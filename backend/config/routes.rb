@@ -1,0 +1,16 @@
+Rails.application.routes.draw do
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  devise_for :users, path: "api/v1",
+    path_names: { sign_in: "login", sign_out: "logout", registration: "signup" },
+    controllers: {
+      sessions: "api/v1/sessions",
+      registrations: "api/v1/registrations"
+    }
+
+  namespace :api do
+    namespace :v1 do
+      resource :current_user, only: [:show], controller: "current_user"
+    end
+  end
+end
