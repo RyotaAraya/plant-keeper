@@ -19,6 +19,36 @@ Rails.application.routes.draw do
       resources :services, only: [:index, :create, :update]
       resources :line_classes, only: [:index, :create, :update]
       resources :departments, only: [:index, :create, :update]
+
+      # Phase 2: 保全管理
+      resources :checklist_templates, only: [:index, :show, :create, :update, :destroy] do
+        member do
+          post :duplicate
+        end
+      end
+      resources :inspections, only: [:index, :show, :create, :update]
+      resources :troubles, only: [:index, :show, :create, :update]
+      resources :trouble_responses, only: [:create, :update]
+      resources :scheduled_maintenances, only: [:index, :show, :create, :update]
+      resources :maintenance_assignments, only: [:create, :destroy]
+
+      # Phase 3: 資材管理
+      resources :manufacturers, only: [:index, :create, :update]
+      resources :materials, only: [:index, :show, :create, :update]
+      resources :warehouses, only: [:index, :create, :update]
+      resources :stocks, only: [:index, :show, :create, :update]
+      resources :stock_transactions, only: [:create]
+      resources :repairs, only: [:index, :show, :create, :update]
+      resources :orders, only: [:index, :show, :create, :update]
+
+      # Phase 4: ユーザ管理
+      resources :users, only: [:index, :show, :update]
+
+      # Phase 5: ダッシュボード
+      get :dashboard, to: 'dashboard#show'
+
+      # Phase 6: 監査ログ
+      resources :audit_logs, only: [:index]
     end
   end
 end
