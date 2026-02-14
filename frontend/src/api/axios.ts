@@ -13,9 +13,10 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use((response) => {
-  const token = response.headers['authorization']
-  if (token) {
-    localStorage.setItem('jwt', token.replace('Bearer ', ''))
+  const authHeader = response.headers['authorization'] || response.headers['Authorization']
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '')
+    localStorage.setItem('jwt', token)
   }
   return response
 })

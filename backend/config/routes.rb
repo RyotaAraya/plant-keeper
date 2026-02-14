@@ -11,6 +11,14 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resource :current_user, only: [:show], controller: "current_user"
+
+      resources :sites, only: [:index, :show, :create, :update]
+      resources :equipments, only: [:index, :show, :create, :update]
+      resources :instruments, only: [:index, :show, :create, :update]
+      resources :equipment_assignments, only: [:index, :create, :update]
+      resources :services, only: [:index, :create, :update]
+      resources :line_classes, only: [:index, :create, :update]
+      resources :departments, only: [:index, :create, :update]
     end
   end
 end
