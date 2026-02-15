@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-保全統合管理システム — 石油プラントの保全業務を統合管理するWebアプリケーション。
+PlantKeeper — 石油プラントの保全業務を統合管理するWebアプリケーション。
 計装保全の実務経験（ENEOS川崎製油所10年）をベースにしたドメイン特化設計。
 
 ## 技術スタック

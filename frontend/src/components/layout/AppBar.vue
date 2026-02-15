@@ -18,7 +18,7 @@ async function handleLogout() {
 <template>
   <v-app-bar color="primary" density="default">
     <v-app-bar-nav-icon @click="$emit('toggle-drawer')" />
-    <v-app-bar-title>保全統合管理システム</v-app-bar-title>
+    <v-app-bar-title>PlantKeeper</v-app-bar-title>
     <v-spacer />
     <span v-if="authStore.user" class="mr-4 text-body-1">
       {{ authStore.user.name }}
