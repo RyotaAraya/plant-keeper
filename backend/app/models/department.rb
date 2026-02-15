@@ -12,4 +12,26 @@ class Department < ApplicationRecord
   enum :level, { division: "division", section: "section", team: "team" }
 
   validates :name, presence: true
+
+  # 部 > 課 > チーム のフルパスを返す
+  def full_path
+    ancestors = []
+    current = self
+    while current
+      ancestors.unshift(current)
+      current = current.parent
+    end
+    ancestors.map(&:name).join(" > ")
+  end
+
+  # 祖先チェーンを配列で返す（ルートから自身まで）
+  def ancestor_chain
+    chain = []
+    current = self
+    while current
+      chain.unshift({ id: current.id, name: current.name, level: current.level })
+      current = current.parent
+    end
+    chain
+  end
 end

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -7,23 +7,134 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 const route = useRoute()
 const router = useRouter()
 const user = ref<any>(null)
-const departments = ref<any[]>([])
+const sites = ref<any[]>([])
+const companies = ref<any[]>([])
+const departmentTreeBySite = ref<Record<number, any[]>>({})
 const loading = ref(true)
 const editDialog = ref(false)
 const editForm = ref<any>({})
 const editErrors = ref<string[]>([])
 
-const roleLabel: Record<string, string> = {
-  worker: '作業員', contractor: '協力会社', supervisor: '監督', maintenance: '保全', admin: '管理者', environment: '環境安全'
+// 部署カスケード選択用
+const selectedSiteId = ref<number | null>(null)
+const selectedDivisionId = ref<number | null>(null)
+const selectedSectionId = ref<number | null>(null)
+const selectedTeamId = ref<number | null>(null)
+
+const employmentTypeLabel: Record<string, string> = {
+  employee: '正社員', dispatch: '派遣社員', contractor: '協力会社',
 }
-const roleOptions = [
-  { title: '作業員', value: 'worker' },
+const employmentTypeOptions = [
+  { title: '正社員', value: 'employee' },
+  { title: '派遣社員', value: 'dispatch' },
   { title: '協力会社', value: 'contractor' },
-  { title: '監督', value: 'supervisor' },
-  { title: '保全', value: 'maintenance' },
-  { title: '管理者', value: 'admin' },
-  { title: '環境安全', value: 'environment' },
 ]
+
+const systemRoleLabel: Record<string, string> = {
+  admin: '管理者', supervisor: '監督者', member: '一般', worker: '作業員',
+}
+
+// 選択中の会社タイプに応じた動的オプション
+const selectedCompanyType = computed(() => {
+  const c = companies.value.find((c: any) => c.id === editForm.value.company_id)
+  return c?.company_type || null
+})
+
+const filteredEmploymentTypeOptions = computed(() => {
+  if (selectedCompanyType.value === 'contractor') {
+    return [{ title: '協力会社', value: 'contractor' }]
+  }
+  return [
+    { title: '正社員', value: 'employee' },
+    { title: '派遣社員', value: 'dispatch' },
+  ]
+})
+
+const filteredSystemRoleOptions = computed(() => {
+  if (selectedCompanyType.value === 'contractor') {
+    return [
+      { title: '監督者', value: 'supervisor' },
+      { title: '作業員', value: 'worker' },
+    ]
+  }
+  return [
+    { title: '管理者', value: 'admin' },
+    { title: '一般', value: 'member' },
+  ]
+})
+
+// カスケードセレクト: 拠点の一覧
+const siteOptions = computed(() =>
+  sites.value.map((s: any) => ({ title: s.name, value: s.id }))
+)
+
+// カスケードセレクト: 選択中の拠点の部一覧
+const divisionOptions = computed(() =>
+  (departmentTreeBySite.value[selectedSiteId.value!] || []).map((d: any) => ({ title: d.name, value: d.id }))
+)
+
+// カスケードセレクト: 選択中の部の課一覧
+const sectionOptions = computed(() => {
+  const tree = departmentTreeBySite.value[selectedSiteId.value!] || []
+  const div = tree.find((d: any) => d.id === selectedDivisionId.value)
+  return (div?.children || []).map((s: any) => ({ title: s.name, value: s.id }))
+})
+
+// カスケードセレクト: 選択中の課のチーム一覧
+const teamOptions = computed(() => {
+  const tree = departmentTreeBySite.value[selectedSiteId.value!] || []
+  const div = tree.find((d: any) => d.id === selectedDivisionId.value)
+  const sec = (div?.children || []).find((s: any) => s.id === selectedSectionId.value)
+  return (sec?.children || []).map((t: any) => ({ title: t.name, value: t.id }))
+})
+
+// openEdit時のwatch連鎖リセットを抑制するフラグ
+const initializing = ref(false)
+
+// 会社が変わったら雇用区分・権限をリセット
+watch(() => editForm.value.company_id, () => {
+  if (initializing.value) return
+  if (selectedCompanyType.value === 'contractor') {
+    editForm.value.employment_type = 'contractor'
+    editForm.value.system_role = 'worker'
+    editForm.value.department_id = null
+    selectedSiteId.value = null
+    selectedDivisionId.value = null
+    selectedSectionId.value = null
+    selectedTeamId.value = null
+  } else if (selectedCompanyType.value === 'owner') {
+    editForm.value.employment_type = 'employee'
+    editForm.value.system_role = 'member'
+  }
+})
+
+// 拠点が変わったら部・課・チームをリセット
+watch(selectedSiteId, () => {
+  if (initializing.value) return
+  selectedDivisionId.value = null
+  selectedSectionId.value = null
+  selectedTeamId.value = null
+})
+
+// 部が変わったら課・チームをリセット
+watch(selectedDivisionId, () => {
+  if (initializing.value) return
+  selectedSectionId.value = null
+  selectedTeamId.value = null
+})
+
+// 課が変わったらチームをリセット
+watch(selectedSectionId, () => {
+  if (initializing.value) return
+  selectedTeamId.value = null
+})
+
+// 最も深い選択を department_id に反映
+watch([selectedSiteId, selectedDivisionId, selectedSectionId, selectedTeamId], () => {
+  if (initializing.value) return
+  editForm.value.department_id =
+    selectedTeamId.value || selectedSectionId.value || selectedDivisionId.value || null
+})
 
 async function fetchUser() {
   loading.value = true
@@ -35,21 +146,46 @@ async function fetchUser() {
   }
 }
 
-async function fetchDepartments() {
-  const res = await api.get('/departments')
-  departments.value = res.data.data
+async function fetchSitesAndDepartments() {
+  const [sitesRes, deptsRes, companiesRes] = await Promise.all([
+    api.get('/sites'),
+    api.get('/departments', { params: { tree: 'true' } }),
+    api.get('/companies'),
+  ])
+  sites.value = sitesRes.data.data
+  companies.value = companiesRes.data.data
+  // ツリーを site_id ごとにグルーピング
+  const tree = deptsRes.data.data as any[]
+  const bySite: Record<number, any[]> = {}
+  for (const node of tree) {
+    const sid = node.site_id
+    if (!bySite[sid]) bySite[sid] = []
+    bySite[sid].push(node)
+  }
+  departmentTreeBySite.value = bySite
 }
 
 function openEdit() {
   editForm.value = {
     name: user.value.name,
-    role: user.value.role,
+    employment_type: user.value.employment_type,
+    system_role: user.value.system_role,
+    company_id: user.value.company_id,
     department_id: user.value.department_id,
     join_year: user.value.join_year,
     home_prefecture: user.value.home_prefecture || '',
     previous_company: user.value.previous_company || '',
     is_active: user.value.is_active,
   }
+  // ancestors + site_id からカスケードセレクトの初期値を復元
+  const dept = user.value.department
+  const ancestors = dept?.ancestors || []
+  initializing.value = true
+  selectedSiteId.value = dept?.site_id || null
+  selectedDivisionId.value = ancestors.find((a: any) => a.level === 'division')?.id || null
+  selectedSectionId.value = ancestors.find((a: any) => a.level === 'section')?.id || null
+  selectedTeamId.value = ancestors.find((a: any) => a.level === 'team')?.id || null
+  initializing.value = false
   editErrors.value = []
   editDialog.value = true
 }
@@ -74,7 +210,7 @@ async function saveEdit() {
 
 onMounted(() => {
   fetchUser()
-  fetchDepartments()
+  fetchSitesAndDepartments()
 })
 </script>
 
@@ -102,12 +238,20 @@ onMounted(() => {
               <div>{{ user.email }}</div>
             </v-col>
             <v-col cols="6" md="3">
-              <div class="text-caption text-grey">役割</div>
-              <div>{{ roleLabel[user.role] }}</div>
+              <div class="text-caption text-grey">雇用区分</div>
+              <div>{{ employmentTypeLabel[user.employment_type] }}</div>
             </v-col>
             <v-col cols="6" md="3">
+              <div class="text-caption text-grey">権限</div>
+              <div>{{ systemRoleLabel[user.system_role] }}</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey">所属会社</div>
+              <div>{{ user.company?.name || '—' }}</div>
+            </v-col>
+            <v-col v-if="user.company?.company_type === 'owner'" cols="12" md="6">
               <div class="text-caption text-grey">部署</div>
-              <div>{{ user.department?.name || '—' }}</div>
+              <div>{{ user.department?.full_path || '—' }}</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">入社年</div>
@@ -156,8 +300,68 @@ onMounted(() => {
               <div v-for="err in editErrors" :key="err">{{ err }}</div>
             </v-alert>
             <v-text-field v-model="editForm.name" label="名前" class="mb-2" />
-            <v-select v-model="editForm.role" :items="roleOptions" item-title="title" item-value="value" label="役割" class="mb-2" />
-            <v-select v-model="editForm.department_id" :items="departments" item-title="name" item-value="id" label="部署" class="mb-2" />
+            <v-row dense class="mb-2">
+              <v-col cols="4">
+                <v-select
+                  v-model="editForm.company_id"
+                  :items="companies"
+                  item-title="name"
+                  item-value="id"
+                  label="所属会社"
+                />
+              </v-col>
+              <v-col cols="4">
+                <v-select v-model="editForm.employment_type" :items="filteredEmploymentTypeOptions" item-title="title" item-value="value" label="雇用区分" />
+              </v-col>
+              <v-col cols="4">
+                <v-select v-model="editForm.system_role" :items="filteredSystemRoleOptions" item-title="title" item-value="value" label="権限" />
+              </v-col>
+            </v-row>
+            <template v-if="selectedCompanyType === 'owner'">
+              <v-select
+                v-model="selectedSiteId"
+                :items="siteOptions"
+                item-title="title"
+                item-value="value"
+                label="拠点"
+                class="mb-2"
+              />
+              <v-row dense class="mb-2">
+                <v-col cols="4">
+                  <v-select
+                    v-model="selectedDivisionId"
+                    :items="divisionOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="部"
+                    clearable
+                    :disabled="!selectedSiteId"
+                  />
+                </v-col>
+                <v-col cols="4">
+                  <v-select
+                    v-model="selectedSectionId"
+                    :items="sectionOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="課"
+                    clearable
+                    :disabled="!selectedDivisionId || sectionOptions.length === 0"
+                  />
+                </v-col>
+                <v-col cols="4">
+                  <v-select
+                    v-model="selectedTeamId"
+                    :items="teamOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="チーム"
+                    clearable
+                    :disabled="!selectedSectionId || teamOptions.length === 0"
+                  />
+                </v-col>
+              </v-row>
+            </template>
             <v-text-field v-model.number="editForm.join_year" label="入社年" type="number" class="mb-2" />
             <v-text-field v-model="editForm.home_prefecture" label="出身地" class="mb-2" />
             <v-text-field v-model="editForm.previous_company" label="前職" class="mb-2" />

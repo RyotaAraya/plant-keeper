@@ -9,7 +9,7 @@ module Api
 
         render json: {
           data: assignments.as_json(include: {
-            user: { only: [ :id, :name, :email, :role ] },
+            user: { only: [ :id, :name, :email, :employment_type, :system_role ] },
             equipment: { only: [ :id, :name ] }
           })
         }

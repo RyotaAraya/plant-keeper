@@ -34,6 +34,7 @@
 | バックエンド | Ruby on Rails 8 (API mode), Devise, Devise-JWT |
 | データベース | PostgreSQL 16 |
 | インフラ | Docker, docker-compose |
+| コード品質 | ESLint, RuboCop, vue-tsc, Lefthook |
 
 ## アーキテクチャ
 

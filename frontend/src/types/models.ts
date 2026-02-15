@@ -67,12 +67,24 @@ export interface Department {
   updated_at: string
 }
 
+export interface Company {
+  id: number
+  name: string
+  company_type: 'owner' | 'contractor'
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: number
   email: string
   password_digest: string
   name: string
-  role: string
+  employment_type: string
+  system_role: string
+  company_id: number | null
+  company?: { id: number; name: string; company_type: string }
   position: string | null
   department_id: number
   join_year: number

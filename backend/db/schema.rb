@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_15_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -46,6 +46,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["department_id"], name: "index_checklist_templates_on_department_id"
+  end
+
+  create_table "companies", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "company_type", default: "owner", null: false
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_type"], name: "index_companies_on_company_type"
   end
 
   create_table "department_histories", force: :cascade do |t|
@@ -359,7 +368,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
     t.string "name", null: false
-    t.string "role", default: "worker", null: false
     t.bigint "department_id"
     t.integer "join_year"
     t.string "home_prefecture"
@@ -370,13 +378,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "position"
+    t.string "employment_type", default: "employee", null: false
+    t.string "system_role", default: "member", null: false
+    t.bigint "company_id"
+    t.index ["company_id"], name: "index_users_on_company_id"
     t.index ["department_id"], name: "index_users_on_department_id"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["employment_type"], name: "index_users_on_employment_type"
     t.index ["is_active"], name: "index_users_on_is_active"
     t.index ["jti"], name: "index_users_on_jti", unique: true
     t.index ["position"], name: "index_users_on_position"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
-    t.index ["role"], name: "index_users_on_role"
+    t.index ["system_role"], name: "index_users_on_system_role"
   end
 
   create_table "warehouses", force: :cascade do |t|
@@ -432,6 +445,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
   add_foreign_key "troubles", "instruments"
   add_foreign_key "troubles", "users", column: "assigned_to_id"
   add_foreign_key "troubles", "users", column: "reported_by_id"
+  add_foreign_key "users", "companies"
   add_foreign_key "users", "departments"
   add_foreign_key "warehouses", "sites"
 end

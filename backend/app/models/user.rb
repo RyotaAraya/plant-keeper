@@ -5,6 +5,7 @@ class User < ApplicationRecord
          :jwt_authenticatable, jwt_revocation_strategy: self
 
   belongs_to :department, optional: true
+  belongs_to :company, optional: true
 
   has_many :equipment_assignments, dependent: :destroy
   has_many :department_histories, dependent: :destroy
@@ -21,7 +22,8 @@ class User < ApplicationRecord
   has_many :assigned_troubles, class_name: "Trouble", foreign_key: "assigned_to_id", dependent: :nullify
   has_many :requested_repairs, class_name: "Repair", foreign_key: "requested_by_id", dependent: :restrict_with_error
 
-  enum :role, { worker: "worker", contractor: "contractor", supervisor: "supervisor", maintenance: "maintenance", admin: "admin", environment: "environment" }
+  enum :employment_type, { employee: "employee", dispatch: "dispatch", contractor: "contractor" }
+  enum :system_role, { admin: "admin", member: "member", supervisor: "supervisor", worker: "worker" }
   enum :position, { general_manager: "general_manager", section_manager: "section_manager", team_leader: "team_leader", senior_staff: "senior_staff", staff: "staff" }
 
   validates :name, presence: true

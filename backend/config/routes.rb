@@ -19,6 +19,7 @@ Rails.application.routes.draw do
       resources :services, only: [ :index, :create, :update ]
       resources :line_classes, only: [ :index, :create, :update ]
       resources :departments, only: [ :index, :create, :update ]
+      resources :companies, only: [ :index, :create, :update ]
 
       # Phase 2: 保全管理
       resources :checklist_templates, only: [ :index, :show, :create, :update, :destroy ] do

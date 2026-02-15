@@ -4,6 +4,7 @@
 
 - Docker Desktop
 - Git
+- [Lefthook](https://github.com/evilmartians/lefthook)（Git hooks 管理）
 
 ## セットアップ
 
@@ -28,7 +29,17 @@ docker-compose up -d
 | `manage-backend-1` | http://localhost:3000 | Rails API サーバー |
 | `manage-db-1` | localhost:5432 | PostgreSQL 16 |
 
-### 3. データベースのセットアップ
+### 3. Git Hooks のセットアップ
+
+```bash
+# macOS
+brew install lefthook
+
+# インストール後
+lefthook install
+```
+
+### 4. データベースのセットアップ
 
 ```bash
 docker-compose exec backend bundle exec rails db:create
@@ -36,7 +47,7 @@ docker-compose exec backend bundle exec rails db:migrate
 docker-compose exec backend bundle exec rails db:seed
 ```
 
-### 4. 動作確認
+### 5. 動作確認
 
 ブラウザで http://localhost:5173 にアクセスし、以下のアカウントでログインできれば成功です。
 
@@ -82,8 +93,14 @@ docker-compose exec backend bundle exec rails routes
 ### フロントエンド
 
 ```bash
+# ESLint
+docker-compose exec frontend npm run lint
+
+# ESLint（自動修正）
+docker-compose exec frontend npm run lint:fix
+
 # 型チェック
-docker-compose exec frontend npx vue-tsc --noEmit
+docker-compose exec frontend npm run typecheck
 
 # ビルド
 docker-compose exec frontend npm run build
@@ -117,9 +134,32 @@ docker-compose exec frontend npm run build
 │   ├── Dockerfile
 │   └── package.json
 ├── README.md
+├── DEVELOPMENT.md            開発環境構築ガイド
 ├── CLAUDE.md                 Claude Code 設定
+├── lefthook.yml              Git hooks 設定（pre-push）
 ├── 要求仕様書.md
 └── データモデル設計.md
+```
+
+## コード品質
+
+`git push` 時に Lefthook が自動で以下のチェックを実行します。
+
+| チェック | 対象 | 内容 |
+|---------|------|------|
+| ESLint | `frontend/src/` | Vue + TypeScript の lint（自動修正） |
+| vue-tsc | `frontend/` | TypeScript 型チェック |
+| RuboCop | `backend/` | Ruby スタイルチェック（自動修正） |
+
+手動で実行する場合：
+
+```bash
+# フロントエンド
+docker-compose exec frontend npm run lint:fix
+docker-compose exec frontend npm run typecheck
+
+# バックエンド
+docker-compose exec backend bundle exec rubocop -A
 ```
 
 ## API 認証

@@ -1,48 +1,84 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 
 const router = useRouter()
 const users = ref<any[]>([])
-const departments = ref<any[]>([])
+const departmentTree = ref<any[]>([])
 const loading = ref(false)
 const showInactive = ref(false)
 
 const filters = ref({
   q: '',
-  role: null as string | null,
+  employment_type: null as string | null,
+  system_role: null as string | null,
   department_id: null as number | null,
 })
 
 const headers = [
   { title: '名前', key: 'name' },
   { title: 'メール', key: 'email' },
-  { title: '役割', key: 'role', width: '100px' },
-  { title: '部署', key: 'department.name', width: '160px' },
+  { title: '雇用区分', key: 'employment_type', width: '100px' },
+  { title: '権限', key: 'system_role', width: '80px' },
+  { title: '所属会社', key: 'company', width: '140px' },
+  { title: '部署', key: 'department_path', width: '280px' },
   { title: '入社年', key: 'join_year', width: '80px' },
   { title: '状態', key: 'is_active', width: '80px' },
 ]
 
-const roleLabel: Record<string, string> = {
-  worker: '作業員', contractor: '協力会社', supervisor: '監督', maintenance: '保全', admin: '管理者', environment: '環境安全'
+const employmentTypeLabel: Record<string, string> = {
+  employee: '正社員', dispatch: '派遣社員', contractor: '協力会社',
 }
-const roleOptions = [
-  { title: '作業員', value: 'worker' },
+const employmentTypeOptions = [
+  { title: '正社員', value: 'employee' },
+  { title: '派遣社員', value: 'dispatch' },
   { title: '協力会社', value: 'contractor' },
-  { title: '監督', value: 'supervisor' },
-  { title: '保全', value: 'maintenance' },
-  { title: '管理者', value: 'admin' },
-  { title: '環境安全', value: 'environment' },
 ]
+
+const systemRoleLabel: Record<string, string> = {
+  admin: '管理者', supervisor: '監督者', member: '一般', worker: '作業員',
+}
+const systemRoleOptions = [
+  { title: '管理者', value: 'admin' },
+  { title: '監督者', value: 'supervisor' },
+  { title: '一般', value: 'member' },
+  { title: '作業員', value: 'worker' },
+]
+
+const levelLabel: Record<string, string> = {
+  division: '部', section: '課', team: 'チーム',
+}
+
+// ツリーをフラットリストに変換（インデント付き）
+function flattenTree(nodes: any[], depth = 0): any[] {
+  const result: any[] = []
+  for (const node of nodes) {
+    const indent = '\u00A0\u00A0'.repeat(depth)
+    result.push({
+      id: node.id,
+      name: node.name,
+      title: `${indent}${node.name}（${levelLabel[node.level] || node.level}）`,
+      level: node.level,
+      depth,
+    })
+    if (node.children?.length) {
+      result.push(...flattenTree(node.children, depth + 1))
+    }
+  }
+  return result
+}
+
+const flatDepartments = computed(() => flattenTree(departmentTree.value))
 
 async function fetchUsers() {
   loading.value = true
   try {
     const params: any = {}
     if (filters.value.q) params.q = filters.value.q
-    if (filters.value.role) params.role = filters.value.role
+    if (filters.value.employment_type) params.employment_type = filters.value.employment_type
+    if (filters.value.system_role) params.system_role = filters.value.system_role
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (!showInactive.value) params.is_active = true
     const res = await api.get('/users', { params })
@@ -53,8 +89,8 @@ async function fetchUsers() {
 }
 
 async function fetchDepartments() {
-  const res = await api.get('/departments')
-  departments.value = res.data.data
+  const res = await api.get('/departments', { params: { tree: 'true' } })
+  departmentTree.value = res.data.data
 }
 
 function goToDetail(row: any) {
@@ -85,26 +121,37 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         style="max-width: 220px"
       />
       <v-select
-        v-model="filters.role"
-        :items="roleOptions"
+        v-model="filters.employment_type"
+        :items="employmentTypeOptions"
         item-title="title"
         item-value="value"
-        label="役割"
+        label="雇用区分"
         clearable
         density="compact"
         hide-details
         style="max-width: 140px"
       />
       <v-select
+        v-model="filters.system_role"
+        :items="systemRoleOptions"
+        item-title="title"
+        item-value="value"
+        label="権限"
+        clearable
+        density="compact"
+        hide-details
+        style="max-width: 120px"
+      />
+      <v-select
         v-model="filters.department_id"
-        :items="departments"
-        item-title="name"
+        :items="flatDepartments"
+        item-title="title"
         item-value="id"
         label="部署"
         clearable
         density="compact"
         hide-details
-        style="max-width: 180px"
+        style="max-width: 260px"
       />
       <v-switch v-model="showInactive" label="退職者表示" density="compact" hide-details />
     </div>
@@ -117,8 +164,17 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
-      <template #item.role="{ item }">
-        {{ roleLabel[item.role] || item.role }}
+      <template #item.employment_type="{ item }">
+        {{ employmentTypeLabel[item.employment_type] || item.employment_type }}
+      </template>
+      <template #item.system_role="{ item }">
+        {{ systemRoleLabel[item.system_role] || item.system_role }}
+      </template>
+      <template #item.company="{ item }">
+        {{ item.company?.name || '—' }}
+      </template>
+      <template #item.department_path="{ item }">
+        {{ item.department?.full_path || '—' }}
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'success' : 'grey'" size="x-small">

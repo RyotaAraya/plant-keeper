@@ -8,14 +8,20 @@ module Api
         departments = departments.where(level: params[:level]) if params[:level].present?
         departments = departments.where(parent_id: params[:parent_id]) if params[:parent_id].present?
 
-        render json: {
-          data: departments.order(:level, :name).as_json(
-            include: {
-              site: { only: [ :id, :name ] },
-              parent: { only: [ :id, :name, :level ] }
+        if params[:tree] == "true"
+          render json: { data: build_tree(departments) }
+        else
+          render json: {
+            data: departments.order(:level, :name).map { |d|
+              d.as_json(
+                include: {
+                  site: { only: [ :id, :name ] },
+                  parent: { only: [ :id, :name, :level ] }
+                }
+              ).merge(full_path: d.full_path)
             }
-          )
-        }
+          }
+        end
       end
 
       def create
@@ -40,6 +46,24 @@ module Api
 
       def department_params
         params.require(:department).permit(:name, :department_type, :site_id, :parent_id, :level)
+      end
+
+      def build_tree(departments)
+        all = departments.order(:level, :name).to_a
+        roots = all.select { |d| d.parent_id.nil? }
+        roots.map { |r| department_node(r, all) }
+      end
+
+      def department_node(dept, all)
+        children = all.select { |d| d.parent_id == dept.id }
+        {
+          id: dept.id,
+          name: dept.name,
+          level: dept.level,
+          department_type: dept.department_type,
+          site_id: dept.site_id,
+          children: children.map { |c| department_node(c, all) }
+        }
       end
     end
   end

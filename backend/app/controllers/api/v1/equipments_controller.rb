@@ -28,7 +28,7 @@ module Api
             include: {
               instruments: { only: [ :id, :tag_number, :instrument_type, :location ] },
               equipment_assignments: {
-                include: { user: { only: [ :id, :name, :email, :role ] } },
+                include: { user: { only: [ :id, :name, :email, :employment_type, :system_role ] } },
                 only: [ :id, :user_id, :role, :started_on, :ended_on ]
               },
               scheduled_maintenances: { only: [ :id, :title, :scheduled_date, :status ] }
