@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_14_000027) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_15_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -66,7 +66,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_14_000027) do
     t.bigint "site_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "parent_id"
+    t.string "level", default: "section", null: false
     t.index ["department_type"], name: "index_departments_on_department_type"
+    t.index ["level"], name: "index_departments_on_level"
+    t.index ["parent_id"], name: "index_departments_on_parent_id"
     t.index ["site_id"], name: "index_departments_on_site_id"
   end
 
@@ -365,10 +369,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_14_000027) do
     t.string "jti", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "position"
     t.index ["department_id"], name: "index_users_on_department_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["is_active"], name: "index_users_on_is_active"
     t.index ["jti"], name: "index_users_on_jti", unique: true
+    t.index ["position"], name: "index_users_on_position"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["role"], name: "index_users_on_role"
   end
@@ -386,6 +392,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_14_000027) do
   add_foreign_key "checklist_templates", "departments"
   add_foreign_key "department_histories", "departments"
   add_foreign_key "department_histories", "users"
+  add_foreign_key "departments", "departments", column: "parent_id"
   add_foreign_key "departments", "sites"
   add_foreign_key "equipment_assignments", "equipments"
   add_foreign_key "equipment_assignments", "users"

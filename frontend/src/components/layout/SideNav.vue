@@ -28,6 +28,7 @@ const navItems = [
   <v-navigation-drawer
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
+    :scrim="false"
   >
     <v-list nav dense>
       <v-list-item

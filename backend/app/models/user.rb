@@ -22,6 +22,7 @@ class User < ApplicationRecord
   has_many :requested_repairs, class_name: 'Repair', foreign_key: 'requested_by_id', dependent: :restrict_with_error
 
   enum :role, { worker: 'worker', contractor: 'contractor', supervisor: 'supervisor', maintenance: 'maintenance', admin: 'admin', environment: 'environment' }
+  enum :position, { general_manager: 'general_manager', section_manager: 'section_manager', team_leader: 'team_leader', senior_staff: 'senior_staff', staff: 'staff' }
 
   validates :name, presence: true
 

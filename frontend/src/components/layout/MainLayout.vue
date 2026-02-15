@@ -11,13 +11,11 @@ function toggleDrawer() {
 </script>
 
 <template>
-  <v-app>
-    <AppBar @toggle-drawer="toggleDrawer" />
-    <SideNav v-model="drawer" />
-    <v-main>
-      <v-container fluid>
-        <slot />
-      </v-container>
-    </v-main>
-  </v-app>
+  <AppBar @toggle-drawer="toggleDrawer" />
+  <SideNav v-model="drawer" />
+  <v-main>
+    <v-container fluid>
+      <slot />
+    </v-container>
+  </v-main>
 </template>

@@ -11,7 +11,10 @@
       "Bash(curl:*)",
       "Bash(docker-compose logs:*)",
       "Bash(docker-compose restart:*)",
-      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzMjZhMWVjZS00ZWNjLTQ1NTUtOTdiMi0wN2U4YWFiNTdmM2QiLCJzdWIiOiIxIiwic2NwIjoidXNlciIsImF1ZCI6bnVsbCwiaWF0IjoxNzcxMDc4NjY0LCJleHAiOjE3NzExNjUwNjR9.iOt15LdUPn-wffT3_QOqLzfI7taJBvOVvM-H2Jv62zM\")"
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzMjZhMWVjZS00ZWNjLTQ1NTUtOTdiMi0wN2U4YWFiNTdmM2QiLCJzdWIiOiIxIiwic2NwIjoidXNlciIsImF1ZCI6bnVsbCwiaWF0IjoxNzcxMDc4NjY0LCJleHAiOjE3NzExNjUwNjR9.iOt15LdUPn-wffT3_QOqLzfI7taJBvOVvM-H2Jv62zM\")",
+      "Bash(python3:*)",
+      "Bash(docker-compose:*)",
+      "Bash(git stash:*)"
     ]
   }
 }

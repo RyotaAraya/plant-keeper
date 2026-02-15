@@ -85,7 +85,7 @@ async function saveLc() {
 const departments = ref<any[]>([])
 const sites = ref<any[]>([])
 const deptDialog = ref(false)
-const deptForm = ref({ name: '', department_type: 'maintenance', site_id: null as number | null })
+const deptForm = ref({ name: '', department_type: 'maintenance', level: 'section', site_id: null as number | null, parent_id: null as number | null })
 const deptEditingId = ref<number | null>(null)
 const deptErrors = ref<string[]>([])
 
@@ -102,10 +102,10 @@ async function fetchSites() {
 function openDeptDialog(item?: any) {
   if (item) {
     deptEditingId.value = item.id
-    deptForm.value = { name: item.name, department_type: item.department_type, site_id: item.site_id }
+    deptForm.value = { name: item.name, department_type: item.department_type, level: item.level || 'section', site_id: item.site_id, parent_id: item.parent_id }
   } else {
     deptEditingId.value = null
-    deptForm.value = { name: '', department_type: 'maintenance', site_id: null }
+    deptForm.value = { name: '', department_type: 'maintenance', level: 'section', site_id: null, parent_id: null }
   }
   deptErrors.value = []
   deptDialog.value = true
@@ -137,6 +137,14 @@ const deptTypeOptions = [
   { title: '保全', value: 'maintenance' },
   { title: '運転', value: 'operation' },
   { title: '環境安全', value: 'environment' },
+]
+const deptLevelLabel: Record<string, string> = {
+  division: '部', section: '課', team: 'チーム'
+}
+const deptLevelOptions = [
+  { title: '部', value: 'division' },
+  { title: '課', value: 'section' },
+  { title: 'チーム', value: 'team' },
 ]
 
 // Checklist Templates
@@ -422,13 +430,20 @@ onMounted(() => {
         <v-data-table
           :headers="[
             { title: '部署名', key: 'name' },
-            { title: '種別', key: 'department_type', width: '120px' },
+            { title: '階層', key: 'level', width: '80px' },
+            { title: '種別', key: 'department_type', width: '100px' },
+            { title: '親部署', key: 'parent.name', width: '160px' },
             { title: '拠点', key: 'site.name' },
             { title: '', key: 'actions', width: '80px', sortable: false },
           ]"
           :items="departments"
           density="compact"
         >
+          <template #item.level="{ item }">
+            <v-chip :color="item.level === 'division' ? 'primary' : item.level === 'section' ? 'info' : 'default'" size="x-small">
+              {{ deptLevelLabel[item.level] || item.level }}
+            </v-chip>
+          </template>
           <template #item.department_type="{ item }">
             {{ deptTypeLabel[item.department_type] || item.department_type }}
           </template>
@@ -445,8 +460,10 @@ onMounted(() => {
                 <div v-for="err in deptErrors" :key="err">{{ err }}</div>
               </v-alert>
               <v-text-field v-model="deptForm.name" label="部署名" class="mb-2" />
+              <v-select v-model="deptForm.level" :items="deptLevelOptions" item-title="title" item-value="value" label="階層" class="mb-2" />
               <v-select v-model="deptForm.department_type" :items="deptTypeOptions" item-title="title" item-value="value" label="種別" class="mb-2" />
               <v-select v-model="deptForm.site_id" :items="sites" item-title="name" item-value="id" label="拠点" class="mb-2" />
+              <v-select v-model="deptForm.parent_id" :items="departments.filter((d: any) => d.level !== 'team')" item-title="name" item-value="id" label="親部署" clearable class="mb-2" />
             </v-card-text>
             <v-card-actions>
               <v-spacer />

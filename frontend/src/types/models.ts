@@ -58,7 +58,11 @@ export interface Department {
   id: number
   name: string
   department_type: string
+  level: string
   site_id: number
+  parent_id: number | null
+  parent?: { id: number; name: string; level: string }
+  children?: Department[]
   created_at: string
   updated_at: string
 }
@@ -69,6 +73,7 @@ export interface User {
   password_digest: string
   name: string
   role: string
+  position: string | null
   department_id: number
   join_year: number
   home_prefecture: string
