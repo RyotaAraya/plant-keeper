@@ -1,7 +1,7 @@
 module Api
   module V1
     class ChecklistTemplatesController < BaseController
-      before_action :set_template, only: [:show, :update, :destroy, :duplicate]
+      before_action :set_template, only: [ :show, :update, :destroy, :duplicate ]
 
       # GET /api/v1/checklist_templates
       def index
@@ -12,8 +12,8 @@ module Api
         render json: {
           data: templates.as_json(
             include: {
-              department: { only: [:id, :name] },
-              checklist_template_items: { only: [:id, :position, :content, :item_type] }
+              department: { only: [ :id, :name ] },
+              checklist_template_items: { only: [ :id, :position, :content, :item_type ] }
             }
           )
         }
@@ -24,8 +24,8 @@ module Api
         render json: {
           data: @template.as_json(
             include: {
-              department: { only: [:id, :name] },
-              checklist_template_items: { only: [:id, :position, :content, :item_type] }
+              department: { only: [ :id, :name ] },
+              checklist_template_items: { only: [ :id, :position, :content, :item_type ] }
             }
           )
         }
@@ -41,7 +41,7 @@ module Api
               template.checklist_template_items.create!(
                 position: idx + 1,
                 content: item[:content],
-                item_type: item[:item_type] || 'check'
+                item_type: item[:item_type] || "check"
               )
             end
           end
@@ -68,7 +68,7 @@ module Api
                 @template.checklist_template_items.create!(
                   position: idx + 1,
                   content: item[:content],
-                  item_type: item[:item_type] || 'check'
+                  item_type: item[:item_type] || "check"
                 )
               end
             end
@@ -80,7 +80,7 @@ module Api
           data: @template.as_json(include: { checklist_template_items: {} })
         }
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # DELETE /api/v1/checklist_templates/:id
@@ -112,7 +112,7 @@ module Api
           data: new_template.as_json(include: { checklist_template_items: {} })
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       private

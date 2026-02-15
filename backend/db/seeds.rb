@@ -83,32 +83,32 @@ create_dept_tree(sites, departments, :kawasaki, [
     { key: :kw_inst_sec, name: "計器保全課", teams: [
       { key: :kw_inst_a, name: "計器Aチーム" },
       { key: :kw_inst_b, name: "計器Bチーム" }
-    ]},
+    ] },
     { key: :kw_elec_sec, name: "電気保全課", teams: [
       { key: :kw_elec_a, name: "電気チーム" }
-    ]},
+    ] },
     { key: :kw_insp_sec, name: "検査課", teams: [
       { key: :kw_insp_a, name: "検査チーム" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :kw_prod_div, name: "製造部", type: "operation", sections: [
     { key: :kw_oper1_sec, name: "第1運転課", teams: [
       { key: :kw_oper1_a, name: "直A" },
       { key: :kw_oper1_b, name: "直B" }
-    ]},
+    ] },
     { key: :kw_oper2_sec, name: "第2運転課", teams: [
       { key: :kw_oper2_a, name: "直A" },
       { key: :kw_oper2_b, name: "直B" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :kw_env_div, name: "安全環境部", type: "environment", sections: [
     { key: :kw_env_sec, name: "環境管理課", teams: [
       { key: :kw_env_a, name: "環境チーム" }
-    ]},
+    ] },
     { key: :kw_safety_sec, name: "安全課", teams: [
       { key: :kw_safety_a, name: "安全チーム" }
-    ]}
-  ]}
+    ] }
+  ] }
 ])
 
 # --- 根岸製油所 ---
@@ -116,20 +116,20 @@ create_dept_tree(sites, departments, :negishi, [
   { key: :ng_maint_div, name: "保全部", type: "maintenance", sections: [
     { key: :ng_inst_sec, name: "計器保全課", teams: [
       { key: :ng_inst_a, name: "計器チーム" }
-    ]},
+    ] },
     { key: :ng_elec_sec, name: "電気保全課", teams: [
       { key: :ng_elec_a, name: "電気チーム" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :ng_prod_div, name: "製造部", type: "operation", sections: [
     { key: :ng_oper1_sec, name: "運転課", teams: [
       { key: :ng_oper1_a, name: "直A" },
       { key: :ng_oper1_b, name: "直B" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :ng_env_div, name: "安全環境部", type: "environment", sections: [
     { key: :ng_env_sec, name: "環境安全課" }
-  ]}
+  ] }
 ])
 
 # --- 堺製油所 ---
@@ -138,23 +138,23 @@ create_dept_tree(sites, departments, :sakai, [
     { key: :sk_inst_sec, name: "計器保全課", teams: [
       { key: :sk_inst_a, name: "計器Aチーム" },
       { key: :sk_inst_b, name: "計器Bチーム" }
-    ]},
+    ] },
     { key: :sk_elec_sec, name: "電気保全課", teams: [
       { key: :sk_elec_a, name: "電気チーム" }
-    ]},
+    ] },
     { key: :sk_insp_sec, name: "検査課", teams: [
       { key: :sk_insp_a, name: "検査チーム" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :sk_prod_div, name: "製造部", type: "operation", sections: [
     { key: :sk_oper1_sec, name: "第1運転課", teams: [
       { key: :sk_oper1_a, name: "直A" },
       { key: :sk_oper1_b, name: "直B" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :sk_env_div, name: "安全環境部", type: "environment", sections: [
     { key: :sk_env_sec, name: "環境管理課" }
-  ]}
+  ] }
 ])
 
 # --- 和歌山製油所 ---
@@ -162,17 +162,17 @@ create_dept_tree(sites, departments, :wakayama, [
   { key: :wk_maint_div, name: "保全部", type: "maintenance", sections: [
     { key: :wk_inst_sec, name: "計器保全課", teams: [
       { key: :wk_inst_a, name: "計器チーム" }
-    ]},
+    ] },
     { key: :wk_elec_sec, name: "電気保全課", teams: [
       { key: :wk_elec_a, name: "電気チーム" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :wk_prod_div, name: "製造部", type: "operation", sections: [
     { key: :wk_oper1_sec, name: "運転課", teams: [
       { key: :wk_oper1_a, name: "直A" },
       { key: :wk_oper1_b, name: "直B" }
-    ]}
-  ]}
+    ] }
+  ] }
 ])
 
 # --- 仙台製油所 ---
@@ -180,26 +180,26 @@ create_dept_tree(sites, departments, :sendai, [
   { key: :sd_maint_div, name: "保全部", type: "maintenance", sections: [
     { key: :sd_inst_sec, name: "計器保全課", teams: [
       { key: :sd_inst_a, name: "計器チーム" }
-    ]},
+    ] },
     { key: :sd_elec_sec, name: "電気保全課", teams: [
       { key: :sd_elec_a, name: "電気チーム" }
-    ]}
-  ]},
+    ] }
+  ] },
   { key: :sd_prod_div, name: "製造部", type: "operation", sections: [
     { key: :sd_oper1_sec, name: "運転課", teams: [
       { key: :sd_oper1_a, name: "直A" }
-    ]}
-  ]}
+    ] }
+  ] }
 ])
 
 # --- 千葉製油所（閉鎖） ---
 create_dept_tree(sites, departments, :chiba, [
   { key: :cb_maint_div, name: "保全部", type: "maintenance", sections: [
     { key: :cb_inst_sec, name: "計器保全課" }
-  ]},
+  ] },
   { key: :cb_prod_div, name: "製造部", type: "operation", sections: [
     { key: :cb_oper1_sec, name: "運転課" }
-  ]}
+  ] }
 ])
 
 # ============================================================
@@ -611,7 +611,7 @@ puts "部署異動履歴を作成中..."
   { user: :fujita,    dept: :kw_inst_b,  started: "2013-04-01", note: "計器保全課Bチーム。チームリーダ" },
   { user: :kimura,    dept: :sk_inst_sec, started: "2008-04-01", note: "堺計器保全課長" },
   { user: :ito,       dept: :sk_maint_div, started: "2002-04-01", note: "堺保全部長" },
-  { user: :sasaki,    dept: :sd_maint_div, started: "2004-04-01", note: "仙台保全部長" },
+  { user: :sasaki,    dept: :sd_maint_div, started: "2004-04-01", note: "仙台保全部長" }
 ].each do |data|
   DepartmentHistory.create!(
     user: users[data[:user]],
@@ -1022,16 +1022,16 @@ troubles[:t15] = Trouble.create!(equipment: equipments[:kw_tank], instrument: in
 
 # 追加: 過去の解決済みトラブル
 (16..25).each do |i|
-  equip_keys = [:kw_cdu, :kw_rhds, :kw_fcc, :kw_boiler, :ng_cdu, :ng_hds, :sk_cdu, :sk_hds, :wk_cdu, :sd_lk]
+  equip_keys = [ :kw_cdu, :kw_rhds, :kw_fcc, :kw_boiler, :ng_cdu, :ng_hds, :sk_cdu, :sk_hds, :wk_cdu, :sd_lk ]
   ek = equip_keys[(i - 16) % equip_keys.size]
-  reporter_keys = [:sato, :takahashi, :fujita, :imai, :tanabe, :hayashi, :wk_inst1, :sd_inst1, :ogata, :nishimura]
+  reporter_keys = [ :sato, :takahashi, :fujita, :imai, :tanabe, :hayashi, :wk_inst1, :sd_inst1, :ogata, :nishimura ]
   rk = reporter_keys[(i - 16) % reporter_keys.size]
-  titles = ["伝送器校正ずれ", "配管漏洩", "弁体シール劣化", "ケーブル絶縁低下", "指示値ドリフト", "端子腐食", "接地不良", "振動による緩み", "凍結による誤作動", "電源異常"]
+  titles = [ "伝送器校正ずれ", "配管漏洩", "弁体シール劣化", "ケーブル絶縁低下", "指示値ドリフト", "端子腐食", "接地不良", "振動による緩み", "凍結による誤作動", "電源異常" ]
   troubles["t#{i}".to_sym] = Trouble.create!(
     equipment: equipments[ek], reported_by: users[rk],
     title: "#{titles[(i - 16) % titles.size]}（過去事例）",
     description: "過去に発生した#{titles[(i - 16) % titles.size]}の事例。対応済み。",
-    status: "closed", priority: ["low", "medium", "high"][(i - 16) % 3],
+    status: "closed", priority: [ "low", "medium", "high" ][(i - 16) % 3],
     reported_at: (30 + (i - 16) * 15).days.ago, resolved_at: (28 + (i - 16) * 15).days.ago
   )
 end
@@ -1174,14 +1174,14 @@ Repair.create!(stock: stocks[:s55], requested_by: users[:sd_inst1], status: "com
 puts "監査ログを作成中..."
 
 AuditLog.create!(user: users[:tanaka], action: "login", auditable_type: "User", auditable_id: users[:tanaka].id, ip_address: "192.168.1.100", performed_at: 1.hour.ago)
-AuditLog.create!(user: users[:sato], action: "create", auditable_type: "Trouble", auditable_id: troubles[:t3].id, changes_json: { title: [nil, "FT-301 オリフィス閉塞疑い"], status: [nil, "open"] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
-AuditLog.create!(user: users[:suzuki], action: "update", auditable_type: "Trouble", auditable_id: troubles[:t1].id, changes_json: { status: ["in_progress", "resolved"], resolved_at: [nil, 5.days.ago.iso8601] }, ip_address: "192.168.1.102", performed_at: 5.days.ago)
-AuditLog.create!(user: users[:sato], action: "approval_request", auditable_type: "Inspection", auditable_id: inspections[:insp3].id, changes_json: { status: ["submitted", "approval_requested"] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
+AuditLog.create!(user: users[:sato], action: "create", auditable_type: "Trouble", auditable_id: troubles[:t3].id, changes_json: { title: [ nil, "FT-301 オリフィス閉塞疑い" ], status: [ nil, "open" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
+AuditLog.create!(user: users[:suzuki], action: "update", auditable_type: "Trouble", auditable_id: troubles[:t1].id, changes_json: { status: [ "in_progress", "resolved" ], resolved_at: [ nil, 5.days.ago.iso8601 ] }, ip_address: "192.168.1.102", performed_at: 5.days.ago)
+AuditLog.create!(user: users[:sato], action: "approval_request", auditable_type: "Inspection", auditable_id: inspections[:insp3].id, changes_json: { status: [ "submitted", "approval_requested" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
 AuditLog.create!(user: users[:suzuki], action: "login", auditable_type: "User", auditable_id: users[:suzuki].id, ip_address: "192.168.1.102", performed_at: 2.hours.ago)
 AuditLog.create!(user: users[:ito], action: "login", auditable_type: "User", auditable_id: users[:ito].id, ip_address: "192.168.2.100", performed_at: 3.hours.ago)
 AuditLog.create!(user: users[:sasaki], action: "login", auditable_type: "User", auditable_id: users[:sasaki].id, ip_address: "192.168.3.100", performed_at: 4.hours.ago)
-AuditLog.create!(user: users[:tanaka], action: "update", auditable_type: "User", auditable_id: users[:morita].id, changes_json: { is_active: [true, false], deactivated_on: [nil, "2024-03-31"] }, ip_address: "192.168.1.100", performed_at: 300.days.ago)
-AuditLog.create!(user: users[:kimura], action: "create", auditable_type: "Inspection", auditable_id: inspections[:insp9].id, changes_json: { status: [nil, "approved"] }, ip_address: "192.168.2.105", performed_at: 3.days.ago)
+AuditLog.create!(user: users[:tanaka], action: "update", auditable_type: "User", auditable_id: users[:morita].id, changes_json: { is_active: [ true, false ], deactivated_on: [ nil, "2024-03-31" ] }, ip_address: "192.168.1.100", performed_at: 300.days.ago)
+AuditLog.create!(user: users[:kimura], action: "create", auditable_type: "Inspection", auditable_id: inspections[:insp9].id, changes_json: { status: [ nil, "approved" ] }, ip_address: "192.168.2.105", performed_at: 3.days.ago)
 AuditLog.create!(user: users[:fujita], action: "create", auditable_type: "StockTransaction", auditable_id: 1, changes_json: { transaction_type: "outgoing", quantity: 2 }, ip_address: "192.168.1.110", performed_at: 15.days.ago)
 
 puts ""

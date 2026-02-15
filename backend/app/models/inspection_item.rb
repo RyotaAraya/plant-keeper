@@ -5,7 +5,7 @@ class InspectionItem < ApplicationRecord
 
   has_one :trouble, dependent: :nullify
 
-  enum :item_type, { check: 'check', measurement: 'measurement', text: 'text' }
+  enum :item_type, { check: "check", measurement: "measurement", text: "text" }
 
   validates :content, presence: true
   validates :position, presence: true

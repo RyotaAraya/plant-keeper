@@ -1,7 +1,7 @@
 module Api
   module V1
     class OrdersController < BaseController
-      before_action :set_order, only: [:show, :update]
+      before_action :set_order, only: [ :show, :update ]
 
       # GET /api/v1/orders
       def index
@@ -19,8 +19,8 @@ module Api
         render json: {
           data: orders.as_json(
             include: {
-              material: { only: [:id, :name, :part_number] },
-              user: { only: [:id, :name] }
+              material: { only: [ :id, :name, :part_number ] },
+              user: { only: [ :id, :name ] }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }
@@ -32,8 +32,8 @@ module Api
         render json: {
           data: @order.as_json(
             include: {
-              material: { only: [:id, :name, :part_number] },
-              user: { only: [:id, :name] }
+              material: { only: [ :id, :name, :part_number ] },
+              user: { only: [ :id, :name ] }
             }
           )
         }
@@ -57,8 +57,8 @@ module Api
           render json: {
             data: @order.as_json(
               include: {
-                material: { only: [:id, :name, :part_number] },
-                user: { only: [:id, :name] }
+                material: { only: [ :id, :name, :part_number ] },
+                user: { only: [ :id, :name ] }
               }
             )
           }

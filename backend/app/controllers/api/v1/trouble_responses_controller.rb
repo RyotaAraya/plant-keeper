@@ -8,7 +8,7 @@ module Api
 
         if response.save
           render json: {
-            data: response.as_json(include: { user: { only: [:id, :name] } })
+            data: response.as_json(include: { user: { only: [ :id, :name ] } })
           }, status: :created
         else
           render json: { errors: response.errors.full_messages }, status: :unprocessable_entity
@@ -21,7 +21,7 @@ module Api
 
         if response.update(response_params)
           render json: {
-            data: response.as_json(include: { user: { only: [:id, :name] } })
+            data: response.as_json(include: { user: { only: [ :id, :name ] } })
           }
         else
           render json: { errors: response.errors.full_messages }, status: :unprocessable_entity

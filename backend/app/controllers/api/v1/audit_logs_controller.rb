@@ -16,7 +16,7 @@ module Api
         logs = logs.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
-          data: logs.as_json(include: { user: { only: [:id, :name] } }),
+          data: logs.as_json(include: { user: { only: [ :id, :name ] } }),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end

@@ -12,7 +12,7 @@ class CreateAuditLogs < ActiveRecord::Migration[7.1]
       t.datetime :created_at, null: false
     end
 
-    add_index :audit_logs, [:auditable_type, :auditable_id]
+    add_index :audit_logs, [ :auditable_type, :auditable_id ]
     add_index :audit_logs, :action
     add_index :audit_logs, :performed_at
   end

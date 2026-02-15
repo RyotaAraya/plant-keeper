@@ -6,7 +6,7 @@ module Api
         warehouses = Warehouse.includes(:site).order(:name).all
         warehouses = warehouses.where(site_id: params[:site_id]) if params[:site_id].present?
         render json: {
-          data: warehouses.as_json(include: { site: { only: [:id, :name] } })
+          data: warehouses.as_json(include: { site: { only: [ :id, :name ] } })
         }
       end
 

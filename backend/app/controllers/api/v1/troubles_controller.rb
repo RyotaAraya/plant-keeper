@@ -1,7 +1,7 @@
 module Api
   module V1
     class TroublesController < BaseController
-      before_action :set_trouble, only: [:show, :update]
+      before_action :set_trouble, only: [ :show, :update ]
 
       # GET /api/v1/troubles
       def index
@@ -26,10 +26,10 @@ module Api
         render json: {
           data: troubles.as_json(
             include: {
-              equipment: { only: [:id, :name] },
-              instrument: { only: [:id, :tag_number] },
-              reported_by: { only: [:id, :name] },
-              assigned_to: { only: [:id, :name] }
+              equipment: { only: [ :id, :name ] },
+              instrument: { only: [ :id, :tag_number ] },
+              reported_by: { only: [ :id, :name ] },
+              assigned_to: { only: [ :id, :name ] }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }
@@ -41,16 +41,16 @@ module Api
         render json: {
           data: @trouble.as_json(
             include: {
-              equipment: { only: [:id, :name] },
-              instrument: { only: [:id, :tag_number] },
-              reported_by: { only: [:id, :name] },
-              assigned_to: { only: [:id, :name] },
+              equipment: { only: [ :id, :name ] },
+              instrument: { only: [ :id, :tag_number ] },
+              reported_by: { only: [ :id, :name ] },
+              assigned_to: { only: [ :id, :name ] },
               inspection_item: {
-                only: [:id, :content, :measured_value],
-                include: { inspection: { only: [:id, :inspected_at, :inspection_type] } }
+                only: [ :id, :content, :measured_value ],
+                include: { inspection: { only: [ :id, :inspected_at, :inspection_type ] } }
               },
               trouble_responses: {
-                include: { user: { only: [:id, :name] } }
+                include: { user: { only: [ :id, :name ] } }
               }
             }
           )
@@ -75,9 +75,9 @@ module Api
           render json: {
             data: @trouble.as_json(
               include: {
-                equipment: { only: [:id, :name] },
-                instrument: { only: [:id, :tag_number] },
-                assigned_to: { only: [:id, :name] }
+                equipment: { only: [ :id, :name ] },
+                instrument: { only: [ :id, :tag_number ] },
+                assigned_to: { only: [ :id, :name ] }
               }
             )
           }

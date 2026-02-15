@@ -7,7 +7,7 @@ module Api
 
         if assignment.save
           render json: {
-            data: assignment.as_json(include: { user: { only: [:id, :name] } })
+            data: assignment.as_json(include: { user: { only: [ :id, :name ] } })
           }, status: :created
         else
           render json: { errors: assignment.errors.full_messages }, status: :unprocessable_entity

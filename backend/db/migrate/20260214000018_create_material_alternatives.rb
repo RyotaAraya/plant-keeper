@@ -8,6 +8,6 @@ class CreateMaterialAlternatives < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :material_alternatives, [:material_id, :alternative_material_id], unique: true, name: "index_material_alternatives_uniqueness"
+    add_index :material_alternatives, [ :material_id, :alternative_material_id ], unique: true, name: "index_material_alternatives_uniqueness"
   end
 end

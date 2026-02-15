@@ -1,7 +1,7 @@
 module Api
   module V1
     class EquipmentsController < BaseController
-      before_action :set_equipment, only: [:show, :update]
+      before_action :set_equipment, only: [ :show, :update ]
 
       # GET /api/v1/equipments
       def index
@@ -16,7 +16,7 @@ module Api
         equipments = equipments.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
-          data: equipments.as_json(include: { site: { only: [:id, :name] } }),
+          data: equipments.as_json(include: { site: { only: [ :id, :name ] } }),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end
@@ -26,12 +26,12 @@ module Api
         render json: {
           data: @equipment.as_json(
             include: {
-              instruments: { only: [:id, :tag_number, :instrument_type, :location] },
+              instruments: { only: [ :id, :tag_number, :instrument_type, :location ] },
               equipment_assignments: {
-                include: { user: { only: [:id, :name, :email, :role] } },
-                only: [:id, :user_id, :role, :started_on, :ended_on]
+                include: { user: { only: [ :id, :name, :email, :role ] } },
+                only: [ :id, :user_id, :role, :started_on, :ended_on ]
               },
-              scheduled_maintenances: { only: [:id, :title, :scheduled_date, :status] }
+              scheduled_maintenances: { only: [ :id, :title, :scheduled_date, :status ] }
             }
           ).merge(
             troubles_count: @equipment.troubles.count

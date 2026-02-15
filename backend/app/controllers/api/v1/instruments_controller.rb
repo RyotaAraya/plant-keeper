@@ -1,7 +1,7 @@
 module Api
   module V1
     class InstrumentsController < BaseController
-      before_action :set_instrument, only: [:show, :update]
+      before_action :set_instrument, only: [ :show, :update ]
 
       def index
         instruments = Instrument.includes(:equipment, :service, :line_class)
@@ -17,9 +17,9 @@ module Api
 
         render json: {
           data: instruments.as_json(include: {
-            equipment: { only: [:id, :name] },
-            service: { only: [:id, :name] },
-            line_class: { only: [:id, :code] }
+            equipment: { only: [ :id, :name ] },
+            service: { only: [ :id, :name ] },
+            line_class: { only: [ :id, :code ] }
           }),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
@@ -28,12 +28,12 @@ module Api
       def show
         render json: {
           data: @instrument.as_json(include: {
-            equipment: { only: [:id, :name], include: { site: { only: [:id, :name] } } },
+            equipment: { only: [ :id, :name ], include: { site: { only: [ :id, :name ] } } },
             service: {},
             line_class: {}
           }).merge(
-            recent_troubles: @instrument.troubles.order(reported_at: :desc).limit(5).as_json(only: [:id, :title, :status, :priority, :reported_at]),
-            recent_inspections: @instrument.inspections.order(inspected_at: :desc).limit(5).as_json(only: [:id, :inspection_type, :status, :inspected_at])
+            recent_troubles: @instrument.troubles.order(reported_at: :desc).limit(5).as_json(only: [ :id, :title, :status, :priority, :reported_at ]),
+            recent_inspections: @instrument.inspections.order(inspected_at: :desc).limit(5).as_json(only: [ :id, :inspection_type, :status, :inspected_at ])
           )
         }
       end

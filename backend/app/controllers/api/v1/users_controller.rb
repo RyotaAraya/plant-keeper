@@ -1,7 +1,7 @@
 module Api
   module V1
     class UsersController < BaseController
-      before_action :set_user, only: [:show, :update]
+      before_action :set_user, only: [ :show, :update ]
 
       # GET /api/v1/users
       def index
@@ -18,8 +18,8 @@ module Api
 
         render json: {
           data: users.as_json(
-            only: [:id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on],
-            include: { department: { only: [:id, :name] } }
+            only: [ :id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on ],
+            include: { department: { only: [ :id, :name ] } }
           )
         }
       end
@@ -28,12 +28,12 @@ module Api
       def show
         render json: {
           data: @user.as_json(
-            only: [:id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on, :created_at],
+            only: [ :id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on, :created_at ],
             include: {
-              department: { only: [:id, :name] },
+              department: { only: [ :id, :name ] },
               equipment_assignments: {
-                include: { equipment: { only: [:id, :name] } },
-                only: [:id, :equipment_id, :role, :started_on, :ended_on]
+                include: { equipment: { only: [ :id, :name ] } },
+                only: [ :id, :equipment_id, :role, :started_on, :ended_on ]
               }
             }
           )
@@ -45,8 +45,8 @@ module Api
         if @user.update(user_params)
           render json: {
             data: @user.as_json(
-              only: [:id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on],
-              include: { department: { only: [:id, :name] } }
+              only: [ :id, :email, :name, :role, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on ],
+              include: { department: { only: [ :id, :name ] } }
             )
           }
         else

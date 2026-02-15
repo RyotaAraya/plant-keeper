@@ -9,8 +9,8 @@ class Inspection < ApplicationRecord
 
   has_many_attached :attachments
 
-  enum :inspection_type, { routine: 'routine', periodic: 'periodic', telemetry: 'telemetry', operation_check: 'operation_check' }
-  enum :status, { draft: 'draft', submitted: 'submitted', approval_requested: 'approval_requested', approved: 'approved' }
+  enum :inspection_type, { routine: "routine", periodic: "periodic", telemetry: "telemetry", operation_check: "operation_check" }
+  enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
 end

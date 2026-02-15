@@ -1,7 +1,7 @@
 module Api
   module V1
     class RepairsController < BaseController
-      before_action :set_repair, only: [:show, :update]
+      before_action :set_repair, only: [ :show, :update ]
 
       # GET /api/v1/repairs
       def index
@@ -18,8 +18,8 @@ module Api
         render json: {
           data: repairs.as_json(
             include: {
-              stock: { include: { material: { only: [:id, :name, :part_number] } }, only: [:id, :serial_number] },
-              requested_by: { only: [:id, :name] }
+              stock: { include: { material: { only: [ :id, :name, :part_number ] } }, only: [ :id, :serial_number ] },
+              requested_by: { only: [ :id, :name ] }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }
@@ -33,12 +33,12 @@ module Api
             include: {
               stock: {
                 include: {
-                  material: { only: [:id, :name, :part_number] },
-                  warehouse: { only: [:id, :name] }
+                  material: { only: [ :id, :name, :part_number ] },
+                  warehouse: { only: [ :id, :name ] }
                 }
               },
-              trouble: { only: [:id, :title, :status] },
-              requested_by: { only: [:id, :name] }
+              trouble: { only: [ :id, :title, :status ] },
+              requested_by: { only: [ :id, :name ] }
             }
           )
         }
@@ -50,7 +50,7 @@ module Api
         repair.requested_by = current_user
 
         if repair.save
-          repair.stock&.update(status: 'awaiting_repair')
+          repair.stock&.update(status: "awaiting_repair")
           render json: { data: repair.as_json }, status: :created
         else
           render json: { errors: repair.errors.full_messages }, status: :unprocessable_entity
@@ -61,12 +61,12 @@ module Api
       def update
         if @repair.update(repair_params)
           case @repair.status
-          when 'shipped'
-            @repair.stock&.update(status: 'under_repair')
-          when 'completed'
-            @repair.stock&.update(status: 'available')
-          when 'disposed'
-            @repair.stock&.update(status: 'disposed')
+          when "shipped"
+            @repair.stock&.update(status: "under_repair")
+          when "completed"
+            @repair.stock&.update(status: "available")
+          when "disposed"
+            @repair.stock&.update(status: "disposed")
           end
           render json: { data: @repair.as_json }
         else
@@ -77,7 +77,7 @@ module Api
       private
 
       def set_repair
-        @repair = Repair.includes(:stock, :trouble, :requested_by, stock: [:material, :warehouse]).find(params[:id])
+        @repair = Repair.includes(:stock, :trouble, :requested_by, stock: [ :material, :warehouse ]).find(params[:id])
       end
 
       def repair_params

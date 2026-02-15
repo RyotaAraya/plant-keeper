@@ -9,13 +9,13 @@ module Api
             troubles: {
               open: Trouble.open.count,
               in_progress: Trouble.in_progress.count,
-              critical: Trouble.where(priority: 'critical').where.not(status: 'closed').count,
-              resolved_this_month: Trouble.resolved.where('resolved_at >= ?', Time.current.beginning_of_month).count
+              critical: Trouble.where(priority: "critical").where.not(status: "closed").count,
+              resolved_this_month: Trouble.resolved.where("resolved_at >= ?", Time.current.beginning_of_month).count
             },
             # 点検統計
             inspections: {
               pending_approval: Inspection.approval_requested.count,
-              this_month: Inspection.where('inspected_at >= ?', Time.current.beginning_of_month).count,
+              this_month: Inspection.where("inspected_at >= ?", Time.current.beginning_of_month).count,
               draft: Inspection.draft.count
             },
             # 定期整備
@@ -26,11 +26,11 @@ module Api
                 .where(scheduled_date: Date.today..30.days.from_now)
                 .order(:scheduled_date)
                 .limit(5)
-                .as_json(include: { equipment: { only: [:id, :name] } })
+                .as_json(include: { equipment: { only: [ :id, :name ] } })
             },
             # 在庫アラート（発注点以下の資材）
             stock_alerts: Material
-              .where(reorder_method: 'reorder_point')
+              .where(reorder_method: "reorder_point")
               .where.not(reorder_point: nil)
               .select { |m|
                 total = m.stocks.sum(:quantity)
@@ -43,7 +43,7 @@ module Api
               draft: Order.draft.count,
               ordered: Order.ordered.count,
               recent: Order.order(ordered_on: :desc).limit(5).as_json(
-                include: { material: { only: [:id, :name] }, user: { only: [:id, :name] } }
+                include: { material: { only: [ :id, :name ] }, user: { only: [ :id, :name ] } }
               )
             },
             # 修理状況

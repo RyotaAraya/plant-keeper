@@ -1,7 +1,7 @@
 module Api
   module V1
     class MaterialsController < BaseController
-      before_action :set_material, only: [:show, :update]
+      before_action :set_material, only: [ :show, :update ]
 
       # GET /api/v1/materials
       def index
@@ -12,7 +12,7 @@ module Api
 
         if params[:q].present?
           q = "%#{params[:q]}%"
-          normalized = params[:q].gsub(/[-\s]/, '')
+          normalized = params[:q].gsub(/[-\s]/, "")
           materials = materials.where(
             "name ILIKE ? OR part_number ILIKE ? OR normalized_part_number ILIKE ?",
             q, q, "%#{normalized}%"
@@ -27,7 +27,7 @@ module Api
         materials = materials.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
-          data: materials.as_json(include: { manufacturer: { only: [:id, :name] } }),
+          data: materials.as_json(include: { manufacturer: { only: [ :id, :name ] } }),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end
@@ -39,12 +39,12 @@ module Api
 
         render json: {
           data: @material.as_json(
-            include: { manufacturer: { only: [:id, :name] } }
+            include: { manufacturer: { only: [ :id, :name ] } }
           ).merge(
             stock_summary: stocks_summary.map { |wid, qty| { warehouse: warehouses[wid]&.name, quantity: qty } },
             total_stock: stocks_summary.values.sum,
             recent_orders: @material.orders.order(ordered_on: :desc).limit(5).as_json(
-              include: { user: { only: [:id, :name] } }
+              include: { user: { only: [ :id, :name ] } }
             )
           )
         }
@@ -63,7 +63,7 @@ module Api
       # PATCH /api/v1/materials/:id
       def update
         if @material.update(material_params)
-          render json: { data: @material.as_json(include: { manufacturer: { only: [:id, :name] } }) }
+          render json: { data: @material.as_json(include: { manufacturer: { only: [ :id, :name ] } }) }
         else
           render json: { errors: @material.errors.full_messages }, status: :unprocessable_entity
         end

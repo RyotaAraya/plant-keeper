@@ -11,8 +11,8 @@ module Api
         render json: {
           data: departments.order(:level, :name).as_json(
             include: {
-              site: { only: [:id, :name] },
-              parent: { only: [:id, :name, :level] }
+              site: { only: [ :id, :name ] },
+              parent: { only: [ :id, :name, :level ] }
             }
           )
         }
@@ -21,7 +21,7 @@ module Api
       def create
         department = Department.new(department_params)
         if department.save
-          render json: { data: department.as_json(include: { site: { only: [:id, :name] }, parent: { only: [:id, :name, :level] } }) }, status: :created
+          render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }, status: :created
         else
           render json: { errors: department.errors.full_messages }, status: :unprocessable_entity
         end
@@ -30,7 +30,7 @@ module Api
       def update
         department = Department.find(params[:id])
         if department.update(department_params)
-          render json: { data: department.as_json(include: { site: { only: [:id, :name] }, parent: { only: [:id, :name, :level] } }) }
+          render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }
         else
           render json: { errors: department.errors.full_messages }, status: :unprocessable_entity
         end

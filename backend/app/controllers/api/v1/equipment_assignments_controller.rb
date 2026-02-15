@@ -9,8 +9,8 @@ module Api
 
         render json: {
           data: assignments.as_json(include: {
-            user: { only: [:id, :name, :email, :role] },
-            equipment: { only: [:id, :name] }
+            user: { only: [ :id, :name, :email, :role ] },
+            equipment: { only: [ :id, :name ] }
           })
         }
       end
@@ -18,7 +18,7 @@ module Api
       def create
         assignment = EquipmentAssignment.new(assignment_params)
         if assignment.save
-          render json: { data: assignment.as_json(include: { user: { only: [:id, :name] } }) }, status: :created
+          render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }, status: :created
         else
           render json: { errors: assignment.errors.full_messages }, status: :unprocessable_entity
         end
@@ -27,7 +27,7 @@ module Api
       def update
         assignment = EquipmentAssignment.find(params[:id])
         if assignment.update(assignment_params)
-          render json: { data: assignment.as_json(include: { user: { only: [:id, :name] } }) }
+          render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }
         else
           render json: { errors: assignment.errors.full_messages }, status: :unprocessable_entity
         end

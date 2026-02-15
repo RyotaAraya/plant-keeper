@@ -9,9 +9,9 @@ class Material < ApplicationRecord
 
   has_many_attached :attachments
 
-  enum :availability, { custom: 'custom', catalog: 'catalog', commodity: 'commodity' }
-  enum :category, { instrument: 'instrument', valve: 'valve', electrical: 'electrical', piping: 'piping' }
-  enum :reorder_method, { reorder_point: 'reorder_point', use_based: 'use_based' }
+  enum :availability, { custom: "custom", catalog: "catalog", commodity: "commodity" }
+  enum :category, { instrument: "instrument", valve: "valve", electrical: "electrical", piping: "piping" }
+  enum :reorder_method, { reorder_point: "reorder_point", use_based: "use_based" }
 
   validates :part_number, presence: true
   validates :name, presence: true
@@ -21,6 +21,6 @@ class Material < ApplicationRecord
   private
 
   def set_normalized_part_number
-    self.normalized_part_number = part_number&.gsub(/[-\s]/, '')
+    self.normalized_part_number = part_number&.gsub(/[-\s]/, "")
   end
 end

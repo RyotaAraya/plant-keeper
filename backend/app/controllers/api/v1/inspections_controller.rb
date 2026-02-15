@@ -1,7 +1,7 @@
 module Api
   module V1
     class InspectionsController < BaseController
-      before_action :set_inspection, only: [:show, :update]
+      before_action :set_inspection, only: [ :show, :update ]
 
       # GET /api/v1/inspections
       def index
@@ -22,10 +22,10 @@ module Api
         render json: {
           data: inspections.as_json(
             include: {
-              user: { only: [:id, :name] },
-              equipment: { only: [:id, :name] },
-              department: { only: [:id, :name] },
-              checklist_template: { only: [:id, :name] }
+              user: { only: [ :id, :name ] },
+              equipment: { only: [ :id, :name ] },
+              department: { only: [ :id, :name ] },
+              checklist_template: { only: [ :id, :name ] }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }
@@ -37,15 +37,15 @@ module Api
         render json: {
           data: @inspection.as_json(
             include: {
-              user: { only: [:id, :name] },
-              equipment: { only: [:id, :name] },
-              department: { only: [:id, :name] },
-              instrument: { only: [:id, :tag_number] },
-              checklist_template: { only: [:id, :name] },
+              user: { only: [ :id, :name ] },
+              equipment: { only: [ :id, :name ] },
+              department: { only: [ :id, :name ] },
+              instrument: { only: [ :id, :tag_number ] },
+              checklist_template: { only: [ :id, :name ] },
               inspection_items: {
                 include: {
-                  trouble: { only: [:id, :title, :status] },
-                  instrument: { only: [:id, :tag_number] }
+                  trouble: { only: [ :id, :title, :status ] },
+                  instrument: { only: [ :id, :tag_number ] }
                 }
               }
             }
@@ -67,7 +67,7 @@ module Api
                 checklist_template_item_id: item[:checklist_template_item_id],
                 position: idx + 1,
                 content: item[:content],
-                item_type: item[:item_type] || 'check',
+                item_type: item[:item_type] || "check",
                 checked: item[:checked] || false,
                 measured_value: item[:measured_value],
                 text_value: item[:text_value],
@@ -84,8 +84,8 @@ module Api
                   reported_by: current_user,
                   title: item[:defect_title],
                   description: item[:defect_description],
-                  status: 'open',
-                  priority: item[:defect_priority] || 'medium',
+                  status: "open",
+                  priority: item[:defect_priority] || "medium",
                   reported_at: Time.current
                 )
               end
@@ -95,10 +95,10 @@ module Api
 
         inspection.reload
         render json: {
-          data: inspection.as_json(include: { inspection_items: { include: { trouble: { only: [:id, :title] } } } })
+          data: inspection.as_json(include: { inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/inspections/:id
@@ -128,7 +128,7 @@ module Api
                   checklist_template_item_id: item[:checklist_template_item_id],
                   position: idx + 1,
                   content: item[:content],
-                  item_type: item[:item_type] || 'check',
+                  item_type: item[:item_type] || "check",
                   checked: item[:checked] || false,
                   measured_value: item[:measured_value],
                   text_value: item[:text_value],
@@ -146,8 +146,8 @@ module Api
                   reported_by: current_user,
                   title: item[:defect_title],
                   description: item[:defect_description],
-                  status: 'open',
-                  priority: item[:defect_priority] || 'medium',
+                  status: "open",
+                  priority: item[:defect_priority] || "medium",
                   reported_at: Time.current
                 )
               end
@@ -157,10 +157,10 @@ module Api
 
         @inspection.reload
         render json: {
-          data: @inspection.as_json(include: { inspection_items: { include: { trouble: { only: [:id, :title] } } } })
+          data: @inspection.as_json(include: { inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
         }
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       private
@@ -168,7 +168,7 @@ module Api
       def set_inspection
         @inspection = Inspection.includes(
           :user, :equipment, :department, :instrument, :checklist_template,
-          inspection_items: [:trouble, :instrument]
+          inspection_items: [ :trouble, :instrument ]
         ).find(params[:id])
       end
 

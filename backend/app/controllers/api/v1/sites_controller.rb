@@ -1,7 +1,7 @@
 module Api
   module V1
     class SitesController < BaseController
-      before_action :set_site, only: [:show, :update]
+      before_action :set_site, only: [ :show, :update ]
 
       # GET /api/v1/sites
       def index

@@ -1,7 +1,7 @@
 module Api
   module V1
     class ScheduledMaintenancesController < BaseController
-      before_action :set_maintenance, only: [:show, :update]
+      before_action :set_maintenance, only: [ :show, :update ]
 
       # GET /api/v1/scheduled_maintenances
       def index
@@ -19,10 +19,10 @@ module Api
         render json: {
           data: maintenances.as_json(
             include: {
-              equipment: { only: [:id, :name] },
+              equipment: { only: [ :id, :name ] },
               maintenance_assignments: {
-                include: { user: { only: [:id, :name] } },
-                only: [:id, :user_id, :role]
+                include: { user: { only: [ :id, :name ] } },
+                only: [ :id, :user_id, :role ]
               }
             }
           ),
@@ -35,10 +35,10 @@ module Api
         render json: {
           data: @maintenance.as_json(
             include: {
-              equipment: { only: [:id, :name] },
+              equipment: { only: [ :id, :name ] },
               maintenance_assignments: {
-                include: { user: { only: [:id, :name] } },
-                only: [:id, :user_id, :role]
+                include: { user: { only: [ :id, :name ] } },
+                only: [ :id, :user_id, :role ]
               }
             }
           )
@@ -56,7 +56,7 @@ module Api
             params[:scheduled_maintenance][:assignments].each do |assignment|
               maintenance.maintenance_assignments.create!(
                 user_id: assignment[:user_id],
-                role: assignment[:role] || 'member'
+                role: assignment[:role] || "member"
               )
             end
           end
@@ -65,11 +65,11 @@ module Api
         maintenance.reload
         render json: {
           data: maintenance.as_json(
-            include: { maintenance_assignments: { include: { user: { only: [:id, :name] } } } }
+            include: { maintenance_assignments: { include: { user: { only: [ :id, :name ] } } } }
           )
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/scheduled_maintenances/:id
@@ -82,7 +82,7 @@ module Api
             params[:scheduled_maintenance][:assignments].each do |assignment|
               @maintenance.maintenance_assignments.create!(
                 user_id: assignment[:user_id],
-                role: assignment[:role] || 'member'
+                role: assignment[:role] || "member"
               )
             end
           end
@@ -92,16 +92,16 @@ module Api
         render json: {
           data: @maintenance.as_json(
             include: {
-              equipment: { only: [:id, :name] },
+              equipment: { only: [ :id, :name ] },
               maintenance_assignments: {
-                include: { user: { only: [:id, :name] } },
-                only: [:id, :user_id, :role]
+                include: { user: { only: [ :id, :name ] } },
+                only: [ :id, :user_id, :role ]
               }
             }
           )
         }
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       private

@@ -1,7 +1,7 @@
 module Api
   module V1
     class StocksController < BaseController
-      before_action :set_stock, only: [:show, :update]
+      before_action :set_stock, only: [ :show, :update ]
 
       # GET /api/v1/stocks
       def index
@@ -20,8 +20,8 @@ module Api
         render json: {
           data: stocks.as_json(
             include: {
-              material: { only: [:id, :name, :part_number] },
-              warehouse: { only: [:id, :name] }
+              material: { only: [ :id, :name, :part_number ] },
+              warehouse: { only: [ :id, :name ] }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }
@@ -33,14 +33,14 @@ module Api
         render json: {
           data: @stock.as_json(
             include: {
-              material: { only: [:id, :name, :part_number] },
-              warehouse: { only: [:id, :name] },
+              material: { only: [ :id, :name, :part_number ] },
+              warehouse: { only: [ :id, :name ] },
               stock_transactions: {
-                include: { user: { only: [:id, :name] } },
+                include: { user: { only: [ :id, :name ] } },
                 methods: []
               },
               repairs: {
-                include: { requested_by: { only: [:id, :name] } }
+                include: { requested_by: { only: [ :id, :name ] } }
               }
             }
           )
