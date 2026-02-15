@@ -24,11 +24,6 @@ const selectedTeamId = ref<number | null>(null)
 const employmentTypeLabel: Record<string, string> = {
   employee: '正社員', dispatch: '派遣社員', contractor: '協力会社',
 }
-const employmentTypeOptions = [
-  { title: '正社員', value: 'employee' },
-  { title: '派遣社員', value: 'dispatch' },
-  { title: '協力会社', value: 'contractor' },
-]
 
 const systemRoleLabel: Record<string, string> = {
   admin: '管理者', supervisor: '監督者', member: '一般', worker: '作業員',
