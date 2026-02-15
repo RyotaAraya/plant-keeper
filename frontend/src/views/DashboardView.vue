@@ -133,7 +133,7 @@ onMounted(fetchDashboard)
 
       <v-row class="mt-2">
         <!-- 緊急トラブル -->
-        <v-col cols="12" md="6" v-if="dashboard.troubles.critical > 0">
+        <v-col v-if="dashboard.troubles.critical > 0" cols="12" md="6">
           <v-card color="error" variant="tonal">
             <v-card-title>
               <v-icon class="mr-2">mdi-alert-octagon</v-icon>

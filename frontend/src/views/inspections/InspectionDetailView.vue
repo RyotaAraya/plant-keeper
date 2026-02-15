@@ -169,7 +169,7 @@ onMounted(fetchInspection)
             <template #prepend>
               <v-icon color="error">mdi-alert-circle</v-icon>
             </template>
-            <template #append v-if="item.trouble">
+            <template v-if="item.trouble" #append>
               <v-chip size="x-small" color="primary">トラブル #{{ item.trouble.id }}</v-chip>
             </template>
           </v-list-item>

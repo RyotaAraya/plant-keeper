@@ -131,7 +131,7 @@ onMounted(fetchStock)
               <div class="text-caption text-grey">シリアル番号</div>
               <div>{{ stock.serial_number || '—' }}</div>
             </v-col>
-            <v-col cols="6" md="3" v-if="stock.notes">
+            <v-col v-if="stock.notes" cols="6" md="3">
               <div class="text-caption text-grey">備考</div>
               <div>{{ stock.notes }}</div>
             </v-col>
@@ -141,7 +141,7 @@ onMounted(fetchStock)
 
       <!-- 入出庫履歴 -->
       <h2 class="text-h6 mb-3">入出庫履歴</h2>
-      <v-table density="compact" v-if="stock.stock_transactions?.length">
+      <v-table v-if="stock.stock_transactions?.length" density="compact">
         <thead>
           <tr>
             <th width="160">日時</th>

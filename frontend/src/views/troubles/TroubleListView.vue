@@ -8,7 +8,6 @@ const router = useRouter()
 
 const troubles = ref<any[]>([])
 const equipments = ref<any[]>([])
-const users = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 const page = ref(1)
@@ -194,8 +193,8 @@ watch([filters, page], fetchTroubles, { deep: true })
       :items="troubles"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.reported_at="{ item }">
         {{ formatDate(item.reported_at) }}
@@ -218,7 +217,7 @@ watch([filters, page], fetchTroubles, { deep: true })
       </template>
     </v-data-table>
 
-    <div class="d-flex justify-center mt-4" v-if="totalCount > 25">
+    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
       <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
     </div>
 

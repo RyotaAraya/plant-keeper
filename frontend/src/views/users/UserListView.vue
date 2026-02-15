@@ -114,8 +114,8 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       :items="users"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.role="{ item }">
         {{ roleLabel[item.role] || item.role }}

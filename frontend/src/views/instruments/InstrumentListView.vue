@@ -132,8 +132,8 @@ watch(selectedEquipmentId, fetchInstruments)
       :items="instruments"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     />
 
     <v-dialog v-model="dialog" max-width="600">

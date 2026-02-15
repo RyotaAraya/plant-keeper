@@ -191,8 +191,8 @@ watch([filters, page], fetchMaterials, { deep: true })
       :items="materials"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.category="{ item }">
         {{ categoryLabel[item.category] || item.category }}
@@ -205,7 +205,7 @@ watch([filters, page], fetchMaterials, { deep: true })
       </template>
     </v-data-table>
 
-    <div class="d-flex justify-center mt-4" v-if="totalCount > 25">
+    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
       <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
     </div>
 
@@ -253,7 +253,7 @@ watch([filters, page], fetchMaterials, { deep: true })
             <v-col cols="6" md="3">
               <v-checkbox v-model="form.is_hazardous" label="危険物" density="compact" />
             </v-col>
-            <v-col cols="12" md="6" v-if="form.is_hazardous">
+            <v-col v-if="form.is_hazardous" cols="12" md="6">
               <v-text-field v-model="form.hazard_note" label="危険物備考" />
             </v-col>
           </v-row>

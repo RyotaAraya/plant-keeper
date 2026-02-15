@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 
-const router = useRouter()
 const orders = ref<any[]>([])
 const materials = ref<any[]>([])
 const loading = ref(false)
@@ -185,7 +183,7 @@ watch([filters, page], fetchOrders, { deep: true })
       </template>
     </v-data-table>
 
-    <div class="d-flex justify-center mt-4" v-if="totalCount > 25">
+    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
       <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
     </div>
 

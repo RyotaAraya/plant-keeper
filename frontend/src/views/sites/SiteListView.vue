@@ -40,13 +40,6 @@ function openCreate() {
   dialog.value = true
 }
 
-function openEdit(site: any) {
-  editingId.value = site.id
-  form.value = { name: site.name, prefecture: site.prefecture, address: site.address, is_active: site.is_active, closed_on: site.closed_on || '' }
-  errors.value = []
-  dialog.value = true
-}
-
 async function save() {
   errors.value = []
   try {
@@ -90,8 +83,8 @@ watch(showInactive, fetchSites)
       :items="sites"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'success' : 'grey'" size="small">

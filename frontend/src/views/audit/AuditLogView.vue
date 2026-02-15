@@ -119,7 +119,7 @@ watch([filters, page], fetchLogs, { deep: true })
       </template>
     </v-data-table>
 
-    <div class="d-flex justify-center mt-4" v-if="totalCount > 50">
+    <div v-if="totalCount > 50" class="d-flex justify-center mt-4">
       <v-pagination v-model="page" :length="Math.ceil(totalCount / 50)" />
     </div>
   </MainLayout>

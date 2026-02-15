@@ -47,7 +47,7 @@ onMounted(fetchSite)
           <v-row>
             <v-col cols="12" md="4"><strong>所在県:</strong> {{ site.prefecture }}</v-col>
             <v-col cols="12" md="4"><strong>住所:</strong> {{ site.address }}</v-col>
-            <v-col cols="12" md="4" v-if="site.closed_on"><strong>閉鎖日:</strong> {{ site.closed_on }}</v-col>
+            <v-col v-if="site.closed_on" cols="12" md="4"><strong>閉鎖日:</strong> {{ site.closed_on }}</v-col>
           </v-row>
           <v-row class="mt-2">
             <v-col cols="6" md="3">
@@ -78,8 +78,8 @@ onMounted(fetchSite)
               :key="eq.id"
               :title="eq.name"
               :subtitle="eq.description"
-              @click="router.push(`/equipments/${eq.id}`)"
               prepend-icon="mdi-factory"
+              @click="router.push(`/equipments/${eq.id}`)"
             />
             <v-list-item v-if="equipments.length === 0" title="設備がありません" />
           </v-list>

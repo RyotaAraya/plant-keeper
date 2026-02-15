@@ -139,8 +139,8 @@ watch([filters, page], fetchInspections, { deep: true })
       :items="inspections"
       :loading="loading"
       hover
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
       class="cursor-pointer"
+      @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.inspected_at="{ item }">
         {{ formatDate(item.inspected_at) }}
@@ -155,7 +155,7 @@ watch([filters, page], fetchInspections, { deep: true })
       </template>
     </v-data-table>
 
-    <div class="d-flex justify-center mt-4" v-if="totalCount > 25">
+    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
       <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
     </div>
   </MainLayout>

@@ -11,11 +11,6 @@ const equipment = ref<any>(null)
 const loading = ref(false)
 const tab = ref('instruments')
 
-const assignDialog = ref(false)
-const users = ref<any[]>([])
-const assignForm = ref({ user_id: null as number | null, role: '主担当', started_on: new Date().toISOString().slice(0, 10) })
-const assignErrors = ref<string[]>([])
-
 async function fetchEquipment() {
   loading.value = true
   try {
@@ -24,12 +19,6 @@ async function fetchEquipment() {
   } finally {
     loading.value = false
   }
-}
-
-async function fetchUsers() {
-  const res = await api.get('/current_user')
-  // Fetch all users for assignment - placeholder until users API exists
-  users.value = []
 }
 
 function currentAssignments() {
@@ -97,8 +86,8 @@ onMounted(fetchEquipment)
             ]"
             :items="equipment.instruments || []"
             hover
-            @click:row="(_e: any, { item }: any) => router.push(`/instruments/${item.id}`)"
             class="cursor-pointer"
+            @click:row="(_e: any, { item }: any) => router.push(`/instruments/${item.id}`)"
           />
         </v-window-item>
 

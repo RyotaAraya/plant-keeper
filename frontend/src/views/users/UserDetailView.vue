@@ -121,7 +121,7 @@ onMounted(() => {
               <div class="text-caption text-grey">前職</div>
               <div>{{ user.previous_company || '—' }}</div>
             </v-col>
-            <v-col cols="6" md="3" v-if="user.deactivated_on">
+            <v-col v-if="user.deactivated_on" cols="6" md="3">
               <div class="text-caption text-grey">退職日</div>
               <div>{{ user.deactivated_on }}</div>
             </v-col>
@@ -130,7 +130,7 @@ onMounted(() => {
       </v-card>
 
       <h2 class="text-h6 mb-3">設備担当</h2>
-      <v-table density="compact" v-if="user.equipment_assignments?.length">
+      <v-table v-if="user.equipment_assignments?.length" density="compact">
         <thead><tr><th>設備</th><th>役割</th><th>開始日</th><th>終了日</th></tr></thead>
         <tbody>
           <tr v-for="a in user.equipment_assignments" :key="a.id">
