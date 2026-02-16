@@ -16,7 +16,9 @@
       "Bash(docker-compose:*)",
       "Bash(git stash:*)",
       "Bash(brew install:*)",
-      "Bash(lefthook install:*)"
+      "Bash(lefthook install:*)",
+      "Bash(xargs:*)",
+      "Bash(ls:*)"
     ]
   }
 }
