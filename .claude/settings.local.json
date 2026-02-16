@@ -18,7 +18,9 @@
       "Bash(brew install:*)",
       "Bash(lefthook install:*)",
       "Bash(xargs:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose up:*)"
     ]
   }
 }
