@@ -20,7 +20,8 @@
       "Bash(xargs:*)",
       "Bash(ls:*)",
       "Bash(docker compose exec:*)",
-      "Bash(docker compose up:*)"
+      "Bash(docker compose up:*)",
+      "Bash(npx vite build:*)"
     ]
   }
 }

@@ -174,7 +174,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         {{ item.company?.name || '—' }}
       </template>
       <template #item.department_path="{ item }">
-        {{ item.department?.full_path || '—' }}
+        {{ item.company?.company_type === 'owner' ? (item.department?.full_path || '—') : '—' }}
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'success' : 'grey'" size="x-small">

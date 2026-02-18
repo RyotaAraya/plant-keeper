@@ -33,9 +33,9 @@ user_data = [
   { email: "fujita@example.com",     name: "藤田 翔太",   employment_type: "employee", system_role: "member",      position: "team_leader",     dept: [ "川崎製油所", "保全部", "計器保全課", "計器Bチーム" ], join_year: 2013, pref: "静岡県" },
   { email: "nishimura@example.com",  name: "西村 拓也",   employment_type: "employee", system_role: "member",      position: "staff",           dept: [ "川崎製油所", "保全部", "計器保全課", "計器Bチーム" ], join_year: 2019, pref: "千葉県" },
   { email: "okada@example.com",      name: "岡田 雅人",   employment_type: "employee", system_role: "member",      position: "staff",           dept: [ "川崎製油所", "保全部", "計器保全課", "計器Bチーム" ], join_year: 2021, pref: "埼玉県" },
-  { email: "yoshida@example.com",    name: "吉田 浩二",   employment_type: "contractor", system_role: "supervisor", position: "staff",           dept: [ "川崎製油所", "保全部", "計器保全課", "計器Aチーム" ], join_year: 2020, pref: "神奈川県", company: techno },
-  { email: "yamada@example.com",     name: "山田 修",     employment_type: "contractor", system_role: "worker",     position: "staff",           dept: [ "川崎製油所", "保全部", "計器保全課", "計器Bチーム" ], join_year: 2021, pref: "東京都", company: plant_maint },
-  { email: "honda@example.com",      name: "本田 慎一",   employment_type: "contractor", system_role: "worker",     position: "staff",           dept: [ "川崎製油所", "保全部", "計器保全課", "計器Aチーム" ], join_year: 2023, pref: "神奈川県", company: techno },
+  { email: "yoshida@example.com",    name: "吉田 浩二",   employment_type: "contractor", system_role: "supervisor", position: "staff",           join_year: 2020, pref: "神奈川県", company: techno },
+  { email: "yamada@example.com",     name: "山田 修",     employment_type: "contractor", system_role: "worker",     position: "staff",           join_year: 2021, pref: "東京都", company: plant_maint },
+  { email: "honda@example.com",      name: "本田 慎一",   employment_type: "contractor", system_role: "worker",     position: "staff",           join_year: 2023, pref: "神奈川県", company: techno },
   # 電気保全課
   { email: "yamamoto@example.com",   name: "山本 大輔",   employment_type: "employee", system_role: "member",      position: "section_manager", dept: [ "川崎製油所", "保全部", "電気保全課" ], join_year: 2006, pref: "神奈川県" },
   { email: "watanabe@example.com",   name: "渡辺 直人",   employment_type: "employee", system_role: "member",      position: "team_leader",     dept: [ "川崎製油所", "保全部", "電気保全課", "電気チーム" ], join_year: 2014, pref: "東京都" },
@@ -94,7 +94,7 @@ user_data = [
   { email: "kitamura@example.com",   name: "北村 剛志",   employment_type: "employee", system_role: "member",      position: "team_leader",     dept: [ "堺製油所", "製造部", "第1運転課", "直A" ], join_year: 2017, pref: "兵庫県" },
   { email: "murata@example.com",     name: "村田 裕子",   employment_type: "employee", system_role: "member",      position: "staff",           dept: [ "堺製油所", "製造部", "第1運転課", "直A" ], join_year: 2021, pref: "大阪府" },
   { email: "arai@example.com",       name: "荒井 康太",   employment_type: "employee", system_role: "member",      position: "staff",           dept: [ "堺製油所", "製造部", "第1運転課", "直B" ], join_year: 2023, pref: "京都府" },
-  { email: "kubo@example.com",       name: "久保 正人",   employment_type: "contractor", system_role: "worker",     position: "staff",           dept: [ "堺製油所", "保全部", "計器保全課", "計器Aチーム" ], join_year: 2021, pref: "大阪府", company: kansai },
+  { email: "kubo@example.com",       name: "久保 正人",   employment_type: "contractor", system_role: "worker",     position: "staff",           join_year: 2021, pref: "大阪府", company: kansai },
 
   # === 和歌山製油所 ===
   { email: "abe@example.com",        name: "阿部 俊介",   employment_type: "employee", system_role: "admin",       position: "general_manager", dept: [ "和歌山製油所", "保全部" ], join_year: 2003, pref: "和歌山県" },
@@ -123,7 +123,7 @@ user_data = [
   { email: "konno@example.com",      name: "今野 真吾",   employment_type: "employee", system_role: "member",      position: "section_manager", dept: [ "仙台製油所", "製造部", "運転課" ], join_year: 2012, pref: "宮城県" },
   { email: "abe_sd@example.com",     name: "阿部 慶太",   employment_type: "employee", system_role: "member",      position: "team_leader",     dept: [ "仙台製油所", "製造部", "運転課", "直A" ], join_year: 2018, pref: "岩手県" },
   { email: "sato_sd@example.com",    name: "佐藤 彩花",   employment_type: "employee", system_role: "member",      position: "staff",           dept: [ "仙台製油所", "製造部", "運転課", "直A" ], join_year: 2022, pref: "宮城県" },
-  { email: "mikami@example.com",     name: "三上 賢治",   employment_type: "contractor", system_role: "worker",     position: "staff",           dept: [ "仙台製油所", "保全部", "計器保全課", "計器チーム" ], join_year: 2022, pref: "宮城県", company: tohoku },
+  { email: "mikami@example.com",     name: "三上 賢治",   employment_type: "contractor", system_role: "worker",     position: "staff",           join_year: 2022, pref: "宮城県", company: tohoku },
 
   # === 千葉（閉鎖）→ 退職者 ===
   { email: "morita@example.com",     name: "森田 正義",   employment_type: "employee", system_role: "member",      position: "section_manager", dept: [ "千葉製油所", "保全部", "計器保全課" ], join_year: 2006, pref: "千葉県", inactive: true },
@@ -141,7 +141,7 @@ user_data.each do |data|
     system_role: data[:system_role],
     company: data[:company] || owner,
     position: data[:position],
-    department: dept(*data[:dept]),
+    department: data[:dept] ? dept(*data[:dept]) : nil,
     join_year: data[:join_year],
     home_prefecture: data[:pref],
     is_active: data[:inactive] ? false : true,

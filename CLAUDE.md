@@ -106,10 +106,27 @@ cd frontend && npx vite build
 - 監査ログ出力: CSV のみ
 - 発注アラート: ダッシュボードにリスト表示のみ（メール通知なし）
 
+### バックエンドの規約
+- レスポンス形式: 成功 `{ data: ... }`、エラー `{ errors: [...] }`
+- ページネーション: `page`/`per_page` パラメータ → `{ data: [...], meta: { total_count, page, per_page } }`
+- フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装
+- enum はすべて文字列型（integer ではない）
+- 論理削除リソースには `destroy` ルートなし（`is_active` フラグで管理）
+- JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
+- シードファイル: `db/seeds/` 配下に 01〜13 の番号付きファイルで分割
+- 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）
+
+### フロントエンドの規約
+- API呼び出し: `src/api/axios.ts` の単一 Axios インスタンスを直接使用（サービス層なし）
+- 型定義: `src/types/models.ts` に全インターフェースを集約
+- 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
+- レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成
+
 ## 注意事項
 
 - GitHub公開リポジトリ。ポートフォリオ関連の文言をコードやドキュメントに書かない
 - 日本語でコミュニケーション
+- テストスイートなし（RSpec/Minitest/Vitest いずれも未導入）
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
 - pre-push フック（lefthook）: ESLint + vue-tsc + RuboCop が自動実行される
