@@ -26,6 +26,7 @@ module Api
         render json: {
           data: @equipment.as_json(
             include: {
+              site: { only: [ :id, :name ] },
               instruments: { only: [ :id, :tag_number, :instrument_type, :location ] },
               equipment_assignments: {
                 include: { user: { only: [ :id, :name, :email, :employment_type, :system_role ] } },
@@ -63,6 +64,7 @@ module Api
 
       def set_equipment
         @equipment = Equipment.includes(
+          :site,
           :instruments,
           :scheduled_maintenances,
           equipment_assignments: :user
