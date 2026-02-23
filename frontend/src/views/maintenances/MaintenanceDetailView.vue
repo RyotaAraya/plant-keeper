@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
+import ResourceHistory from '@/components/ResourceHistory.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -205,6 +206,10 @@ onMounted(fetchMaintenance)
         </v-list-item>
       </v-list>
       <div v-else class="text-center text-grey py-4">担当者が割り当てられていません</div>
+
+      <v-divider class="my-4" />
+      <h2 class="text-h6 mb-3">変更履歴</h2>
+      <ResourceHistory auditable-type="ScheduledMaintenance" :auditable-id="maintenance.id" />
 
       <!-- Edit Dialog -->
       <v-dialog v-model="editDialog" max-width="600">

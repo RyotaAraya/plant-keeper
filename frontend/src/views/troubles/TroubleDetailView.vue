@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import ResourceHistory from '@/components/ResourceHistory.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -239,6 +240,10 @@ onMounted(fetchTrouble)
       <div v-if="!trouble.trouble_responses?.length" class="text-center text-grey py-4">
         対応記録がありません
       </div>
+
+      <v-divider class="my-4" />
+      <h2 class="text-h6 mb-3">変更履歴</h2>
+      <ResourceHistory auditable-type="Trouble" :auditable-id="trouble.id" />
 
       <!-- Edit Dialog -->
       <v-dialog v-model="editDialog" max-width="500">

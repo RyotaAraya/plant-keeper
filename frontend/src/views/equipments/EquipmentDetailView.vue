@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import ResourceHistory from '@/components/ResourceHistory.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -145,6 +146,7 @@ onMounted(fetchEquipment)
         <v-tab value="instruments">装置・計器</v-tab>
         <v-tab value="assignments">設備担当</v-tab>
         <v-tab value="maintenances">定期整備</v-tab>
+        <v-tab value="history">変更履歴</v-tab>
       </v-tabs>
 
       <v-window v-model="tab">
@@ -214,6 +216,10 @@ onMounted(fetchEquipment)
             </v-list-item>
           </v-list>
           <p v-else class="text-body-2 text-grey ml-4">定期整備の予定なし</p>
+        </v-window-item>
+
+        <v-window-item value="history">
+          <ResourceHistory auditable-type="Equipment" :auditable-id="equipment.id" />
         </v-window-item>
       </v-window>
     </template>
