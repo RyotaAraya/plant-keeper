@@ -50,6 +50,9 @@ Rails.application.routes.draw do
 
       # Phase 6: 監査ログ
       resources :audit_logs, only: [ :index ]
+
+      # デモ用（認証不要）
+      get :demo_accounts, to: "demo#accounts"
     end
   end
 end

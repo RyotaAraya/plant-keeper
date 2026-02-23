@@ -78,26 +78,55 @@ cd frontend && npx vite build
 - 拠点（site）ごとに独立したツリー
 - `Department#full_path` → "保全部 > 計器保全課 > 計器Aチーム"
 - `Department#ancestor_chain` → 階層配列（UI用）
-- API: `GET /departments?tree=true` でネストされたツリー取得
+- API: `GET /departments?tree=true` でネストされたツリー取得（Ruby側でin-memoryでツリーを構築）
 
 ### バックエンド構造
 - API: `/api/v1` 名前空間、全コントローラが `BaseController`（`authenticate_user!`）を継承
 - 認証: devise-jwt、トークンは Authorization ヘッダーで送受信
-- レスポンス: `{ data: ... }` 形式。User は `user_json` ヘルパーで company/department をネスト返却
+- JWT revocation: `JTIMatcher` 戦略（usersテーブルの`jti`カラムで管理）
+- レスポンス: `{ data: ... }` 形式
+
+**シリアライズの使い分け:**
+- `UserSerializer`（PORO）: 認証系レスポンスのみ（`POST /login`、`GET /current_user`）。返却フィールドはIDのみで、company/departmentオブジェクトのネストなし
+- `user_json` ヘルパー: users一覧・詳細画面のレスポンスでcompany/departmentをネスト返却
+- その他モデル: コントローラ内で `as_json(include: ...)` インライン（ActiveModel::Serializers不使用）
+
+**コントローラの一貫したパターン:**
+- `index`: `includes(...)` + `if params[:x].present?` チェーンフィルタ + `limit/offset` ページネーション
+- `show`: 深い `includes(...)` + 完全ネストJSON。computed fields（`troubles_count`, `stock_summary`等）は `.merge(...)` で付与
+- ネストされたコレクション更新（点検項目等）: フロントから送られたIDを収集 → 送られていないIDの子レコードを `destroy_all` → ループでupsert（ID有りは更新、ID無しは作成）
+- 複数テーブルへの書き込みは必ず `ActiveRecord::Base.transaction` でラップ
+
+**ルート上の注意点:**
+- `destroy` ルートがあるのは `checklist_templates` と `maintenance_assignments` のみ。それ以外は `is_active` フラグで論理削除
+- `checklist_templates` にはカスタムメンバーアクション `POST /:id/duplicate` あり（テンプレートと全項目を複製、名前に「（コピー）」付与）
+- `position` フィールドは `user_params` の permit リストに含まれず、API経由での更新不可（読み取りは可能）
 
 ### フロントエンド構造
 - ルーティング: `meta: { requiresAuth: true }` でガード、遅延ロード
 - 認証: `stores/auth.ts` で JWT を localStorage 管理、axios インターセプタで自動付与
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
+- `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用
+- `orders/` には一覧ビューのみ（詳細ビューなし）
+
+**Axiosインターセプタ:**
+- リクエスト: localStorageから `jwt` を読みAuthorizationヘッダーにセット
+- レスポンス: バックエンドが新しい `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書き（JWTローテーションを透過的に処理）
+
+**認証ストア（`stores/auth.ts`）:**
+- singleton promiseパターン: `initPromise` 変数でページロード時の並行初期化競合を防止
+- `initialize()` はべき等 — 複数回呼び出しても同じPromiseを返す
+- ログアウト失敗時（ネットワーク障害等）もローカル状態とlocalStorageはクリア（UX優先のフェイルオープン）
 
 ### データモデルの設計方針
 - 論理削除: sites.is_active / users.is_active / companies.is_active（履歴保持）
 - 履歴パターン: started_on/ended_on（equipment_assignments, department_histories）
 - ポリモーフィック監査ログ: audit_logs（auditable_type/auditable_id）
 - 自己結合: departments（parent_id）、material_alternatives（代替品）
-- 正規化検索: materials.normalized_part_number（ハイフン除去）
+- 正規化検索: materials.normalized_part_number（ハイフン除去、`before_save` で自動設定）。検索時もクエリ側で同様にハイフン除去してから `ILIKE` 検索
 - 添付ファイル: ActiveStorage（has_many_attached）— 専用テーブルなし
+- 在庫: `purchased_on: :asc` 順（FIFO）
 
 ### 簡易実装方針
 - 承認フロー: UIのみ（ボタンでステータス変更、ロジックなし）
@@ -105,22 +134,26 @@ cd frontend && npx vite build
 - 使用資材記録: テキストカラム（trouble_responses.used_materials 等）
 - 監査ログ出力: CSV のみ
 - 発注アラート: ダッシュボードにリスト表示のみ（メール通知なし）
+- ダッシュボードの在庫アラート: `Material#select` ブロック内で `stocks.sum(:quantity)` を呼ぶため、対象資材数によってN+1が発生（現状のデータ規模では許容）
 
 ### バックエンドの規約
 - レスポンス形式: 成功 `{ data: ... }`、エラー `{ errors: [...] }`
-- ページネーション: `page`/`per_page` パラメータ → `{ data: [...], meta: { total_count, page, per_page } }`
+- ページネーション: `page`/`per_page` パラメータ → `{ data: [...], meta: { total_count, page, per_page } }`。ページネーションなしのエンドポイントもあり（users, departments, checklist_templates）
 - フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装
+- 全文検索: `ILIKE '%query%'` パターン（users: name+email, troubles: title, instruments: tag_number, materials: name+part_number+normalized_part_number）
 - enum はすべて文字列型（integer ではない）
-- 論理削除リソースには `destroy` ルートなし（`is_active` フラグで管理）
+- `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
+- 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
 - シードファイル: `db/seeds/` 配下に 01〜13 の番号付きファイルで分割
-- 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）
+- 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 
 ### フロントエンドの規約
 - API呼び出し: `src/api/axios.ts` の単一 Axios インスタンスを直接使用（サービス層なし）
 - 型定義: `src/types/models.ts` に全インターフェースを集約
 - 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
 - レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成
+- Pinia は router より先に登録（router の `beforeEach` で `useAuthStore()` を使用するため）
 
 ## 注意事項
 
@@ -129,6 +162,6 @@ cd frontend && npx vite build
 - テストスイートなし（RSpec/Minitest/Vitest いずれも未導入）
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
-- pre-push フック（lefthook）: ESLint + vue-tsc + RuboCop が自動実行される
+- pre-push フック（lefthook）: ESLint → vue-tsc → RuboCop が直列実行（`docker-compose exec -T` 経由）
 - vue-tsc は Vuetify の型定義で既知のエラーあり。ビルド確認は `npx vite build` を使用
 - シードの audit_log 部分で `Auditable must exist` バリデーションエラーが出るが、ユーザ・設備等の主要データには影響なし

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api/axios'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -10,6 +11,41 @@ const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const loading = ref(false)
+
+interface DemoAccount {
+  id: number
+  name: string
+  email: string
+  system_role: string
+  employment_type: string
+  company_name: string | null
+  department_path: string | null
+}
+
+const demoAccounts = ref<DemoAccount[]>([])
+
+const roleLabel: Record<string, string> = {
+  admin: '管理者',
+  member: '一般',
+  supervisor: '監督者',
+  worker: '作業者',
+}
+
+const roleColor: Record<string, string> = {
+  admin: 'error',
+  supervisor: 'warning',
+  member: 'primary',
+  worker: 'success',
+}
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/demo_accounts')
+    demoAccounts.value = res.data.data
+  } catch {
+    // デモアカウント取得失敗は無視
+  }
+})
 
 async function handleLogin() {
   errorMessage.value = ''
@@ -28,13 +64,26 @@ async function handleLogin() {
     loading.value = false
   }
 }
+
+async function loginAs(accountEmail: string) {
+  errorMessage.value = ''
+  loading.value = true
+  try {
+    await authStore.login(accountEmail, 'password')
+    await router.push('/')
+  } catch {
+    errorMessage.value = 'ログインに失敗しました。'
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
   <v-main>
     <v-container class="fill-height" fluid>
       <v-row align="center" justify="center">
-        <v-col cols="12" sm="8" md="4">
+        <v-col cols="12" sm="8" md="5">
           <v-card class="elevation-12">
             <v-toolbar color="primary" dark flat>
               <v-toolbar-title>PlantKeeper</v-toolbar-title>
@@ -75,6 +124,44 @@ async function handleLogin() {
                 </v-btn>
               </v-form>
             </v-card-text>
+
+            <template v-if="demoAccounts.length > 0">
+              <v-divider />
+              <v-card-text class="pb-1">
+                <div class="text-caption text-medium-emphasis mb-1">デモアカウント（クリックでログイン）</div>
+              </v-card-text>
+              <v-list
+                density="compact"
+                style="max-height: 280px; overflow-y: auto;"
+              >
+                <v-list-item
+                  v-for="account in demoAccounts"
+                  :key="account.id"
+                  :disabled="loading"
+                  rounded="lg"
+                  class="mx-2 mb-1"
+                  @click="loginAs(account.email)"
+                >
+                  <template #prepend>
+                    <v-icon color="grey-darken-1">mdi-account-circle</v-icon>
+                  </template>
+                  <v-list-item-title>{{ account.name }}</v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ [account.company_name, account.department_path].filter(Boolean).join(' / ') }}
+                  </v-list-item-subtitle>
+                  <template #append>
+                    <v-chip
+                      :color="roleColor[account.system_role]"
+                      size="x-small"
+                      label
+                    >
+                      {{ roleLabel[account.system_role] ?? account.system_role }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
+              </v-list>
+              <div class="pb-2" />
+            </template>
           </v-card>
         </v-col>
       </v-row>
