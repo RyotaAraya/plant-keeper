@@ -64,6 +64,7 @@ module Api
         trouble.reported_by = current_user
 
         if trouble.save
+          record_audit_log("create", trouble)
           render json: { data: trouble.as_json }, status: :created
         else
           render json: { errors: trouble.errors.full_messages }, status: :unprocessable_entity
@@ -74,6 +75,7 @@ module Api
       def update
         authorize @trouble
         if @trouble.update(trouble_params)
+          record_audit_log("update", @trouble)
           render json: {
             data: @trouble.as_json(
               include: {

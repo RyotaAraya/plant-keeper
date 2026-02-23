@@ -52,6 +52,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           maintenance.save!
+          record_audit_log("create", maintenance)
 
           if params[:scheduled_maintenance][:assignments].present?
             params[:scheduled_maintenance][:assignments].each do |assignment|
@@ -78,6 +79,7 @@ module Api
         authorize @maintenance
         ActiveRecord::Base.transaction do
           @maintenance.update!(maintenance_params)
+          record_audit_log("update", @maintenance)
 
           if params[:scheduled_maintenance][:assignments].present?
             @maintenance.maintenance_assignments.destroy_all

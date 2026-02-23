@@ -61,6 +61,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           inspection.save!
+          record_audit_log("create", inspection)
 
           if params[:inspection][:items].present?
             params[:inspection][:items].each_with_index do |item, idx|
@@ -107,6 +108,7 @@ module Api
         authorize @inspection
         ActiveRecord::Base.transaction do
           @inspection.update!(inspection_params)
+          record_audit_log("update", @inspection)
 
           if params[:inspection][:items].present?
             existing_ids = params[:inspection][:items].filter_map { |i| i[:id] }

@@ -50,6 +50,7 @@ const typeOptions = [
   { title: '計器 (Instrument)', value: 'Instrument' },
   { title: '点検 (Inspection)', value: 'Inspection' },
   { title: 'トラブル (Trouble)', value: 'Trouble' },
+  { title: '定期整備 (ScheduledMaintenance)', value: 'ScheduledMaintenance' },
   { title: '資材 (Material)', value: 'Material' },
   { title: '発注 (Order)', value: 'Order' },
   { title: 'ユーザ (User)', value: 'User' },

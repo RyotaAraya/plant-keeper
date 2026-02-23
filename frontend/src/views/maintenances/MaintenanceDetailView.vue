@@ -12,6 +12,7 @@ const authStore = useAuthStore()
 const { canManageMaintenance } = usePermissions()
 const maintenance = ref<any>(null)
 const loading = ref(true)
+const users = ref<any[]>([])
 
 // Edit dialog
 const editDialog = ref(false)
@@ -73,7 +74,14 @@ async function saveEdit() {
   }
 }
 
-function openAssign() {
+async function fetchUsers() {
+  if (users.value.length) return
+  const res = await api.get('/users', { params: { per_page: 200 } })
+  users.value = res.data.data
+}
+
+async function openAssign() {
+  await fetchUsers()
   assignForm.value = { user_id: null, role: 'member' }
   assignErrors.value = []
   assignDialog.value = true
@@ -229,7 +237,15 @@ onMounted(fetchMaintenance)
             <v-alert v-if="assignErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in assignErrors" :key="err">{{ err }}</div>
             </v-alert>
-            <v-text-field v-model.number="assignForm.user_id" label="ユーザID" type="number" class="mb-2" />
+            <v-autocomplete
+              v-model="assignForm.user_id"
+              :items="users"
+              item-title="name"
+              item-value="id"
+              label="担当者 *"
+              clearable
+              class="mb-2"
+            />
             <v-select v-model="assignForm.role" :items="roleOptions" item-title="title" item-value="value" label="役割" />
           </v-card-text>
           <v-card-actions>

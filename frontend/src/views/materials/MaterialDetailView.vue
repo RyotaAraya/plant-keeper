@@ -117,7 +117,7 @@ onMounted(fetchMaterial)
                 :key="order.id"
                 :title="`${order.supplier_name} — ${order.quantity}個`"
                 :subtitle="`${order.ordered_on} / ${order.user?.name}`"
-                @click="router.push(`/orders/${order.id}`)"
+                @click="router.push('/orders')"
               >
                 <template #append>
                   <v-chip size="x-small">{{ order.status }}</v-chip>

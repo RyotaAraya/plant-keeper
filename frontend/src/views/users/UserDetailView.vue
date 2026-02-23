@@ -3,9 +3,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canManageUsers } = usePermissions()
 const user = ref<any>(null)
 const sites = ref<any[]>([])
 const companies = ref<any[]>([])
@@ -250,7 +252,7 @@ onMounted(() => {
           {{ user.is_active ? '在籍' : '退職' }}
         </v-chip>
         <v-spacer />
-        <v-btn variant="outlined" @click="openEdit">
+        <v-btn v-if="canManageUsers" variant="outlined" @click="openEdit">
           <v-icon start>mdi-pencil</v-icon>編集
         </v-btn>
       </div>

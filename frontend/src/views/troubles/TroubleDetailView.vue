@@ -73,14 +73,13 @@ async function fetchTrouble() {
 }
 
 async function fetchUsers() {
-  // Simple fetch — will be improved in Phase 4
-  try {
-    const res = await api.get('/current_user')
-    users.value = [res.data.user]
-  } catch { /* ignore */ }
+  if (users.value.length) return
+  const res = await api.get('/users', { params: { per_page: 200 } })
+  users.value = res.data.data
 }
 
-function openEdit() {
+async function openEdit() {
+  await fetchUsers()
   editForm.value = {
     status: trouble.value.status,
     priority: trouble.value.priority,
@@ -137,10 +136,7 @@ function formatDate(dt: string) {
   return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(() => {
-  fetchTrouble()
-  fetchUsers()
-})
+onMounted(fetchTrouble)
 </script>
 
 <template>
@@ -254,6 +250,15 @@ onMounted(() => {
             </v-alert>
             <v-select v-model="editForm.status" :items="statusOptions" item-title="title" item-value="value" label="ステータス" class="mb-2" />
             <v-select v-model="editForm.priority" :items="priorityOptions" item-title="title" item-value="value" label="優先度" class="mb-2" />
+            <v-autocomplete
+              v-model="editForm.assigned_to_id"
+              :items="users"
+              item-title="name"
+              item-value="id"
+              label="担当者"
+              clearable
+              class="mb-2"
+            />
           </v-card-text>
           <v-card-actions>
             <v-spacer />
