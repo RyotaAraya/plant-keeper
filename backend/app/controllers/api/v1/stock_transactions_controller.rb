@@ -9,6 +9,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           transaction.save!
+          record_audit_log("create", transaction)
 
           stock = transaction.stock
           case transaction.transaction_type

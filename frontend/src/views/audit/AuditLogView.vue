@@ -42,7 +42,7 @@ const actionOptions = [
 const typeLabel: Record<string, string> = {
   Site: '拠点', Equipment: '設備', Instrument: '計器', Inspection: '点検',
   Trouble: 'トラブル', Material: '資材', Order: '発注', User: 'ユーザ',
-  ScheduledMaintenance: '定期整備', Repair: '修理',
+  ScheduledMaintenance: '定期整備', Repair: '修理', StockTransaction: '在庫操作',
 }
 const typeOptions = [
   { title: '拠点 (Site)', value: 'Site' },
@@ -53,6 +53,8 @@ const typeOptions = [
   { title: '定期整備 (ScheduledMaintenance)', value: 'ScheduledMaintenance' },
   { title: '資材 (Material)', value: 'Material' },
   { title: '発注 (Order)', value: 'Order' },
+  { title: '修理 (Repair)', value: 'Repair' },
+  { title: '在庫操作 (StockTransaction)', value: 'StockTransaction' },
   { title: 'ユーザ (User)', value: 'User' },
 ]
 

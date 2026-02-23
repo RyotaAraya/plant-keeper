@@ -48,6 +48,7 @@ module Api
         order.user = current_user
 
         if order.save
+          record_audit_log("create", order)
           render json: { data: order.as_json }, status: :created
         else
           render json: { errors: order.errors.full_messages }, status: :unprocessable_entity
@@ -58,6 +59,7 @@ module Api
       def update
         authorize @order
         if @order.update(order_params)
+          record_audit_log("update", @order)
           render json: {
             data: @order.as_json(
               include: {

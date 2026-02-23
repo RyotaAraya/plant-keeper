@@ -53,6 +53,7 @@ module Api
         repair.requested_by = current_user
 
         if repair.save
+          record_audit_log("create", repair)
           repair.stock&.update(status: "awaiting_repair")
           render json: { data: repair.as_json }, status: :created
         else
@@ -64,6 +65,7 @@ module Api
       def update
         authorize @repair
         if @repair.update(repair_params)
+          record_audit_log("update", @repair)
           case @repair.status
           when "shipped"
             @repair.stock&.update(status: "under_repair")

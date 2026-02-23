@@ -57,6 +57,7 @@ module Api
         material = Material.new(material_params)
         authorize material
         if material.save
+          record_audit_log("create", material)
           render json: { data: material.as_json }, status: :created
         else
           render json: { errors: material.errors.full_messages }, status: :unprocessable_entity
@@ -67,6 +68,7 @@ module Api
       def update
         authorize @material
         if @material.update(material_params)
+          record_audit_log("update", @material)
           render json: { data: @material.as_json(include: { manufacturer: { only: [ :id, :name ] } }) }
         else
           render json: { errors: @material.errors.full_messages }, status: :unprocessable_entity
