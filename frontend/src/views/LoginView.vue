@@ -25,15 +25,15 @@ interface DemoAccount {
 const demoAccounts = ref<DemoAccount[]>([])
 
 const roleLabel: Record<string, string> = {
-  admin: '管理者',
+  admin: 'システム管理者',
+  manager: '業務管理者',
   member: '一般',
-  supervisor: '監督者',
-  worker: '作業者',
+  worker: '技能員',
 }
 
 const roleColor: Record<string, string> = {
   admin: 'error',
-  supervisor: 'warning',
+  manager: 'warning',
   member: 'primary',
   worker: 'success',
 }
@@ -63,6 +63,17 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
+}
+
+const AVATAR_COLORS = [
+  '#1565C0', '#2E7D32', '#6A1B9A', '#00838F',
+  '#E65100', '#AD1457', '#4527A0', '#00695C',
+]
+function avatarColor(id: number) {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length]
+}
+function nameInitial(name: string) {
+  return name.charAt(0)
 }
 
 async function loginAs(accountEmail: string) {
@@ -143,7 +154,9 @@ async function loginAs(accountEmail: string) {
                   @click="loginAs(account.email)"
                 >
                   <template #prepend>
-                    <v-icon color="grey-darken-1">mdi-account-circle</v-icon>
+                    <v-avatar :color="avatarColor(account.id)" size="32">
+                      <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
+                    </v-avatar>
                   </template>
                   <v-list-item-title>{{ account.name }}</v-list-item-title>
                   <v-list-item-subtitle>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_15_000004) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -381,6 +381,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000004) do
     t.string "employment_type", default: "employee", null: false
     t.string "system_role", default: "member", null: false
     t.bigint "company_id"
+    t.bigint "site_id"
     t.index ["company_id"], name: "index_users_on_company_id"
     t.index ["department_id"], name: "index_users_on_department_id"
     t.index ["email"], name: "index_users_on_email", unique: true
@@ -389,6 +390,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000004) do
     t.index ["jti"], name: "index_users_on_jti", unique: true
     t.index ["position"], name: "index_users_on_position"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["site_id"], name: "index_users_on_site_id"
     t.index ["system_role"], name: "index_users_on_system_role"
   end
 
@@ -447,5 +449,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_15_000004) do
   add_foreign_key "troubles", "users", column: "reported_by_id"
   add_foreign_key "users", "companies"
   add_foreign_key "users", "departments"
+  add_foreign_key "users", "sites"
   add_foreign_key "warehouses", "sites"
 end

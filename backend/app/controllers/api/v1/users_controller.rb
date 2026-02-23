@@ -50,7 +50,7 @@ module Api
       end
 
       def user_json(user)
-        json = user.as_json(only: [ :id, :email, :name, :employment_type, :system_role, :company_id, :department_id, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on, :position, :created_at ])
+        json = user.as_json(only: [ :id, :email, :name, :employment_type, :system_role, :company_id, :department_id, :site_id, :position, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on, :created_at ])
         if user.company
           json[:company] = { id: user.company.id, name: user.company.name, company_type: user.company.company_type }
         end
@@ -69,8 +69,8 @@ module Api
 
       def user_params
         params.require(:user).permit(
-          :name, :employment_type, :system_role, :company_id, :department_id, :is_active,
-          :join_year, :home_prefecture, :previous_company, :deactivated_on
+          :name, :employment_type, :system_role, :company_id, :department_id, :site_id,
+          :position, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on
         )
       end
     end

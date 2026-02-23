@@ -22,12 +22,25 @@ const selectedSectionId = ref<number | null>(null)
 const selectedTeamId = ref<number | null>(null)
 
 const employmentTypeLabel: Record<string, string> = {
-  employee: '正社員', dispatch: '派遣社員', contractor: '協力会社',
+  employee: '正社員', dispatch: '派遣社員', contractor: '協力会社員',
 }
 
 const systemRoleLabel: Record<string, string> = {
-  admin: '管理者', supervisor: '監督者', member: '一般', worker: '作業員',
+  admin: 'システム管理者', manager: '業務管理者', member: '一般', worker: '技能員',
 }
+
+const positionLabel: Record<string, string> = {
+  general_manager: '部長', section_manager: '課長', team_leader: 'チームリーダー',
+  senior_staff: '主任', staff: '担当',
+}
+
+const positionOptions = [
+  { title: '部長', value: 'general_manager' },
+  { title: '課長', value: 'section_manager' },
+  { title: 'チームリーダー', value: 'team_leader' },
+  { title: '主任', value: 'senior_staff' },
+  { title: '担当', value: 'staff' },
+]
 
 // 選択中の会社タイプに応じた動的オプション
 const selectedCompanyType = computed(() => {
@@ -37,7 +50,7 @@ const selectedCompanyType = computed(() => {
 
 const filteredEmploymentTypeOptions = computed(() => {
   if (selectedCompanyType.value === 'contractor') {
-    return [{ title: '協力会社', value: 'contractor' }]
+    return [{ title: '協力会社員', value: 'contractor' }]
   }
   return [
     { title: '正社員', value: 'employee' },
@@ -48,12 +61,13 @@ const filteredEmploymentTypeOptions = computed(() => {
 const filteredSystemRoleOptions = computed(() => {
   if (selectedCompanyType.value === 'contractor') {
     return [
-      { title: '監督者', value: 'supervisor' },
-      { title: '作業員', value: 'worker' },
+      { title: '業務管理者', value: 'manager' },
+      { title: '技能員', value: 'worker' },
     ]
   }
   return [
-    { title: '管理者', value: 'admin' },
+    { title: 'システム管理者', value: 'admin' },
+    { title: '業務管理者', value: 'manager' },
     { title: '一般', value: 'member' },
   ]
 })
@@ -86,7 +100,7 @@ const teamOptions = computed(() => {
 // openEdit時のwatch連鎖リセットを抑制するフラグ
 const initializing = ref(false)
 
-// 会社が変わったら雇用区分・権限をリセット
+// 会社が変わったら在籍区分・権限をリセット
 watch(() => editForm.value.company_id, () => {
   if (initializing.value) return
   if (selectedCompanyType.value === 'contractor') {
@@ -167,6 +181,8 @@ function openEdit() {
     system_role: user.value.system_role,
     company_id: user.value.company_id,
     department_id: user.value.department_id,
+    site_id: user.value.site_id,
+    position: user.value.position,
     join_year: user.value.join_year,
     home_prefecture: user.value.home_prefecture || '',
     previous_company: user.value.previous_company || '',
@@ -183,6 +199,17 @@ function openEdit() {
   initializing.value = false
   editErrors.value = []
   editDialog.value = true
+}
+
+const AVATAR_COLORS = [
+  '#1565C0', '#2E7D32', '#6A1B9A', '#00838F',
+  '#E65100', '#AD1457', '#4527A0', '#00695C',
+]
+function avatarColor(id: number) {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length]
+}
+function nameInitial(name: string) {
+  return name.charAt(0)
 }
 
 async function saveEdit() {
@@ -215,7 +242,10 @@ onMounted(() => {
     <template v-else-if="user">
       <div class="d-flex align-center mb-4">
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/users')" />
-        <h1 class="text-h5 ml-2">{{ user.name }}</h1>
+        <v-avatar :color="avatarColor(user.id)" size="48" class="ml-2">
+          <span class="text-white text-h6 font-weight-bold">{{ nameInitial(user.name) }}</span>
+        </v-avatar>
+        <h1 class="text-h5 ml-3">{{ user.name }}</h1>
         <v-chip class="ml-3" :color="user.is_active ? 'success' : 'grey'" size="small">
           {{ user.is_active ? '在籍' : '退職' }}
         </v-chip>
@@ -233,30 +263,47 @@ onMounted(() => {
               <div>{{ user.email }}</div>
             </v-col>
             <v-col cols="6" md="3">
-              <div class="text-caption text-grey">雇用区分</div>
-              <div>{{ employmentTypeLabel[user.employment_type] }}</div>
+              <div class="text-caption text-grey">在籍区分</div>
+              <div>{{ employmentTypeLabel[user.employment_type] || user.employment_type }}</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">権限</div>
-              <div>{{ systemRoleLabel[user.system_role] }}</div>
+              <div>{{ systemRoleLabel[user.system_role] || user.system_role }}</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">所属会社</div>
-              <div>{{ user.company?.name || '—' }}</div>
+              <div class="d-flex align-center ga-2">
+                <span>{{ user.company?.name || '—' }}</span>
+                <v-chip
+                  v-if="user.company"
+                  :color="user.company.company_type === 'owner' ? 'primary' : 'orange'"
+                  size="x-small"
+                  label
+                  variant="tonal"
+                >
+                  {{ user.company.company_type === 'owner' ? '自社' : '協力' }}
+                </v-chip>
+              </div>
             </v-col>
-            <v-col v-if="user.company?.company_type === 'owner'" cols="12" md="6">
-              <div class="text-caption text-grey">部署</div>
-              <div>{{ user.department?.full_path || '—' }}</div>
-            </v-col>
+            <template v-if="user.company?.company_type === 'owner'">
+              <v-col cols="6" md="3">
+                <div class="text-caption text-grey">役職</div>
+                <div>{{ positionLabel[user.position] || '—' }}</div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <div class="text-caption text-grey">部署</div>
+                <div>{{ user.department?.full_path || '—' }}</div>
+              </v-col>
+            </template>
             <v-col cols="6" md="3">
-              <div class="text-caption text-grey">入社年</div>
+              <div class="text-caption text-grey">{{ user.company?.company_type === 'owner' ? '入社年' : '参加年' }}</div>
               <div>{{ user.join_year ? `${user.join_year}年` : '—' }}</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">出身地</div>
               <div>{{ user.home_prefecture || '—' }}</div>
             </v-col>
-            <v-col cols="6" md="3">
+            <v-col v-if="user.company?.company_type === 'owner'" cols="6" md="3">
               <div class="text-caption text-grey">前職</div>
               <div>{{ user.previous_company || '—' }}</div>
             </v-col>
@@ -296,7 +343,7 @@ onMounted(() => {
             </v-alert>
             <v-text-field v-model="editForm.name" label="名前" class="mb-2" />
             <v-row dense class="mb-2">
-              <v-col cols="4">
+              <v-col cols="6">
                 <v-select
                   v-model="editForm.company_id"
                   :items="companies"
@@ -305,11 +352,35 @@ onMounted(() => {
                   label="所属会社"
                 />
               </v-col>
-              <v-col cols="4">
-                <v-select v-model="editForm.employment_type" :items="filteredEmploymentTypeOptions" item-title="title" item-value="value" label="雇用区分" />
+              <v-col cols="6">
+                <v-select
+                  v-model="editForm.employment_type"
+                  :items="filteredEmploymentTypeOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="在籍区分"
+                />
               </v-col>
-              <v-col cols="4">
-                <v-select v-model="editForm.system_role" :items="filteredSystemRoleOptions" item-title="title" item-value="value" label="権限" />
+            </v-row>
+            <v-row dense class="mb-2">
+              <v-col cols="6">
+                <v-select
+                  v-model="editForm.system_role"
+                  :items="filteredSystemRoleOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="権限"
+                />
+              </v-col>
+              <v-col v-if="selectedCompanyType === 'owner'" cols="6">
+                <v-select
+                  v-model="editForm.position"
+                  :items="positionOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="役職"
+                  clearable
+                />
               </v-col>
             </v-row>
             <template v-if="selectedCompanyType === 'owner'">
@@ -357,9 +428,19 @@ onMounted(() => {
                 </v-col>
               </v-row>
             </template>
-            <v-text-field v-model.number="editForm.join_year" label="入社年" type="number" class="mb-2" />
+            <v-text-field
+              v-model.number="editForm.join_year"
+              :label="selectedCompanyType === 'contractor' ? '参加年' : '入社年'"
+              type="number"
+              class="mb-2"
+            />
             <v-text-field v-model="editForm.home_prefecture" label="出身地" class="mb-2" />
-            <v-text-field v-model="editForm.previous_company" label="前職" class="mb-2" />
+            <v-text-field
+              v-if="selectedCompanyType === 'owner'"
+              v-model="editForm.previous_company"
+              label="前職"
+              class="mb-2"
+            />
             <v-switch v-model="editForm.is_active" label="在籍" color="success" />
           </v-card-text>
           <v-card-actions>

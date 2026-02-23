@@ -79,16 +79,24 @@ export interface Company {
 export interface User {
   id: number
   email: string
-  password_digest: string
   name: string
   employment_type: string
   system_role: string
   company_id: number | null
   company?: { id: number; name: string; company_type: string }
+  department_id: number | null
+  department?: {
+    id: number
+    name: string
+    level: string
+    site_id: number
+    full_path: string
+    ancestors: { id: number; name: string; level: string }[]
+  }
+  site_id: number | null
   position: string | null
-  department_id: number
-  join_year: number
-  home_prefecture: string
+  join_year: number | null
+  home_prefecture: string | null
   previous_company: string | null
   is_active: boolean
   deactivated_on: string | null
