@@ -36,6 +36,9 @@ gem "rack-cors"
 gem "devise"
 gem "devise-jwt"
 
+# Authorization
+gem "pundit"
+
 group :development do
   gem "annotate"
 end

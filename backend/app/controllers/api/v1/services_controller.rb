@@ -7,6 +7,7 @@ module Api
 
       def create
         service = Service.new(service_params)
+        authorize service
         if service.save
           render json: { data: service.as_json }, status: :created
         else
@@ -16,6 +17,7 @@ module Api
 
       def update
         service = Service.find(params[:id])
+        authorize service
         if service.update(service_params)
           render json: { data: service.as_json }
         else

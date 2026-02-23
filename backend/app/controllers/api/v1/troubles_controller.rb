@@ -60,6 +60,7 @@ module Api
       # POST /api/v1/troubles
       def create
         trouble = Trouble.new(trouble_params)
+        authorize trouble
         trouble.reported_by = current_user
 
         if trouble.save
@@ -71,6 +72,7 @@ module Api
 
       # PATCH /api/v1/troubles/:id
       def update
+        authorize @trouble
         if @trouble.update(trouble_params)
           render json: {
             data: @trouble.as_json(

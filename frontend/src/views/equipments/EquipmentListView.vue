@@ -3,8 +3,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
+const { canManageEquipment } = usePermissions()
 
 const equipments = ref<any[]>([])
 const sites = ref<any[]>([])
@@ -88,7 +90,7 @@ watch(selectedSiteId, fetchEquipments)
         style="max-width: 250px"
         class="mr-4"
       />
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
+      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
     <v-data-table

@@ -4,6 +4,7 @@ module Api
       # POST /api/v1/stock_transactions
       def create
         transaction = StockTransaction.new(transaction_params)
+        authorize transaction
         transaction.user = current_user
 
         ActiveRecord::Base.transaction do

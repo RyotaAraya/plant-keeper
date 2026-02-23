@@ -34,6 +34,7 @@ module Api
       # POST /api/v1/sites
       def create
         site = Site.new(site_params)
+        authorize site
 
         if site.save
           render json: { data: site.as_json }, status: :created
@@ -44,6 +45,7 @@ module Api
 
       # PATCH/PUT /api/v1/sites/:id
       def update
+        authorize @site
         if @site.update(site_params)
           render json: { data: @site.as_json }
         else

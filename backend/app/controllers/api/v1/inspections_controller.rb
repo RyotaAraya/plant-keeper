@@ -56,6 +56,7 @@ module Api
       # POST /api/v1/inspections
       def create
         inspection = Inspection.new(inspection_params)
+        authorize inspection
         inspection.user = current_user
 
         ActiveRecord::Base.transaction do
@@ -103,6 +104,7 @@ module Api
 
       # PATCH /api/v1/inspections/:id
       def update
+        authorize @inspection
         ActiveRecord::Base.transaction do
           @inspection.update!(inspection_params)
 

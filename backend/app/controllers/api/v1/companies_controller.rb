@@ -13,6 +13,7 @@ module Api
 
       def create
         company = Company.new(company_params)
+        authorize company
         if company.save
           render json: { data: company.as_json(only: [ :id, :name, :company_type, :is_active ]) }, status: :created
         else
@@ -22,6 +23,7 @@ module Api
 
       def update
         company = Company.find(params[:id])
+        authorize company
         if company.update(company_params)
           render json: { data: company.as_json(only: [ :id, :name, :company_type, :is_active ]) }
         else

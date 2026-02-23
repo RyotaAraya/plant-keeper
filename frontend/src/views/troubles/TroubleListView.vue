@@ -3,8 +3,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
+const { canCreateTrouble } = usePermissions()
 
 const troubles = ref<any[]>([])
 const equipments = ref<any[]>([])
@@ -140,7 +142,7 @@ watch([filters, page], fetchTroubles, { deep: true })
     <div class="d-flex align-center mb-4">
       <h1 class="text-h5">トラブル管理</h1>
       <v-spacer />
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
+      <v-btn v-if="canCreateTrouble" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap">

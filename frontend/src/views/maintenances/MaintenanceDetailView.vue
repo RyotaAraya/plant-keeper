@@ -4,10 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { canManageMaintenance } = usePermissions()
 const maintenance = ref<any>(null)
 const loading = ref(true)
 
@@ -128,7 +130,7 @@ onMounted(fetchMaintenance)
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/maintenances')" />
         <h1 class="text-h5 ml-2">{{ maintenance.title }}</h1>
         <v-spacer />
-        <v-btn variant="outlined" @click="openEdit">
+        <v-btn v-if="canManageMaintenance" variant="outlined" @click="openEdit">
           <v-icon start>mdi-pencil</v-icon>編集
         </v-btn>
       </div>
@@ -171,10 +173,10 @@ onMounted(fetchMaintenance)
       <div class="d-flex align-center mb-3">
         <h2 class="text-h6">担当者</h2>
         <v-spacer />
-        <v-btn size="small" variant="text" class="mr-2" @click="quickAssignSelf">
+        <v-btn v-if="canManageMaintenance" size="small" variant="text" class="mr-2" @click="quickAssignSelf">
           <v-icon start>mdi-account-plus</v-icon>自分を追加
         </v-btn>
-        <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="openAssign">担当追加</v-btn>
+        <v-btn v-if="canManageMaintenance" size="small" variant="outlined" prepend-icon="mdi-plus" @click="openAssign">担当追加</v-btn>
       </div>
 
       <v-list v-if="maintenance.maintenance_assignments?.length">
@@ -190,7 +192,7 @@ onMounted(fetchMaintenance)
             </v-icon>
           </template>
           <template #append>
-            <v-btn icon="mdi-close" size="x-small" variant="text" @click="removeAssignment(a.id)" />
+            <v-btn v-if="canManageMaintenance" icon="mdi-close" size="x-small" variant="text" @click="removeAssignment(a.id)" />
           </template>
         </v-list-item>
       </v-list>

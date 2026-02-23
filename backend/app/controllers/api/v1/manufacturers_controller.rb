@@ -10,6 +10,7 @@ module Api
       # POST /api/v1/manufacturers
       def create
         manufacturer = Manufacturer.new(manufacturer_params)
+        authorize manufacturer
         if manufacturer.save
           render json: { data: manufacturer.as_json }, status: :created
         else
@@ -20,6 +21,7 @@ module Api
       # PATCH /api/v1/manufacturers/:id
       def update
         manufacturer = Manufacturer.find(params[:id])
+        authorize manufacturer
         if manufacturer.update(manufacturer_params)
           render json: { data: manufacturer.as_json }
         else

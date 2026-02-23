@@ -3,8 +3,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
+const { canManageStockTransaction } = usePermissions()
 const stocks = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)
@@ -154,7 +156,7 @@ watch([filters, page], fetchStocks, { deep: true })
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="x-small" variant="outlined" @click.stop="openTx(item)">入出庫</v-btn>
+        <v-btn v-if="canManageStockTransaction" size="x-small" variant="outlined" @click.stop="openTx(item)">入出庫</v-btn>
       </template>
     </v-data-table>
 

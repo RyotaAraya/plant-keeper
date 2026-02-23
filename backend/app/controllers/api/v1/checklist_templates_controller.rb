@@ -34,6 +34,7 @@ module Api
       # POST /api/v1/checklist_templates
       def create
         template = ChecklistTemplate.new(template_params)
+        authorize template
 
         if template.save
           if params[:checklist_template][:items].present?
@@ -53,6 +54,7 @@ module Api
 
       # PATCH /api/v1/checklist_templates/:id
       def update
+        authorize @template
         ActiveRecord::Base.transaction do
           @template.update!(template_params)
 
@@ -85,6 +87,7 @@ module Api
 
       # DELETE /api/v1/checklist_templates/:id
       def destroy
+        authorize @template
         if @template.destroy
           head :no_content
         else
@@ -94,6 +97,7 @@ module Api
 
       # POST /api/v1/checklist_templates/:id/duplicate
       def duplicate
+        authorize @template, :duplicate?
         new_template = @template.dup
         new_template.name = "#{@template.name}（コピー）"
 

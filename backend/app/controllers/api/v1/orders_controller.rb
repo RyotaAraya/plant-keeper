@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/orders
       def index
+        authorize Order
         orders = Order.includes(:material, :user).all
         orders = orders.where(material_id: params[:material_id]) if params[:material_id].present?
         orders = orders.where(status: params[:status]) if params[:status].present?
@@ -29,6 +30,7 @@ module Api
 
       # GET /api/v1/orders/:id
       def show
+        authorize @order
         render json: {
           data: @order.as_json(
             include: {
@@ -42,6 +44,7 @@ module Api
       # POST /api/v1/orders
       def create
         order = Order.new(order_params)
+        authorize order
         order.user = current_user
 
         if order.save
@@ -53,6 +56,7 @@ module Api
 
       # PATCH /api/v1/orders/:id
       def update
+        authorize @order
         if @order.update(order_params)
           render json: {
             data: @order.as_json(

@@ -40,6 +40,7 @@ module Api
 
       def create
         instrument = Instrument.new(instrument_params)
+        authorize instrument
         if instrument.save
           render json: { data: instrument.as_json }, status: :created
         else
@@ -48,6 +49,7 @@ module Api
       end
 
       def update
+        authorize @instrument
         if @instrument.update(instrument_params)
           render json: { data: @instrument.as_json }
         else

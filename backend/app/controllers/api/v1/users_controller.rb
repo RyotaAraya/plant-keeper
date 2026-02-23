@@ -25,6 +25,7 @@ module Api
 
       # GET /api/v1/users/:id
       def show
+        authorize @user
         json = user_json(@user)
         json[:equipment_assignments] = @user.equipment_assignments.as_json(
           only: [ :id, :equipment_id, :role, :started_on, :ended_on ],
@@ -35,6 +36,7 @@ module Api
 
       # PATCH /api/v1/users/:id
       def update
+        authorize @user
         if @user.update(user_params)
           @user.reload
           render json: { data: user_json(@user) }

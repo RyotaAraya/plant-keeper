@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/repairs
       def index
+        authorize Repair
         repairs = Repair.includes(:stock, :requested_by, stock: :material).all
         repairs = repairs.where(status: params[:status]) if params[:status].present?
 
@@ -28,6 +29,7 @@ module Api
 
       # GET /api/v1/repairs/:id
       def show
+        authorize @repair
         render json: {
           data: @repair.as_json(
             include: {
@@ -47,6 +49,7 @@ module Api
       # POST /api/v1/repairs
       def create
         repair = Repair.new(repair_params)
+        authorize repair
         repair.requested_by = current_user
 
         if repair.save
@@ -59,6 +62,7 @@ module Api
 
       # PATCH /api/v1/repairs/:id
       def update
+        authorize @repair
         if @repair.update(repair_params)
           case @repair.status
           when "shipped"

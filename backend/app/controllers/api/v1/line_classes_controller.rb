@@ -7,6 +7,7 @@ module Api
 
       def create
         line_class = LineClass.new(line_class_params)
+        authorize line_class
         if line_class.save
           render json: { data: line_class.as_json }, status: :created
         else
@@ -16,6 +17,7 @@ module Api
 
       def update
         line_class = LineClass.find(params[:id])
+        authorize line_class
         if line_class.update(line_class_params)
           render json: { data: line_class.as_json }
         else

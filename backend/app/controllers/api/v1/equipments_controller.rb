@@ -43,6 +43,7 @@ module Api
       # POST /api/v1/equipments
       def create
         equipment = Equipment.new(equipment_params)
+        authorize equipment
 
         if equipment.save
           render json: { data: equipment.as_json }, status: :created
@@ -53,6 +54,7 @@ module Api
 
       # PATCH/PUT /api/v1/equipments/:id
       def update
+        authorize @equipment
         if @equipment.update(equipment_params)
           render json: { data: @equipment.as_json }
         else

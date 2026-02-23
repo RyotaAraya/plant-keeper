@@ -4,6 +4,7 @@ module Api
       # POST /api/v1/maintenance_assignments
       def create
         assignment = MaintenanceAssignment.new(assignment_params)
+        authorize assignment
 
         if assignment.save
           render json: {
@@ -17,6 +18,7 @@ module Api
       # DELETE /api/v1/maintenance_assignments/:id
       def destroy
         assignment = MaintenanceAssignment.find(params[:id])
+        authorize assignment
         assignment.destroy!
         head :no_content
       end

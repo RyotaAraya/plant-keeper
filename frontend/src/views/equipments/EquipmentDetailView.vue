@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canManageEquipmentAssignment } = usePermissions()
 
 const equipment = ref<any>(null)
 const loading = ref(false)
@@ -101,7 +103,7 @@ onMounted(fetchEquipment)
               :subtitle="`${a.role} / ${a.started_on}〜`"
             >
               <template #append>
-                <v-btn size="small" variant="outlined" color="warning" @click="endAssignment(a)">
+                <v-btn v-if="canManageEquipmentAssignment" size="small" variant="outlined" color="warning" @click="endAssignment(a)">
                   担当終了
                 </v-btn>
               </template>

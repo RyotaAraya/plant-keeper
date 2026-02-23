@@ -2,6 +2,7 @@ module Api
   module V1
     class EquipmentAssignmentsController < BaseController
       def index
+        authorize EquipmentAssignment
         assignments = EquipmentAssignment.includes(:user, :equipment)
         assignments = assignments.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
         assignments = assignments.where(user_id: params[:user_id]) if params[:user_id].present?
@@ -17,6 +18,7 @@ module Api
 
       def create
         assignment = EquipmentAssignment.new(assignment_params)
+        authorize assignment
         if assignment.save
           render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }, status: :created
         else
@@ -26,6 +28,7 @@ module Api
 
       def update
         assignment = EquipmentAssignment.find(params[:id])
+        authorize assignment
         if assignment.update(assignment_params)
           render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }
         else

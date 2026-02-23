@@ -13,6 +13,7 @@ module Api
       # POST /api/v1/warehouses
       def create
         warehouse = Warehouse.new(warehouse_params)
+        authorize warehouse
         if warehouse.save
           render json: { data: warehouse.as_json }, status: :created
         else
@@ -23,6 +24,7 @@ module Api
       # PATCH /api/v1/warehouses/:id
       def update
         warehouse = Warehouse.find(params[:id])
+        authorize warehouse
         if warehouse.update(warehouse_params)
           render json: { data: warehouse.as_json }
         else

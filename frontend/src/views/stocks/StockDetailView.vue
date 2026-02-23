@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canManageStockTransaction } = usePermissions()
 const stock = ref<any>(null)
 const loading = ref(true)
 
@@ -93,7 +95,7 @@ onMounted(fetchStock)
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/stocks')" />
         <h1 class="text-h5 ml-2">在庫詳細</h1>
         <v-spacer />
-        <v-btn color="primary" prepend-icon="mdi-swap-horizontal" @click="openTx">入出庫</v-btn>
+        <v-btn v-if="canManageStockTransaction" color="primary" prepend-icon="mdi-swap-horizontal" @click="openTx">入出庫</v-btn>
       </div>
 
       <v-card class="mb-4">

@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canUpdateTrouble, canCreateTroubleResponse } = usePermissions()
 const trouble = ref<any>(null)
 const loading = ref(true)
 const users = ref<any[]>([])
@@ -149,10 +151,10 @@ onMounted(() => {
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/troubles')" />
         <h1 class="text-h5 ml-2">{{ trouble.title }}</h1>
         <v-spacer />
-        <v-btn class="mr-2" variant="outlined" @click="openEdit">
+        <v-btn v-if="canUpdateTrouble" class="mr-2" variant="outlined" @click="openEdit">
           <v-icon start>mdi-pencil</v-icon>編集
         </v-btn>
-        <v-btn color="primary" @click="openResponse">
+        <v-btn v-if="canCreateTroubleResponse" color="primary" @click="openResponse">
           <v-icon start>mdi-comment-plus</v-icon>対応記録
         </v-btn>
       </div>

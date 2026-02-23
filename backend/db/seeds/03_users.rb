@@ -233,7 +233,7 @@ chiba_un    = find_dept("千葉製油所", "製造部", "運転課")
   # ============================================================
   { email: "morita@example.com",    name: "森田 正義",   employment_type: "employee", system_role: "member",   position: "section_manager", dept: chiba_keiki, site: chiba, join_year: 2006, pref: "千葉県", inactive: true },
   { email: "oishi@example.com",     name: "大石 裕次",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_keiki, site: chiba, join_year: 2015, pref: "千葉県", inactive: true },
-  { email: "suzuki_c@example.com",  name: "鈴木 将大",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_un,    site: chiba, join_year: 2016, pref: "千葉県", inactive: true },
+  { email: "suzuki_c@example.com",  name: "鈴木 将大",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_un,    site: chiba, join_year: 2016, pref: "千葉県", inactive: true }
 ].each do |data|
   User.create!(
     email:            data[:email],
@@ -269,7 +269,7 @@ end
   { email: "kubo@example.com",    name: "久保 正人", system_role: "manager", company: kansai,      site: sakai,    join_year: 2019, pref: "大阪府" },
   { email: "fujii@example.com",   name: "藤井 直人", system_role: "worker",  company: kansai,      site: sakai,    join_year: 2022, pref: "兵庫県" },
   # 東北計装サービス（仙台常駐）
-  { email: "mikami@example.com",  name: "三上 賢治", system_role: "worker",  company: tohoku,      site: sendai,   join_year: 2022, pref: "宮城県" },
+  { email: "mikami@example.com",  name: "三上 賢治", system_role: "worker",  company: tohoku,      site: sendai,   join_year: 2022, pref: "宮城県" }
 ].each do |data|
   User.create!(
     email:            data[:email],

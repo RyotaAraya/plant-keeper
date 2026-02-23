@@ -104,55 +104,55 @@ const router = createRouter({
       path: '/materials',
       name: 'Materials',
       component: () => import('@/views/materials/MaterialListView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresNonWorker: true },
     },
     {
       path: '/materials/:id',
       name: 'MaterialDetail',
       component: () => import('@/views/materials/MaterialDetailView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresNonWorker: true },
     },
     {
       path: '/stocks',
       name: 'Stocks',
       component: () => import('@/views/stocks/StockListView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresOwner: true },
     },
     {
       path: '/stocks/:id',
       name: 'StockDetail',
       component: () => import('@/views/stocks/StockDetailView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresOwner: true },
     },
     {
       path: '/orders',
       name: 'Orders',
       component: () => import('@/views/orders/OrderListView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresOwnerManager: true },
     },
     {
       path: '/users',
       name: 'Users',
       component: () => import('@/views/users/UserListView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: '/users/:id',
       name: 'UserDetail',
       component: () => import('@/views/users/UserDetailView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: '/audit-logs',
       name: 'AuditLogs',
       component: () => import('@/views/audit/AuditLogView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: '/settings',
       name: 'Settings',
       component: () => import('@/views/settings/SettingsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
   ],
 })
@@ -171,6 +171,25 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guest && authStore.isLoggedIn) {
     return { path: '/' }
+  }
+
+  if (authStore.isLoggedIn) {
+    const user = authStore.user
+    const role = user?.system_role
+    const companyType = user?.company?.company_type
+
+    if (to.meta.requiresAdmin && role !== 'admin') {
+      return { path: '/' }
+    }
+    if (to.meta.requiresOwner && companyType !== 'owner') {
+      return { path: '/' }
+    }
+    if (to.meta.requiresOwnerManager && !(role === 'admin' || (role === 'manager' && companyType === 'owner'))) {
+      return { path: '/' }
+    }
+    if (to.meta.requiresNonWorker && role === 'worker') {
+      return { path: '/' }
+    }
   }
 })
 

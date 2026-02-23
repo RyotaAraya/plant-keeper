@@ -4,6 +4,7 @@ module Api
       # POST /api/v1/trouble_responses
       def create
         response = TroubleResponse.new(response_params)
+        authorize response
         response.user = current_user
 
         if response.save
@@ -18,6 +19,7 @@ module Api
       # PATCH /api/v1/trouble_responses/:id
       def update
         response = TroubleResponse.find(params[:id])
+        authorize response
 
         if response.update(response_params)
           render json: {

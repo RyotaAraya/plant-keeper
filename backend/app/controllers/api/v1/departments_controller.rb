@@ -26,6 +26,7 @@ module Api
 
       def create
         department = Department.new(department_params)
+        authorize department
         if department.save
           render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }, status: :created
         else
@@ -35,6 +36,7 @@ module Api
 
       def update
         department = Department.find(params[:id])
+        authorize department
         if department.update(department_params)
           render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }
         else

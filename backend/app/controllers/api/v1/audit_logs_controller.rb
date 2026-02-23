@@ -3,6 +3,7 @@ module Api
     class AuditLogsController < BaseController
       # GET /api/v1/audit_logs
       def index
+        authorize AuditLog
         logs = AuditLog.includes(:user).all
         logs = logs.where(user_id: params[:user_id]) if params[:user_id].present?
         logs = logs.where(action: params[:action]) if params[:action].present?

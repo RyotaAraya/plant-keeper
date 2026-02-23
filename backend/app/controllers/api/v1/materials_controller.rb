@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/materials
       def index
+        authorize Material
         materials = Material.includes(:manufacturer).all
         materials = materials.where(manufacturer_id: params[:manufacturer_id]) if params[:manufacturer_id].present?
         materials = materials.where(category: params[:category]) if params[:category].present?
@@ -34,6 +35,7 @@ module Api
 
       # GET /api/v1/materials/:id
       def show
+        authorize @material
         stocks_summary = @material.stocks.group(:warehouse_id).sum(:quantity)
         warehouses = Warehouse.where(id: stocks_summary.keys).index_by(&:id)
 
@@ -53,6 +55,7 @@ module Api
       # POST /api/v1/materials
       def create
         material = Material.new(material_params)
+        authorize material
         if material.save
           render json: { data: material.as_json }, status: :created
         else
@@ -62,6 +65,7 @@ module Api
 
       # PATCH /api/v1/materials/:id
       def update
+        authorize @material
         if @material.update(material_params)
           render json: { data: @material.as_json(include: { manufacturer: { only: [ :id, :name ] } }) }
         else

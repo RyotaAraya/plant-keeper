@@ -3,8 +3,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
+const { canManageMaintenance } = usePermissions()
 
 const maintenances = ref<any[]>([])
 const equipments = ref<any[]>([])
@@ -117,7 +119,7 @@ watch([filters, page], fetchMaintenances, { deep: true })
     <div class="d-flex align-center mb-4">
       <h1 class="text-h5">定期整備</h1>
       <v-spacer />
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
+      <v-btn v-if="canManageMaintenance" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
     <div class="d-flex ga-4 mb-4">

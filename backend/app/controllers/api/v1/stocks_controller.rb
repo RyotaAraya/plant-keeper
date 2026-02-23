@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/stocks
       def index
+        authorize Stock
         stocks = Stock.includes(:material, :warehouse).all
         stocks = stocks.where(material_id: params[:material_id]) if params[:material_id].present?
         stocks = stocks.where(warehouse_id: params[:warehouse_id]) if params[:warehouse_id].present?
@@ -30,6 +31,7 @@ module Api
 
       # GET /api/v1/stocks/:id
       def show
+        authorize @stock
         render json: {
           data: @stock.as_json(
             include: {
@@ -50,6 +52,7 @@ module Api
       # POST /api/v1/stocks
       def create
         stock = Stock.new(stock_params)
+        authorize stock
         if stock.save
           render json: { data: stock.as_json }, status: :created
         else
@@ -59,6 +62,7 @@ module Api
 
       # PATCH /api/v1/stocks/:id
       def update
+        authorize @stock
         if @stock.update(stock_params)
           render json: { data: @stock.as_json }
         else

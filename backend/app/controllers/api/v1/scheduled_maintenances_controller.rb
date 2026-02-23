@@ -48,6 +48,7 @@ module Api
       # POST /api/v1/scheduled_maintenances
       def create
         maintenance = ScheduledMaintenance.new(maintenance_params)
+        authorize maintenance
 
         ActiveRecord::Base.transaction do
           maintenance.save!
@@ -74,6 +75,7 @@ module Api
 
       # PATCH /api/v1/scheduled_maintenances/:id
       def update
+        authorize @maintenance
         ActiveRecord::Base.transaction do
           @maintenance.update!(maintenance_params)
 
