@@ -21,6 +21,7 @@ const headers = [
   { title: '設備名', key: 'name' },
   { title: '拠点', key: 'site.name' },
   { title: '説明', key: 'description' },
+  { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
 async function fetchEquipments() {
@@ -43,6 +44,13 @@ async function fetchSites() {
 function openCreate() {
   editingId.value = null
   form.value = { name: '', description: '', site_id: selectedSiteId.value }
+  errors.value = []
+  dialog.value = true
+}
+
+function openEdit(item: any) {
+  editingId.value = item.id
+  form.value = { name: item.name, description: item.description || '', site_id: item.site_id }
   errors.value = []
   dialog.value = true
 }
@@ -100,7 +108,11 @@ watch(selectedSiteId, fetchEquipments)
       hover
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
-    />
+    >
+      <template #item.actions="{ item }">
+        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+      </template>
+    </v-data-table>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>

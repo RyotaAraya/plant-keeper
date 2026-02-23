@@ -34,6 +34,7 @@ const headers = [
   { title: '設備', key: 'equipment.name' },
   { title: 'サービス', key: 'service.name' },
   { title: 'ラインクラス', key: 'line_class.code' },
+  { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
 async function fetchInstruments() {
@@ -63,6 +64,21 @@ async function fetchMasters() {
 function openCreate() {
   editingId.value = null
   form.value = { equipment_id: selectedEquipmentId.value, tag_number: '', instrument_type: '', service_id: null, line_class_id: null, location: '', notes: '' }
+  errors.value = []
+  dialog.value = true
+}
+
+function openEdit(item: any) {
+  editingId.value = item.id
+  form.value = {
+    equipment_id: item.equipment_id,
+    tag_number: item.tag_number,
+    instrument_type: item.instrument_type || '',
+    service_id: item.service_id ?? null,
+    line_class_id: item.line_class_id ?? null,
+    location: item.location || '',
+    notes: item.notes || '',
+  }
   errors.value = []
   dialog.value = true
 }
@@ -136,7 +152,11 @@ watch(selectedEquipmentId, fetchInstruments)
       hover
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
-    />
+    >
+      <template #item.actions="{ item }">
+        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+      </template>
+    </v-data-table>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>

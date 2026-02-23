@@ -6,7 +6,7 @@ module Api
         authorize AuditLog
         logs = AuditLog.includes(:user).all
         logs = logs.where(user_id: params[:user_id]) if params[:user_id].present?
-        logs = logs.where(action: params[:action]) if params[:action].present?
+        logs = logs.where(action: params[:log_action]) if params[:log_action].present?
         logs = logs.where(auditable_type: params[:auditable_type]) if params[:auditable_type].present?
 
         logs = logs.order(performed_at: :desc)

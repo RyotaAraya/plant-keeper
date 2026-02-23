@@ -7,11 +7,76 @@ import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
-const { canManageEquipmentAssignment } = usePermissions()
+const { canManageEquipment, canManageEquipmentAssignment } = usePermissions()
 
 const equipment = ref<any>(null)
 const loading = ref(false)
 const tab = ref('instruments')
+
+// --- 設備編集 ---
+const editDialog = ref(false)
+const editForm = ref({ name: '', description: '', site_id: null as number | null })
+const editErrors = ref<string[]>([])
+const sites = ref<any[]>([])
+
+async function openEditEquipment() {
+  if (!sites.value.length) {
+    const res = await api.get('/sites', { params: { per_page: 100 } })
+    sites.value = res.data.data
+  }
+  editForm.value = {
+    name: equipment.value.name,
+    description: equipment.value.description || '',
+    site_id: equipment.value.site_id,
+  }
+  editErrors.value = []
+  editDialog.value = true
+}
+
+async function saveEquipment() {
+  editErrors.value = []
+  try {
+    await api.patch(`/equipments/${route.params.id}`, { equipment: editForm.value })
+    editDialog.value = false
+    await fetchEquipment()
+  } catch (e: any) {
+    editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
+  }
+}
+
+// --- 設備担当追加 ---
+const assignDialog = ref(false)
+const assignForm = ref({ user_id: null as number | null, role: '', started_on: new Date().toISOString().slice(0, 10) })
+const assignErrors = ref<string[]>([])
+const users = ref<any[]>([])
+
+async function openAssignDialog() {
+  if (!users.value.length) {
+    const res = await api.get('/users', { params: { per_page: 200 } })
+    users.value = res.data.data
+  }
+  assignForm.value = { user_id: null, role: '', started_on: new Date().toISOString().slice(0, 10) }
+  assignErrors.value = []
+  assignDialog.value = true
+}
+
+async function saveAssignment() {
+  assignErrors.value = []
+  try {
+    await api.post('/equipment_assignments', {
+      equipment_assignment: {
+        equipment_id: equipment.value.id,
+        user_id: assignForm.value.user_id,
+        role: assignForm.value.role,
+        started_on: assignForm.value.started_on,
+      },
+    })
+    assignDialog.value = false
+    await fetchEquipment()
+  } catch (e: any) {
+    assignErrors.value = e.response?.data?.errors || ['保存に失敗しました']
+  }
+}
 
 async function fetchEquipment() {
   loading.value = true
@@ -51,7 +116,11 @@ onMounted(fetchEquipment)
 
     <template v-else-if="equipment">
       <v-card class="mb-4">
-        <v-card-title>{{ equipment.name }}</v-card-title>
+        <v-card-title class="d-flex align-center">
+          {{ equipment.name }}
+          <v-spacer />
+          <v-btn v-if="canManageEquipment" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
+        </v-card-title>
         <v-card-subtitle v-if="equipment.site">{{ equipment.site?.name }}</v-card-subtitle>
         <v-card-text>
           <p v-if="equipment.description">{{ equipment.description }}</p>
@@ -94,7 +163,11 @@ onMounted(fetchEquipment)
         </v-window-item>
 
         <v-window-item value="assignments">
-          <h3 class="text-subtitle-1 mb-2">現任担当者</h3>
+          <div class="d-flex align-center mb-2">
+            <h3 class="text-subtitle-1">現任担当者</h3>
+            <v-spacer />
+            <v-btn v-if="canManageEquipmentAssignment" size="small" color="primary" prepend-icon="mdi-plus" @click="openAssignDialog">担当追加</v-btn>
+          </div>
           <v-list v-if="currentAssignments().length">
             <v-list-item
               v-for="a in currentAssignments()"
@@ -144,6 +217,46 @@ onMounted(fetchEquipment)
         </v-window-item>
       </v-window>
     </template>
+
+    <!-- 設備編集ダイアログ -->
+    <v-dialog v-model="editDialog" max-width="500">
+      <v-card>
+        <v-card-title>設備編集</v-card-title>
+        <v-card-text>
+          <v-alert v-if="editErrors.length" type="error" density="compact" class="mb-4">
+            <div v-for="err in editErrors" :key="err">{{ err }}</div>
+          </v-alert>
+          <v-select v-model="editForm.site_id" :items="sites" item-title="name" item-value="id" label="拠点" class="mb-2" />
+          <v-text-field v-model="editForm.name" label="設備名" class="mb-2" />
+          <v-textarea v-model="editForm.description" label="説明" rows="3" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" @click="saveEquipment">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 担当追加ダイアログ -->
+    <v-dialog v-model="assignDialog" max-width="500">
+      <v-card>
+        <v-card-title>担当追加</v-card-title>
+        <v-card-text>
+          <v-alert v-if="assignErrors.length" type="error" density="compact" class="mb-4">
+            <div v-for="err in assignErrors" :key="err">{{ err }}</div>
+          </v-alert>
+          <v-select v-model="assignForm.user_id" :items="users" item-title="name" item-value="id" label="担当者 *" class="mb-2" />
+          <v-text-field v-model="assignForm.role" label="役割" class="mb-2" />
+          <v-text-field v-model="assignForm.started_on" label="開始日 *" type="date" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="assignDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" @click="saveAssignment">追加</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </MainLayout>
 </template>
 

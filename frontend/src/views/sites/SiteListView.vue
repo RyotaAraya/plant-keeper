@@ -21,6 +21,7 @@ const headers = [
   { title: '所在県', key: 'prefecture' },
   { title: '住所', key: 'address' },
   { title: '状態', key: 'is_active', width: '100px' },
+  { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
 async function fetchSites() {
@@ -38,6 +39,13 @@ async function fetchSites() {
 function openCreate() {
   editingId.value = null
   form.value = { name: '', prefecture: '', address: '', is_active: true, closed_on: '' }
+  errors.value = []
+  dialog.value = true
+}
+
+function openEdit(item: any) {
+  editingId.value = item.id
+  form.value = { name: item.name, prefecture: item.prefecture || '', address: item.address || '', is_active: item.is_active, closed_on: item.closed_on || '' }
   errors.value = []
   dialog.value = true
 }
@@ -93,6 +101,9 @@ watch(showInactive, fetchSites)
           {{ item.is_active ? '稼働中' : '閉鎖' }}
         </v-chip>
       </template>
+      <template #item.actions="{ item }">
+        <v-btn v-if="canManageSite" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+      </template>
     </v-data-table>
 
     <v-dialog v-model="dialog" max-width="600">
@@ -105,7 +116,8 @@ watch(showInactive, fetchSites)
           <v-text-field v-model="form.name" label="拠点名" class="mb-2" />
           <v-text-field v-model="form.prefecture" label="所在県" class="mb-2" />
           <v-text-field v-model="form.address" label="住所" class="mb-2" />
-          <v-switch v-model="form.is_active" label="稼働中" />
+          <v-switch v-model="form.is_active" label="稼働中" class="mb-2" />
+          <v-text-field v-if="!form.is_active" v-model="form.closed_on" label="閉鎖日" type="date" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />

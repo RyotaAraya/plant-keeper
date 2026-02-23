@@ -3,14 +3,44 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canManageSite } = usePermissions()
 
 const site = ref<any>(null)
 const equipments = ref<any[]>([])
 const loading = ref(false)
 const tab = ref('equipments')
+
+// --- 編集 ---
+const editDialog = ref(false)
+const editErrors = ref<string[]>([])
+const editForm = ref({ name: '', prefecture: '', address: '', is_active: true, closed_on: '' })
+
+function openEditSite() {
+  editForm.value = {
+    name: site.value.name,
+    prefecture: site.value.prefecture || '',
+    address: site.value.address || '',
+    is_active: site.value.is_active,
+    closed_on: site.value.closed_on || '',
+  }
+  editErrors.value = []
+  editDialog.value = true
+}
+
+async function saveSite() {
+  editErrors.value = []
+  try {
+    await api.patch(`/sites/${route.params.id}`, { site: editForm.value })
+    editDialog.value = false
+    await fetchSite()
+  } catch (e: any) {
+    editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
+  }
+}
 
 async function fetchSite() {
   loading.value = true
@@ -42,6 +72,8 @@ onMounted(fetchSite)
           <v-chip :color="site.is_active ? 'success' : 'grey'" size="small" class="ml-2">
             {{ site.is_active ? '稼働中' : '閉鎖' }}
           </v-chip>
+          <v-spacer />
+          <v-btn v-if="canManageSite" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditSite">編集</v-btn>
         </v-card-title>
         <v-card-text>
           <v-row>
@@ -86,5 +118,27 @@ onMounted(fetchSite)
         </v-window-item>
       </v-window>
     </template>
+
+    <!-- 拠点編集ダイアログ -->
+    <v-dialog v-model="editDialog" max-width="500">
+      <v-card>
+        <v-card-title>拠点編集</v-card-title>
+        <v-card-text>
+          <v-alert v-if="editErrors.length" type="error" density="compact" class="mb-4">
+            <div v-for="err in editErrors" :key="err">{{ err }}</div>
+          </v-alert>
+          <v-text-field v-model="editForm.name" label="拠点名" class="mb-2" />
+          <v-text-field v-model="editForm.prefecture" label="所在県" class="mb-2" />
+          <v-text-field v-model="editForm.address" label="住所" class="mb-2" />
+          <v-switch v-model="editForm.is_active" label="稼働中" class="mb-2" />
+          <v-text-field v-if="!editForm.is_active" v-model="editForm.closed_on" label="閉鎖日" type="date" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" @click="saveSite">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </MainLayout>
 </template>

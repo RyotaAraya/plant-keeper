@@ -46,6 +46,7 @@ module Api
         authorize equipment
 
         if equipment.save
+          record_audit_log("create", equipment)
           render json: { data: equipment.as_json }, status: :created
         else
           render json: { errors: equipment.errors.full_messages }, status: :unprocessable_entity
@@ -56,6 +57,7 @@ module Api
       def update
         authorize @equipment
         if @equipment.update(equipment_params)
+          record_audit_log("update", @equipment)
           render json: { data: @equipment.as_json }
         else
           render json: { errors: @equipment.errors.full_messages }, status: :unprocessable_entity

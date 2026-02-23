@@ -37,6 +37,7 @@ module Api
         authorize site
 
         if site.save
+          record_audit_log("create", site)
           render json: { data: site.as_json }, status: :created
         else
           render json: { errors: site.errors.full_messages }, status: :unprocessable_entity
@@ -47,6 +48,7 @@ module Api
       def update
         authorize @site
         if @site.update(site_params)
+          record_audit_log("update", @site)
           render json: { data: @site.as_json }
         else
           render json: { errors: @site.errors.full_messages }, status: :unprocessable_entity

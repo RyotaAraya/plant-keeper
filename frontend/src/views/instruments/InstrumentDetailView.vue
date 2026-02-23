@@ -3,13 +3,66 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const { canManageEquipment } = usePermissions()
 
 const instrument = ref<any>(null)
 const loading = ref(false)
 const tab = ref('info')
+
+// --- 編集 ---
+const editDialog = ref(false)
+const editErrors = ref<string[]>([])
+const editForm = ref({
+  equipment_id: null as number | null,
+  tag_number: '',
+  instrument_type: '',
+  service_id: null as number | null,
+  line_class_id: null as number | null,
+  location: '',
+  notes: '',
+})
+const equipments = ref<any[]>([])
+const services = ref<any[]>([])
+const lineClasses = ref<any[]>([])
+
+async function openEditInstrument() {
+  if (!equipments.value.length) {
+    const [eqRes, svcRes, lcRes] = await Promise.all([
+      api.get('/equipments', { params: { per_page: 100 } }),
+      api.get('/services'),
+      api.get('/line_classes'),
+    ])
+    equipments.value = eqRes.data.data
+    services.value = svcRes.data.data
+    lineClasses.value = lcRes.data.data
+  }
+  editForm.value = {
+    equipment_id: instrument.value.equipment_id,
+    tag_number: instrument.value.tag_number,
+    instrument_type: instrument.value.instrument_type || '',
+    service_id: instrument.value.service_id ?? null,
+    line_class_id: instrument.value.line_class_id ?? null,
+    location: instrument.value.location || '',
+    notes: instrument.value.notes || '',
+  }
+  editErrors.value = []
+  editDialog.value = true
+}
+
+async function saveInstrument() {
+  editErrors.value = []
+  try {
+    await api.patch(`/instruments/${route.params.id}`, { instrument: editForm.value })
+    editDialog.value = false
+    await fetchInstrument()
+  } catch (e: any) {
+    editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
+  }
+}
 
 const statusLabel: Record<string, string> = {
   open: '未対応', in_progress: '対応中', resolved: '解決済', closed: 'クローズ'
@@ -47,7 +100,11 @@ onMounted(fetchInstrument)
 
     <template v-else-if="instrument">
       <v-card class="mb-4">
-        <v-card-title>{{ instrument.tag_number }}</v-card-title>
+        <v-card-title class="d-flex align-center">
+          {{ instrument.tag_number }}
+          <v-spacer />
+          <v-btn v-if="canManageEquipment" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditInstrument">編集</v-btn>
+        </v-card-title>
         <v-card-subtitle>
           {{ instrument.equipment?.name }} / {{ instrument.equipment?.site?.name }}
         </v-card-subtitle>
@@ -114,5 +171,29 @@ onMounted(fetchInstrument)
         </v-window-item>
       </v-window>
     </template>
+
+    <!-- 計器編集ダイアログ -->
+    <v-dialog v-model="editDialog" max-width="600">
+      <v-card>
+        <v-card-title>計器編集</v-card-title>
+        <v-card-text>
+          <v-alert v-if="editErrors.length" type="error" density="compact" class="mb-4">
+            <div v-for="err in editErrors" :key="err">{{ err }}</div>
+          </v-alert>
+          <v-select v-model="editForm.equipment_id" :items="equipments" item-title="name" item-value="id" label="設備" class="mb-2" />
+          <v-text-field v-model="editForm.tag_number" label="タグナンバー" class="mb-2" />
+          <v-text-field v-model="editForm.instrument_type" label="種別" class="mb-2" />
+          <v-select v-model="editForm.service_id" :items="services" item-title="name" item-value="id" label="サービス・流体" clearable class="mb-2" />
+          <v-select v-model="editForm.line_class_id" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" clearable class="mb-2" />
+          <v-text-field v-model="editForm.location" label="設置場所" class="mb-2" />
+          <v-textarea v-model="editForm.notes" label="備考" rows="2" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" @click="saveInstrument">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </MainLayout>
 </template>

@@ -42,6 +42,7 @@ module Api
         instrument = Instrument.new(instrument_params)
         authorize instrument
         if instrument.save
+          record_audit_log("create", instrument)
           render json: { data: instrument.as_json }, status: :created
         else
           render json: { errors: instrument.errors.full_messages }, status: :unprocessable_entity
@@ -51,6 +52,7 @@ module Api
       def update
         authorize @instrument
         if @instrument.update(instrument_params)
+          record_audit_log("update", @instrument)
           render json: { data: @instrument.as_json }
         else
           render json: { errors: @instrument.errors.full_messages }, status: :unprocessable_entity
