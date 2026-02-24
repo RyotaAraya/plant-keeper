@@ -1,6 +1,26 @@
 module Api
   module V1
     class DepartmentsController < BaseController
+      def show
+        dept = Department.includes(:site, :parent, :children,
+                                   department_histories: :user).find(params[:id])
+        current_members = dept.department_histories.current.map do |dh|
+          {
+            id: dh.id,
+            user: dh.user.as_json(only: [ :id, :name, :email ]),
+            role_note: dh.role_note,
+            started_on: dh.started_on
+          }
+        end
+        render json: {
+          data: dept.as_json(include: {
+            site: { only: [ :id, :name ] },
+            parent: { only: [ :id, :name, :level ] },
+            children: { only: [ :id, :name, :level ] }
+          }).merge(current_members: current_members)
+        }
+      end
+
       def index
         departments = Department.includes(:site, :parent)
         departments = departments.where(site_id: params[:site_id]) if params[:site_id].present?
@@ -37,7 +57,7 @@ module Api
       def update
         department = Department.find(params[:id])
         authorize department
-        if department.update(department_params)
+        if department.update(update_params)
           render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }
         else
           render json: { errors: department.errors.full_messages }, status: :unprocessable_entity
@@ -48,6 +68,10 @@ module Api
 
       def department_params
         params.require(:department).permit(:name, :department_type, :site_id, :parent_id, :level)
+      end
+
+      def update_params
+        params.require(:department).permit(:name, :department_type, :parent_id, :level)
       end
 
       def build_tree(departments)

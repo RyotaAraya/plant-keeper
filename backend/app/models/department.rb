@@ -12,6 +12,8 @@ class Department < ApplicationRecord
   enum :level, { division: "division", section: "section", team: "team" }
 
   validates :name, presence: true
+  validate :valid_parent_level
+  validate :not_self_referential
 
   # 部 > 課 > チーム のフルパスを返す
   def full_path
@@ -33,5 +35,22 @@ class Department < ApplicationRecord
       current = current.parent
     end
     chain
+  end
+
+  private
+
+  def not_self_referential
+    errors.add(:parent, "自身を親部署に設定できません") if parent_id.present? && parent_id == id
+  end
+
+  def valid_parent_level
+    case level
+    when "division"
+      errors.add(:parent, "部にはなし、親部署は設定できません") if parent_id.present?
+    when "section"
+      errors.add(:parent, "課の親は部である必要があります") unless parent&.division?
+    when "team"
+      errors.add(:parent, "チームの親は課である必要があります") unless parent&.section?
+    end
   end
 end

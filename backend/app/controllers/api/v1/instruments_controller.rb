@@ -5,8 +5,43 @@ module Api
 
       def index
         instruments = Instrument.includes(:equipment, :service, :line_class)
-        instruments = instruments.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
-        instruments = instruments.where("tag_number ILIKE ?", "%#{params[:q]}%") if params[:q].present?
+
+        # 拠点フィルタ（複数対応）
+        if params[:site_ids].present?
+          ids = Array(params[:site_ids]).map(&:to_i).select(&:positive?)
+          instruments = instruments.joins(:equipment).where(equipments: { site_id: ids }) if ids.any?
+        elsif params[:site_id].present?
+          instruments = instruments.joins(:equipment).where(equipments: { site_id: params[:site_id] })
+        end
+
+        # 設備フィルタ（複数対応）
+        if params[:equipment_ids].present?
+          ids = Array(params[:equipment_ids]).map(&:to_i).select(&:positive?)
+          instruments = instruments.where(equipment_id: ids) if ids.any?
+        elsif params[:equipment_id].present?
+          instruments = instruments.where(equipment_id: params[:equipment_id])
+        end
+
+        # サービスフィルタ（複数対応）
+        if params[:service_ids].present?
+          ids = Array(params[:service_ids]).map(&:to_i).select(&:positive?)
+          instruments = instruments.where(service_id: ids) if ids.any?
+        elsif params[:service_id].present?
+          instruments = instruments.where(service_id: params[:service_id])
+        end
+
+        # ラインクラスフィルタ（複数対応）
+        if params[:line_class_ids].present?
+          ids = Array(params[:line_class_ids]).map(&:to_i).select(&:positive?)
+          instruments = instruments.where(line_class_id: ids) if ids.any?
+        elsif params[:line_class_id].present?
+          instruments = instruments.where(line_class_id: params[:line_class_id])
+        end
+
+        if params[:q].present?
+          q = "%#{params[:q]}%"
+          instruments = instruments.where("tag_number ILIKE ? OR instrument_type ILIKE ? OR location ILIKE ?", q, q, q)
+        end
 
         instruments = instruments.order(:tag_number)
         total_count = instruments.count

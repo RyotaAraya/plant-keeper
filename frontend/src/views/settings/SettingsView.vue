@@ -81,13 +81,9 @@ async function saveLc() {
   }
 }
 
-// Departments
+// Departments（チェックリストテンプレートの部署選択に使用）
 const departments = ref<any[]>([])
 const sites = ref<any[]>([])
-const deptDialog = ref(false)
-const deptForm = ref({ name: '', department_type: 'maintenance', level: 'section', site_id: null as number | null, parent_id: null as number | null })
-const deptEditingId = ref<number | null>(null)
-const deptErrors = ref<string[]>([])
 
 async function fetchDepartments() {
   const res = await api.get('/departments')
@@ -99,54 +95,11 @@ async function fetchSites() {
   sites.value = res.data.data
 }
 
-function openDeptDialog(item?: any) {
-  if (item) {
-    deptEditingId.value = item.id
-    deptForm.value = { name: item.name, department_type: item.department_type, level: item.level || 'section', site_id: item.site_id, parent_id: item.parent_id }
-  } else {
-    deptEditingId.value = null
-    deptForm.value = { name: '', department_type: 'maintenance', level: 'section', site_id: null, parent_id: null }
-  }
-  deptErrors.value = []
-  deptDialog.value = true
-}
-
-async function saveDept() {
-  try {
-    if (deptEditingId.value) {
-      await api.patch(`/departments/${deptEditingId.value}`, { department: deptForm.value })
-    } else {
-      await api.post('/departments', { department: deptForm.value })
-    }
-    deptDialog.value = false
-    await fetchDepartments()
-  } catch (e: any) {
-    deptErrors.value = e.response?.data?.errors || ['保存に失敗しました']
-  }
-}
-
-const deptTypeLabel: Record<string, string> = {
-  maintenance: '保全', operation: '運転', environment: '環境安全'
-}
 const hazardOptions = [
   { title: '高', value: 'high' },
   { title: '中', value: 'medium' },
   { title: '低', value: 'low' },
 ]
-const deptTypeOptions = [
-  { title: '保全', value: 'maintenance' },
-  { title: '運転', value: 'operation' },
-  { title: '環境安全', value: 'environment' },
-]
-const deptLevelLabel: Record<string, string> = {
-  division: '部', section: '課', team: 'チーム'
-}
-const deptLevelOptions = [
-  { title: '部', value: 'division' },
-  { title: '課', value: 'section' },
-  { title: 'チーム', value: 'team' },
-]
-
 // Checklist Templates
 const templates = ref<any[]>([])
 const templateDialog = ref(false)
@@ -326,7 +279,6 @@ onMounted(() => {
     <v-tabs v-model="tab" class="mb-4">
       <v-tab value="services">サービス・流体</v-tab>
       <v-tab value="lineClasses">ラインクラス</v-tab>
-      <v-tab value="departments">部署</v-tab>
       <v-tab value="checklists">チェックリスト</v-tab>
       <v-tab value="manufacturers">メーカー</v-tab>
       <v-tab value="warehouses">倉庫</v-tab>
@@ -421,58 +373,6 @@ onMounted(() => {
         </v-dialog>
       </v-window-item>
 
-      <!-- 部署 -->
-      <v-window-item value="departments">
-        <div class="d-flex mb-2">
-          <v-spacer />
-          <v-btn color="primary" size="small" prepend-icon="mdi-plus" @click="openDeptDialog()">追加</v-btn>
-        </div>
-        <v-data-table
-          :headers="[
-            { title: '部署名', key: 'name' },
-            { title: '階層', key: 'level', width: '80px' },
-            { title: '種別', key: 'department_type', width: '100px' },
-            { title: '親部署', key: 'parent.name', width: '160px' },
-            { title: '拠点', key: 'site.name' },
-            { title: '', key: 'actions', width: '80px', sortable: false },
-          ]"
-          :items="departments"
-          density="compact"
-        >
-          <template #item.level="{ item }">
-            <v-chip :color="item.level === 'division' ? 'primary' : item.level === 'section' ? 'info' : 'default'" size="x-small">
-              {{ deptLevelLabel[item.level] || item.level }}
-            </v-chip>
-          </template>
-          <template #item.department_type="{ item }">
-            {{ deptTypeLabel[item.department_type] || item.department_type }}
-          </template>
-          <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openDeptDialog(item)" />
-          </template>
-        </v-data-table>
-
-        <v-dialog v-model="deptDialog" max-width="500">
-          <v-card>
-            <v-card-title>{{ deptEditingId ? '部署編集' : '部署追加' }}</v-card-title>
-            <v-card-text>
-              <v-alert v-if="deptErrors.length" type="error" density="compact" class="mb-4">
-                <div v-for="err in deptErrors" :key="err">{{ err }}</div>
-              </v-alert>
-              <v-text-field v-model="deptForm.name" label="部署名" class="mb-2" />
-              <v-select v-model="deptForm.level" :items="deptLevelOptions" item-title="title" item-value="value" label="階層" class="mb-2" />
-              <v-select v-model="deptForm.department_type" :items="deptTypeOptions" item-title="title" item-value="value" label="種別" class="mb-2" />
-              <v-select v-model="deptForm.site_id" :items="sites" item-title="name" item-value="id" label="拠点" class="mb-2" />
-              <v-select v-model="deptForm.parent_id" :items="departments.filter((d: any) => d.level !== 'team')" item-title="name" item-value="id" label="親部署" clearable class="mb-2" />
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer />
-              <v-btn @click="deptDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveDept">保存</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-      </v-window-item>
       <!-- チェックリストテンプレート -->
       <v-window-item value="checklists">
         <div class="d-flex mb-2">
