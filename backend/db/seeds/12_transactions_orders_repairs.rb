@@ -40,6 +40,15 @@ StockTransaction.create!(stock: stock_by("堺第1倉庫", "GK-NB10"), user: tana
 StockTransaction.create!(stock: stock_by("堺第1倉庫", "YTKG-AFS"), user: hayashi, transaction_type: "outgoing", quantity: 1, from_warehouse: warehouses["堺第1倉庫"], reason: "堺HDS熱電対交換。", transacted_at: 18.days.ago)
 StockTransaction.create!(stock: stock_by("和歌山倉庫", "GK-NB10"), user: wk_inst1, transaction_type: "outgoing", quantity: 2, from_warehouse: warehouses["和歌山倉庫"], reason: "和歌山CDU作業。", transacted_at: 14.days.ago)
 StockTransaction.create!(stock: stock_by("仙台倉庫", "GK-NB10"), user: sd_inst1, transaction_type: "outgoing", quantity: 2, from_warehouse: warehouses["仙台倉庫"], reason: "仙台LK作業。", transacted_at: 10.days.ago)
+StockTransaction.create!(stock: stock_by("川崎第1倉庫", "GK-NB20"), user: sato, transaction_type: "outgoing", quantity: 5, from_warehouse: warehouses["川崎第1倉庫"], reason: "RHDS配管フランジ開放作業用（20K）。", transacted_at: 7.days.ago)
+StockTransaction.create!(stock: stock_by("根岸倉庫", "YTA510"), user: imai, transaction_type: "outgoing", quantity: 1, from_warehouse: warehouses["根岸倉庫"], reason: "根岸CDU温度伝送器交換。", transacted_at: 14.days.ago)
+StockTransaction.create!(stock: stock_by("堺第1倉庫", "AVP300"), user: tanabe, transaction_type: "outgoing", quantity: 1, from_warehouse: warehouses["堺第1倉庫"], reason: "堺CDU調節弁ポジショナー交換。", transacted_at: 9.days.ago)
+StockTransaction.create!(stock: stock_by("和歌山倉庫", "YTKG-AFS"), user: wk_inst1, transaction_type: "outgoing", quantity: 2, from_warehouse: warehouses["和歌山倉庫"], reason: "和歌山FCC熱電対交換。", transacted_at: 11.days.ago)
+StockTransaction.create!(stock: stock_by("仙台倉庫", "YTKG-AFS"), user: sd_inst1, transaction_type: "outgoing", quantity: 1, from_warehouse: warehouses["仙台倉庫"], reason: "仙台ボイラー熱電対交換。", transacted_at: 6.days.ago)
+StockTransaction.create!(stock: stock_by("堺第1倉庫", "GK-NB10"), user: hayashi, transaction_type: "outgoing", quantity: 4, from_warehouse: warehouses["堺第1倉庫"], reason: "堺CRF配管開放作業用。", transacted_at: 4.days.ago)
+StockTransaction.create!(stock: stock_by("川崎第1倉庫", "10UTB"), user: sato, transaction_type: "outgoing", quantity: 2, from_warehouse: warehouses["川崎第1倉庫"], reason: "CDUドレン弁交換。", transacted_at: 18.days.ago)
+StockTransaction.create!(stock: stock_by("川崎第2倉庫", "EJA110E", serial: "EJA-2025-KW2-001"), user: fujita, transaction_type: "transfer", quantity: 1, from_warehouse: warehouses["川崎第2倉庫"], to_warehouse: warehouses["川崎第1倉庫"], reason: "第1倉庫への移動。ボイラー点検用。", transacted_at: 5.days.ago)
+StockTransaction.create!(stock: stock_by("根岸第2倉庫", "CVV-S-1.25"), user: imai, transaction_type: "outgoing", quantity: 50, from_warehouse: warehouses["根岸第2倉庫"], reason: "根岸タンクヤード配線工事。", transacted_at: 22.days.ago)
 
 puts "発注を作成中..."
 
@@ -74,6 +83,29 @@ Order.create!(material: materials["10XJME"], user: sato, quantity: 5, unit_price
 Order.create!(material: materials["10SNBF"], user: sato, quantity: 5, unit_price: 15_000, supplier_name: "キッツ販売", status: "received", ordered_on: Date.new(2025, 5, 10), received_on: Date.new(2025, 5, 17))
 Order.create!(material: materials["GK-NB20"], user: suzuki, quantity: 60, unit_price: 380, supplier_name: "配管資材センター", status: "received", ordered_on: Date.new(2025, 7, 10), received_on: Date.new(2025, 7, 11))
 Order.create!(material: materials["YTRG-AFS"], user: suzuki, quantity: 5, unit_price: 12_000, supplier_name: "横河ソリューションサービス", status: "received", ordered_on: Date.new(2025, 3, 20), received_on: Date.new(2025, 3, 27))
+
+# ============================================================
+# 追加発注
+# ============================================================
+imai2      = user_by("imai@example.com")
+kimura2    = user_by("kimura@example.com")
+matsumoto2 = user_by("matsumoto@example.com")
+doi3       = user_by("doi@example.com")
+
+Order.create!(material: materials["EJA110E"],    user: suzuki,     quantity: 2,   unit_price: 192_000, supplier_name: "横河ソリューションサービス",       status: "ordered",  ordered_on: Date.new(2026, 2, 1),  notes: "川崎RHDS予備。高圧仕様用。")
+Order.create!(material: materials["3051CD"],     user: imai2,      quantity: 2,   unit_price: 210_000, supplier_name: "エマソン・プロセス・マネジメント", status: "ordered",  ordered_on: Date.new(2026, 2, 5),  notes: "根岸HDS予備。")
+Order.create!(material: materials["YTA510"],     user: kimura2,    quantity: 3,   unit_price: 95_000,  supplier_name: "横河ソリューションサービス",       status: "received", ordered_on: Date.new(2025, 10, 1), received_on: Date.new(2025, 10, 15), notes: "堺向け。")
+Order.create!(material: materials["AVP300"],     user: kimura2,    quantity: 2,   unit_price: 120_000, supplier_name: "アズビル株式会社",                 status: "received", ordered_on: Date.new(2025, 11, 1), received_on: Date.new(2025, 11, 15))
+Order.create!(material: materials["GK-NB10"],    user: imai2,      quantity: 80,  unit_price: 250,     supplier_name: "配管資材センター",                 status: "received", ordered_on: Date.new(2025, 11, 5), received_on: Date.new(2025, 11, 6))
+Order.create!(material: materials["GK-NB10"],    user: doi3,       quantity: 50,  unit_price: 250,     supplier_name: "配管資材センター",                 status: "received", ordered_on: Date.new(2025, 8, 10), received_on: Date.new(2025, 8, 11), notes: "和歌山向け。")
+Order.create!(material: materials["SS-810-1-8"], user: imai2,      quantity: 30,  unit_price: 1_200,   supplier_name: "スウェージロック・ジャパン",       status: "received", ordered_on: Date.new(2025, 9, 20), received_on: Date.new(2025, 9, 23))
+Order.create!(material: materials["YTKG-AFS"],   user: doi3,       quantity: 5,   unit_price: 8_500,   supplier_name: "横河ソリューションサービス",       status: "received", ordered_on: Date.new(2025, 7, 15), received_on: Date.new(2025, 7, 22), notes: "和歌山向け。")
+Order.create!(material: materials["10UTB"],      user: imai2,      quantity: 10,  unit_price: 4_500,   supplier_name: "キッツ販売",                       status: "received", ordered_on: Date.new(2025, 10, 10), received_on: Date.new(2025, 10, 14))
+Order.create!(material: materials["CVV-S-1.25"], user: matsumoto2, quantity: 200, unit_price: 150,     supplier_name: "電線商事",                         status: "received", ordered_on: Date.new(2025, 5, 20), received_on: Date.new(2025, 5, 23), notes: "仙台向け。")
+Order.create!(material: materials["PKG-700-PTFE"], user: kimura2,  quantity: 15,  unit_price: 3_500,   supplier_name: "アズビル株式会社",                 status: "received", ordered_on: Date.new(2025, 6, 10), received_on: Date.new(2025, 6, 17))
+Order.create!(material: materials["EJA110E"],    user: matsumoto2, quantity: 2,   unit_price: 185_000, supplier_name: "横河ソリューションサービス",       status: "received", ordered_on: Date.new(2025, 8, 1),  received_on: Date.new(2025, 8, 15), notes: "仙台向け追加。")
+Order.create!(material: materials["GK-NB20"],    user: tanabe,     quantity: 40,  unit_price: 380,     supplier_name: "配管資材センター",                 status: "received", ordered_on: Date.new(2025, 10, 5), received_on: Date.new(2025, 10, 6))
+Order.create!(material: materials["475"],        user: suzuki,     quantity: 1,   unit_price: 380_000, supplier_name: "エマソン・プロセス・マネジメント", status: "draft",    ordered_on: Date.new(2026, 2, 15), notes: "HARTコミュニケータ更新。旧機種の修理不可。")
 
 puts "修理を作成中..."
 

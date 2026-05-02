@@ -233,7 +233,51 @@ chiba_un    = find_dept("千葉製油所", "製造部", "運転課")
   # ============================================================
   { email: "morita@example.com",    name: "森田 正義",   employment_type: "employee", system_role: "member",   position: "section_manager", dept: chiba_keiki, site: chiba, join_year: 2006, pref: "千葉県", inactive: true },
   { email: "oishi@example.com",     name: "大石 裕次",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_keiki, site: chiba, join_year: 2015, pref: "千葉県", inactive: true },
-  { email: "suzuki_c@example.com",  name: "鈴木 将大",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_un,    site: chiba, join_year: 2016, pref: "千葉県", inactive: true }
+  { email: "suzuki_c@example.com",  name: "鈴木 将大",   employment_type: "employee", system_role: "member",   position: "staff",           dept: chiba_un,    site: chiba, join_year: 2016, pref: "千葉県", inactive: true },
+
+  # ============================================================
+  # 追加ユーザー
+  # ============================================================
+  # 川崎 計器Aチーム
+  { email: "matsui@example.com",        name: "松井 亮太",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_keiki_a, site: kawasaki, join_year: 2023, pref: "神奈川県" },
+  { email: "kimura_kw@example.com",     name: "木村 龍一",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_keiki_a, site: kawasaki, join_year: 2024, pref: "東京都" },
+  # 川崎 計器Bチーム
+  { email: "sakamoto@example.com",      name: "坂本 翔",     employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_keiki_b, site: kawasaki, join_year: 2022, pref: "千葉県" },
+  { email: "seki@example.com",          name: "関 泰司",     employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_keiki_b, site: kawasaki, join_year: 2023, pref: "埼玉県" },
+  # 川崎 電気保全課
+  { email: "tsuchiya@example.com",      name: "土屋 克己",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_denki_t, site: kawasaki, join_year: 2021, pref: "神奈川県" },
+  # 川崎 第1運転課
+  { email: "hamaguchi@example.com",     name: "浜口 大貴",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_un1_a,   site: kawasaki, join_year: 2022, pref: "神奈川県" },
+  { email: "mikami_kw@example.com",     name: "三上 沙織",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_un1_b,   site: kawasaki, join_year: 2023, pref: "千葉県" },
+  # 川崎 第2運転課
+  { email: "aoyama@example.com",        name: "青山 隼人",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_un2_a,   site: kawasaki, join_year: 2022, pref: "東京都" },
+  # 根岸 計器保全課
+  { email: "nakajima@example.com",      name: "中島 崇",     employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_keiki_t,  site: negishi,  join_year: 2020, pref: "神奈川県" },
+  { email: "aoki@example.com",          name: "青木 由紀",   employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_keiki_t,  site: negishi,  join_year: 2022, pref: "神奈川県" },
+  # 根岸 電気保全課
+  { email: "yamauchi@example.com",      name: "山内 洋一",   employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_denki_t,  site: negishi,  join_year: 2021, pref: "神奈川県" },
+  # 根岸 運転課
+  { email: "sakurai@example.com",       name: "桜井 雄太",   employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_un_a,     site: negishi,  join_year: 2021, pref: "千葉県" },
+  { email: "ishikawa@example.com",      name: "石川 拓馬",   employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_un_b,     site: negishi,  join_year: 2023, pref: "東京都" },
+  # 堺 計器Aチーム
+  { email: "ikeda@example.com",         name: "池田 遥",     employment_type: "employee", system_role: "member",  position: "staff",           dept: sakai_keiki_a,    site: sakai,    join_year: 2021, pref: "大阪府" },
+  { email: "shimomura@example.com",     name: "下村 忠彦",   employment_type: "employee", system_role: "member",  position: "staff",           dept: sakai_keiki_a,    site: sakai,    join_year: 2023, pref: "兵庫県" },
+  # 堺 計器Bチーム
+  { email: "yoshioka@example.com",      name: "吉岡 悠",     employment_type: "employee", system_role: "member",  position: "team_leader",     dept: sakai_keiki_b,    site: sakai,    join_year: 2017, pref: "大阪府" },
+  # 堺 電気保全課
+  { email: "higuchi@example.com",       name: "樋口 克典",   employment_type: "employee", system_role: "member",  position: "staff",           dept: sakai_denki_t,    site: sakai,    join_year: 2022, pref: "大阪府" },
+  # 堺 第1運転課
+  { email: "nishi@example.com",         name: "西 康太",     employment_type: "employee", system_role: "member",  position: "staff",           dept: sakai_un1_a,      site: sakai,    join_year: 2022, pref: "大阪府" },
+  # 和歌山 計器チーム
+  { email: "kondo@example.com",         name: "近藤 正弘",   employment_type: "employee", system_role: "member",  position: "staff",           dept: wakayama_keiki_t, site: wakayama, join_year: 2021, pref: "和歌山県" },
+  { email: "miyazaki@example.com",      name: "宮崎 浩司",   employment_type: "employee", system_role: "member",  position: "staff",           dept: wakayama_keiki_t, site: wakayama, join_year: 2022, pref: "和歌山県" },
+  # 和歌山 運転課
+  { email: "nojima@example.com",        name: "野島 彩花",   employment_type: "employee", system_role: "member",  position: "staff",           dept: wakayama_un_a,    site: wakayama, join_year: 2023, pref: "和歌山県" },
+  # 仙台 計器チーム
+  { email: "naito@example.com",         name: "内藤 克己",   employment_type: "employee", system_role: "member",  position: "staff",           dept: sendai_keiki_t,   site: sendai,   join_year: 2022, pref: "宮城県" },
+  { email: "goto_sd@example.com",       name: "後藤 由佳",   employment_type: "employee", system_role: "member",  position: "staff",           dept: sendai_keiki_t,   site: sendai,   join_year: 2024, pref: "宮城県" },
+  # 仙台 電気保全課
+  { email: "kobayashi_sd@example.com",  name: "小林 正志",   employment_type: "employee", system_role: "member",  position: "staff",           dept: sendai_denki_t,   site: sendai,   join_year: 2021, pref: "岩手県" }
 ].each do |data|
   User.create!(
     email:            data[:email],
@@ -261,15 +305,24 @@ end
 # ===========================
 [
   # テクノサービス（川崎常駐）
-  { email: "yoshida@example.com", name: "吉田 浩二", system_role: "manager", company: techno,      site: kawasaki, join_year: 2020, pref: "神奈川県" },
-  { email: "honda@example.com",   name: "本田 慎一", system_role: "worker",  company: techno,      site: kawasaki, join_year: 2023, pref: "神奈川県" },
+  { email: "yoshida@example.com",    name: "吉田 浩二", system_role: "manager", company: techno,      site: kawasaki, join_year: 2020, pref: "神奈川県" },
+  { email: "honda@example.com",      name: "本田 慎一", system_role: "worker",  company: techno,      site: kawasaki, join_year: 2023, pref: "神奈川県" },
+  # テクノサービス（根岸常駐）追加
+  { email: "honda_ng@example.com",   name: "本田 剛志", system_role: "worker",  company: techno,      site: negishi,  join_year: 2022, pref: "神奈川県" },
+  { email: "okamoto@example.com",    name: "岡本 隆",   system_role: "worker",  company: techno,      site: negishi,  join_year: 2023, pref: "神奈川県" },
   # プラントメンテナンス（川崎常駐）
-  { email: "yamada@example.com",  name: "山田 修",   system_role: "worker",  company: plant_maint, site: kawasaki, join_year: 2021, pref: "東京都" },
+  { email: "yamada@example.com",     name: "山田 修",   system_role: "worker",  company: plant_maint, site: kawasaki, join_year: 2021, pref: "東京都" },
+  # プラントメンテナンス（仙台常駐）追加
+  { email: "yamada_sd@example.com",  name: "山田 龍也", system_role: "worker",  company: plant_maint, site: sendai,   join_year: 2023, pref: "宮城県" },
   # 関西プラントサービス（堺常駐）
-  { email: "kubo@example.com",    name: "久保 正人", system_role: "manager", company: kansai,      site: sakai,    join_year: 2019, pref: "大阪府" },
-  { email: "fujii@example.com",   name: "藤井 直人", system_role: "worker",  company: kansai,      site: sakai,    join_year: 2022, pref: "兵庫県" },
+  { email: "kubo@example.com",       name: "久保 正人", system_role: "manager", company: kansai,      site: sakai,    join_year: 2019, pref: "大阪府" },
+  { email: "fujii@example.com",      name: "藤井 直人", system_role: "worker",  company: kansai,      site: sakai,    join_year: 2022, pref: "兵庫県" },
+  # 関西プラントサービス（和歌山常駐）追加
+  { email: "kubo_wk@example.com",    name: "久保 弘明", system_role: "worker",  company: kansai,      site: wakayama, join_year: 2021, pref: "和歌山県" },
   # 東北計装サービス（仙台常駐）
-  { email: "mikami@example.com",  name: "三上 賢治", system_role: "worker",  company: tohoku,      site: sendai,   join_year: 2022, pref: "宮城県" }
+  { email: "mikami@example.com",     name: "三上 賢治", system_role: "worker",  company: tohoku,      site: sendai,   join_year: 2022, pref: "宮城県" },
+  # 東北計装サービス（追加）
+  { email: "mikami_sd@example.com",  name: "三上 賢一", system_role: "worker",  company: tohoku,      site: sendai,   join_year: 2023, pref: "岩手県" }
 ].each do |data|
   User.create!(
     email:            data[:email],

@@ -155,3 +155,87 @@ Inspection.create!(checklist_template: templates[:routine_inst], user: wk_inst1,
 Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst1, equipment: sd_lk, instrument: inst("TV-D101"), department: sd_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 3.days.ago, notes: "正常。")
 Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst2, equipment: sd_hds, instrument: inst("TV-D201"), department: sd_inst_sec, inspection_type: "routine", status: "submitted", inspected_at: 1.day.ago, notes: "微小な振動あり。次回確認。")
 insp15 = Inspection.create!(checklist_template: templates[:periodic_valve], user: sato, equipment: kw_cdu, instrument: inst("PV-201"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 60.days.ago, notes: "前回定期点検。異常なし。")
+
+# ============================================================
+# 追加点検記録
+# ============================================================
+kw_crf2   = equip("川崎製油所", "接触改質装置")
+kw_vdu2   = equip("川崎製油所", "減圧蒸留装置")
+kw_rhds2  = equip("川崎製油所", "重油間接脱硫装置")
+kw_boiler2 = equip("川崎製油所", "ボイラー設備")
+kw_tank2  = equip("川崎製油所", "タンク設備")
+ng_boiler2 = equip("根岸製油所", "ボイラー設備")
+sk_boiler2 = equip("堺製油所", "ボイラー設備")
+wk_fcc2   = equip("和歌山製油所", "流動接触分解装置")
+sd_boiler2 = equip("仙台製油所", "ボイラー設備")
+
+fujita2    = user_by("fujita@example.com")
+inoue      = user_by("inoue@example.com")
+nishimura2 = user_by("nishimura@example.com")
+kaneko2    = user_by("kaneko@example.com")
+watanabe2  = user_by("watanabe@example.com")
+okada2     = user_by("okada@example.com")
+
+# 16. 川崎 CRF 日常点検
+Inspection.create!(checklist_template: templates[:routine_inst], user: inoue, equipment: kw_crf2, instrument: inst("TV-801"), department: kw_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 2.days.ago, notes: "改質温度安定。正常。")
+
+# 17. 川崎 VDU 定期点検
+insp17 = Inspection.create!(checklist_template: templates[:periodic_valve], user: nishimura2, equipment: kw_vdu2, instrument: inst("PV-901"), department: kw_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 1.day.ago, notes: "弁体に若干の漏れ傾向あり。要監視。")
+InspectionItem.create!(inspection: insp17, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp17, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "52.3", has_defect: false)
+InspectionItem.create!(inspection: insp17, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
+
+# 18. 川崎 RHDS FT-501 日常点検
+insp18 = Inspection.create!(checklist_template: templates[:routine_inst], user: sato, equipment: kw_rhds2, instrument: inst("FT-501"), department: kw_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 6.days.ago, notes: "水素循環量正常。")
+InspectionItem.create!(inspection: insp18, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp18, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "15.1", has_defect: false)
+
+# 19. 川崎 ボイラー PT-701 日常点検
+insp19 = Inspection.create!(checklist_template: templates[:routine_inst], user: fujita2, equipment: kw_boiler2, instrument: inst("PT-701"), department: kw_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 8.days.ago, notes: "ドラム圧力正常。")
+InspectionItem.create!(inspection: insp19, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp19, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "16.8", has_defect: false)
+
+# 20. 根岸 ボイラー 日常点検
+insp20 = Inspection.create!(checklist_template: templates[:ng_routine], user: kaneko2, equipment: ng_boiler2, instrument: inst("FT-N701"), department: ng_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 5.days.ago, notes: "スチーム流量正常。")
+InspectionItem.create!(inspection: insp20, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+
+# 21. 根岸 CDU PV-N201 定期点検
+insp21 = Inspection.create!(checklist_template: templates[:periodic_valve], user: imai, equipment: ng_cdu, instrument: inst("PV-N201"), department: ng_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 10.days.ago, notes: "フルストローク正常。弁体シール問題なし。")
+InspectionItem.create!(inspection: insp21, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp21, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "48.5", has_defect: false)
+InspectionItem.create!(inspection: insp21, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp21, position: 5, content: "開→閉 応答時間（秒）", item_type: "measurement", measured_value: "3.2", has_defect: false)
+InspectionItem.create!(inspection: insp21, position: 6, content: "閉→開 応答時間（秒）", item_type: "measurement", measured_value: "3.5", has_defect: false)
+
+# 22. 堺 ボイラー 日常点検
+insp22 = Inspection.create!(checklist_template: templates[:sk_routine], user: hayashi, equipment: sk_boiler2, instrument: inst("FT-S701"), department: sk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 4.days.ago, notes: "正常。")
+InspectionItem.create!(inspection: insp22, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+
+# 23. 堺 CDU TV-S101 日常点検（承認待ち）
+insp23 = Inspection.create!(checklist_template: templates[:sk_routine], user: tanabe, equipment: sk_cdu, instrument: inst("TV-S101"), department: sk_inst_sec, inspection_type: "routine", status: "submitted", inspected_at: 2.days.ago, notes: "加熱炉出口温度がやや高め。運転確認中。")
+InspectionItem.create!(inspection: insp23, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp23, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "17.8", has_defect: false)
+
+# 24. 和歌山 FCC 定期点検
+insp24 = Inspection.create!(checklist_template: templates[:routine_inst], user: wk_inst1, equipment: wk_fcc2, instrument: inst("TV-W501"), department: wk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 6.days.ago, notes: "反応塔温度正常。")
+InspectionItem.create!(inspection: insp24, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp24, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "13.6", has_defect: false)
+
+# 25. 仙台 ボイラー 日常点検
+insp25 = Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst2, equipment: sd_boiler2, instrument: inst("FT-D701"), department: sd_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 7.days.ago, notes: "スチーム流量正常。")
+InspectionItem.create!(inspection: insp25, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+
+# 26. 仙台 HDS PT-D201 定期点検（不具合検出）
+insp26 = Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst1, equipment: sd_hds, instrument: inst("PT-D201"), department: sd_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 3.days.ago, notes: "反応器圧力伝送器にゼロ点ドリフト確認。トラブル起票。")
+InspectionItem.create!(inspection: insp26, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: false, has_defect: true, instrument: inst("PT-D201"))
+
+# 27. 川崎 タンク LT-1001 月次点検
+insp27 = Inspection.create!(checklist_template: templates[:routine_inst], user: okada2, equipment: kw_tank2, instrument: inst("LT-1001"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 30.days.ago, notes: "月次点検。液位指示正常。")
+InspectionItem.create!(inspection: insp27, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp27, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "11.2", has_defect: false)
+
+# 28. 川崎 電気設備 日常点検
+insp28 = Inspection.create!(checklist_template: templates[:elec_daily], user: watanabe2, equipment: kw_boiler2, department: kw_elec_sec, inspection_type: "routine", status: "approved", inspected_at: 3.days.ago, notes: "モーター正常。絶縁抵抗良好。")
+InspectionItem.create!(inspection: insp28, position: 1, content: "モーター回転方向を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp28, position: 2, content: "絶縁抵抗値（MΩ）", item_type: "measurement", measured_value: "500", has_defect: false)
+InspectionItem.create!(inspection: insp28, position: 3, content: "ベアリング温度（℃）", item_type: "measurement", measured_value: "42.5", has_defect: false)

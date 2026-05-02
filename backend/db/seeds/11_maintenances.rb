@@ -82,3 +82,42 @@ MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m10], user: h
 MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m11], user: wk_inst1, role: "lead")
 MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m12], user: sd_inst1, role: "lead")
 MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m12], user: sd_inst2, role: "member")
+
+# ============================================================
+# 追加定期整備
+# ============================================================
+sk_crf2 = equip("堺製油所", "接触改質装置")
+wk_fcc3 = equip("和歌山製油所", "流動接触分解装置")
+sk_tank = equip("堺製油所", "タンク設備")
+ng_tank = equip("根岸製油所", "タンク設備")
+sd_tank = equip("仙台製油所", "タンク設備")
+kw_rhds3 = equip("川崎製油所", "重油間接脱硫装置")
+
+maintenances[:m16] = ScheduledMaintenance.create!(equipment: equip("川崎製油所", "常圧蒸留装置"), title: "CDU 調節弁定期整備（PV-201）", description: "CDU塔頂圧力制御弁PV-201の本格整備。グランドパッキン・弁体シール全交換。SDW期間中に実施予定。", scheduled_date: Date.new(2026, 4, 1), status: "planned")
+maintenances[:m17] = ScheduledMaintenance.create!(equipment: sk_crf2, title: "堺CRF 計器年次点検", description: "堺接触改質装置計器の年次点検。反応器温度・圧力計器を中心に校正実施。", scheduled_date: Date.new(2026, 4, 10), status: "planned")
+maintenances[:m18] = ScheduledMaintenance.create!(equipment: wk_fcc3, title: "和歌山FCC 計器定期整備", description: "和歌山FCC装置計器定期整備。反応塔・再生塔温度計一斉校正。", scheduled_date: Date.new(2026, 5, 1), status: "planned")
+maintenances[:m19] = ScheduledMaintenance.create!(equipment: sk_tank, title: "堺タンクヤード 計器年次点検", description: "堺タンクヤードの液位計・温度計年次点検。レーダーレベル計のアンテナ清掃含む。", scheduled_date: Date.new(2026, 3, 20), status: "planned")
+maintenances[:m20] = ScheduledMaintenance.create!(equipment: ng_tank, title: "根岸タンクヤード 液位計点検", description: "根岸タンクヤード液位計定期点検。", scheduled_date: Date.new(2026, 4, 5), status: "planned")
+maintenances[:m21] = ScheduledMaintenance.create!(equipment: sd_tank, title: "仙台タンクヤード 計器点検", description: "仙台タンクヤード全計器の定期点検。レーダーレベル計校正含む。", scheduled_date: Date.new(2026, 3, 10), status: "planned")
+maintenances[:m22] = ScheduledMaintenance.create!(equipment: kw_rhds3, title: "RHDS 高圧計器定期整備", description: "RHDS高圧系計器定期整備。水素系高圧伝送器の定期校正。防爆仕様装置のため協力会社立会のもと実施。", scheduled_date: Date.new(2026, 5, 15), status: "planned")
+maintenances[:m23] = ScheduledMaintenance.create!(equipment: equip("堺製油所", "常圧蒸留装置"), title: "堺CDU 前回年次点検", description: "前回の年次点検整備。完了済み。", scheduled_date: Date.new(2025, 4, 5), completed_date: Date.new(2025, 4, 8), status: "completed", used_materials: "差圧伝送器EJA110E × 1台、ガスケット × 8枚")
+maintenances[:m24] = ScheduledMaintenance.create!(equipment: equip("和歌山製油所", "常圧蒸留装置"), title: "和歌山CDU 安全弁検査", description: "和歌山CDU安全弁法定検査。前回検査から2年経過。", scheduled_date: Date.new(2025, 10, 15), completed_date: Date.new(2025, 10, 17), status: "completed")
+maintenances[:m25] = ScheduledMaintenance.create!(equipment: equip("仙台製油所", "潤滑油製造装置"), title: "仙台LK 前回年次点検", description: "前回の年次点検整備。完了済み。", scheduled_date: Date.new(2025, 3, 5), completed_date: Date.new(2025, 3, 8), status: "completed", used_materials: "温度伝送器YTA510 × 1台、ガスケット × 6枚")
+
+honda_ng     = user_by("honda_ng@example.com")
+wk_inst_mgr2 = user_by("kawamoto@example.com")
+doi2         = user_by("doi@example.com")
+
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m16], user: suzuki, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m16], user: sato, role: "member")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m16], user: yoshida, role: "member")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m17], user: kimura, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m17], user: hayashi, role: "member")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m18], user: wk_inst_mgr2, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m18], user: doi2, role: "member")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m19], user: kimura, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m20], user: yamashita, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m20], user: honda_ng, role: "member")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m21], user: sd_inst1, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m22], user: suzuki, role: "lead")
+MaintenanceAssignment.create!(scheduled_maintenance: maintenances[:m22], user: inoue, role: "member")

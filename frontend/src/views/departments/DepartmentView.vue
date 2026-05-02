@@ -275,7 +275,7 @@ onMounted(() => {
 
       <!-- 右: 詳細 -->
       <div class="flex-grow-1">
-        <v-skeleton-loader v-if="loadingDetail" type="card" />
+        <v-skeleton-loader v-if="loadingDetail && !selectedDept" type="card" />
 
         <template v-else-if="selectedDept">
           <!-- 部署ヘッダー -->
@@ -368,9 +368,6 @@ onMounted(() => {
           </v-card>
         </template>
 
-        <v-card v-else variant="tonal" class="d-flex align-center justify-center" style="min-height: 200px">
-          <p class="text-body-2 text-grey">左のツリーから部署を選択してください</p>
-        </v-card>
       </div>
     </div>
 

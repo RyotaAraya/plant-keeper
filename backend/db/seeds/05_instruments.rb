@@ -121,7 +121,128 @@ instrument_data = [
   { equip: [ "仙台製油所", "タンク設備" ], tag: "LT-D1001", type: "level_transmitter", service: "原油", lc: "A1A", loc: "仙台原油タンク", notes: "タンク液位。" },
 
   # === 千葉（閉鎖済） ===
-  { equip: [ "千葉製油所", "常圧蒸留装置" ], tag: "TV-C01", type: "temperature_transmitter", service: "原油", lc: "A1A", loc: "千葉CDU", notes: "閉鎖済装置の計器。" }
+  { equip: [ "千葉製油所", "常圧蒸留装置" ], tag: "TV-C01", type: "temperature_transmitter", service: "原油", lc: "A1A", loc: "千葉CDU", notes: "閉鎖済装置の計器。" },
+
+  # ============================================================
+  # 追加計器データ
+  # ============================================================
+
+  # === 川崎 CDU 追加 ===
+  { equip: [ "川崎製油所", "常圧蒸留装置" ], tag: "TV-104",  type: "temperature_transmitter", service: "灯油",   lc: "A2A", loc: "CDU 灯油ストリッパー",     notes: "灯油ストリッパー温度。" },
+  { equip: [ "川崎製油所", "常圧蒸留装置" ], tag: "FT-303",  type: "flow_transmitter",        service: "ナフサ", lc: "A1A", loc: "CDU ナフサ抜出ライン",     notes: "ナフサ製品抜出量。" },
+  { equip: [ "川崎製油所", "常圧蒸留装置" ], tag: "LT-403",  type: "level_transmitter",       service: "軽油",   lc: "A1A", loc: "CDU 軽油ストリッパー",     notes: "軽油ストリッパー液位。" },
+  { equip: [ "川崎製油所", "常圧蒸留装置" ], tag: "HV-103",  type: "hand_valve",              service: "灯油",   lc: "A2A", loc: "CDU 灯油サンプリング",     notes: "灯油サンプリング弁。" },
+  { equip: [ "川崎製油所", "常圧蒸留装置" ], tag: "XV-102",  type: "shutoff_valve",           service: "原油",   lc: "A2A", loc: "CDU 原料緊急遮断",         notes: "緊急遮断弁。安全計装連動。" },
+
+  # === 川崎 RHDS 追加 ===
+  { equip: [ "川崎製油所", "重油間接脱硫装置" ], tag: "TV-503", type: "temperature_transmitter", service: "水素",   lc: "C1A", loc: "RHDS 予熱炉出口",       notes: "予熱炉出口温度。" },
+  { equip: [ "川崎製油所", "重油間接脱硫装置" ], tag: "PT-502", type: "pressure_transmitter",   service: "水素",   lc: "C2A", loc: "RHDS 循環水素ライン",   notes: "循環水素ライン圧力。" },
+  { equip: [ "川崎製油所", "重油間接脱硫装置" ], tag: "FT-502", type: "flow_transmitter",       service: "原油",   lc: "C1A", loc: "RHDS 原料フィードライン", notes: "RHDS原料供給量。" },
+  { equip: [ "川崎製油所", "重油間接脱硫装置" ], tag: "LT-502", type: "level_transmitter",      service: "原油",   lc: "C1A", loc: "RHDS 低圧分離槽",       notes: "低圧分離槽液位。" },
+  { equip: [ "川崎製油所", "重油間接脱硫装置" ], tag: "TV-504", type: "temperature_transmitter", service: "原油",  lc: "C1A", loc: "RHDS 加熱炉出口",       notes: "加熱炉出口温度監視。" },
+
+  # === 川崎 FCC 追加 ===
+  { equip: [ "川崎製油所", "流動接触分解装置" ], tag: "TV-603", type: "temperature_transmitter", service: "原油",     lc: "C1A", loc: "FCC 再生器入口",       notes: "再生器入口温度。触媒再生管理。" },
+  { equip: [ "川崎製油所", "流動接触分解装置" ], tag: "PT-601", type: "pressure_transmitter",   service: "燃料ガス", lc: "A2A", loc: "FCC 塔頂圧力",         notes: "メインフラクショネーター塔頂圧力。" },
+  { equip: [ "川崎製油所", "流動接触分解装置" ], tag: "LT-602", type: "level_transmitter",      service: "原油",     lc: "A2A", loc: "FCC 分留塔底",         notes: "塔底液位監視。" },
+  { equip: [ "川崎製油所", "流動接触分解装置" ], tag: "FT-602", type: "flow_transmitter",       service: "原油",     lc: "A2A", loc: "FCC 製品抜出ライン",   notes: "製品油抜出量。" },
+
+  # === 川崎 ボイラー 追加 ===
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "TV-702", type: "temperature_transmitter", service: "冷却水",   lc: "E1A", loc: "ボイラー 給水温度",             notes: "ボイラー給水温度。脱酸素器出口。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "FT-702", type: "flow_transmitter",       service: "冷却水",   lc: "E1A", loc: "ボイラー 給水流量",             notes: "ボイラー給水流量。渦流量計。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "PT-702", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "ボイラー 中圧スチームヘッダー", notes: "中圧スチームヘッダー圧力。" },
+
+  # === 川崎 CRF 追加 ===
+  { equip: [ "川崎製油所", "接触改質装置" ], tag: "TV-802", type: "temperature_transmitter", service: "水素",   lc: "C1A", loc: "CRF 水素再循環ライン", notes: "水素再循環温度。" },
+  { equip: [ "川崎製油所", "接触改質装置" ], tag: "LT-801", type: "level_transmitter",      service: "ナフサ", lc: "A2A", loc: "CRF 原料ドラム",       notes: "原料ドラム液位。" },
+  { equip: [ "川崎製油所", "接触改質装置" ], tag: "FT-802", type: "flow_transmitter",       service: "水素",   lc: "C1A", loc: "CRF 水素ライン",       notes: "水素再循環量。" },
+
+  # === 川崎 VDU 追加 ===
+  { equip: [ "川崎製油所", "減圧蒸留装置" ], tag: "FT-901", type: "flow_transmitter",       service: "原油", lc: "C1A", loc: "VDU 残渣油フィード",   notes: "常圧残渣油供給量。" },
+  { equip: [ "川崎製油所", "減圧蒸留装置" ], tag: "TV-902", type: "temperature_transmitter", service: "原油", lc: "C1A", loc: "VDU 側留出口",         notes: "減圧軽油留出温度。" },
+  { equip: [ "川崎製油所", "減圧蒸留装置" ], tag: "PT-901", type: "pressure_transmitter",   service: "原油", lc: "A2A", loc: "VDU 真空度監視",       notes: "VDU塔頂真空度監視。絶対圧。" },
+
+  # === 川崎 タンク 追加 ===
+  { equip: [ "川崎製油所", "タンク設備" ], tag: "LT-1003", type: "level_transmitter",       service: "灯油",   lc: "A1A", loc: "灯油タンクT-301",   notes: "灯油タンク液位。レーダー式。" },
+  { equip: [ "川崎製油所", "タンク設備" ], tag: "TV-1002", type: "temperature_transmitter", service: "ナフサ", lc: "A1A", loc: "ナフサタンクT-201", notes: "ナフサタンク内温度。" },
+  { equip: [ "川崎製油所", "タンク設備" ], tag: "LT-1004", type: "level_transmitter",       service: "軽油",   lc: "A1A", loc: "軽油タンクT-401",   notes: "軽油タンク液位。レーダー式。" },
+
+  # === 根岸 CDU 追加 ===
+  { equip: [ "根岸製油所", "常圧蒸留装置" ], tag: "TV-N103",  type: "temperature_transmitter", service: "ナフサ",   lc: "A2A", loc: "根岸CDU ナフサ留出",             notes: "ナフサ留出温度。" },
+  { equip: [ "根岸製油所", "常圧蒸留装置" ], tag: "PV-N202",  type: "pressure_valve",          service: "スチーム", lc: "D1A", loc: "根岸CDU スチームストリッパー",     notes: "ストリッパースチーム制御弁。" },
+  { equip: [ "根岸製油所", "常圧蒸留装置" ], tag: "LT-N402",  type: "level_transmitter",       service: "灯油",     lc: "A1A", loc: "根岸CDU 灯油ストリッパー",       notes: "灯油ストリッパー液位。" },
+  { equip: [ "根岸製油所", "常圧蒸留装置" ], tag: "FT-N302",  type: "flow_transmitter",        service: "スチーム", lc: "D1A", loc: "根岸CDU スチームライン",           notes: "ストリッピングスチーム流量。" },
+
+  # === 根岸 HDS 追加 ===
+  { equip: [ "根岸製油所", "軽油脱硫装置" ], tag: "TV-N502", type: "temperature_transmitter", service: "軽油", lc: "A2A", loc: "根岸HDS 反応器出口", notes: "反応器出口温度。" },
+  { equip: [ "根岸製油所", "軽油脱硫装置" ], tag: "LT-N502", type: "level_transmitter",      service: "軽油", lc: "A2A", loc: "根岸HDS 分離槽",     notes: "分離槽液位。" },
+  { equip: [ "根岸製油所", "軽油脱硫装置" ], tag: "HV-N101", type: "hand_valve",             service: "軽油", lc: "A2A", loc: "根岸HDS ドレン",     notes: "ドレン手動弁。" },
+
+  # === 根岸 ボイラー 追加 ===
+  { equip: [ "根岸製油所", "ボイラー設備" ], tag: "TV-N702", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "根岸ボイラー 過熱器出口", notes: "過熱スチーム温度。" },
+  { equip: [ "根岸製油所", "ボイラー設備" ], tag: "PT-N702", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "根岸ボイラー ドラム圧力", notes: "ドラム圧力監視。" },
+
+  # === 根岸 タンク 追加 ===
+  { equip: [ "根岸製油所", "タンク設備" ], tag: "TV-N1001", type: "temperature_transmitter", service: "原油",   lc: "A1A", loc: "根岸原油タンク 温度",   notes: "タンク内温度監視。" },
+  { equip: [ "根岸製油所", "タンク設備" ], tag: "LT-N1002", type: "level_transmitter",      service: "ナフサ", lc: "A1A", loc: "根岸ナフサタンク 液位", notes: "ナフサタンク液位。" },
+
+  # === 堺 CDU 追加 ===
+  { equip: [ "堺製油所", "常圧蒸留装置" ], tag: "TV-S103",  type: "temperature_transmitter", service: "ナフサ",   lc: "A2A", loc: "堺CDU ナフサ留出",         notes: "ナフサ留出温度。" },
+  { equip: [ "堺製油所", "常圧蒸留装置" ], tag: "PV-S202",  type: "pressure_valve",          service: "スチーム", lc: "D1A", loc: "堺CDU スチームストリッパー", notes: "ストリッパースチーム制御弁。" },
+  { equip: [ "堺製油所", "常圧蒸留装置" ], tag: "FT-S302",  type: "flow_transmitter",        service: "スチーム", lc: "D1A", loc: "堺CDU スチームライン",       notes: "ストリッピングスチーム流量。" },
+  { equip: [ "堺製油所", "常圧蒸留装置" ], tag: "LT-S402",  type: "level_transmitter",       service: "灯油",     lc: "A1A", loc: "堺CDU 灯油ストリッパー",   notes: "灯油ストリッパー液位。" },
+
+  # === 堺 HDS 追加 ===
+  { equip: [ "堺製油所", "軽油脱硫装置" ], tag: "TV-S502", type: "temperature_transmitter", service: "水素", lc: "C1A", loc: "堺HDS 水素予熱器",   notes: "水素予熱器出口温度。" },
+  { equip: [ "堺製油所", "軽油脱硫装置" ], tag: "LT-S502", type: "level_transmitter",      service: "軽油", lc: "A2A", loc: "堺HDS 分離槽",       notes: "分離槽液位。" },
+  { equip: [ "堺製油所", "軽油脱硫装置" ], tag: "XV-S201", type: "shutoff_valve",          service: "水素", lc: "C1A", loc: "堺HDS 緊急遮断",     notes: "緊急遮断弁。SIS連動。" },
+
+  # === 堺 CRF 追加 ===
+  { equip: [ "堺製油所", "接触改質装置" ], tag: "TV-S602", type: "temperature_transmitter", service: "水素",   lc: "C1A", loc: "堺CRF 水素ライン",   notes: "水素温度監視。" },
+  { equip: [ "堺製油所", "接触改質装置" ], tag: "LT-S601", type: "level_transmitter",      service: "ナフサ", lc: "A2A", loc: "堺CRF 原料ドラム", notes: "原料ドラム液位。" },
+
+  # === 堺 ボイラー 追加 ===
+  { equip: [ "堺製油所", "ボイラー設備" ], tag: "TV-S702", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "堺ボイラー 過熱器出口", notes: "過熱スチーム温度。" },
+  { equip: [ "堺製油所", "ボイラー設備" ], tag: "PT-S702", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "堺ボイラー ドラム圧力", notes: "ドラム圧力監視。" },
+
+  # === 堺 タンク 追加 ===
+  { equip: [ "堺製油所", "タンク設備" ], tag: "TV-S1001", type: "temperature_transmitter", service: "原油",   lc: "A1A", loc: "堺原油タンク 温度",   notes: "タンク内温度。" },
+  { equip: [ "堺製油所", "タンク設備" ], tag: "LT-S1002", type: "level_transmitter",      service: "ナフサ", lc: "A1A", loc: "堺ナフサタンク 液位", notes: "ナフサタンク液位。" },
+
+  # === 和歌山 CDU 追加 ===
+  { equip: [ "和歌山製油所", "常圧蒸留装置" ], tag: "TV-W102",  type: "temperature_transmitter", service: "灯油",     lc: "A2A", loc: "和歌山CDU 側留",             notes: "灯油側留温度。" },
+  { equip: [ "和歌山製油所", "常圧蒸留装置" ], tag: "FT-W302",  type: "flow_transmitter",        service: "スチーム", lc: "D1A", loc: "和歌山CDU スチームライン",     notes: "ストリッピングスチーム流量。" },
+  { equip: [ "和歌山製油所", "常圧蒸留装置" ], tag: "LT-W402",  type: "level_transmitter",       service: "灯油",     lc: "A1A", loc: "和歌山CDU 灯油ストリッパー", notes: "灯油ストリッパー液位。" },
+
+  # === 和歌山 FCC 追加 ===
+  { equip: [ "和歌山製油所", "流動接触分解装置" ], tag: "TV-W502", type: "temperature_transmitter", service: "原油", lc: "C1A", loc: "和歌山FCC 再生塔",   notes: "再生塔温度。" },
+  { equip: [ "和歌山製油所", "流動接触分解装置" ], tag: "LT-W501", type: "level_transmitter",      service: "原油", lc: "A2A", loc: "和歌山FCC 分留塔底", notes: "分留塔底液位。" },
+  { equip: [ "和歌山製油所", "流動接触分解装置" ], tag: "LT-W502", type: "level_transmitter",      service: "原油", lc: "A2A", loc: "和歌山FCC 塔頂ドラム", notes: "塔頂ドラム液位。" },
+
+  # === 和歌山 ボイラー 追加 ===
+  { equip: [ "和歌山製油所", "ボイラー設備" ], tag: "TV-W702", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "和歌山ボイラー 過熱器出口", notes: "過熱スチーム温度。" },
+  { equip: [ "和歌山製油所", "ボイラー設備" ], tag: "PT-W701", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "和歌山ボイラー ドラム",     notes: "ドラム圧力監視。" },
+
+  # === 和歌山 タンク 追加 ===
+  { equip: [ "和歌山製油所", "タンク設備" ], tag: "TV-W1001", type: "temperature_transmitter", service: "原油",   lc: "A1A", loc: "和歌山原油タンク 温度",   notes: "タンク内温度。" },
+  { equip: [ "和歌山製油所", "タンク設備" ], tag: "LT-W1002", type: "level_transmitter",      service: "ナフサ", lc: "A1A", loc: "和歌山ナフサタンク 液位", notes: "ナフサタンク液位。" },
+
+  # === 仙台 LK 追加 ===
+  { equip: [ "仙台製油所", "潤滑油製造装置" ], tag: "TV-D102", type: "temperature_transmitter", service: "原油", lc: "A2A", loc: "LK 精製塔",    notes: "基油精製塔温度。" },
+  { equip: [ "仙台製油所", "潤滑油製造装置" ], tag: "LT-D102", type: "level_transmitter",      service: "原油", lc: "A1A", loc: "LK 製品ドラム", notes: "製品ドラム液位。" },
+  { equip: [ "仙台製油所", "潤滑油製造装置" ], tag: "PT-D101", type: "pressure_transmitter",   service: "原油", lc: "A2A", loc: "LK 反応器",     notes: "反応器圧力監視。" },
+
+  # === 仙台 HDS 追加 ===
+  { equip: [ "仙台製油所", "軽油脱硫装置" ], tag: "TV-D202", type: "temperature_transmitter", service: "軽油", lc: "A2A", loc: "仙台HDS 反応器出口", notes: "反応器出口温度。" },
+  { equip: [ "仙台製油所", "軽油脱硫装置" ], tag: "LT-D202", type: "level_transmitter",      service: "軽油", lc: "A2A", loc: "仙台HDS 分離槽",     notes: "分離槽液位。" },
+  { equip: [ "仙台製油所", "軽油脱硫装置" ], tag: "XV-D201", type: "shutoff_valve",          service: "水素", lc: "C1A", loc: "仙台HDS 緊急遮断",   notes: "緊急遮断弁。SIS連動。" },
+
+  # === 仙台 ボイラー 追加 ===
+  { equip: [ "仙台製油所", "ボイラー設備" ], tag: "TV-D702", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "仙台ボイラー 過熱器出口", notes: "過熱スチーム温度。" },
+  { equip: [ "仙台製油所", "ボイラー設備" ], tag: "PT-D702", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "仙台ボイラー ドラム圧力", notes: "ドラム圧力監視。" },
+
+  # === 仙台 タンク 追加 ===
+  { equip: [ "仙台製油所", "タンク設備" ], tag: "TV-D1001", type: "temperature_transmitter", service: "原油", lc: "A1A", loc: "仙台原油タンク 温度", notes: "タンク内温度監視。" }
 ]
 
 instrument_data.each do |data|

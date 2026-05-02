@@ -42,10 +42,15 @@ docker-compose exec backend bundle exec rubocop -A
 cd frontend && npx vite build
 ```
 
+## アクセスURL（開発用）
+
+- フロントエンド: http://localhost:5173
+- バックエンドAPI: http://localhost:3000/api/v1
+
 ## ログイン情報（開発用）
 
 - 管理者(admin): admin@example.com / password
-- 監督者(supervisor): suzuki@example.com / password
+- 管理者(manager): suzuki@example.com / password
 - 一般(member): sato@example.com / password
 
 ## 設計ドキュメント
@@ -53,6 +58,7 @@ cd frontend && npx vite build
 - `要求仕様書.md` — 機能要件、業務フロー、設計方針
 - `データモデル設計.md` — 27テーブルのER図・テーブル定義・簡易化メモ
 - `DEVELOPMENT.md` — 開発環境構築ガイド
+- `実装タスク表.md` — フェーズ別の実装タスク進捗表
 
 ## アーキテクチャ
 
@@ -68,22 +74,27 @@ cd frontend && npx vite build
 |---|---|---|---|
 | 所属会社 | company_id → companies | company_type: owner | company_type: contractor |
 | 雇用区分 | employment_type | employee / dispatch | contractor（自動設定） |
-| 権限 | system_role | admin / member | supervisor / worker |
+| 権限 | system_role | admin / manager / member | manager / worker |
 
 - 会社タイプ変更で雇用区分・権限の選択肢が連動
 - 協力会社は部署（department）なし
 
 ### 部署の階層構造
 - departments テーブル: parent_id 自己参照で3階層（division→section→team）
-- 拠点（site）ごとに独立したツリー
+- 拠点（site）ごとに独立したツリー。各行が `site_id` を持つ（非正規化）
 - `Department#full_path` → "保全部 > 計器保全課 > 計器Aチーム"
 - `Department#ancestor_chain` → 階層配列（UI用）
 - API: `GET /departments?tree=true` でネストされたツリー取得（Ruby側でin-memoryでツリーを構築）
+- モデルバリデーション: 自己参照禁止（`not_self_referential`）、階層整合性チェック（`valid_parent_level`）
+- `full_path` / `ancestor_chain` は public メソッド。`private` キーワードより前に定義すること
+- `update_params`（site_id除外）と `department_params`（create用、site_id含む）を分離。作成後の拠点変更不可
 
 ### バックエンド構造
 - API: `/api/v1` 名前空間、全コントローラが `BaseController`（`authenticate_user!`）を継承
 - 認証: devise-jwt、トークンは Authorization ヘッダーで送受信
 - JWT revocation: `JTIMatcher` 戦略（usersテーブルの`jti`カラムで管理）
+- 認可: Pundit（`BaseController` に `include Pundit::Authorization`）。各モデルに対応するポリシーファイルあり（`app/policies/`）。`ApplicationPolicy` のヘルパー: `admin?`、`owner_manager?`、`owner_company?`
+- 監査ログ: `BaseController#record_audit_log(action, resource)` ヘルパーで統一記録（`resource.saved_changes` を `changes_json` に保存）
 - レスポンス: `{ data: ... }` 形式
 
 **シリアライズの使い分け:**
@@ -105,6 +116,7 @@ cd frontend && npx vite build
 ### フロントエンド構造
 - ルーティング: `meta: { requiresAuth: true }` でガード、遅延ロード
 - 認証: `stores/auth.ts` で JWT を localStorage 管理、axios インターセプタで自動付与
+- 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
 - `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用

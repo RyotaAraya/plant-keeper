@@ -22,9 +22,11 @@ tanabe = user_by("tanabe@example.com")
 hayashi = user_by("hayashi@example.com")
 kimura = user_by("kimura@example.com")
 matsumoto = user_by("matsumoto@example.com")
+yamamoto  = user_by("yamamoto@example.com")
 wk_inst1 = user_by("doi@example.com")
 wk_inst_mgr = user_by("kawamoto@example.com")
 sd_inst1 = user_by("chiba_t@example.com")
+sd_inst2 = user_by("oikawa@example.com")
 
 kw_cdu = equip("川崎製油所", "常圧蒸留装置")
 kw_rhds = equip("川崎製油所", "重油間接脱硫装置")
@@ -103,6 +105,74 @@ Trouble.create!(equipment: kw_tank, instrument: inst("LT-1001"), reported_by: ok
   title: "LT-1001 レーダーレベル計指示異常", description: "原油タンクT-101のレーダーレベル計が一時的に異常値を指示。浮屋根の結露影響か。",
   status: "resolved", priority: "low", reported_at: 14.days.ago, resolved_at: 13.days.ago)
 
+# ============================================================
+# 追加トラブル
+# ============================================================
+wk_denki = user_by("komori@example.com")
+sk_kensa = user_by("wada@example.com")
+sd_denki = user_by("kumagai@example.com")
+ng_seizo = user_by("kuroda@example.com")
+sakai_seizo = user_by("ogawa@example.com")
+
+Trouble.create!(equipment: equip("川崎製油所", "常圧蒸留装置"), instrument: inst("LT-403"), reported_by: sato, assigned_to: suzuki,
+  title: "LT-403 軽油ストリッパー液位計指示低", description: "CDU軽油ストリッパー液位計LT-403の指示が実液位より低め傾向。導圧管の部分閉塞が疑われる。",
+  status: "open", priority: "medium", reported_at: 2.days.ago)
+
+Trouble.create!(equipment: equip("川崎製油所", "重油間接脱硫装置"), instrument: inst("PT-502"), reported_by: inoue, assigned_to: suzuki,
+  title: "PT-502 水素圧力伝送器ゼロ点シフト", description: "RHDS循環水素ラインPT-502のゼロ点が+0.8%FS方向にシフト。高圧プロセスのため校正作業の段取りが必要。",
+  status: "in_progress", priority: "high", reported_at: 4.days.ago)
+
+Trouble.create!(equipment: equip("川崎製油所", "接触改質装置"), instrument: inst("FT-802"), reported_by: inoue,
+  title: "FT-802 水素再循環量計ゼロ点異常", description: "CRF水素再循環流量計FT-802のゼロ点に異常を確認。プロセス停止後の校正が必要。",
+  status: "open", priority: "medium", reported_at: 6.days.ago)
+
+Trouble.create!(equipment: equip("川崎製油所", "ボイラー設備"), instrument: inst("FT-702"), reported_by: fujita, assigned_to: yamamoto,
+  title: "FT-702 給水流量計据え付け不良", description: "ボイラー給水流量計FT-702の取付フランジ周辺から微量の漏れを確認。ガスケット交換が必要。",
+  status: "in_progress", priority: "medium", reported_at: 3.days.ago)
+
+Trouble.create!(equipment: equip("根岸製油所", "常圧蒸留装置"), instrument: inst("LT-N402"), reported_by: imai, assigned_to: yamashita,
+  title: "LT-N402 灯油ストリッパー液位計異常", description: "根岸CDU灯油ストリッパー液位計LT-N402が間欠的に異常値を表示。センサ内部の腐食が疑われる。",
+  status: "open", priority: "medium", reported_at: 5.days.ago)
+
+Trouble.create!(equipment: equip("根岸製油所", "軽油脱硫装置"), instrument: inst("LT-N502"), reported_by: ogata, assigned_to: yamashita,
+  title: "LT-N502 分離槽液位計ゼロ点ドリフト", description: "根岸HDS分離槽液位計のゼロ点が経時的にドリフト。月次校正で偏差が拡大している。",
+  status: "resolved", priority: "low", reported_at: 20.days.ago, resolved_at: 18.days.ago)
+
+Trouble.create!(equipment: equip("堺製油所", "接触改質装置"), instrument: inst("TV-S602"), reported_by: hayashi, assigned_to: kimura,
+  title: "TV-S602 水素ライン温度計断線", description: "堺CRF水素ラインTV-S602の4-20mA信号が突然断。現場確認で端子腐食を発見。",
+  status: "resolved", priority: "high", reported_at: 8.days.ago, resolved_at: 7.days.ago)
+
+Trouble.create!(equipment: equip("堺製油所", "ボイラー設備"), instrument: inst("PT-S702"), reported_by: hayashi, assigned_to: kimura,
+  title: "PT-S702 ドラム圧力計指示振れ", description: "堺ボイラードラム圧力計PT-S702の指示が±1%の範囲で振れる。バイブレーション対策が必要。",
+  status: "open", priority: "low", reported_at: 9.days.ago)
+
+Trouble.create!(equipment: equip("和歌山製油所", "常圧蒸留装置"), instrument: inst("TV-W102"), reported_by: wk_inst1, assigned_to: wk_inst_mgr,
+  title: "TV-W102 側留温度計指示不安定", description: "和歌山CDU灯油側留温度計TV-W102の指示が不安定。熱電対の寿命劣化が疑われる。交換部品を手配中。",
+  status: "in_progress", priority: "medium", reported_at: 7.days.ago)
+
+Trouble.create!(equipment: equip("和歌山製油所", "流動接触分解装置"), instrument: inst("LT-W501"), reported_by: wk_inst1,
+  title: "LT-W501 分留塔底液位計据付不良", description: "和歌山FCC分留塔底液位計LT-W501の取付部でプロセス流体の滲みを確認。フランジパッキン交換が必要。",
+  status: "open", priority: "medium", reported_at: 1.day.ago)
+
+Trouble.create!(equipment: equip("仙台製油所", "潤滑油製造装置"), instrument: inst("PT-D101"), reported_by: sd_inst1, assigned_to: matsumoto,
+  title: "PT-D101 LK反応器圧力伝送器異常", description: "仙台LK反応器圧力伝送器PT-D101の出力が間欠的に4mA以下に低下。電源回路の不具合が疑われる。",
+  status: "in_progress", priority: "high", reported_at: 2.days.ago)
+
+Trouble.create!(equipment: equip("仙台製油所", "軽油脱硫装置"), instrument: inst("LT-D202"), reported_by: sd_inst2, assigned_to: matsumoto,
+  title: "LT-D202 分離槽液位計ゼロ点異常", description: "仙台HDS分離槽液位計LT-D202のゼロ点が+3%方向にシフト。校正実施後に再発しており、センサ劣化の可能性。",
+  status: "open", priority: "medium", reported_at: 10.days.ago)
+
+# 追加: 過去の解決済みトラブル（2件）
+Trouble.create!(equipment: equip("川崎製油所", "タンク設備"), instrument: inst("LT-1003"), reported_by: okada,
+  title: "LT-1003 灯油タンク液位計不感帯異常",
+  description: "灯油タンクT-301レーダーレベル計の不感帯設定が変化。メーカー設定確認・調整で解決。",
+  status: "closed", priority: "low", reported_at: 45.days.ago, resolved_at: 44.days.ago)
+
+Trouble.create!(equipment: equip("根岸製油所", "ボイラー設備"), instrument: inst("TV-N702"), reported_by: imai,
+  title: "TV-N702 過熱スチーム温度計配線断",
+  description: "根岸ボイラー過熱スチーム温度計TV-N702の信号線断線。補修配線で復旧済み。",
+  status: "closed", priority: "medium", reported_at: 35.days.ago, resolved_at: 34.days.ago)
+
 # 追加: 過去の解決済みトラブル
 equip_list = [ kw_cdu, kw_rhds, kw_fcc, kw_boiler, ng_cdu, ng_hds, sk_cdu, sk_hds, equip("和歌山製油所", "常圧蒸留装置"), sd_lk ]
 reporter_list = [ sato, takahashi, fujita, imai, tanabe, hayashi, wk_inst1, sd_inst1, ogata, nishimura ]
@@ -141,3 +211,18 @@ TroubleResponse.create!(trouble: t8, user: imai, response_type: "repair", descri
 TroubleResponse.create!(trouble: t11, user: tanabe, response_type: "repair", description: "導圧管のブロー実施後、ゼロ点を再調整。正常値に復帰。", responded_at: 8.days.ago)
 TroubleResponse.create!(trouble: t12, user: wk_inst1, response_type: "investigation", description: "接地線の確認中。シールドケーブルの接地が外れていた可能性。", responded_at: 2.days.ago)
 TroubleResponse.create!(trouble: t15, user: okada, response_type: "investigation", description: "レーダーアンテナの清掃実施。結露除去後、指示値安定。経過観察とする。", responded_at: 13.days.ago)
+
+# 追加トラブル対応
+ta_tv502 = Trouble.find_by!(title: "TV-S602 水素ライン温度計断線")
+ta_lt_n502 = Trouble.find_by!(title: "LT-N502 分離槽液位計ゼロ点ドリフト")
+ta_ft702 = Trouble.find_by!(title: "FT-702 給水流量計据え付け不良")
+ta_wk_tv = Trouble.find_by!(title: "TV-W102 側留温度計指示不安定")
+ta_pt502 = Trouble.find_by!(title: "PT-502 水素圧力伝送器ゼロ点シフト")
+
+TroubleResponse.create!(trouble: ta_tv502, user: kimura, response_type: "investigation", description: "端子腐食の範囲を確認。腐食は端子台1箇所に限定。原因は結露と判断。", responded_at: 7.days.ago + 12.hours)
+TroubleResponse.create!(trouble: ta_tv502, user: hayashi, response_type: "repair", description: "腐食端子台を交換し、配線を引き直し。信号復旧確認。防水対策として端子台カバーを追加。", used_materials: "端子台 × 1個、計装ケーブル CVV-S 1.25mm² × 3m", responded_at: 7.days.ago)
+TroubleResponse.create!(trouble: ta_lt_n502, user: yamashita, response_type: "investigation", description: "HARTコミュニケータにてゼロ点確認。+2.1%FSのドリフトを確認。導圧管の詰まりが疑われる。", responded_at: 19.days.ago)
+TroubleResponse.create!(trouble: ta_lt_n502, user: ogata, response_type: "repair", description: "導圧管ブロー実施後、ゼロ点再調整（基準値0.0%FS）。正常範囲内に復旧。定期ブロー計画に追加。", responded_at: 18.days.ago)
+TroubleResponse.create!(trouble: ta_ft702, user: yamamoto, response_type: "investigation", description: "フランジ面の腐食確認。ガスケットの劣化による微量漏れ。給水ラインのため耐熱ガスケットに交換が必要。", responded_at: 2.days.ago)
+TroubleResponse.create!(trouble: ta_wk_tv, user: wk_inst_mgr, response_type: "investigation", description: "熱電対をHARTコミュニケータで確認。センサ抵抗値が規格外。経年劣化による熱電対素線の断線気味と判断。", responded_at: 6.days.ago)
+TroubleResponse.create!(trouble: ta_pt502, user: suzuki, response_type: "investigation", description: "HARTで確認、ゼロ点+0.8%FS。周囲温度変化の影響を排除後も偏差継続。高圧仕様のためSDW待ちで校正計画。", responded_at: 3.days.ago)
