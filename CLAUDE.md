@@ -53,6 +53,18 @@ cd frontend && npx vite build
 - 管理者(manager): suzuki@example.com / password
 - 一般(member): sato@example.com / password
 
+## デプロイ（本番 / Render）
+
+- 設定ファイル: `render.yaml`（Blueprint）
+- `main` ブランチに push すると Render が自動デプロイ（GitHub連携によるauto-deploy）
+- フロントエンド: `plant-keeper-web`（static site、`frontend/` を `npm run build` → `dist/` を配信）
+  - https://plant-keeper-web.onrender.com
+- バックエンド: `plant-keeper-api`（Ruby、`backend/` を起動時に `db:migrate` 実行後 puma 起動）
+  - https://plant-keeper-api.onrender.com/api/v1
+- DB: `plant-keeper-db`（Postgres、free plan）
+- 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
+- pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードで確認が必要（Claude Codeからは確認不可）
+
 ## 設計ドキュメント
 
 - `要求仕様書.md` — 機能要件、業務フロー、設計方針
