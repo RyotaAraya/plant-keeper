@@ -310,7 +310,6 @@ onMounted(() => {
       :items="instruments"
       :loading="loading"
       hover
-      hide-default-footer
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
