@@ -33,7 +33,7 @@ services:
     name: plant-keeper-web
     runtime: static
     rootDir: frontend
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm install --legacy-peer-deps && npm run build"
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
