@@ -1,6 +1,7 @@
 .env
 backend/tmp/
 backend/log/
+backend/config/master.key
 frontend/node_modules/
 frontend/dist/
 *.swp
