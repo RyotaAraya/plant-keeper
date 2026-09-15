@@ -13,7 +13,7 @@ function toggleDrawer() {
 <template>
   <AppBar @toggle-drawer="toggleDrawer" />
   <SideNav v-model="drawer" />
-  <v-main>
+  <v-main style="background: var(--pk-mist)">
     <v-container fluid>
       <slot />
     </v-container>

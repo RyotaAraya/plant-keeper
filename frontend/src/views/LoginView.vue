@@ -66,8 +66,8 @@ async function handleLogin() {
 }
 
 const AVATAR_COLORS = [
-  '#1565C0', '#2E7D32', '#6A1B9A', '#00838F',
-  '#E65100', '#AD1457', '#4527A0', '#00695C',
+  '#2E5B7A', '#3D6E8C', '#6B7D5B', '#8C6A3D',
+  '#7A4B3D', '#5B6B70', '#4B5A7A', '#2E7D4F',
 ]
 function avatarColor(id: number) {
   return AVATAR_COLORS[id % AVATAR_COLORS.length]
@@ -91,93 +91,228 @@ async function loginAs(accountEmail: string) {
 </script>
 
 <template>
-  <v-main>
-    <v-container class="fill-height" fluid>
-      <v-row align="center" justify="center">
-        <v-col cols="12" sm="8" md="5">
-          <v-card class="elevation-12">
-            <v-toolbar color="primary" dark flat>
-              <v-toolbar-title>PlantKeeper</v-toolbar-title>
-            </v-toolbar>
-            <v-card-text>
-              <v-alert
-                v-if="errorMessage"
-                type="error"
-                density="compact"
-                class="mb-4"
-              >
-                {{ errorMessage }}
-              </v-alert>
-              <v-form @submit.prevent="handleLogin">
-                <v-text-field
-                  v-model="email"
-                  label="メールアドレス"
-                  prepend-icon="mdi-email"
-                  type="email"
-                  required
-                />
-                <v-text-field
-                  v-model="password"
-                  label="パスワード"
-                  prepend-icon="mdi-lock"
-                  type="password"
-                  required
-                />
-                <v-btn
-                  type="submit"
-                  color="primary"
-                  block
-                  size="large"
-                  :loading="loading"
-                  class="mt-4"
-                >
-                  ログイン
-                </v-btn>
-              </v-form>
-            </v-card-text>
+  <div class="pk-login">
+    <aside class="pk-login__brand">
+      <router-link to="/" class="pk-login__brand-mark">
+        <v-icon color="#E7B778" size="26">mdi-gauge-full</v-icon>
+        <span>PlantKeeper</span>
+      </router-link>
+      <div class="pk-login__brand-copy">
+        <h1>プラント保全業務を、<br />まるごと一つに。</h1>
+        <p>設備台帳・点検記録・トラブル管理・資材管理を一元化した、現場発の統合管理システムです。</p>
+      </div>
+      <router-link to="/" class="pk-login__back">
+        <v-icon size="16" class="mr-1">mdi-arrow-left</v-icon>
+        トップページに戻る
+      </router-link>
+    </aside>
 
-            <template v-if="demoAccounts.length > 0">
-              <v-divider />
-              <v-card-text class="pb-1">
-                <div class="text-caption text-medium-emphasis mb-1">デモアカウント（クリックでログイン）</div>
-              </v-card-text>
-              <v-list
-                density="compact"
-                style="max-height: 280px; overflow-y: auto;"
-              >
-                <v-list-item
-                  v-for="account in demoAccounts"
-                  :key="account.id"
-                  :disabled="loading"
-                  rounded="lg"
-                  class="mx-2 mb-1"
-                  @click="loginAs(account.email)"
-                >
-                  <template #prepend>
-                    <v-avatar :color="avatarColor(account.id)" size="32">
-                      <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>{{ account.name }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    {{ [account.company_name, account.department_path].filter(Boolean).join(' / ') }}
-                  </v-list-item-subtitle>
-                  <template #append>
-                    <v-chip
-                      :color="roleColor[account.system_role]"
-                      size="x-small"
-                      label
-                    >
-                      {{ roleLabel[account.system_role] ?? account.system_role }}
-                    </v-chip>
-                  </template>
-                </v-list-item>
-              </v-list>
-              <div class="pb-2" />
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </v-main>
+    <main class="pk-login__form">
+      <div class="pk-login__form-inner">
+        <h2 class="text-h5 font-weight-bold mb-1">ログイン</h2>
+        <p class="text-body-2 text-medium-emphasis mb-6">アカウント情報を入力してください</p>
+
+        <v-alert
+          v-if="errorMessage"
+          type="error"
+          density="compact"
+          variant="tonal"
+          class="mb-4"
+        >
+          {{ errorMessage }}
+        </v-alert>
+
+        <v-form @submit.prevent="handleLogin">
+          <v-text-field
+            v-model="email"
+            label="メールアドレス"
+            prepend-inner-icon="mdi-email-outline"
+            type="email"
+            required
+          />
+          <v-text-field
+            v-model="password"
+            label="パスワード"
+            prepend-inner-icon="mdi-lock-outline"
+            type="password"
+            required
+          />
+          <v-btn
+            type="submit"
+            color="primary"
+            block
+            size="large"
+            :loading="loading"
+            class="mt-2"
+          >
+            ログイン
+          </v-btn>
+        </v-form>
+
+        <template v-if="demoAccounts.length > 0">
+          <v-divider class="my-6" />
+          <div class="text-caption text-medium-emphasis mb-2">デモアカウント（クリックでログイン）</div>
+          <div class="pk-demo-list">
+            <button
+              v-for="account in demoAccounts"
+              :key="account.id"
+              type="button"
+              class="pk-demo-item"
+              :disabled="loading"
+              @click="loginAs(account.email)"
+            >
+              <v-avatar :color="avatarColor(account.id)" size="34">
+                <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
+              </v-avatar>
+              <div class="pk-demo-item__body">
+                <div class="pk-demo-item__name">{{ account.name }}</div>
+                <div class="pk-demo-item__meta">
+                  {{ [account.company_name, account.department_path].filter(Boolean).join(' / ') }}
+                </div>
+              </div>
+              <v-chip :color="roleColor[account.system_role]" size="x-small" label>
+                {{ roleLabel[account.system_role] ?? account.system_role }}
+              </v-chip>
+            </button>
+          </div>
+        </template>
+      </div>
+    </main>
+  </div>
 </template>
+
+<style scoped>
+.pk-login {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.pk-login__brand {
+  background: var(--pk-ink);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  color: #f5f6f5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem;
+}
+
+.pk-login__brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--pk-font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #f5f6f5;
+  text-decoration: none;
+}
+
+.pk-login__brand-copy h1 {
+  font-family: var(--pk-font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.3;
+  margin-bottom: 1rem;
+}
+
+.pk-login__brand-copy p {
+  color: rgba(245, 246, 245, 0.7);
+  max-width: 400px;
+  font-size: 0.95rem;
+}
+
+.pk-login__back {
+  color: rgba(245, 246, 245, 0.55);
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.pk-login__back:hover {
+  color: #e7b778;
+}
+
+.pk-login__form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #fff;
+}
+
+.pk-login__form-inner {
+  width: 100%;
+  max-width: 400px;
+}
+
+.pk-demo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.pk-demo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--pk-line);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pk-demo-item:hover:not(:disabled) {
+  border-color: var(--pk-steel);
+  background: rgba(46, 91, 122, 0.05);
+}
+
+.pk-demo-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pk-demo-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pk-demo-item__name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pk-ink);
+}
+
+.pk-demo-item__meta {
+  font-size: 0.75rem;
+  color: #6b7678;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .pk-login {
+    grid-template-columns: 1fr;
+  }
+
+  .pk-login__brand {
+    padding: 2rem 1.5rem;
+  }
+
+  .pk-login__brand-copy p {
+    display: none;
+  }
+}
+</style>

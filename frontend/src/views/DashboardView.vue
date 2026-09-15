@@ -43,36 +43,28 @@ onMounted(fetchDashboard)
       <!-- 統計カード -->
       <v-row class="mb-4">
         <v-col cols="6" md="3">
-          <v-card color="error" variant="tonal" @click="router.push('/troubles?status=open')">
-            <v-card-text class="text-center">
-              <div class="text-h3">{{ dashboard.troubles.open }}</div>
-              <div class="text-body-2">未対応トラブル</div>
-            </v-card-text>
-          </v-card>
+          <button class="pk-kpi pk-kpi--error" @click="router.push('/troubles?status=open')">
+            <div class="pk-kpi__value pk-mono">{{ dashboard.troubles.open }}</div>
+            <div class="pk-kpi__label">未対応トラブル</div>
+          </button>
         </v-col>
         <v-col cols="6" md="3">
-          <v-card color="warning" variant="tonal" @click="router.push('/troubles?status=in_progress')">
-            <v-card-text class="text-center">
-              <div class="text-h3">{{ dashboard.troubles.in_progress }}</div>
-              <div class="text-body-2">対応中トラブル</div>
-            </v-card-text>
-          </v-card>
+          <button class="pk-kpi pk-kpi--warning" @click="router.push('/troubles?status=in_progress')">
+            <div class="pk-kpi__value pk-mono">{{ dashboard.troubles.in_progress }}</div>
+            <div class="pk-kpi__label">対応中トラブル</div>
+          </button>
         </v-col>
         <v-col cols="6" md="3">
-          <v-card color="info" variant="tonal" @click="router.push('/inspections')">
-            <v-card-text class="text-center">
-              <div class="text-h3">{{ dashboard.inspections.pending_approval }}</div>
-              <div class="text-body-2">承認待ち点検</div>
-            </v-card-text>
-          </v-card>
+          <button class="pk-kpi pk-kpi--info" @click="router.push('/inspections')">
+            <div class="pk-kpi__value pk-mono">{{ dashboard.inspections.pending_approval }}</div>
+            <div class="pk-kpi__label">承認待ち点検</div>
+          </button>
         </v-col>
         <v-col cols="6" md="3">
-          <v-card color="success" variant="tonal">
-            <v-card-text class="text-center">
-              <div class="text-h3">{{ dashboard.inspections.this_month }}</div>
-              <div class="text-body-2">今月の点検数</div>
-            </v-card-text>
-          </v-card>
+          <div class="pk-kpi pk-kpi--success">
+            <div class="pk-kpi__value pk-mono">{{ dashboard.inspections.this_month }}</div>
+            <div class="pk-kpi__label">今月の点検数</div>
+          </div>
         </v-col>
       </v-row>
 
@@ -192,3 +184,48 @@ onMounted(fetchDashboard)
     </template>
   </MainLayout>
 </template>
+
+<style scoped>
+.pk-kpi {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-left: 3px solid var(--pk-line);
+  padding: 1.1rem 1.25rem;
+  text-align: left;
+  cursor: default;
+  font: inherit;
+}
+
+button.pk-kpi {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+button.pk-kpi:hover {
+  background: var(--pk-mist);
+}
+
+.pk-kpi__value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.pk-kpi__label {
+  font-size: 0.8rem;
+  color: #5b6b70;
+  margin-top: 0.25rem;
+}
+
+.pk-kpi--error { border-left-color: #b3261e; }
+.pk-kpi--error .pk-kpi__value { color: #b3261e; }
+.pk-kpi--warning { border-left-color: #b4720e; }
+.pk-kpi--warning .pk-kpi__value { color: #b4720e; }
+.pk-kpi--info { border-left-color: #3d6e8c; }
+.pk-kpi--info .pk-kpi__value { color: #3d6e8c; }
+.pk-kpi--success { border-left-color: #2e7d4f; }
+.pk-kpi--success .pk-kpi__value { color: #2e7d4f; }
+</style>
+

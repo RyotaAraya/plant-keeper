@@ -367,7 +367,6 @@ onMounted(() => {
             </v-card-text>
           </v-card>
         </template>
-
       </div>
     </div>
 

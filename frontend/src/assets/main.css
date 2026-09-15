@@ -1,11 +1,58 @@
+/* PlantKeeper デザイントークン
+   計装保全の現場（銘板・計器盤・図面）を起点にした配色とタイポグラフィ。 */
+:root {
+  --pk-ink: #17222b;
+  --pk-steel: #2e5b7a;
+  --pk-steel-dark: #203f55;
+  --pk-amber: #c1631f;
+  --pk-mist: #eef1ef;
+  --pk-line: #d6dbd8;
+  --pk-font-body: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+  --pk-font-display: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+  --pk-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-color: var(--pk-line) transparent;
+}
+
 .v-application {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--pk-font-body) !important;
+  color: var(--pk-ink);
 }
 
 .v-application .v-card,
 .v-application .v-sheet {
-  --v-border-color: 228, 228, 231;
+  --v-border-color: 214, 219, 216;
   --v-border-opacity: 1;
+}
+
+/* 見出しはゴシック体で統一し、本文と役割を分ける */
+h1, h2, h3,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5,
+.v-toolbar-title, .v-card-title {
+  font-family: var(--pk-font-display) !important;
+  letter-spacing: 0;
+}
+
+/* タグ番号・数値・日時など計器の読み値的な情報は等幅で統一 */
+.pk-mono {
+  font-family: var(--pk-font-mono);
+  font-feature-settings: 'tnum';
+}
+
+::selection {
+  background: var(--pk-amber);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pk-amber);
+  outline-offset: 2px;
 }
 
 .v-data-table {
@@ -14,23 +61,37 @@
 
 .v-data-table > .v-table__wrapper > table > thead > tr > th {
   font-weight: 600 !important;
-  color: #52525B !important;
-  background: #FAFAFA;
+  color: var(--pk-ink) !important;
+  background: var(--pk-mist);
+  border-bottom: 1px solid var(--pk-line) !important;
+}
+
+.v-data-table > .v-table__wrapper > table > tbody > tr > td {
+  font-variant-numeric: tabular-nums;
 }
 
 .v-navigation-drawer {
-  border-right: 1px solid #E4E4E7 !important;
+  border-right: 1px solid var(--pk-line) !important;
 }
 
 .v-navigation-drawer .v-list-item--active {
-  background: #EEF2FF;
-  color: #4F46E5 !important;
+  background: rgba(46, 91, 122, 0.08);
+  color: var(--pk-steel) !important;
 }
 
 .v-navigation-drawer .v-list-item--active .v-icon {
-  color: #4F46E5 !important;
+  color: var(--pk-steel) !important;
 }
 
 .v-app-bar {
-  border-bottom: 1px solid #E4E4E7 !important;
+  border-bottom: 1px solid var(--pk-line) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
