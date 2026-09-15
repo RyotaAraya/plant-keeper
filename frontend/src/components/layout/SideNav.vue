@@ -24,7 +24,6 @@ const navItems = [
   { title: '資材管理', icon: 'mdi-package-variant', to: '/materials', permission: canViewMaterials },
   { title: '在庫管理', icon: 'mdi-warehouse', to: '/stocks', permission: canViewStocks },
   { title: '発注管理', icon: 'mdi-cart', to: '/orders', permission: canManageOrders },
-  { title: '修理管理', icon: 'mdi-tools', to: '/repairs', permission: canManageOrders },
   { title: '部署管理', icon: 'mdi-office-building', to: '/departments', permission: canManageUsers },
   { title: 'ユーザ管理', icon: 'mdi-account-group', to: '/users', permission: canManageUsers },
   { title: '監査ログ', icon: 'mdi-file-document', to: '/audit-logs', permission: canViewAuditLogs },
