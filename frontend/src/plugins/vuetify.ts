@@ -8,7 +8,7 @@ const vuetify = createVuetify({
   components,
   directives,
   locale: {
-    defaultLocale: 'ja',
+    locale: 'ja',
     messages: { ja },
   },
   theme: {
