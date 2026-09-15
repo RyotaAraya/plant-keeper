@@ -12,7 +12,6 @@ const troubles = ref<any[]>([])
 const equipments = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
@@ -73,7 +72,7 @@ const priorityOptions = [
 async function fetchTroubles() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.priority) params.priority = filters.value.priority
     if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
@@ -134,7 +133,7 @@ onMounted(() => {
   fetchEquipments()
   fetchTroubles()
 })
-watch([filters, page], fetchTroubles, { deep: true })
+watch(filters, fetchTroubles, { deep: true })
 </script>
 
 <template>
@@ -218,10 +217,6 @@ watch([filters, page], fetchTroubles, { deep: true })
         {{ item.assigned_to?.name || '未割当' }}
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>

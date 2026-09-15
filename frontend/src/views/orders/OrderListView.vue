@@ -7,7 +7,6 @@ const orders = ref<any[]>([])
 const materials = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
@@ -53,7 +52,7 @@ const statusOptions = [
 async function fetchOrders() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.status) params.status = filters.value.status
     const res = await api.get('/orders', { params })
     orders.value = res.data.data
@@ -123,7 +122,7 @@ onMounted(() => {
   fetchMaterials()
   fetchOrders()
 })
-watch([filters, page], fetchOrders, { deep: true })
+watch(filters, fetchOrders, { deep: true })
 </script>
 
 <template>
@@ -182,10 +181,6 @@ watch([filters, page], fetchOrders, { deep: true })
         </v-chip>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>

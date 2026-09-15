@@ -12,7 +12,6 @@ const maintenances = ref<any[]>([])
 const equipments = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
@@ -53,7 +52,7 @@ const statusOptions = [
 async function fetchMaintenances() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
     if (filters.value.status) params.status = filters.value.status
     const res = await api.get('/scheduled_maintenances', { params })
@@ -111,7 +110,7 @@ onMounted(() => {
   fetchEquipments()
   fetchMaintenances()
 })
-watch([filters, page], fetchMaintenances, { deep: true })
+watch(filters, fetchMaintenances, { deep: true })
 </script>
 
 <template>
@@ -167,10 +166,6 @@ watch([filters, page], fetchMaintenances, { deep: true })
         </v-chip>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>

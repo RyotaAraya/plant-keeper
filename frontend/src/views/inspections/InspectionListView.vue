@@ -10,7 +10,6 @@ const inspections = ref<any[]>([])
 const equipments = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 
 const filters = ref({
   equipment_id: null as number | null,
@@ -56,7 +55,7 @@ const statusOptions = [
 async function fetchInspections() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
     if (filters.value.inspection_type) params.inspection_type = filters.value.inspection_type
     if (filters.value.status) params.status = filters.value.status
@@ -87,7 +86,7 @@ onMounted(() => {
   fetchEquipments()
   fetchInspections()
 })
-watch([filters, page], fetchInspections, { deep: true })
+watch(filters, fetchInspections, { deep: true })
 </script>
 
 <template>
@@ -154,10 +153,6 @@ watch([filters, page], fetchInspections, { deep: true })
         </v-chip>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
   </MainLayout>
 </template>
 

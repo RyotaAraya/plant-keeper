@@ -15,8 +15,6 @@ const services = ref<any[]>([])
 const lineClasses = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
-const perPage = 50
 
 // フィルタ（すべて複数選択）
 const search = ref('')
@@ -88,7 +86,6 @@ function clearFilters() {
   selectedEquipmentIds.value = []
   selectedServiceIds.value = []
   selectedLineClassIds.value = []
-  page.value = 1
 }
 
 function removeChip(key: string) {
@@ -101,7 +98,7 @@ function removeChip(key: string) {
 async function fetchInstruments() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: perPage }
+    const params: any = { per_page: 1000 }
     if (search.value) params.q = search.value
     if (selectedSiteIds.value.length) params['site_ids[]'] = selectedSiteIds.value
     if (selectedEquipmentIds.value.length) params['equipment_ids[]'] = selectedEquipmentIds.value
@@ -178,7 +175,6 @@ function goToDetail(row: any) {
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(search, () => {
   clearTimeout(searchTimeout)
-  page.value = 1
   searchTimeout = setTimeout(fetchInstruments, 300)
 })
 // 拠点変更時: その拠点に属さない設備選択を解除
@@ -188,14 +184,11 @@ watch(selectedSiteIds, (newIds) => {
       id => newIds.includes(equipments.value.find((e: any) => e.id === id)?.site_id)
     )
   }
-  page.value = 1
   fetchInstruments()
 }, { deep: true })
 watch([selectedEquipmentIds, selectedServiceIds, selectedLineClassIds], () => {
-  page.value = 1
   fetchInstruments()
 }, { deep: true })
-watch(page, fetchInstruments)
 
 onMounted(() => {
   fetchMasters()
@@ -327,9 +320,6 @@ onMounted(() => {
     </v-data-table>
 
     <!-- ページネーション -->
-    <div v-if="totalCount > perPage" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / perPage)" />
-    </div>
 
     <!-- 作成・編集ダイアログ -->
     <v-dialog v-model="dialog" max-width="600">

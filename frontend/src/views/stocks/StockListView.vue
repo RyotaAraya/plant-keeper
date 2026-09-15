@@ -11,7 +11,6 @@ const stocks = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 
 const filters = ref({
   warehouse_id: null as number | null,
@@ -61,7 +60,7 @@ const txTypeOptions = [
 async function fetchStocks() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.warehouse_id) params.warehouse_id = filters.value.warehouse_id
     if (filters.value.status) params.status = filters.value.status
     const res = await api.get('/stocks', { params })
@@ -108,7 +107,7 @@ onMounted(() => {
   fetchWarehouses()
   fetchStocks()
 })
-watch([filters, page], fetchStocks, { deep: true })
+watch(filters, fetchStocks, { deep: true })
 </script>
 
 <template>
@@ -159,10 +158,6 @@ watch([filters, page], fetchStocks, { deep: true })
         <v-btn v-if="canManageStockTransaction" size="x-small" variant="outlined" @click.stop="openTx(item)">入出庫</v-btn>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
 
     <!-- Transaction Dialog -->
     <v-dialog v-model="txDialog" max-width="500">

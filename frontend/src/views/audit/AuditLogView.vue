@@ -6,7 +6,6 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 const logs = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 const apiError = ref<string | null>(null)
 
 const filters = ref({
@@ -62,7 +61,7 @@ async function fetchLogs() {
   loading.value = true
   apiError.value = null
   try {
-    const params: any = { page: page.value, per_page: 50 }
+    const params: any = { per_page: 1000 }
     if (filters.value.action) params.log_action = filters.value.action
     if (filters.value.auditable_type) params.auditable_type = filters.value.auditable_type
     const res = await api.get('/audit_logs', { params })
@@ -97,7 +96,7 @@ function hasChanges(changes: any): boolean {
 }
 
 onMounted(fetchLogs)
-watch([filters, page], fetchLogs, { deep: true })
+watch(filters, fetchLogs, { deep: true })
 </script>
 
 <template>
@@ -160,9 +159,5 @@ watch([filters, page], fetchLogs, { deep: true })
         <span v-else class="text-caption text-grey">—</span>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 50" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 50)" />
-    </div>
   </MainLayout>
 </template>

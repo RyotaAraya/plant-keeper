@@ -11,7 +11,6 @@ const materials = ref<any[]>([])
 const manufacturers = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
-const page = ref(1)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
@@ -72,7 +71,7 @@ const reorderOptions = [
 async function fetchMaterials() {
   loading.value = true
   try {
-    const params: any = { page: page.value, per_page: 25 }
+    const params: any = { per_page: 1000 }
     if (filters.value.q) params.q = filters.value.q
     if (filters.value.category) params.category = filters.value.category
     if (filters.value.manufacturer_id) params.manufacturer_id = filters.value.manufacturer_id
@@ -143,7 +142,7 @@ onMounted(() => {
   fetchManufacturers()
   fetchMaterials()
 })
-watch([filters, page], fetchMaterials, { deep: true })
+watch(filters, fetchMaterials, { deep: true })
 </script>
 
 <template>
@@ -206,10 +205,6 @@ watch([filters, page], fetchMaterials, { deep: true })
         <v-icon v-if="item.is_hazardous" color="error" size="small">mdi-alert</v-icon>
       </template>
     </v-data-table>
-
-    <div v-if="totalCount > 25" class="d-flex justify-center mt-4">
-      <v-pagination v-model="page" :length="Math.ceil(totalCount / 25)" />
-    </div>
 
     <v-dialog v-model="dialog" max-width="700">
       <v-card>
