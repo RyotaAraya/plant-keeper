@@ -5,13 +5,18 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/',
+      name: 'Home',
+      component: () => import('@/views/HomeView.vue'),
+    },
+    {
       path: '/login',
       name: 'Login',
       component: () => import('@/views/LoginView.vue'),
       meta: { guest: true },
     },
     {
-      path: '/',
+      path: '/dashboard',
       name: 'Dashboard',
       component: () => import('@/views/DashboardView.vue'),
       meta: { requiresAuth: true },
@@ -131,6 +136,18 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresOwnerManager: true },
     },
     {
+      path: '/repairs',
+      name: 'Repairs',
+      component: () => import('@/views/repairs/RepairListView.vue'),
+      meta: { requiresAuth: true, requiresOwnerManager: true },
+    },
+    {
+      path: '/repairs/:id',
+      name: 'RepairDetail',
+      component: () => import('@/views/repairs/RepairDetailView.vue'),
+      meta: { requiresAuth: true, requiresOwnerManager: true },
+    },
+    {
       path: '/departments',
       name: 'Departments',
       component: () => import('@/views/departments/DepartmentView.vue'),
@@ -176,7 +193,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guest && authStore.isLoggedIn) {
-    return { path: '/' }
+    return { path: '/dashboard' }
   }
 
   if (authStore.isLoggedIn) {
@@ -185,16 +202,16 @@ router.beforeEach(async (to) => {
     const companyType = user?.company?.company_type
 
     if (to.meta.requiresAdmin && role !== 'admin') {
-      return { path: '/' }
+      return { path: '/dashboard' }
     }
     if (to.meta.requiresOwner && companyType !== 'owner') {
-      return { path: '/' }
+      return { path: '/dashboard' }
     }
     if (to.meta.requiresOwnerManager && !(role === 'admin' || (role === 'manager' && companyType === 'owner'))) {
-      return { path: '/' }
+      return { path: '/dashboard' }
     }
     if (to.meta.requiresNonWorker && role === 'worker') {
-      return { path: '/' }
+      return { path: '/dashboard' }
     }
   }
 })

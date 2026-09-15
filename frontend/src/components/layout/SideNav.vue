@@ -14,7 +14,7 @@ const { canManageUsers, canViewAuditLogs, canAccessSettings, canManageOrders, ca
   usePermissions()
 
 const navItems = [
-  { title: 'ダッシュボード', icon: 'mdi-view-dashboard', to: '/' },
+  { title: 'ダッシュボード', icon: 'mdi-view-dashboard', to: '/dashboard' },
   { title: '拠点管理', icon: 'mdi-domain', to: '/sites' },
   { title: '設備台帳', icon: 'mdi-factory', to: '/equipments' },
   { title: '装置・計器', icon: 'mdi-gauge', to: '/instruments' },

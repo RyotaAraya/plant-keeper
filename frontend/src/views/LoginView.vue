@@ -52,7 +52,7 @@ async function handleLogin() {
   loading.value = true
   try {
     await authStore.login(email.value, password.value)
-    await router.push('/')
+    await router.push('/dashboard')
   } catch (e: any) {
     console.error('Login error:', e)
     if (e?.response?.status === 401) {
@@ -81,7 +81,7 @@ async function loginAs(accountEmail: string) {
   loading.value = true
   try {
     await authStore.login(accountEmail, 'password')
-    await router.push('/')
+    await router.push('/dashboard')
   } catch {
     errorMessage.value = 'ログインに失敗しました。'
   } finally {
