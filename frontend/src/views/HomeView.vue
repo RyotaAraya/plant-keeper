@@ -31,6 +31,14 @@ const featureGroups = [
 ]
 
 const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'PostgreSQL']
+
+const painPoints = [
+  { icon: 'mdi-file-document-alert-outline', text: '最新版かわからない回路図。手書きの追記だけが残り、更新されないまま放置された図面' },
+  { icon: 'mdi-file-image-outline', text: '紙の記録とデータの二重管理。検索性の低いスキャン画像の山' },
+  { icon: 'mdi-clipboard-text-multiple-outline', text: '何重にもなったチェックリストと、ハンコリレーによる承認フロー' },
+]
+
+const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 </script>
 
 <template>
@@ -105,8 +113,44 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
       </v-container>
     </section>
 
-    <!-- CTA -->
+    <!-- 開発の背景 -->
     <section class="px-4 px-sm-8 py-12 py-sm-16">
+      <v-container>
+        <v-row justify="center">
+          <v-col cols="12" md="10" lg="8">
+            <v-chip color="primary" variant="tonal" size="small" class="mb-4">開発の背景</v-chip>
+            <h2 class="text-h4 font-weight-bold mb-6">なぜPlantKeeperを作ったのか</h2>
+            <p class="text-body-1 text-grey-darken-2 mb-6">
+              石油プラントの現場で<strong>計装保全員として10年間</strong>、計器や自動制御機器の保守に携わってきました。
+              その中でずっと感じていたのが、現場に根強く残る「非効率」でした。
+            </p>
+            <v-card variant="flat" rounded="lg" border class="pa-6 mb-6" color="surface-variant">
+              <v-list density="comfortable" class="bg-transparent pa-0">
+                <v-list-item v-for="point in painPoints" :key="point.text" class="px-0">
+                  <template #prepend>
+                    <v-icon color="warning" class="mr-3">{{ point.icon }}</v-icon>
+                  </template>
+                  <v-list-item-title class="text-body-2" style="white-space: normal">{{ point.text }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card>
+            <p class="text-body-1 text-grey-darken-2 mb-4">
+              朝会・夕会で使う進捗確認表をExcelで使いやすく作り替えたのがきっかけで、「業務改善そのもの」に楽しさを見出し、
+              独学でプログラミングを学び始めました。現場を離れてからは、電力会社・SaaS企業でWebエンジニアとして
+              開発・チーム運営に携わってきました。
+            </p>
+            <p class="text-body-1 text-grey-darken-2 font-weight-medium">
+              PlantKeeperは、その原体験をもとに「現場が本当に使いたくなる保全システムとは何か」を考えながら設計した
+              アプリケーションです。設備台帳・点検記録・トラブル管理・資材管理を紙とExcelから解放し、
+              計装保全の実務で培った現場感覚をそのままシステム設計に落とし込みました。
+            </p>
+          </v-col>
+        </v-row>
+      </v-container>
+    </section>
+
+    <!-- CTA -->
+    <section class="px-4 px-sm-8 py-12 py-sm-16" style="background: #F4F4F5">
       <v-container>
         <v-card color="primary" class="pa-8 pa-sm-12 text-center" border="0">
           <h2 class="text-h4 font-weight-bold text-white mb-3">今すぐ触って試せます</h2>
@@ -122,11 +166,23 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
 
     <!-- フッター -->
     <v-footer class="d-flex flex-column py-6 px-4" color="grey-darken-4">
-      <div class="d-flex flex-wrap ga-2 justify-center mb-3">
+      <div class="d-flex flex-wrap ga-2 justify-center mb-4">
         <v-chip v-for="tech in techStack" :key="tech" size="small" variant="outlined" color="grey-lighten-1">
           {{ tech }}
         </v-chip>
       </div>
+      <v-btn
+        :href="GITHUB_URL"
+        target="_blank"
+        rel="noopener"
+        variant="text"
+        size="small"
+        prepend-icon="mdi-github"
+        color="grey-lighten-1"
+        class="mb-2"
+      >
+        Developed by Ryota Araya — GitHubでソースコードを見る
+      </v-btn>
       <div class="text-caption text-grey-lighten-1">© {{ new Date().getFullYear() }} PlantKeeper</div>
     </v-footer>
   </v-main>
