@@ -31,15 +31,15 @@ async function handleLogout() {
 </script>
 
 <template>
-  <v-app-bar color="primary" density="default">
+  <v-app-bar density="default">
     <v-app-bar-nav-icon @click="$emit('toggle-drawer')" />
-    <v-app-bar-title>PlantKeeper</v-app-bar-title>
+    <v-app-bar-title class="font-weight-bold">PlantKeeper</v-app-bar-title>
     <v-spacer />
     <div v-if="authStore.user" class="mr-4 text-right">
-      <div class="text-body-2">{{ authStore.user.name }}</div>
-      <div class="text-caption opacity-80">{{ roleLabel }}・{{ companyName }}</div>
+      <div class="text-body-2 font-weight-medium">{{ authStore.user.name }}</div>
+      <div class="text-caption text-medium-emphasis">{{ roleLabel }}・{{ companyName }}</div>
     </div>
-    <v-btn icon @click="handleLogout">
+    <v-btn icon variant="text" @click="handleLogout">
       <v-icon>mdi-logout</v-icon>
     </v-btn>
   </v-app-bar>

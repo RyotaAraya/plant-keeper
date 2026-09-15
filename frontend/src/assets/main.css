@@ -1,0 +1,36 @@
+.v-application {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.v-application .v-card,
+.v-application .v-sheet {
+  --v-border-color: 228, 228, 231;
+  --v-border-opacity: 1;
+}
+
+.v-data-table {
+  font-size: 0.875rem;
+}
+
+.v-data-table > .v-table__wrapper > table > thead > tr > th {
+  font-weight: 600 !important;
+  color: #52525B !important;
+  background: #FAFAFA;
+}
+
+.v-navigation-drawer {
+  border-right: 1px solid #E4E4E7 !important;
+}
+
+.v-navigation-drawer .v-list-item--active {
+  background: #EEF2FF;
+  color: #4F46E5 !important;
+}
+
+.v-navigation-drawer .v-list-item--active .v-icon {
+  color: #4F46E5 !important;
+}
+
+.v-app-bar {
+  border-bottom: 1px solid #E4E4E7 !important;
+}

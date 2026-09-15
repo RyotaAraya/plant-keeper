@@ -36,7 +36,7 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
 <template>
   <v-main>
     <!-- ヘッダー -->
-    <v-app-bar color="white" flat elevation="0" class="px-2 px-sm-6">
+    <v-app-bar class="px-2 px-sm-6">
       <v-icon color="primary" size="28" class="mr-2">mdi-water-pump</v-icon>
       <span class="text-h6 font-weight-bold text-grey-darken-3">PlantKeeper</span>
       <v-spacer />
@@ -62,7 +62,6 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
               color="primary"
               size="x-large"
               class="px-8"
-              elevation="2"
               append-icon="mdi-arrow-right"
               @click="goToApp"
             >
@@ -78,7 +77,7 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
     </section>
 
     <!-- 機能紹介 -->
-    <section class="px-4 px-sm-8 py-12 py-sm-16" style="background: #F7F9FC">
+    <section class="px-4 px-sm-8 py-12 py-sm-16" style="background: #F4F4F5">
       <v-container>
         <div class="text-center mb-10">
           <h2 class="text-h4 font-weight-bold mb-2">主な機能</h2>
@@ -109,12 +108,12 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
     <!-- CTA -->
     <section class="px-4 px-sm-8 py-12 py-sm-16">
       <v-container>
-        <v-card color="primary" rounded="lg" class="pa-8 pa-sm-12 text-center" elevation="0">
+        <v-card color="primary" class="pa-8 pa-sm-12 text-center" border="0">
           <h2 class="text-h4 font-weight-bold text-white mb-3">今すぐ触って試せます</h2>
           <p class="text-body-1 mb-6" style="color: rgba(255,255,255,0.85)">
             ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
           </p>
-          <v-btn color="white" size="x-large" class="px-8 text-primary" elevation="0" @click="goToApp">
+          <v-btn color="white" size="x-large" class="px-8 text-primary" @click="goToApp">
             ログイン画面へ
           </v-btn>
         </v-card>
@@ -135,7 +134,7 @@ const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'Postg
 
 <style scoped>
 .hero-section {
-  background: linear-gradient(180deg, #EAF2FD 0%, #FFFFFF 100%);
+  background: linear-gradient(180deg, #EEF2FF 0%, #FAFAFA 100%);
 }
 .min-height-0 {
   min-height: 0;
