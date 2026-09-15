@@ -305,6 +305,8 @@ async function loginAs(accountEmail: string) {
 @media (max-width: 900px) {
   .pk-login {
     grid-template-columns: 1fr;
+    min-height: 0;
+    align-content: start;
   }
 
   .pk-login__brand {
