@@ -118,6 +118,7 @@ async function loginAs(accountEmail: string) {
           density="compact"
           variant="tonal"
           class="mb-4"
+          role="alert"
         >
           {{ errorMessage }}
         </v-alert>
@@ -161,7 +162,7 @@ async function loginAs(accountEmail: string) {
               :disabled="loading"
               @click="loginAs(account.email)"
             >
-              <v-avatar :color="avatarColor(account.id)" size="34">
+              <v-avatar :color="avatarColor(account.id)" size="34" aria-hidden="true">
                 <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
               </v-avatar>
               <div class="pk-demo-item__body">
@@ -183,7 +184,7 @@ async function loginAs(accountEmail: string) {
 
 <style scoped>
 .pk-login {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -218,12 +219,14 @@ async function loginAs(accountEmail: string) {
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   line-height: 1.3;
   margin-bottom: 1rem;
+  text-wrap: balance;
 }
 
 .pk-login__brand-copy p {
   color: rgba(245, 246, 245, 0.7);
   max-width: 400px;
   font-size: 0.95rem;
+  text-wrap: pretty;
 }
 
 .pk-login__back {

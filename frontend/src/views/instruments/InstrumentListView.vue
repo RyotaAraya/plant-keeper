@@ -206,7 +206,7 @@ onMounted(() => {
     </div>
 
     <!-- フィルタパネル -->
-    <v-card variant="tonal" class="mb-3 pa-3">
+    <div class="mb-4">
       <div class="d-flex ga-3 flex-wrap align-center">
         <v-text-field
           v-model="search"
@@ -299,7 +299,7 @@ onMounted(() => {
           {{ chip.label }}
         </v-chip>
       </div>
-    </v-card>
+    </div>
 
     <!-- 件数表示 -->
     <div class="text-caption text-grey mb-2">{{ totalCount }}件</div>

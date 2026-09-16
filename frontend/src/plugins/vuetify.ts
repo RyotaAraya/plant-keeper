@@ -72,7 +72,7 @@ const vuetify = createVuetify({
     VTextarea: { variant: 'outlined', density: 'comfortable', rounded: 'sm' },
     VChip: { rounded: 'sm' },
     VDialog: { VCard: { elevation: 3, rounded: 0 } },
-    VDataTable: { rounded: 0 },
+    VDataTable: { rounded: 0, itemsPerPage: 50 },
   },
 })
 
