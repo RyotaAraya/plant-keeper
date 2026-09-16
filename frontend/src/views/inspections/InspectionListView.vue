@@ -82,7 +82,10 @@ async function fetchEquipments() {
 
 async function fetchDepartments() {
   const res = await api.get('/departments')
+  // 部署名は拠点間で重複する（例: どの拠点にも「保全部」がある）ため、拠点名を付けて区別する
   departments.value = res.data.data
+    .map((d: any) => ({ ...d, display_name: `${d.site?.name ?? ''} ${d.full_path}` }))
+    .sort((a: any, b: any) => a.display_name.localeCompare(b.display_name, 'ja'))
 }
 
 function formatDate(dt: string) {
@@ -125,13 +128,13 @@ watch(filters, fetchInspections, { deep: true })
       <v-select
         v-model="filters.department_id"
         :items="departments"
-        item-title="name"
+        item-title="display_name"
         item-value="id"
         label="部署"
         clearable
         density="compact"
         hide-details
-        style="max-width: 200px"
+        style="max-width: 240px"
       />
       <v-select
         v-model="filters.inspection_type"

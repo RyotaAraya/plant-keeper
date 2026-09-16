@@ -4,21 +4,26 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const { canCreateTrouble } = usePermissions()
+const authStore = useAuthStore()
 
 const troubles = ref<any[]>([])
 const equipments = ref<any[]>([])
+const departments = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
+// 通常業務では自部署だけ意識すればよいため、自分の所属部署をデフォルト選択（切替可）
 const filters = ref({
   status: null as string | null,
   priority: null as string | null,
   equipment_id: null as number | null,
+  department_id: authStore.user?.department_id ?? null as number | null,
   q: '',
 })
 
@@ -76,6 +81,7 @@ async function fetchTroubles() {
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.priority) params.priority = filters.value.priority
     if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
+    if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.q) params.q = filters.value.q
     const res = await api.get('/troubles', { params })
     troubles.value = res.data.data
@@ -88,6 +94,14 @@ async function fetchTroubles() {
 async function fetchEquipments() {
   const res = await api.get('/equipments', { params: { per_page: 100 } })
   equipments.value = res.data.data
+}
+
+async function fetchDepartments() {
+  const res = await api.get('/departments')
+  // 部署名は拠点間で重複する（例: どの拠点にも「保全部」がある）ため、拠点名を付けて区別する
+  departments.value = res.data.data
+    .map((d: any) => ({ ...d, display_name: `${d.site?.name ?? ''} ${d.full_path}` }))
+    .sort((a: any, b: any) => a.display_name.localeCompare(b.display_name, 'ja'))
 }
 
 async function fetchInstruments() {
@@ -131,6 +145,7 @@ function goToDetail(row: any) {
 
 onMounted(() => {
   fetchEquipments()
+  fetchDepartments()
   fetchTroubles()
 })
 watch(filters, fetchTroubles, { deep: true })
@@ -164,6 +179,17 @@ watch(filters, fetchTroubles, { deep: true })
         density="compact"
         hide-details
         style="max-width: 200px"
+      />
+      <v-select
+        v-model="filters.department_id"
+        :items="departments"
+        item-title="display_name"
+        item-value="id"
+        label="部署"
+        clearable
+        density="compact"
+        hide-details
+        style="max-width: 240px"
       />
       <v-select
         v-model="filters.status"

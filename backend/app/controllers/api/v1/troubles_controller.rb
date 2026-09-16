@@ -11,6 +11,10 @@ module Api
         troubles = troubles.where(status: params[:status]) if params[:status].present?
         troubles = troubles.where(priority: params[:priority]) if params[:priority].present?
         troubles = troubles.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
+        if params[:department_id].present?
+          dept_user_ids = User.where(department_id: params[:department_id]).select(:id)
+          troubles = troubles.where("reported_by_id IN (?) OR assigned_to_id IN (?)", dept_user_ids, dept_user_ids)
+        end
 
         if params[:q].present?
           troubles = troubles.where("title ILIKE ?", "%#{params[:q]}%")
