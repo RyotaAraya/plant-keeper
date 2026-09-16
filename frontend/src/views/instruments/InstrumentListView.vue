@@ -56,48 +56,6 @@ const headers = [
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
-// アクティブフィルタチップ
-const activeFilterChips = computed(() => {
-  const chips: { key: string; label: string }[] = []
-  if (selectedSiteIds.value.length) {
-    const names = selectedSiteIds.value.map(id => sites.value.find(s => s.id === id)?.name).filter(Boolean)
-    chips.push({ key: 'site', label: `拠点: ${names.join('、')}` })
-  }
-  if (selectedEquipmentIds.value.length) {
-    const names = selectedEquipmentIds.value.map(id => equipments.value.find(e => e.id === id)?.name).filter(Boolean)
-    chips.push({ key: 'equipment', label: `設備: ${names.join('、')}` })
-  }
-  if (selectedServiceIds.value.length) {
-    const names = selectedServiceIds.value.map(id => services.value.find(s => s.id === id)?.name).filter(Boolean)
-    chips.push({ key: 'service', label: `サービス: ${names.join('、')}` })
-  }
-  if (selectedLineClassIds.value.length) {
-    const codes = selectedLineClassIds.value.map(id => lineClasses.value.find(l => l.id === id)?.code).filter(Boolean)
-    chips.push({ key: 'lineClass', label: `ラインクラス: ${codes.join('、')}` })
-  }
-  return chips
-})
-
-const hasActiveFilters = computed(
-  () => !!search.value || selectedSiteIds.value.length > 0 || selectedEquipmentIds.value.length > 0
-    || selectedServiceIds.value.length > 0 || selectedLineClassIds.value.length > 0
-)
-
-function clearFilters() {
-  search.value = ''
-  selectedSiteIds.value = []
-  selectedEquipmentIds.value = []
-  selectedServiceIds.value = []
-  selectedLineClassIds.value = []
-}
-
-function removeChip(key: string) {
-  if (key === 'site') { selectedSiteIds.value = []; selectedEquipmentIds.value = [] }
-  if (key === 'equipment') selectedEquipmentIds.value = []
-  if (key === 'service') selectedServiceIds.value = []
-  if (key === 'lineClass') selectedLineClassIds.value = []
-}
-
 async function fetchInstruments() {
   loading.value = true
   try {
@@ -209,99 +167,72 @@ onMounted(() => {
     </div>
 
     <!-- フィルタパネル -->
-    <div class="mb-4">
-      <div class="d-flex ga-3 flex-wrap align-center">
-        <v-text-field
-          v-model="search"
-          label="タグ番号・種別・設置場所"
-          prepend-inner-icon="mdi-magnify"
-          clearable
-          density="compact"
-          hide-details
-          style="min-width: 200px; max-width: 260px"
-        />
-        <v-autocomplete
-          v-model="selectedSiteIds"
-          :items="sites"
-          item-title="name"
-          item-value="id"
-          label="拠点"
-          multiple
-          chips
-          closable-chips
-          clearable
-          density="compact"
-          hide-details
-          style="min-width: 160px; max-width: 260px"
-        />
-        <v-autocomplete
-          v-model="selectedEquipmentIds"
-          :items="filteredEquipments"
-          item-title="name"
-          item-value="id"
-          label="設備"
-          multiple
-          chips
-          closable-chips
-          clearable
-          density="compact"
-          hide-details
-          style="min-width: 200px; max-width: 320px"
-        />
-        <v-autocomplete
-          v-model="selectedServiceIds"
-          :items="services"
-          item-title="name"
-          item-value="id"
-          label="サービス・流体"
-          multiple
-          chips
-          closable-chips
-          clearable
-          density="compact"
-          hide-details
-          style="min-width: 160px; max-width: 260px"
-        />
-        <v-autocomplete
-          v-model="selectedLineClassIds"
-          :items="lineClasses"
-          item-title="code"
-          item-value="id"
-          label="ラインクラス"
-          multiple
-          chips
-          closable-chips
-          clearable
-          density="compact"
-          hide-details
-          style="min-width: 160px; max-width: 260px"
-        />
-        <v-btn
-          v-if="hasActiveFilters"
-          variant="text"
-          size="small"
-          color="grey"
-          prepend-icon="mdi-filter-off"
-          @click="clearFilters"
-        >
-          クリア
-        </v-btn>
-      </div>
-
-      <!-- アクティブフィルタチップ -->
-      <div v-if="activeFilterChips.length" class="d-flex ga-2 mt-2 flex-wrap">
-        <v-chip
-          v-for="chip in activeFilterChips"
-          :key="chip.key"
-          size="small"
-          closable
-          color="primary"
-          variant="tonal"
-          @click:close="removeChip(chip.key)"
-        >
-          {{ chip.label }}
-        </v-chip>
-      </div>
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+      <v-text-field
+        v-model="search"
+        label="タグ番号・種別・設置場所"
+        prepend-inner-icon="mdi-magnify"
+        clearable
+        density="compact"
+        hide-details
+        style="min-width: 200px; max-width: 260px"
+      />
+      <v-autocomplete
+        v-model="selectedSiteIds"
+        :items="sites"
+        item-title="name"
+        item-value="id"
+        label="拠点"
+        multiple
+        chips
+        closable-chips
+        clearable
+        density="compact"
+        hide-details
+        style="min-width: 160px; max-width: 260px"
+      />
+      <v-autocomplete
+        v-model="selectedEquipmentIds"
+        :items="filteredEquipments"
+        item-title="name"
+        item-value="id"
+        label="設備"
+        multiple
+        chips
+        closable-chips
+        clearable
+        density="compact"
+        hide-details
+        style="min-width: 200px; max-width: 320px"
+      />
+      <v-autocomplete
+        v-model="selectedServiceIds"
+        :items="services"
+        item-title="name"
+        item-value="id"
+        label="サービス・流体"
+        multiple
+        chips
+        closable-chips
+        clearable
+        density="compact"
+        hide-details
+        style="min-width: 160px; max-width: 260px"
+      />
+      <v-autocomplete
+        v-model="selectedLineClassIds"
+        :items="lineClasses"
+        item-title="code"
+        item-value="id"
+        label="ラインクラス"
+        multiple
+        chips
+        closable-chips
+        clearable
+        density="compact"
+        hide-details
+        style="min-width: 160px; max-width: 260px"
+      />
     </div>
 
     <!-- 件数表示 -->

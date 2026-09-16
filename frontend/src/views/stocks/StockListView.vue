@@ -116,7 +116,7 @@ watch(filters, fetchStocks, { deep: true })
       <h1 class="text-h5">在庫管理</h1>
     </div>
 
-    <div class="d-flex ga-4 mb-4">
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-select
         v-model="filters.warehouse_id"
         :items="warehouses"

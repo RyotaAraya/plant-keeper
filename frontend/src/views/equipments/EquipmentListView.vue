@@ -89,19 +89,21 @@ watch(selectedSiteId, fetchEquipments)
     <div class="d-flex align-center mb-4">
       <h1 class="text-h5">設備台帳</h1>
       <v-spacer />
+      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
+    </div>
+
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-select
         v-model="selectedSiteId"
         :items="sites"
         item-title="name"
         item-value="id"
-        label="拠点フィルタ"
+        label="拠点"
         clearable
         density="compact"
         hide-details
         style="max-width: 250px"
-        class="mr-4"
       />
-      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
     <v-data-table

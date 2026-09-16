@@ -113,7 +113,7 @@ watch(filters, fetchInspections, { deep: true })
       <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/inspections/new')">新規点検</v-btn>
     </div>
 
-    <div class="d-flex ga-4 mb-4">
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-select
         v-model="filters.equipment_id"
         :items="equipments"

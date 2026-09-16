@@ -160,7 +160,7 @@ watch(filters, fetchTroubles, { deep: true })
       <v-btn v-if="canCreateTrouble" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
     </div>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap">
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-text-field
         v-model="filters.q"
         label="タイトル検索"

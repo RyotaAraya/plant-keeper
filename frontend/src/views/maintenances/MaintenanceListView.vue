@@ -121,7 +121,7 @@ watch(filters, fetchMaintenances, { deep: true })
       <v-btn v-if="canManageMaintenance" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
-    <div class="d-flex ga-4 mb-4">
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-select
         v-model="filters.equipment_id"
         :items="equipments"

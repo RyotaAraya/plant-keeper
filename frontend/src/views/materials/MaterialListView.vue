@@ -153,7 +153,7 @@ watch(filters, fetchMaterials, { deep: true })
       <v-btn v-if="canManageMaterial" color="primary" prepend-icon="mdi-plus" @click="openDialog()">新規登録</v-btn>
     </div>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap">
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-text-field
         v-model="filters.q"
         label="資材名・型番検索"
