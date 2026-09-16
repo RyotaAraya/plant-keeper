@@ -5,6 +5,25 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 
 const tab = ref('services')
 
+// デモデータ再投入
+const reseedDialog = ref(false)
+const reseeding = ref(false)
+const reseedError = ref('')
+const reseedDone = ref(false)
+
+async function reseed() {
+  reseeding.value = true
+  reseedError.value = ''
+  try {
+    await api.post('/admin/reseed')
+    reseedDone.value = true
+  } catch (e: any) {
+    reseedError.value = e.response?.data?.errors?.join('、') || '再投入に失敗しました'
+  } finally {
+    reseeding.value = false
+  }
+}
+
 // Services
 const services = ref<any[]>([])
 const serviceDialog = ref(false)
@@ -275,6 +294,42 @@ onMounted(() => {
 <template>
   <MainLayout>
     <h1 class="text-h5 mb-4">設定</h1>
+
+    <v-card class="mb-4" variant="outlined">
+      <v-card-title class="text-subtitle-1">
+        <v-icon class="mr-2" color="warning" aria-hidden="true">mdi-database-refresh</v-icon>
+        デモデータの再投入
+      </v-card-title>
+      <v-card-text>
+        現在の全データを削除し、初期デモデータを再投入します。デモ環境用の機能です。
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="warning" variant="tonal" @click="reseedDialog = true">再投入する</v-btn>
+      </v-card-actions>
+    </v-card>
+
+    <v-dialog v-model="reseedDialog" max-width="440">
+      <v-card>
+        <v-card-title>デモデータを再投入しますか？</v-card-title>
+        <v-card-text>
+          <template v-if="!reseedDone">
+            現在登録されている全データ（拠点・設備・点検・トラブル等）が削除され、初期デモデータに置き換わります。この操作は取り消せません。
+          </template>
+          <template v-else>
+            デモデータを再投入しました。
+          </template>
+          <v-alert v-if="reseedError" type="error" density="compact" class="mt-3">{{ reseedError }}</v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <template v-if="!reseedDone">
+            <v-btn @click="reseedDialog = false">キャンセル</v-btn>
+            <v-btn color="warning" :loading="reseeding" @click="reseed">実行する</v-btn>
+          </template>
+          <v-btn v-else color="primary" @click="reseedDialog = false; reseedDone = false">閉じる</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-tabs v-model="tab" class="mb-4">
       <v-tab value="services">サービス・流体</v-tab>

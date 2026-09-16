@@ -54,6 +54,9 @@ Rails.application.routes.draw do
 
       # デモ用（認証不要）
       get :demo_accounts, to: "demo#accounts"
+
+      # 管理者用ユーティリティ
+      post "admin/reseed", to: "admin#reseed"
     end
   end
 end
