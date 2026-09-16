@@ -5,7 +5,7 @@ module Api
 
       # GET /api/v1/troubles
       def index
-        troubles = Trouble.includes(:equipment, :instrument, :reported_by, :assigned_to).all
+        troubles = Trouble.includes(:equipment, :instrument, reported_by: :department, assigned_to: :department).all
         troubles = troubles.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
         troubles = troubles.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
         troubles = troubles.where(status: params[:status]) if params[:status].present?
@@ -32,8 +32,8 @@ module Api
             include: {
               equipment: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
-              reported_by: { only: [ :id, :name ] },
-              assigned_to: { only: [ :id, :name ] }
+              reported_by: { only: [ :id, :name ], include: { department: { only: [ :id, :name ] } } },
+              assigned_to: { only: [ :id, :name ], include: { department: { only: [ :id, :name ] } } }
             }
           ),
           meta: { total_count: total_count, page: page, per_page: per_page }

@@ -44,6 +44,7 @@ const headers = [
   { title: 'タイトル', key: 'title' },
   { title: '設備', key: 'equipment.name', width: '150px' },
   { title: '計器', key: 'instrument.tag_number', width: '120px' },
+  { title: '部署', key: 'department_display', width: '120px' },
   { title: '担当者', key: 'assigned_to.name', width: '100px' },
   { title: 'ステータス', key: 'status', width: '110px' },
 ]
@@ -241,6 +242,9 @@ watch(filters, fetchTroubles, { deep: true })
       </template>
       <template #item.assigned_to.name="{ item }">
         {{ item.assigned_to?.name || '未割当' }}
+      </template>
+      <template #item.department_display="{ item }">
+        {{ item.assigned_to?.department?.name || item.reported_by?.department?.name || '—' }}
       </template>
     </v-data-table>
 
