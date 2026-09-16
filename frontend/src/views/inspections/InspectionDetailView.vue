@@ -133,13 +133,15 @@ onMounted(fetchInspection)
         <tbody v-if="!inspection.inspection_items?.length">
           <tr>
             <td colspan="6" class="text-center text-grey py-4">
-              点検項目が未入力です。
-              <a
-                v-if="inspection.status === 'draft'"
-                class="text-primary"
-                style="cursor: pointer"
-                @click="router.push(`/inspections/${inspection.id}/edit`)"
-              >編集画面</a>から入力してください。
+              <template v-if="inspection.status === 'draft'">
+                点検項目が未入力です。
+                <a
+                  class="text-primary"
+                  style="cursor: pointer"
+                  @click="router.push(`/inspections/${inspection.id}/edit`)"
+                >編集画面</a>から入力してください。
+              </template>
+              <template v-else>点検項目が未入力です。</template>
             </td>
           </tr>
         </tbody>

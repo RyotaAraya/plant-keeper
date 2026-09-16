@@ -149,12 +149,32 @@ insp9 = Inspection.create!(checklist_template: templates[:sk_routine], user: tan
 InspectionItem.create!(inspection: insp9, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
 
 # 10-15. 追加点検（各拠点）
-Inspection.create!(checklist_template: templates[:sk_routine], user: hayashi, equipment: sk_hds, instrument: inst("TV-S501"), department: sk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 5.days.ago, notes: "正常。")
+insp10 = Inspection.create!(checklist_template: templates[:sk_routine], user: hayashi, equipment: sk_hds, instrument: inst("TV-S501"), department: sk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 5.days.ago, notes: "正常。")
+InspectionItem.create!(inspection: insp10, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp10, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "12.9", has_defect: false)
+
 insp11 = Inspection.create!(checklist_template: templates[:sk_routine], user: tanabe, equipment: sk_crf, instrument: inst("TV-S601"), department: sk_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 1.day.ago, notes: "CRF反応温度やや上昇傾向。触媒寿命を確認。")
-Inspection.create!(checklist_template: templates[:routine_inst], user: wk_inst1, equipment: wk_cdu, instrument: inst("TV-W101"), department: wk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 4.days.ago, notes: "正常。")
-Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst1, equipment: sd_lk, instrument: inst("TV-D101"), department: sd_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 3.days.ago, notes: "正常。")
-Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst2, equipment: sd_hds, instrument: inst("TV-D201"), department: sd_inst_sec, inspection_type: "routine", status: "submitted", inspected_at: 1.day.ago, notes: "微小な振動あり。次回確認。")
+InspectionItem.create!(inspection: insp11, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp11, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "18.6", has_defect: false)
+InspectionItem.create!(inspection: insp11, position: 7, content: "特記事項", item_type: "text", text_value: "反応温度がやや上昇傾向。次回触媒交換時期を確認予定。", has_defect: false)
+
+insp12 = Inspection.create!(checklist_template: templates[:routine_inst], user: wk_inst1, equipment: wk_cdu, instrument: inst("TV-W101"), department: wk_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 4.days.ago, notes: "正常。")
+InspectionItem.create!(inspection: insp12, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp12, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "13.4", has_defect: false)
+
+insp13 = Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst1, equipment: sd_lk, instrument: inst("TV-D101"), department: sd_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 3.days.ago, notes: "正常。")
+InspectionItem.create!(inspection: insp13, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp13, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "12.1", has_defect: false)
+
+insp14 = Inspection.create!(checklist_template: templates[:routine_inst], user: sd_inst2, equipment: sd_hds, instrument: inst("TV-D201"), department: sd_inst_sec, inspection_type: "routine", status: "submitted", inspected_at: 1.day.ago, notes: "微小な振動あり。次回確認。")
+InspectionItem.create!(inspection: insp14, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp14, position: 6, content: "異常振動・異音の有無を確認", item_type: "check", checked: false, has_defect: false)
+InspectionItem.create!(inspection: insp14, position: 7, content: "特記事項", item_type: "text", text_value: "微小な振動を確認。悪化するようなら要トラブル起票。", has_defect: false)
+
 insp15 = Inspection.create!(checklist_template: templates[:periodic_valve], user: sato, equipment: kw_cdu, instrument: inst("PV-201"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 60.days.ago, notes: "前回定期点検。異常なし。")
+InspectionItem.create!(inspection: insp15, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp15, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "55.0", has_defect: false)
+InspectionItem.create!(inspection: insp15, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
 
 # ============================================================
 # 追加点検記録
@@ -177,7 +197,9 @@ watanabe2  = user_by("watanabe@example.com")
 okada2     = user_by("okada@example.com")
 
 # 16. 川崎 CRF 日常点検
-Inspection.create!(checklist_template: templates[:routine_inst], user: inoue, equipment: kw_crf2, instrument: inst("TV-801"), department: kw_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 2.days.ago, notes: "改質温度安定。正常。")
+insp16 = Inspection.create!(checklist_template: templates[:routine_inst], user: inoue, equipment: kw_crf2, instrument: inst("TV-801"), department: kw_inst_sec, inspection_type: "routine", status: "approved", inspected_at: 2.days.ago, notes: "改質温度安定。正常。")
+InspectionItem.create!(inspection: insp16, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
+InspectionItem.create!(inspection: insp16, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "14.8", has_defect: false)
 
 # 17. 川崎 VDU 定期点検
 insp17 = Inspection.create!(checklist_template: templates[:periodic_valve], user: nishimura2, equipment: kw_vdu2, instrument: inst("PV-901"), department: kw_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 1.day.ago, notes: "弁体に若干の漏れ傾向あり。要監視。")

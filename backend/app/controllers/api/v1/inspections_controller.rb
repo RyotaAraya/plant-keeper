@@ -5,7 +5,7 @@ module Api
 
       # GET /api/v1/inspections
       def index
-        inspections = Inspection.includes(:user, :equipment, :department, :checklist_template).all
+        inspections = Inspection.includes(:user, :equipment, :instrument, :department, :checklist_template).all
         inspections = inspections.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
         inspections = inspections.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
         inspections = inspections.where(department_id: params[:department_id]) if params[:department_id].present?
@@ -24,6 +24,7 @@ module Api
             include: {
               user: { only: [ :id, :name ] },
               equipment: { only: [ :id, :name ] },
+              instrument: { only: [ :id, :tag_number ] },
               department: { only: [ :id, :name ] },
               checklist_template: { only: [ :id, :name ] }
             }
