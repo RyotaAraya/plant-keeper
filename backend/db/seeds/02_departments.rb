@@ -11,14 +11,23 @@ sites = {
   chiba:    Site.find_by!(name: "千葉製油所")
 }
 
-# ヘルパー: 部→課→チームを一括作成
+# ヘルパー: 部→課→チームを一括作成（既存があれば再利用し、重複作成を防ぐ）
 def create_dept_tree(site, divisions)
   divisions.each do |div|
-    d = Department.create!(name: div[:name], department_type: div[:type], level: "division", site: site)
+    d = Department.find_or_create_by!(name: div[:name], site: site, parent: nil) do |dept|
+      dept.department_type = div[:type]
+      dept.level = "division"
+    end
     (div[:sections] || []).each do |sec|
-      s = Department.create!(name: sec[:name], department_type: sec[:type] || div[:type], level: "section", site: site, parent: d)
+      s = Department.find_or_create_by!(name: sec[:name], site: site, parent: d) do |dept|
+        dept.department_type = sec[:type] || div[:type]
+        dept.level = "section"
+      end
       (sec[:teams] || []).each do |tm|
-        t = Department.create!(name: tm[:name], department_type: tm[:type] || sec[:type] || div[:type], level: "team", site: site, parent: s)
+        Department.find_or_create_by!(name: tm[:name], site: site, parent: s) do |dept|
+          dept.department_type = tm[:type] || sec[:type] || div[:type]
+          dept.level = "team"
+        end
       end
     end
   end
