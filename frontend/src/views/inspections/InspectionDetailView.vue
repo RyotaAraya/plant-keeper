@@ -130,7 +130,20 @@ onMounted(fetchInspection)
             <th width="120">計器</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody v-if="!inspection.inspection_items?.length">
+          <tr>
+            <td colspan="6" class="text-center text-grey py-4">
+              点検項目が未入力です。
+              <a
+                v-if="inspection.status === 'draft'"
+                class="text-primary"
+                style="cursor: pointer"
+                @click="router.push(`/inspections/${inspection.id}/edit`)"
+              >編集画面</a>から入力してください。
+            </td>
+          </tr>
+        </tbody>
+        <tbody v-else>
           <tr v-for="item in inspection.inspection_items" :key="item.id" :class="{ 'bg-red-lighten-5': item.has_defect }">
             <td>{{ item.position }}</td>
             <td>{{ item.content }}</td>

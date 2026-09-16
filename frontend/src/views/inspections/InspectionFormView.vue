@@ -63,6 +63,7 @@ async function fetchInstruments() {
 function loadTemplate() {
   const tmpl = templates.value.find((t: any) => t.id === form.value.checklist_template_id)
   if (!tmpl) return
+  if (form.value.items.length > 0 && !confirm('現在入力済みの点検項目は上書きされます。テンプレートから読み込みますか？')) return
   form.value.inspection_type = tmpl.inspection_type
   form.value.items = (tmpl.checklist_template_items || []).map((item: any) => ({
     checklist_template_item_id: item.id,
@@ -208,15 +209,26 @@ onMounted(async () => {
             />
           </v-col>
           <v-col cols="12" md="6">
-            <v-select
-              v-model="form.checklist_template_id"
-              :items="templates"
-              item-title="name"
-              item-value="id"
-              label="テンプレート（任意）"
-              clearable
-              @update:model-value="loadTemplate"
-            />
+            <div class="d-flex ga-2 align-center">
+              <v-select
+                v-model="form.checklist_template_id"
+                :items="templates"
+                item-title="name"
+                item-value="id"
+                label="テンプレート（任意）"
+                clearable
+                @update:model-value="loadTemplate"
+              />
+              <v-btn
+                v-if="form.checklist_template_id"
+                variant="outlined"
+                size="small"
+                prepend-icon="mdi-refresh"
+                @click="loadTemplate"
+              >
+                項目を読込
+              </v-btn>
+            </div>
           </v-col>
           <v-col cols="12" md="6">
             <v-select
