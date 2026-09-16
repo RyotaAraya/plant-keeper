@@ -13,7 +13,15 @@ module Api
 
         Rails.application.load_tasks
         Rake::Task["db:seed:replant"].reenable
-        Rake::Task["db:seed:replant"].invoke
+
+        original_check = ENV["DISABLE_DATABASE_ENVIRONMENT_CHECK"]
+        begin
+          # このデモ環境ではRAILS_ENV=productionでも管理者操作としてreplantを許可する
+          ENV["DISABLE_DATABASE_ENVIRONMENT_CHECK"] = "1"
+          Rake::Task["db:seed:replant"].invoke
+        ensure
+          ENV["DISABLE_DATABASE_ENVIRONMENT_CHECK"] = original_check
+        end
 
         render json: { data: { message: "デモデータを再投入しました" } }
       rescue StandardError => e
