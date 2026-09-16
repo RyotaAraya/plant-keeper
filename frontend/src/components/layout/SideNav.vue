@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
+
+const route = useRoute()
 
 defineProps<{
   modelValue: boolean
@@ -31,6 +34,12 @@ const navItems = [
 ]
 
 const filteredNavItems = computed(() => navItems.filter((item) => !item.permission || item.permission.value))
+
+// 詳細画面（/sites/:id 等）は一覧と別ルートのため、Vue Routerの自動判定だけでは
+// アクティブ表示が外れてしまう。パスの前方一致で明示的に判定する。
+function isItemActive(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
 </script>
 
 <template>
@@ -50,6 +59,7 @@ const filteredNavItems = computed(() => navItems.filter((item) => !item.permissi
         v-for="item in filteredNavItems"
         :key="item.title"
         :to="item.to"
+        :active="isItemActive(item.to)"
         :prepend-icon="item.icon"
         :title="item.title"
         class="pk-sidenav__item"
