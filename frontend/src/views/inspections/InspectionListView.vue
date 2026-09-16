@@ -3,16 +3,21 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const inspections = ref<any[]>([])
 const equipments = ref<any[]>([])
+const departments = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 
+// 通常業務では自部署だけ意識すればよいため、自分の所属部署をデフォルト選択（切替可）
 const filters = ref({
   equipment_id: null as number | null,
+  department_id: authStore.user?.department_id ?? null as number | null,
   inspection_type: null as string | null,
   status: null as string | null,
 })
@@ -58,6 +63,7 @@ async function fetchInspections() {
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
+    if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.inspection_type) params.inspection_type = filters.value.inspection_type
     if (filters.value.status) params.status = filters.value.status
 
@@ -74,6 +80,11 @@ async function fetchEquipments() {
   equipments.value = res.data.data
 }
 
+async function fetchDepartments() {
+  const res = await api.get('/departments')
+  departments.value = res.data.data
+}
+
 function formatDate(dt: string) {
   if (!dt) return ''
   return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -85,6 +96,7 @@ function goToDetail(row: any) {
 
 onMounted(() => {
   fetchEquipments()
+  fetchDepartments()
   fetchInspections()
 })
 watch(filters, fetchInspections, { deep: true })
@@ -109,6 +121,17 @@ watch(filters, fetchInspections, { deep: true })
         density="compact"
         hide-details
         style="max-width: 220px"
+      />
+      <v-select
+        v-model="filters.department_id"
+        :items="departments"
+        item-title="name"
+        item-value="id"
+        label="部署"
+        clearable
+        density="compact"
+        hide-details
+        style="max-width: 200px"
       />
       <v-select
         v-model="filters.inspection_type"
