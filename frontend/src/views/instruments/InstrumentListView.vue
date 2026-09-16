@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const { canManageEquipment } = usePermissions()
+const authStore = useAuthStore()
 
 const instruments = ref<any[]>([])
 const sites = ref<any[]>([])
@@ -18,7 +20,8 @@ const totalCount = ref(0)
 
 // フィルタ（すべて複数選択）
 const search = ref('')
-const selectedSiteIds = ref<number[]>([])
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
+const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
 const selectedEquipmentIds = ref<number[]>([])
 const selectedServiceIds = ref<number[]>([])
 const selectedLineClassIds = ref<number[]>([])

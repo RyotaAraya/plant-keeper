@@ -2,14 +2,17 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 // --- マスタ ---
 const sites = ref<any[]>([])
 const allUsers = ref<any[]>([])
 const tree = ref<any[]>([])
 
-// --- フィルタ ---
-const selectedSiteId = ref<number | null>(null)
+// --- フィルタ（通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択） ---
+const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
 
 const filteredDepts = computed(() => {
   if (!selectedSiteId.value) return allDepartments.value

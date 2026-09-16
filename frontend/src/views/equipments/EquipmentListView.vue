@@ -4,14 +4,17 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const { canManageEquipment } = usePermissions()
+const authStore = useAuthStore()
 
 const equipments = ref<any[]>([])
 const sites = ref<any[]>([])
 const loading = ref(false)
-const selectedSiteId = ref<number | null>(null)
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
+const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ name: '', description: '', site_id: null as number | null })
