@@ -2,6 +2,10 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import HeroCanvas from '@/components/home/HeroCanvas.vue'
+import equipmentsShot from '@/assets/screenshots/equipments.png'
+import materialsShot from '@/assets/screenshots/materials.png'
+import departmentsShot from '@/assets/screenshots/departments.png'
+import dashboardShot from '@/assets/screenshots/dashboard.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -12,22 +16,31 @@ function goToApp() {
 
 const featureGroups = [
   {
+    key: 'maintenance',
     icon: 'mdi-clipboard-check-outline',
     title: '保全管理',
     description: '設備台帳・点検記録・トラブル対応・定期整備のスケジュールまで、現場の保全業務を一元管理。',
-    items: ['設備台帳・設備ツリー', 'チェックリスト点検・作業記録', 'トラブル報告〜対応完了の追跡', '定期整備のスケジュール管理'],
+    shot: equipmentsShot,
+    shotAlt: '設備台帳画面のスクリーンショット。常圧蒸留装置や流動接触分解装置などの設備一覧が並ぶ',
+    shotCaption: '実際の設備台帳画面',
   },
   {
+    key: 'materials',
     icon: 'mdi-package-variant-closed',
     title: '資材管理',
     description: '型番・在庫・発注・修理の状況を拠点横断で把握し、資材切れや二重発注を防ぐ。',
-    items: ['資材マスタ・代替品管理', '拠点別在庫・発注点アラート', '見積〜発注のステータス管理', '外部修理の送付・返却追跡'],
+    shot: materialsShot,
+    shotAlt: '資材管理画面のスクリーンショット。ガスケットやパッキンなどの資材が型番付きで並ぶ',
+    shotCaption: '実際の資材管理画面',
   },
   {
+    key: 'organization',
     icon: 'mdi-office-building-outline',
     title: '組織管理',
     description: '複数拠点・複数会社が関わる保全体制を、権限管理も含めて柔軟に表現。',
-    items: ['6ロールのユーザー権限管理', '部→課→チームの組織階層', '複数拠点の横断管理', '操作履歴の監査ログ'],
+    shot: departmentsShot,
+    shotAlt: '部署管理画面のスクリーンショット。保全部の下に検査課・計器保全課などが階層表示されている',
+    shotCaption: '実際の部署管理画面',
   },
 ]
 
@@ -85,12 +98,14 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
               </div>
               <h3 class="text-h6 font-weight-bold mb-2">{{ group.title }}</h3>
               <p class="text-body-2 text-medium-emphasis mb-4">{{ group.description }}</p>
-              <ul class="pk-feature-list">
-                <li v-for="item in group.items" :key="item">
-                  <v-icon size="16" color="success" class="mr-2">mdi-check</v-icon>
-                  <span class="text-body-2">{{ item }}</span>
-                </li>
-              </ul>
+
+              <figure class="pk-shot">
+                <div class="pk-shot__frame">
+                  <img :src="group.shot" :alt="group.shotAlt" class="pk-shot__img" loading="lazy" />
+                  <div class="pk-shot__fade" />
+                </div>
+                <figcaption class="pk-shot__caption">{{ group.shotCaption }}</figcaption>
+              </figure>
             </v-card>
           </v-col>
         </v-row>
@@ -163,14 +178,26 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
     <!-- CTA -->
     <section class="px-4 px-sm-8 py-12 py-sm-16">
       <v-container>
-        <v-card color="ink" theme="dark" class="pa-8 pa-sm-12 text-center">
-          <h2 class="text-h4 font-weight-bold mb-3">今すぐ触って試せます</h2>
-          <p class="text-body-1 mb-6" style="color: rgba(255, 255, 255, 0.78)">
-            ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
-          </p>
-          <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
-            ログイン画面へ
-          </v-btn>
+        <v-card color="ink" theme="dark" class="pa-8 pa-sm-12">
+          <div class="pk-cta">
+            <div class="pk-cta__text">
+              <h2 class="text-h4 font-weight-bold mb-3">今すぐ触って試せます</h2>
+              <p class="text-body-1 mb-6" style="color: rgba(255, 255, 255, 0.78)">
+                ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
+              </p>
+              <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
+                ログイン画面へ
+              </v-btn>
+            </div>
+            <div class="pk-cta__shot">
+              <img
+                :src="dashboardShot"
+                alt="ログイン後のダッシュボード画面のスクリーンショット。未対応トラブルや在庫アラートなどが一覧表示されている"
+                class="pk-cta__shot-img"
+                loading="lazy"
+              />
+            </div>
+          </div>
         </v-card>
       </v-container>
     </section>
@@ -276,18 +303,52 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   margin-bottom: 1rem;
 }
 
-.pk-feature-list,
 .pk-pain-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.pk-feature-list li,
 .pk-pain-list li {
   display: flex;
   align-items: flex-start;
   padding: 0.25rem 0;
+}
+
+.pk-shot {
+  margin: 0;
+  border: 1px solid var(--pk-line);
+  background: #fff;
+}
+
+.pk-shot__frame {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: var(--pk-mist);
+}
+
+.pk-shot__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pk-shot__fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2.5rem;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff);
+}
+
+.pk-shot__caption {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem;
+  color: #8a9296;
+  border-top: 1px solid var(--pk-line);
 }
 
 .pk-story {
@@ -347,5 +408,34 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   color: #cfd6d8;
   border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 0.25rem 0.6rem;
+}
+
+.pk-cta {
+  display: flex;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 3.5rem);
+}
+
+.pk-cta__text {
+  flex: 1 1 360px;
+}
+
+.pk-cta__shot {
+  flex: 1 1 460px;
+  width: 100%;
+}
+
+.pk-cta__shot-img {
+  width: 100%;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 900px) {
+  .pk-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>
