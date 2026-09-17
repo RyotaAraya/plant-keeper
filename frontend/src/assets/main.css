@@ -64,6 +64,7 @@ h1, h2, h3,
   color: var(--pk-ink) !important;
   background: var(--pk-mist);
   border-bottom: 1px solid var(--pk-line) !important;
+  white-space: nowrap;
 }
 
 .v-data-table > .v-table__wrapper > table > tbody > tr > td {
