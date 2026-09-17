@@ -70,15 +70,26 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
       <HeroCanvas />
       <div class="pk-hero__scrim" />
       <v-container fluid class="pk-hero__content">
-        <h1 class="pk-hero__brand">PlantKeeper</h1>
-        <p class="pk-hero__tagline">
-          現場の保全業務を、まるごと一つに。
-        </p>
-        <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
-          デモアカウントで試す
-        </v-btn>
-        <div class="pk-hero__note">
-          登録不要。ログイン画面のデモアカウント一覧からクリックするだけで操作を試せます。
+        <div class="pk-hero__layout">
+          <div class="pk-hero__text">
+            <h1 class="pk-hero__brand">PlantKeeper</h1>
+            <p class="pk-hero__tagline">
+              現場の保全業務を、まるごと一つに。
+            </p>
+            <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
+              デモアカウントで試す
+            </v-btn>
+            <div class="pk-hero__note">
+              登録不要。ログイン画面のデモアカウント一覧からクリックするだけで操作を試せます。
+            </div>
+          </div>
+          <div class="pk-hero__shot">
+            <img
+              :src="dashboardShot"
+              alt="ログイン後のダッシュボード画面のスクリーンショット。未対応トラブルや在庫アラートなどが一覧表示されている"
+              class="pk-hero__shot-img"
+            />
+          </div>
         </div>
       </v-container>
     </section>
@@ -178,26 +189,14 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
     <!-- CTA -->
     <section class="px-4 px-sm-8 py-12 py-sm-16">
       <v-container>
-        <v-card color="ink" theme="dark" class="pa-8 pa-sm-12">
-          <div class="pk-cta">
-            <div class="pk-cta__text">
-              <h2 class="text-h4 font-weight-bold mb-3">今すぐ触って試せます</h2>
-              <p class="text-body-1 mb-6" style="color: rgba(255, 255, 255, 0.78)">
-                ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
-              </p>
-              <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
-                ログイン画面へ
-              </v-btn>
-            </div>
-            <div class="pk-cta__shot">
-              <img
-                :src="dashboardShot"
-                alt="ログイン後のダッシュボード画面のスクリーンショット。未対応トラブルや在庫アラートなどが一覧表示されている"
-                class="pk-cta__shot-img"
-                loading="lazy"
-              />
-            </div>
-          </div>
+        <v-card color="ink" theme="dark" class="pa-8 pa-sm-12 text-center">
+          <h2 class="text-h4 font-weight-bold mb-3">今すぐ触って試せます</h2>
+          <p class="text-body-1 mb-6" style="color: rgba(255, 255, 255, 0.78)">
+            ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
+          </p>
+          <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
+            ログイン画面へ
+          </v-btn>
         </v-card>
       </v-container>
     </section>
@@ -258,10 +257,47 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-hero__content {
   position: relative;
   z-index: 1;
-  max-width: 720px;
+  max-width: 1240px;
   width: 100%;
   padding-left: clamp(1.5rem, 7vw, 6.5rem) !important;
   padding-right: clamp(1.5rem, 6vw, 3rem) !important;
+}
+
+.pk-hero__layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.pk-hero__text {
+  flex: 1 1 480px;
+  max-width: 560px;
+}
+
+.pk-hero__shot {
+  flex: 1 1 520px;
+  width: 100%;
+}
+
+.pk-hero__shot-img {
+  width: 100%;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 900px) {
+  .pk-hero__layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pk-hero__text,
+  .pk-hero__shot {
+    flex: 0 0 auto;
+    max-width: none;
+  }
 }
 
 .pk-hero__brand {
@@ -410,32 +446,5 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   padding: 0.25rem 0.6rem;
 }
 
-.pk-cta {
-  display: flex;
-  align-items: center;
-  gap: clamp(2rem, 5vw, 3.5rem);
-}
 
-.pk-cta__text {
-  flex: 1 1 360px;
-}
-
-.pk-cta__shot {
-  flex: 1 1 460px;
-  width: 100%;
-}
-
-.pk-cta__shot-img {
-  width: 100%;
-  display: block;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
-}
-
-@media (max-width: 900px) {
-  .pk-cta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
 </style>
