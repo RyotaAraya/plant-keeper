@@ -60,6 +60,11 @@ async function fetchInstruments() {
   instruments.value = res.data.data
 }
 
+async function onEquipmentChange() {
+  form.value.instrument_id = null
+  await fetchInstruments()
+}
+
 function loadTemplate() {
   const tmpl = templates.value.find((t: any) => t.id === form.value.checklist_template_id)
   if (!tmpl) return
@@ -179,7 +184,7 @@ onMounted(async () => {
               item-title="name"
               item-value="id"
               label="設備 *"
-              @update:model-value="fetchInstruments"
+              @update:model-value="onEquipmentChange"
             />
           </v-col>
           <v-col cols="12" md="6">
