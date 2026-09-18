@@ -253,7 +253,7 @@ onMounted(() => {
               v-for="dept in group.depts"
               :key="dept.id"
               :active="selectedDept?.id === dept.id"
-              active-color="primary"
+              color="primary"
               :class="dept.level === 'section' ? 'pl-8' : dept.level === 'team' ? 'pl-12' : ''"
               @click="selectDept(dept.id)"
             >
