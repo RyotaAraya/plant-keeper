@@ -6,6 +6,6 @@ class StockTransaction < ApplicationRecord
 
   enum :transaction_type, { incoming: "incoming", outgoing: "outgoing", transfer: "transfer", disposal: "disposal" }
 
-  validates :quantity, presence: true
+  validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :transacted_at, presence: true
 end
