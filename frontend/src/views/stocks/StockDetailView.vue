@@ -18,8 +18,10 @@ const txForm = ref({
   quantity: 1,
   reason: '',
   transacted_at: new Date().toISOString().slice(0, 16),
+  to_warehouse_id: null as number | null,
 })
 const txErrors = ref<string[]>([])
+const warehouses = ref<any[]>([])
 
 const statusLabel: Record<string, string> = {
   available: '利用可', in_use: '使用中', awaiting_repair: '修理待ち', under_repair: '修理中', disposed: '廃棄済'
@@ -36,6 +38,7 @@ const txTypeColor: Record<string, string> = {
 const txTypeOptions = [
   { title: '出庫', value: 'outgoing' },
   { title: '入庫', value: 'incoming' },
+  { title: '移動', value: 'transfer' },
   { title: '廃棄', value: 'disposal' },
 ]
 const repairStatusLabel: Record<string, string> = {
@@ -52,12 +55,18 @@ async function fetchStock() {
   }
 }
 
+async function fetchWarehouses() {
+  const res = await api.get('/warehouses')
+  warehouses.value = res.data.data
+}
+
 function openTx() {
   txForm.value = {
     transaction_type: 'outgoing',
     quantity: 1,
     reason: '',
     transacted_at: new Date().toISOString().slice(0, 16),
+    to_warehouse_id: null,
   }
   txErrors.value = []
   txDialog.value = true
@@ -84,7 +93,10 @@ function formatDate(dt: string) {
   return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(fetchStock)
+onMounted(() => {
+  fetchStock()
+  fetchWarehouses()
+})
 </script>
 
 <template>
@@ -205,6 +217,15 @@ onMounted(fetchStock)
               <div v-for="err in txErrors" :key="err">{{ err }}</div>
             </v-alert>
             <v-select v-model="txForm.transaction_type" :items="txTypeOptions" item-title="title" item-value="value" label="種別" class="mb-2" />
+            <v-select
+              v-if="txForm.transaction_type === 'transfer'"
+              v-model="txForm.to_warehouse_id"
+              :items="warehouses.filter((w) => w.id !== stock.warehouse_id)"
+              item-title="name"
+              item-value="id"
+              label="移動先倉庫"
+              class="mb-2"
+            />
             <v-text-field v-model.number="txForm.quantity" label="数量" type="number" min="1" class="mb-2" />
             <v-text-field v-model="txForm.reason" label="理由・用途" class="mb-2" />
             <v-text-field v-model="txForm.transacted_at" label="日時" type="datetime-local" />

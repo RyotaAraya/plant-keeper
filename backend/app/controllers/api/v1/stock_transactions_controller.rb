@@ -6,6 +6,7 @@ module Api
         transaction = StockTransaction.new(transaction_params)
         authorize transaction
         transaction.user = current_user
+        transaction.from_warehouse_id = transaction.stock&.warehouse_id if transaction.transfer?
 
         ActiveRecord::Base.transaction do
           transaction.save!
@@ -23,6 +24,22 @@ module Api
             new_qty = stock.quantity - transaction.quantity
             raise ActiveRecord::RecordInvalid.new(stock), "在庫数が不足しています" if new_qty < 0
             stock.update!(quantity: new_qty, status: new_qty.zero? ? "disposed" : stock.status)
+          when "transfer"
+            raise ActiveRecord::RecordInvalid.new(stock), "移動先倉庫を指定してください" if transaction.to_warehouse_id.blank?
+            raise ActiveRecord::RecordInvalid.new(stock), "移動元と移動先の倉庫が同じです" if transaction.to_warehouse_id == stock.warehouse_id
+
+            new_qty = stock.quantity - transaction.quantity
+            raise ActiveRecord::RecordInvalid.new(stock), "在庫数が不足しています" if new_qty < 0
+            stock.update!(quantity: new_qty)
+
+            Stock.create!(
+              material_id: stock.material_id,
+              warehouse_id: transaction.to_warehouse_id,
+              quantity: transaction.quantity,
+              purchased_on: stock.purchased_on,
+              status: stock.status,
+              notes: stock.notes
+            )
           end
         end
 
