@@ -52,5 +52,6 @@ class Department < ApplicationRecord
     when "team"
       errors.add(:parent, "チームの親は課である必要があります") unless parent&.section?
     end
+    errors.add(:parent, "親部署は同じ拠点である必要があります") if parent && parent.site_id != site_id
   end
 end
