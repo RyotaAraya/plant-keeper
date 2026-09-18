@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -176,7 +176,7 @@ async function fetchSitesAndDepartments() {
   departmentTreeBySite.value = bySite
 }
 
-function openEdit() {
+async function openEdit() {
   editForm.value = {
     name: user.value.name,
     employment_type: user.value.employment_type,
@@ -198,6 +198,7 @@ function openEdit() {
   selectedDivisionId.value = ancestors.find((a: any) => a.level === 'division')?.id || null
   selectedSectionId.value = ancestors.find((a: any) => a.level === 'section')?.id || null
   selectedTeamId.value = ancestors.find((a: any) => a.level === 'team')?.id || null
+  await nextTick()
   initializing.value = false
   editErrors.value = []
   editDialog.value = true
