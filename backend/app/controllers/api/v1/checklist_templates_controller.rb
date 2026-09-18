@@ -36,7 +36,9 @@ module Api
         template = ChecklistTemplate.new(template_params)
         authorize template
 
-        if template.save
+        ActiveRecord::Base.transaction do
+          template.save!
+
           if params[:checklist_template][:items].present?
             params[:checklist_template][:items].each_with_index do |item, idx|
               template.checklist_template_items.create!(
@@ -46,10 +48,11 @@ module Api
               )
             end
           end
-          render json: { data: template.as_json(include: { checklist_template_items: {} }) }, status: :created
-        else
-          render json: { errors: template.errors.full_messages }, status: :unprocessable_entity
         end
+
+        render json: { data: template.as_json(include: { checklist_template_items: {} }) }, status: :created
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/checklist_templates/:id
