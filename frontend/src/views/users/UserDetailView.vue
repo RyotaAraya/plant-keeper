@@ -382,7 +382,9 @@ onMounted(() => {
                   item-title="title"
                   item-value="value"
                   label="役職"
-                  clearable
+                  hint="役職はシステム管理者のみ変更可能です（画面からの変更不可）"
+                  persistent-hint
+                  disabled
                 />
               </v-col>
             </v-row>

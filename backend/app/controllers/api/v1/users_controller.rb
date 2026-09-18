@@ -72,7 +72,7 @@ module Api
       def user_params
         params.require(:user).permit(
           :name, :employment_type, :system_role, :company_id, :department_id, :site_id,
-          :position, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on
+          :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on
         )
       end
     end
