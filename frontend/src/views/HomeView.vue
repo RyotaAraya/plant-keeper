@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import HeroCanvas from '@/components/home/HeroCanvas.vue'
-import equipmentsShot from '@/assets/screenshots/equipments.png'
+import inspectionsShot from '@/assets/screenshots/inspections.png'
 import materialsShot from '@/assets/screenshots/materials.png'
 import departmentsShot from '@/assets/screenshots/departments.png'
 import dashboardShot from '@/assets/screenshots/dashboard.png'
@@ -20,9 +20,9 @@ const featureGroups = [
     icon: 'mdi-clipboard-check-outline',
     title: '保全管理',
     description: '設備台帳・点検記録・トラブル対応・定期整備のスケジュールまで、現場の保全業務を一元管理。',
-    shot: equipmentsShot,
-    shotAlt: '設備台帳画面のスクリーンショット。常圧蒸留装置や流動接触分解装置などの設備一覧が並ぶ',
-    shotCaption: '実際の設備台帳画面',
+    shot: inspectionsShot,
+    shotAlt: '点検・作業記録画面のスクリーンショット。減圧蒸留装置や接触改質装置などの点検記録が計器タグ番号・ステータス付きで並ぶ',
+    shotCaption: '実際の点検・作業記録画面',
   },
   {
     key: 'materials',
@@ -39,7 +39,7 @@ const featureGroups = [
     title: '組織管理',
     description: '複数拠点・複数会社が関わる保全体制を、権限管理も含めて柔軟に表現。',
     shot: departmentsShot,
-    shotAlt: '部署管理画面のスクリーンショット。保全部の下に検査課・計器保全課などが階層表示されている',
+    shotAlt: '部署管理画面のスクリーンショット。保全部の下の計器保全課を選択し、所属チームとメンバー（鈴木一郎、課長）が表示されている',
     shotCaption: '実際の部署管理画面',
   },
 ]
@@ -101,25 +101,25 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
           <h2 class="text-h4 font-weight-bold mb-2">主な機能</h2>
           <p class="text-body-2 text-medium-emphasis">現場から本社まで、保全にまつわる情報をひとつのシステムに集約</p>
         </div>
-        <v-row>
-          <v-col v-for="group in featureGroups" :key="group.title" cols="12" md="4">
-            <v-card variant="flat" class="pa-6 h-100 pk-feature-card" border>
-              <div class="pk-feature-icon">
+        <div class="pk-feature-rows">
+          <div v-for="group in featureGroups" :key="group.title" class="pk-feature-row">
+            <div class="pk-feature-row__text">
+              <div class="pk-feature-row__heading">
                 <v-icon color="primary" size="22">{{ group.icon }}</v-icon>
+                <h3 class="text-h6 font-weight-bold">{{ group.title }}</h3>
               </div>
-              <h3 class="text-h6 font-weight-bold mb-2">{{ group.title }}</h3>
-              <p class="text-body-2 text-medium-emphasis mb-4">{{ group.description }}</p>
+              <p class="text-body-2 text-medium-emphasis">{{ group.description }}</p>
+            </div>
 
-              <figure class="pk-shot">
-                <div class="pk-shot__frame">
-                  <img :src="group.shot" :alt="group.shotAlt" class="pk-shot__img" loading="lazy" />
-                  <div class="pk-shot__fade" />
-                </div>
-                <figcaption class="pk-shot__caption">{{ group.shotCaption }}</figcaption>
-              </figure>
-            </v-card>
-          </v-col>
-        </v-row>
+            <figure class="pk-shot pk-feature-row__shot">
+              <div class="pk-shot__frame">
+                <img :src="group.shot" :alt="group.shotAlt" class="pk-shot__img" loading="lazy" />
+                <div class="pk-shot__fade" />
+              </div>
+              <figcaption class="pk-shot__caption">{{ group.shotCaption }}</figcaption>
+            </figure>
+          </div>
+        </div>
       </v-container>
     </section>
 
@@ -174,7 +174,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
               <li class="pk-timeline__item pk-timeline__item--last">
                 <span class="pk-timeline__dot pk-timeline__dot--accent" />
                 <div class="pk-timeline__label pk-mono">そして、PlantKeeperへ</div>
-                <p class="text-body-1 font-weight-medium">
+                <p class="text-body-1 font-weight-medium mb-4">
                   その原体験をもとに「現場が本当に使いたくなる保全システムとは何か」を考えながら設計したアプリケーションです。
                   設備台帳・点検記録・トラブル管理・資材管理を紙とExcelから解放し、
                   計装保全の実務で培った現場感覚をそのままシステム設計に落とし込みました。
@@ -324,19 +324,50 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   color: rgba(245, 246, 245, 0.65);
 }
 
-.pk-feature-card {
-  border-color: var(--pk-line) !important;
+.pk-feature-rows {
+  display: flex;
+  flex-direction: column;
 }
 
-.pk-feature-icon {
-  width: 44px;
-  height: 44px;
+.pk-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(2rem, 5vw, 4rem);
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--pk-line);
+}
+
+.pk-feature-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.pk-feature-row__text {
+  flex: 0 0 300px;
+  max-width: 300px;
+}
+
+.pk-feature-row__heading {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--pk-line);
-  background: var(--pk-mist);
-  margin-bottom: 1rem;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.pk-feature-row__shot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .pk-feature-row {
+    flex-direction: column;
+  }
+
+  .pk-feature-row__text {
+    flex: 0 0 auto;
+    max-width: none;
+  }
 }
 
 .pk-pain-list {
@@ -359,7 +390,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 
 .pk-shot__frame {
   position: relative;
-  height: 190px;
+  height: clamp(200px, 24vw, 320px);
   overflow: hidden;
   background: var(--pk-mist);
 }
@@ -445,6 +476,5 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 0.25rem 0.6rem;
 }
-
 
 </style>
