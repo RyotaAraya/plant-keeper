@@ -13,8 +13,15 @@ defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { canManageUsers, canViewAuditLogs, canAccessSettings, canManageOrders, canViewStocks, canViewMaterials } =
-  usePermissions()
+const {
+  canManageUsers,
+  canViewAuditLogs,
+  canAccessSettings,
+  canManageOrders,
+  canManageRepairs,
+  canViewStocks,
+  canViewMaterials,
+} = usePermissions()
 
 const navItems = [
   { title: 'ダッシュボード', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
@@ -26,6 +33,7 @@ const navItems = [
   { title: '定期整備', icon: 'mdi-wrench-outline', to: '/maintenances' },
   { title: '資材管理', icon: 'mdi-package-variant', to: '/materials', permission: canViewMaterials },
   { title: '在庫管理', icon: 'mdi-warehouse', to: '/stocks', permission: canViewStocks },
+  { title: '修理管理', icon: 'mdi-hammer-wrench', to: '/repairs', permission: canManageRepairs },
   { title: '発注管理', icon: 'mdi-cart-outline', to: '/orders', permission: canManageOrders },
   { title: '部署管理', icon: 'mdi-office-building-outline', to: '/departments', permission: canManageUsers },
   { title: 'ユーザ管理', icon: 'mdi-account-group-outline', to: '/users', permission: canManageUsers },

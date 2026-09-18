@@ -136,6 +136,18 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresOwnerManager: true },
     },
     {
+      path: '/repairs',
+      name: 'Repairs',
+      component: () => import('@/views/repairs/RepairListView.vue'),
+      meta: { requiresAuth: true, requiresOwnerManager: true },
+    },
+    {
+      path: '/repairs/:id',
+      name: 'RepairDetail',
+      component: () => import('@/views/repairs/RepairDetailView.vue'),
+      meta: { requiresAuth: true, requiresOwnerManager: true },
+    },
+    {
       path: '/departments',
       name: 'Departments',
       component: () => import('@/views/departments/DepartmentView.vue'),

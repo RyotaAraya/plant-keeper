@@ -27,6 +27,7 @@ export function usePermissions() {
     canViewAuditLogs: isAdmin,
     canAccessSettings: isAdmin,
     canManageOrders: canManageCore,
+    canManageRepairs: canManageCore,
     canViewStocks: isOwnerCompany,
     canViewMaterials: computed(() => !isWorker.value),
 
