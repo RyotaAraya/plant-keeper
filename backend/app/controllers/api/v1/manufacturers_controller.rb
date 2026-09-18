@@ -12,6 +12,7 @@ module Api
         manufacturer = Manufacturer.new(manufacturer_params)
         authorize manufacturer
         if manufacturer.save
+          record_audit_log("create", manufacturer)
           render json: { data: manufacturer.as_json }, status: :created
         else
           render json: { errors: manufacturer.errors.full_messages }, status: :unprocessable_entity
@@ -23,6 +24,7 @@ module Api
         manufacturer = Manufacturer.find(params[:id])
         authorize manufacturer
         if manufacturer.update(manufacturer_params)
+          record_audit_log("update", manufacturer)
           render json: { data: manufacturer.as_json }
         else
           render json: { errors: manufacturer.errors.full_messages }, status: :unprocessable_entity

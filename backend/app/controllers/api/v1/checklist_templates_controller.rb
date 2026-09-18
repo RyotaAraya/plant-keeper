@@ -38,6 +38,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           template.save!
+          record_audit_log("create", template)
 
           if params[:checklist_template][:items].present?
             params[:checklist_template][:items].each_with_index do |item, idx|
@@ -60,6 +61,7 @@ module Api
         authorize @template
         ActiveRecord::Base.transaction do
           @template.update!(template_params)
+          record_audit_log("update", @template)
 
           if params[:checklist_template][:items].present?
             existing_ids = params[:checklist_template][:items].filter_map { |i| i[:id] }

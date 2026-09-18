@@ -54,6 +54,7 @@ module Api
         stock = Stock.new(stock_params)
         authorize stock
         if stock.save
+          record_audit_log("create", stock)
           render json: { data: stock.as_json }, status: :created
         else
           render json: { errors: stock.errors.full_messages }, status: :unprocessable_entity
@@ -64,6 +65,7 @@ module Api
       def update
         authorize @stock
         if @stock.update(stock_params)
+          record_audit_log("update", @stock)
           render json: { data: @stock.as_json }
         else
           render json: { errors: @stock.errors.full_messages }, status: :unprocessable_entity

@@ -50,6 +50,7 @@ module Api
         department = Department.new(department_params)
         authorize department
         if department.save
+          record_audit_log("create", department)
           render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }, status: :created
         else
           render json: { errors: department.errors.full_messages }, status: :unprocessable_entity
@@ -60,6 +61,7 @@ module Api
         department = Department.find(params[:id])
         authorize department
         if department.update(update_params)
+          record_audit_log("update", department)
           render json: { data: department.as_json(include: { site: { only: [ :id, :name ] }, parent: { only: [ :id, :name, :level ] } }) }
         else
           render json: { errors: department.errors.full_messages }, status: :unprocessable_entity

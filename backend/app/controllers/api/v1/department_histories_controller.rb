@@ -5,6 +5,7 @@ module Api
         dh = DepartmentHistory.new(dh_params.merge(started_on: Date.today))
         authorize dh
         if dh.save
+          record_audit_log("create", dh)
           render json: {
             data: dh.as_json(include: { user: { only: [ :id, :name, :email ] } }).merge(started_on: dh.started_on)
           }, status: :created
@@ -17,6 +18,7 @@ module Api
         dh = DepartmentHistory.find(params[:id])
         authorize dh
         if dh.update(dh_params.slice(:role_note))
+          record_audit_log("update", dh)
           render json: {
             data: dh.as_json(include: { user: { only: [ :id, :name, :email ] } }).merge(started_on: dh.started_on)
           }

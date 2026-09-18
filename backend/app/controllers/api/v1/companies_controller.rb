@@ -15,6 +15,7 @@ module Api
         company = Company.new(company_params)
         authorize company
         if company.save
+          record_audit_log("create", company)
           render json: { data: company.as_json(only: [ :id, :name, :company_type, :is_active ]) }, status: :created
         else
           render json: { errors: company.errors.full_messages }, status: :unprocessable_entity
@@ -25,6 +26,7 @@ module Api
         company = Company.find(params[:id])
         authorize company
         if company.update(company_params)
+          record_audit_log("update", company)
           render json: { data: company.as_json(only: [ :id, :name, :company_type, :is_active ]) }
         else
           render json: { errors: company.errors.full_messages }, status: :unprocessable_entity

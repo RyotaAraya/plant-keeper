@@ -38,6 +38,7 @@ module Api
       def update
         authorize @user
         if @user.update(user_params)
+          record_audit_log("update", @user)
           @user.reload
           render json: { data: user_json(@user) }
         else

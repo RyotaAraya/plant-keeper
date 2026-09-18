@@ -20,6 +20,7 @@ module Api
         assignment = EquipmentAssignment.new(assignment_params)
         authorize assignment
         if assignment.save
+          record_audit_log("create", assignment)
           render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }, status: :created
         else
           render json: { errors: assignment.errors.full_messages }, status: :unprocessable_entity
@@ -30,6 +31,7 @@ module Api
         assignment = EquipmentAssignment.find(params[:id])
         authorize assignment
         if assignment.update(assignment_params)
+          record_audit_log("update", assignment)
           render json: { data: assignment.as_json(include: { user: { only: [ :id, :name ] } }) }
         else
           render json: { errors: assignment.errors.full_messages }, status: :unprocessable_entity

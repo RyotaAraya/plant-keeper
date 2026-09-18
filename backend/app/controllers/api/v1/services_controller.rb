@@ -9,6 +9,7 @@ module Api
         service = Service.new(service_params)
         authorize service
         if service.save
+          record_audit_log("create", service)
           render json: { data: service.as_json }, status: :created
         else
           render json: { errors: service.errors.full_messages }, status: :unprocessable_entity
@@ -19,6 +20,7 @@ module Api
         service = Service.find(params[:id])
         authorize service
         if service.update(service_params)
+          record_audit_log("update", service)
           render json: { data: service.as_json }
         else
           render json: { errors: service.errors.full_messages }, status: :unprocessable_entity

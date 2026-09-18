@@ -7,6 +7,7 @@ module Api
         authorize assignment
 
         if assignment.save
+          record_audit_log("create", assignment)
           render json: {
             data: assignment.as_json(include: { user: { only: [ :id, :name ] } })
           }, status: :created

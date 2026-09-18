@@ -8,6 +8,7 @@ module Api
         response.user = current_user
 
         if response.save
+          record_audit_log("create", response)
           render json: {
             data: response.as_json(include: { user: { only: [ :id, :name ] } })
           }, status: :created
@@ -22,6 +23,7 @@ module Api
         authorize response
 
         if response.update(response_params)
+          record_audit_log("update", response)
           render json: {
             data: response.as_json(include: { user: { only: [ :id, :name ] } })
           }

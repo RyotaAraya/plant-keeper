@@ -9,6 +9,7 @@ module Api
         line_class = LineClass.new(line_class_params)
         authorize line_class
         if line_class.save
+          record_audit_log("create", line_class)
           render json: { data: line_class.as_json }, status: :created
         else
           render json: { errors: line_class.errors.full_messages }, status: :unprocessable_entity
@@ -19,6 +20,7 @@ module Api
         line_class = LineClass.find(params[:id])
         authorize line_class
         if line_class.update(line_class_params)
+          record_audit_log("update", line_class)
           render json: { data: line_class.as_json }
         else
           render json: { errors: line_class.errors.full_messages }, status: :unprocessable_entity

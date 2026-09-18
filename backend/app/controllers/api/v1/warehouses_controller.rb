@@ -15,6 +15,7 @@ module Api
         warehouse = Warehouse.new(warehouse_params)
         authorize warehouse
         if warehouse.save
+          record_audit_log("create", warehouse)
           render json: { data: warehouse.as_json }, status: :created
         else
           render json: { errors: warehouse.errors.full_messages }, status: :unprocessable_entity
@@ -26,6 +27,7 @@ module Api
         warehouse = Warehouse.find(params[:id])
         authorize warehouse
         if warehouse.update(warehouse_params)
+          record_audit_log("update", warehouse)
           render json: { data: warehouse.as_json }
         else
           render json: { errors: warehouse.errors.full_messages }, status: :unprocessable_entity
