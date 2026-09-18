@@ -4,6 +4,7 @@ module Api
       def show
         dept = Department.includes(:site, :parent, :children,
                                    department_histories: :user).find(params[:id])
+        authorize dept
         current_members = dept.department_histories.current.map do |dh|
           {
             id: dh.id,
@@ -22,6 +23,7 @@ module Api
       end
 
       def index
+        authorize Department
         departments = Department.includes(:site, :parent)
         departments = departments.where(site_id: params[:site_id]) if params[:site_id].present?
         departments = departments.where(department_type: params[:department_type]) if params[:department_type].present?
