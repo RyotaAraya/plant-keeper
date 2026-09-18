@@ -53,16 +53,34 @@ cd frontend && npx vite build
 - 管理者(manager): suzuki@example.com / password
 - 一般(member): sato@example.com / password
 
-## デプロイ（本番 / Render）
+## デプロイ（Render）
 
-- 設定ファイル: `render.yaml`（Blueprint）
-- `main` ブランチに push すると Render が自動デプロイ（GitHub連携によるauto-deploy）
+- 設定ファイル: `render.yaml`（Blueprint）。本番・stg の両サービスをこの1ファイルで定義
+- 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
+
+### ブランチ運用
+- `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
+- `main` に push/マージすると即本番に自動デプロイされる（GitHub連携によるauto-deploy）。直接 push しない
+- dependabot の PR は `develop` 向け（`.github/dependabot.yml` の `target-branch`）。メジャー更新は stg で動作確認してから `main` へ
+- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行
+
+### 本番
 - フロントエンド: `plant-keeper-web`（static site、`frontend/` を `npm run build` → `dist/` を配信）
   - https://plant-keeper-web.onrender.com
 - バックエンド: `plant-keeper-api`（Ruby、`backend/` を起動時に `db:migrate` 実行後 puma 起動）
   - https://plant-keeper-api.onrender.com/api/v1
-- DB: `plant-keeper-db`（Postgres、free plan）
-- 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
+- DB: `plant-keeper-db`（Render Postgres、free plan）
+
+### stg（`develop` ブランチ）
+- フロントエンド: `plant-keeper-web-stg` — https://plant-keeper-web-stg.onrender.com
+- バックエンド: `plant-keeper-api-stg` — https://plant-keeper-api-stg.onrender.com/api/v1
+- DB: Neon（無料Postgres）。Render管理外のため `DATABASE_URL` は Render ダッシュボードで手動設定する（Neonの接続文字列、`sslmode=require` 付き）
+- `DEVISE_JWT_SECRET_KEY` は本番と別の値を設定する。`RAILS_MASTER_KEY` も手動設定
+- 初回のみシード投入が必要（Render無料プランはシェルが使えないためローカルから実行。`db:migrate` は初回デプロイで実行済みのため `db:seed` のみ）:
+  ```bash
+  docker-compose exec -e DATABASE_URL='<Neonの接続文字列>' backend bundle exec rails db:seed
+  ```
+  （`db:seed:replant` は全データ削除のため、接続先を確認してから使うこと）
 - pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードで確認が必要（Claude Codeからは確認不可）
 
 ## 設計ドキュメント

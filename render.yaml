@@ -42,3 +42,42 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  # --- stg環境（developブランチ）。DBはNeon（DATABASE_URLはダッシュボードで手動設定） ---
+  - type: web
+    name: plant-keeper-api-stg
+    runtime: ruby
+    plan: free
+    branch: develop
+    rootDir: backend
+    buildCommand: "bundle install"
+    startCommand: "bundle exec rails db:migrate && bundle exec puma -C config/puma.rb"
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_LOG_TO_STDOUT
+        value: "true"
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DEVISE_JWT_SECRET_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://plant-keeper-web-stg.onrender.com
+      - key: DATABASE_URL
+        sync: false
+
+  - type: web
+    name: plant-keeper-web-stg
+    runtime: static
+    branch: develop
+    rootDir: frontend
+    buildCommand: "npm install --legacy-peer-deps && npm run build"
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://plant-keeper-api-stg.onrender.com/api/v1
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
