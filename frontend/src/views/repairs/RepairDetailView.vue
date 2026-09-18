@@ -7,7 +7,7 @@ import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
-const { canManageCore } = usePermissions()
+const { canManageRepairs } = usePermissions()
 
 const repair = ref<any>(null)
 const loading = ref(true)
@@ -110,7 +110,7 @@ onMounted(fetchRepair)
       </v-btn>
       <h1 class="text-h5 ml-2">修理詳細</h1>
       <v-spacer />
-      <v-btn v-if="canManageCore && repair && !['completed','disposed'].includes(repair.status)" variant="outlined" @click="openEdit">編集</v-btn>
+      <v-btn v-if="canManageRepairs && repair && !['completed','disposed'].includes(repair.status)" variant="outlined" @click="openEdit">編集</v-btn>
     </div>
 
     <div v-if="loading" class="d-flex justify-center mt-8">
@@ -119,7 +119,7 @@ onMounted(fetchRepair)
 
     <template v-else-if="repair">
       <!-- ステータス遷移 -->
-      <div v-if="canManageCore && nextStatusOptions[repair.status]?.length" class="d-flex ga-2 mb-4">
+      <div v-if="canManageRepairs && nextStatusOptions[repair.status]?.length" class="d-flex ga-2 mb-4">
         <v-btn
           v-for="opt in nextStatusOptions[repair.status]"
           :key="opt.value"

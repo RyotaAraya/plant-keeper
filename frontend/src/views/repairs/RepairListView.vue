@@ -6,7 +6,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
-const { canManageCore } = usePermissions()
+const { canManageRepairs } = usePermissions()
 
 const repairs = ref<any[]>([])
 const stocks = ref<any[]>([])
@@ -108,7 +108,7 @@ watch([filters, page], fetchRepairs, { deep: true })
     <div class="d-flex align-center mb-4">
       <h1 class="text-h5">修理管理</h1>
       <v-spacer />
-      <v-btn v-if="canManageCore" color="primary" prepend-icon="mdi-plus" @click="openDialog()">修理依頼</v-btn>
+      <v-btn v-if="canManageRepairs" color="primary" prepend-icon="mdi-plus" @click="openDialog()">修理依頼</v-btn>
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
