@@ -140,6 +140,20 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert JwtDenylist.exists?(jti: "still-valid-token")
   end
 
+  test "ログアウトは監査ログ(logout)に記録され、トークンなしのログアウトは記録されない" do
+    assert_difference -> { AuditLog.where(action: "logout", user: @user).count }, 1 do
+      delete "/api/v1/logout", headers: auth_headers_for(@user)
+    end
+    assert_response :no_content
+    log = AuditLog.where(action: "logout", user: @user).last
+    assert_equal [ "User", @user.id ], [ log.auditable_type, log.auditable_id ]
+
+    assert_no_difference -> { AuditLog.where(action: "logout").count } do
+      delete "/api/v1/logout"
+    end
+    assert_response :no_content
+  end
+
   test "トークンなしでログアウトしてもエラーにならない" do
     delete "/api/v1/logout"
 

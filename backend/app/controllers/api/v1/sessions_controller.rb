@@ -13,6 +13,22 @@ module Api
         end
       end
 
+      # ログアウトを監査ログに残す。トークンの失効は devise-jwt のミドルウェアがこのあとで行う。
+      # JWT にはセッションがないため、Devise の verify_signed_out_user は常に「ログアウト済み」と判定して
+      # destroy を呼ばずに終わる。それを外し、トークンで認証できたときだけ記録する（トークンなしは記録せず204）
+      skip_before_action :verify_signed_out_user, only: :destroy
+
+      def destroy
+        user = current_user
+        if user
+          AuditLog.create!(
+            user: user, action: "logout", auditable: user,
+            ip_address: request.remote_ip, performed_at: Time.current
+          )
+        end
+        respond_to_on_destroy
+      end
+
       private
 
       def respond_with(resource, _opts = {})

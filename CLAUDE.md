@@ -205,7 +205,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
   - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
   - 資材の拠点別の在庫も同じ扱い。資材一覧の `stock_by_site`（拠点ごとの使える在庫。自拠点が先頭）と、詳細の `stock_summary` / `total_stock` / `usable_stock`（倉庫ごと・拠点付き）は、在庫を見られる人（自社）にだけ返し、協力会社にはキー自体を含めない。「使える在庫」は利用可（`available`）で数量1以上のもの（使用中・修理中・廃棄済みは数えない）。一覧の `stock_availability=own|others_only|none`（自拠点にあり／他拠点にだけあり／どこにもなし）も在庫を見られる人にだけ効く。資材マスタ自体は全拠点共通で、拠点で絞らない（自拠点になければ他拠点にあるかを、同じ行で探せるのが目的）
-- 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
+- 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）・ログアウト（`logout`。トークンで認証できたときだけ記録）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
   - 監査ログには変更されたデータの拠点（`audit_logs.site_id`）を持たせる。記録時に `AuditLog.site_id_for(resource)` が対象から求める（設備・点検・トラブルは設備の拠点、在庫・発注・修理は倉庫の拠点、ユーザ・ログインは所属拠点。資材・メーカー・流体などの全社共通マスタは NULL）。**拠点を指定した絞り込みでは NULL のログは出ない**（全拠点＝指定なしのときだけ出る）。対象の種類を増やすときは `site_id_for` にも足す
   - 一覧APIの絞り込み: `site_ids`（複数可）、`from` / `to`（日本時間の日付 `YYYY-MM-DD`。開始日の0時〜終了日の終わり。不正な値は422）、`log_action`、`auditable_type`。画面の初期値は自拠点・直近1か月。並びは新しい順（同時刻は id 降順）
 - レスポンス: `{ data: ... }` 形式
