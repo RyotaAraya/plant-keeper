@@ -120,6 +120,33 @@ class InspectionsTest < ActionDispatch::IntegrationTest
     assert_operator json["meta"]["total_count"], :>=, 2
   end
 
+  test "一覧は拠点（設備の拠点）で絞り込める" do
+    other_equipment = create_equipment(site: create_site(name: "第二製油所"))
+    mine = create_inspection
+    other = Inspection.create!(user: @user, equipment: other_equipment, department: @department,
+                               inspection_type: "routine", inspected_at: Time.current)
+
+    get "/api/v1/inspections", params: { site_id: @site.id }, headers: @headers
+
+    assert_response :ok
+    ids = json["data"].map { |i| i["id"] }
+    assert_includes ids, mine.id
+    assert_not_includes ids, other.id
+  end
+
+  test "トラブル一覧は拠点（設備の拠点）で絞り込める" do
+    other_equipment = create_equipment(site: create_site(name: "第二製油所"))
+    mine = Trouble.create!(equipment: @equipment, reported_by: @user, title: "自拠点のトラブル", reported_at: Time.current)
+    other = Trouble.create!(equipment: other_equipment, reported_by: @user, title: "他拠点のトラブル", reported_at: Time.current)
+
+    get "/api/v1/troubles", params: { site_id: @site.id }, headers: @headers
+
+    assert_response :ok
+    ids = json["data"].map { |t| t["id"] }
+    assert_includes ids, mine.id
+    assert_not_includes ids, other.id
+  end
+
   private
 
   def post_inspection(items)

@@ -9,8 +9,12 @@ module Api
         authorize InspectionPlan
         plans = InspectionPlan.includes(:equipment, :instrument, :checklist_template)
         plans = plans.where(is_active: params[:is_active] == "false" ? false : true)
-        plans = plans.joins(:equipment).where(equipments: { site_id: params[:site_id] }) if params[:site_id].present?
-        plans = plans.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          plans = plans.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
+        end
+        if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
+          plans = plans.where(equipment_id: equipment_ids)
+        end
         plans = plans.overdue if params[:overdue] == "true"
         plans = plans.due_within(params[:due_within].to_i) if params[:due_within].present?
 

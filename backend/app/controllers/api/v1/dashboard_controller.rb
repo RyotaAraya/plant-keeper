@@ -1,34 +1,34 @@
 module Api
   module V1
     class DashboardController < BaseController
-      # GET /api/v1/dashboard?site_id=1
+      # GET /api/v1/dashboard?site_ids[]=1&site_ids[]=2（拠点の指定がなければ全拠点）
       def show
         authorize :dashboard, :show?
         dashboard_policy = policy(:dashboard)
-        site_id = params[:site_id].presence
+        site_ids = id_list_param(:site_ids, :site_id)
 
         troubles_scope = Trouble.joins(:equipment)
-        troubles_scope = troubles_scope.where(equipments: { site_id: site_id }) if site_id
+        troubles_scope = troubles_scope.where(equipments: { site_id: site_ids }) if site_ids
 
         inspections_scope = Inspection.joins(:equipment)
-        inspections_scope = inspections_scope.where(equipments: { site_id: site_id }) if site_id
+        inspections_scope = inspections_scope.where(equipments: { site_id: site_ids }) if site_ids
 
         maintenances_scope = ScheduledMaintenance.joins(:equipment)
-        maintenances_scope = maintenances_scope.where(equipments: { site_id: site_id }) if site_id
+        maintenances_scope = maintenances_scope.where(equipments: { site_id: site_ids }) if site_ids
 
         plans_scope = InspectionPlan.active.joins(:equipment)
-        plans_scope = plans_scope.where(equipments: { site_id: site_id }) if site_id
+        plans_scope = plans_scope.where(equipments: { site_id: site_ids }) if site_ids
 
         repairs_scope = Repair.joins(stock: :warehouse)
-        repairs_scope = repairs_scope.where(warehouses: { site_id: site_id }) if site_id
+        repairs_scope = repairs_scope.where(warehouses: { site_id: site_ids }) if site_ids
 
-        # 在庫アラート対象の資材。site_id指定時はその拠点に在庫を持つ資材に絞り、
-        # 在庫数もその拠点分のみで判定する（reorder_pointは資材マスタ側の拠点横断の閾値）
+        # 在庫アラート対象の資材。拠点の指定時はそれらの拠点に在庫を持つ資材に絞り、
+        # 在庫数もそれらの拠点の合計で判定する（reorder_pointは資材マスタ側の拠点横断の閾値）
         materials_scope = Material.where(reorder_method: "reorder_point").where.not(reorder_point: nil)
-        materials_scope = materials_scope.joins(stocks: :warehouse).where(warehouses: { site_id: site_id }).distinct if site_id
+        materials_scope = materials_scope.joins(stocks: :warehouse).where(warehouses: { site_id: site_ids }).distinct if site_ids
         stock_total = ->(material) {
-          if site_id
-            material.stocks.joins(:warehouse).where(warehouses: { site_id: site_id }).sum(:quantity)
+          if site_ids
+            material.stocks.joins(:warehouse).where(warehouses: { site_id: site_ids }).sum(:quantity)
           else
             material.stocks.sum(:quantity)
           end

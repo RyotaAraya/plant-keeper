@@ -10,8 +10,15 @@ module Api
         authorize Stock
         stocks = Stock.includes(:material, :warehouse).all
         stocks = stocks.where(material_id: params[:material_id]) if params[:material_id].present?
-        stocks = stocks.where(warehouse_id: params[:warehouse_id]) if params[:warehouse_id].present?
-        stocks = stocks.where(status: params[:status]) if params[:status].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          stocks = stocks.where(warehouse_id: Warehouse.where(site_id: site_ids).select(:id))
+        end
+        if (warehouse_ids = id_list_param(:warehouse_ids, :warehouse_id))
+          stocks = stocks.where(warehouse_id: warehouse_ids)
+        end
+        if (statuses = value_list_param(:statuses, :status))
+          stocks = stocks.where(status: statuses)
+        end
 
         stocks = stocks.order(purchased_on: :asc)
         total_count = stocks.count

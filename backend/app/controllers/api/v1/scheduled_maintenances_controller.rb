@@ -7,8 +7,15 @@ module Api
       def index
         authorize ScheduledMaintenance
         maintenances = ScheduledMaintenance.includes(:equipment, maintenance_assignments: :user).all
-        maintenances = maintenances.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
-        maintenances = maintenances.where(status: params[:status]) if params[:status].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          maintenances = maintenances.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
+        end
+        if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
+          maintenances = maintenances.where(equipment_id: equipment_ids)
+        end
+        if (statuses = value_list_param(:statuses, :status))
+          maintenances = maintenances.where(status: statuses)
+        end
 
         maintenances = maintenances.order(scheduled_date: :desc)
         total_count = maintenances.count
