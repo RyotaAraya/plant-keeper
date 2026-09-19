@@ -54,7 +54,7 @@
 - **テスト**: `backend/test/` に Minitest（認証・権限・点検→トラブル自動作成・資材検索・モデル検証）、`e2e/` に Playwright のスモークテスト（認証・画面遷移・ロール別の表示制御・点検から不具合報告→トラブル登録）
 - **CI**（GitHub Actions）: PR と `main`/`develop` への push で、Brakeman、RuboCop、バックエンドのテスト、フロントの lint + ビルド、E2E を実行
 - **依存更新**: [Renovate](https://docs.renovatebot.com/) が毎週月曜の朝に `develop` 向けの更新PRを作成。patch は公開3日後にCI成功で自動マージ、minor は手動マージ、major は承認制
-- 手順の詳細は [DEVELOPMENT.md](DEVELOPMENT.md) を参照
+- 開発コマンド・テストの実行方法・デプロイ手順・設計上の規約は [CLAUDE.md](CLAUDE.md) にまとめています
 
 ## アーキテクチャ
 
@@ -69,6 +69,17 @@ db                 PostgreSQL 16 (:5432)
 - JWT認証（Authorization ヘッダー）
 - フロントエンド → バックエンドの通信は Axios + CORS
 - 27テーブルのリレーショナルデータモデル
+
+## ローカルでの起動
+
+Docker Desktop が必要です。
+
+```bash
+docker-compose up -d
+docker-compose exec backend bundle exec rails db:create db:migrate db:seed
+```
+
+http://localhost:5173 を開き、デモアカウントでログインできます（管理者: `admin@example.com` / `password`）。
 
 ## ライセンス
 

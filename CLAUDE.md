@@ -16,11 +16,25 @@ PlantKeeper — 石油プラントの保全業務を統合管理するWebアプ�
 - テスト: バックエンド Minitest、E2E Playwright（フロントの単体テストは未導入）
 - CI/CD・依存更新: GitHub Actions、Renovate（Dependabot は使わない。脆弱性アラートは GitHub 側の Dependabot alerts を参照）
 
+## セットアップ（初回）
+
+前提: Docker Desktop、Git、[Lefthook](https://github.com/evilmartians/lefthook)（`brew install lefthook`）
+
+```bash
+docker-compose up -d    # frontend :5173 / backend :3000 / db :5432 の3コンテナ
+lefthook install        # pre-push フックを有効化
+docker-compose exec backend bundle exec rails db:create db:migrate db:seed
+```
+
 ## 開発コマンド
 
 ```bash
-# 起動
+# 起動・停止
 docker-compose up -d
+docker-compose down
+
+# ルーティング確認
+docker-compose exec backend bundle exec rails routes
 
 # マイグレーション
 docker-compose exec backend bundle exec rails db:migrate
@@ -140,7 +154,6 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 - `要求仕様書.md` — 機能要件、業務フロー、設計方針
 - `データモデル設計.md` — 27テーブルのER図・テーブル定義・簡易化メモ
-- `DEVELOPMENT.md` — 開発環境構築ガイド
 - `実装タスク表.md` — フェーズ別の実装タスク進捗表
 
 ## アーキテクチャ
@@ -249,6 +262,26 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
 - レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成
 - Pinia は router より先に登録（router の `beforeEach` で `useAuthStore()` を使用するため）
+
+## API認証の動作確認（curl）
+
+```bash
+# ログイン — Authorization ヘッダーでトークンが返る
+curl -D - -X POST http://localhost:3000/api/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"user":{"email":"admin@example.com","password":"password"}}'
+
+# 認証付きAPI / ログアウト
+curl http://localhost:3000/api/v1/dashboard -H 'Authorization: Bearer <token>'
+curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <token>'
+```
+
+## トラブルシューティング
+
+- **HMRが効かない**: Docker + macOS のため `vite.config.ts` で `usePolling: true` 設定済み。それでも反映されなければ `docker-compose restart frontend`
+- **APIが401**: JWTの有効期限切れ。再ログインする
+- **マイグレーションがずれた（開発DBのみ）**: `db:migrate:reset` → `db:seed`。接続先が開発DBであることを確認してから実行する
+- **backendが起動しない**: puma のPIDファイル残り。`docker-compose.yml` の command で `rm -f tmp/pids/server.pid` 済みだが、解消しなければ `docker-compose down` → `up -d`
 
 ## 注意事項
 
