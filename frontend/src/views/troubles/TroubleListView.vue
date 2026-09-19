@@ -10,6 +10,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +83,10 @@ const priorityOptions = [
   { title: '緊急', value: 'critical' },
 ]
 
+const fetchTroublesGuard = latestGuard()
+
 async function fetchTroubles() {
+  const isLatest = fetchTroublesGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -93,10 +97,11 @@ async function fetchTroubles() {
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.q) params.q = filters.value.q
     const res = await api.get('/troubles', { params })
+    if (!isLatest()) return
     troubles.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

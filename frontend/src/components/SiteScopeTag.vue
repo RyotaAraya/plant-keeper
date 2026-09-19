@@ -26,7 +26,7 @@ const switchable = computed(() => canViewSites.value && sites.value.length > 1)
 
 // 選択中の拠点。空は全拠点（メニューでは全てにチェックが付く）
 const selectedIds = computed(() => (model.value.length ? model.value : sites.value.map((s) => s.id)))
-const isAll = computed(() => sites.value.length > 0 && selectedIds.value.length >= sites.value.length)
+const isAll = computed(() => sites.value.length > 0 && sites.value.every((s) => selectedIds.value.includes(s.id)))
 
 const label = computed(() => {
   if (!switchable.value) return authStore.user?.site?.name ?? '所属拠点'
@@ -40,7 +40,9 @@ function toggle(id: number) {
   const current = selectedIds.value
   const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id]
   // 全ての拠点を外すことはできない（少なくとも1つは選んでおく）
-  if (next.length) model.value = next
+  if (!next.length) return
+  // 稼働中の全拠点を選んだ状態は、全拠点（空）にそろえる。表示は「全拠点」なのに、非稼働の拠点のデータだけ外れる、を防ぐ
+  model.value = sites.value.every((s) => next.includes(s.id)) ? [] : next
 }
 
 function selectOwn() {

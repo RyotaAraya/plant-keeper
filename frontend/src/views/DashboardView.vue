@@ -6,6 +6,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { siteIdsToQuery } from '@/utils/listQuery'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,16 +16,20 @@ const loading = ref(true)
 // 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）
 const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
 
+const fetchDashboardGuard = latestGuard()
+
 async function fetchDashboard() {
+  const isLatest = fetchDashboardGuard()
   loading.value = true
   try {
     const params: any = {}
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
     const res = await api.get('/dashboard', { params })
+    if (!isLatest()) return
     dashboard.value = res.data.data
     lastUpdated.value = formatTime(new Date())
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

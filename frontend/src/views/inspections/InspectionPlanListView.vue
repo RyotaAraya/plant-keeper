@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
 import { siteIdsFromQuery } from '@/utils/listQuery'
+import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,7 +61,10 @@ function dueLabel(plan: InspectionPlan) {
   return `${plan.next_due_on}（あと${plan.days_until_due}日）`
 }
 
+const fetchPlansGuard = latestGuard()
+
 async function fetchPlans() {
+  const isLatest = fetchPlansGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -68,9 +72,10 @@ async function fetchPlans() {
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.overdue) params.overdue = 'true'
     const res = await api.get('/inspection_plans', { params })
+    if (!isLatest()) return
     plans.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

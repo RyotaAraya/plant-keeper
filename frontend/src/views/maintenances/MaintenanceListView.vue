@@ -8,6 +8,7 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageMaintenance } = usePermissions()
@@ -56,7 +57,10 @@ const statusOptions = [
   { title: '完了', value: 'completed' },
 ]
 
+const fetchMaintenancesGuard = latestGuard()
+
 async function fetchMaintenances() {
+  const isLatest = fetchMaintenancesGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -64,10 +68,11 @@ async function fetchMaintenances() {
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.statuses.length) params.statuses = filters.value.statuses
     const res = await api.get('/scheduled_maintenances', { params })
+    if (!isLatest()) return
     maintenances.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

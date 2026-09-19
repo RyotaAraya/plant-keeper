@@ -6,6 +6,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageEquipment, canViewSites } = usePermissions()
@@ -28,15 +29,19 @@ const headers = [
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
+const fetchEquipmentsGuard = latestGuard()
+
 async function fetchEquipments() {
+  const isLatest = fetchEquipmentsGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
     const res = await api.get('/equipments', { params })
+    if (!isLatest()) return
     equipments.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

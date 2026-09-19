@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageMaterial, canViewStocks } = usePermissions()
@@ -102,7 +103,10 @@ const reorderOptions = [
   { title: '使用時発注', value: 'use_based' },
 ]
 
+const fetchMaterialsGuard = latestGuard()
+
 async function fetchMaterials() {
+  const isLatest = fetchMaterialsGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -111,10 +115,11 @@ async function fetchMaterials() {
     if (filters.value.manufacturer_id) params.manufacturer_id = filters.value.manufacturer_id
     if (filters.value.stock_availability) params.stock_availability = filters.value.stock_availability
     const res = await api.get('/materials', { params })
+    if (!isLatest()) return
     materials.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

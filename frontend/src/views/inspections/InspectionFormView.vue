@@ -61,6 +61,17 @@ async function ensureOptionsCoverEquipment() {
   await loadSiteOptions([res.data.data.site_id])
 }
 
+// 選ばれている部署が、表示中の拠点の選択肢にないとき（別拠点の設備の点検を、自分の部署のまま開いたときなど）は、
+// その部署を選択肢に足す。点検の部署は入力時に選ぶ値で、設備の拠点とは限らないため
+async function ensureDepartmentInOptions() {
+  const id = form.value.department_id
+  if (!id || departments.value.some((d) => d.id === id)) return
+  // 部署の詳細は管理者しか読めないため、誰でも読める一覧から探す
+  const res = await api.get('/departments')
+  const dept = res.data.data.find((d: any) => d.id === id)
+  if (dept) departments.value = [...departments.value, { ...dept, display_name: `${dept.site?.name ?? ''} ${dept.full_path}` }]
+}
+
 async function fetchInstruments() {
   if (!form.value.equipment_id) {
     instruments.value = []
@@ -188,6 +199,7 @@ onMounted(async () => {
   await loadExisting()
   await prefillFromPlan()
   await ensureOptionsCoverEquipment()
+  await ensureDepartmentInOptions()
 })
 </script>
 

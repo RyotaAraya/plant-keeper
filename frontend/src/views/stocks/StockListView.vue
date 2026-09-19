@@ -8,6 +8,7 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageStockTransaction } = usePermissions()
@@ -65,7 +66,10 @@ const txTypeOptions = [
   { title: '廃棄', value: 'disposal' },
 ]
 
+const fetchStocksGuard = latestGuard()
+
 async function fetchStocks() {
+  const isLatest = fetchStocksGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -73,15 +77,20 @@ async function fetchStocks() {
     if (filters.value.warehouse_ids.length) params.warehouse_ids = filters.value.warehouse_ids
     if (filters.value.statuses.length) params.statuses = filters.value.statuses
     const res = await api.get('/stocks', { params })
+    if (!isLatest()) return
     stocks.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
+const warehousesGuard = latestGuard()
+
 async function fetchWarehouses(siteIds: number[]) {
+  const isLatest = warehousesGuard()
   const res = await api.get('/warehouses', { params: siteIds.length ? { site_ids: siteIds } : {} })
+  if (!isLatest()) return
   // 倉庫名は拠点間で重複しうるため、拠点が1つに決まらないときは拠点名を付ける
   warehouses.value = res.data.data.map((w: any) => ({ ...w, display_name: siteIds.length === 1 ? w.name : `${w.site?.name ?? ''} ${w.name}` }))
 }

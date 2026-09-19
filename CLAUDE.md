@@ -237,7 +237,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 **Axiosインターセプタ:**
 - リクエスト: localStorageから `jwt` を読みAuthorizationヘッダーにセット
-- レスポンス: バックエンドが `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書きする。ただし現状トークンを発行するのはログインだけなので、実質ログイン時にしか動かない（ローテーションはしていない）。トークン付きのリクエストが401になったとき（24時間の有効期限切れ・失効）は、トークンを消して `/login?expired=1` に遷移し、ログイン画面に理由を表示する（同時に飛んでいた他のリクエストは保留にして、未捕捉の例外や失敗表示を出さない）。ログイン自体の401（パスワード違い）は対象外
+- レスポンス: バックエンドが `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書きする。ただし現状トークンを発行するのはログインだけなので、実質ログイン時にしか動かない（ローテーションはしていない）。トークン付きのリクエストが401になったとき（24時間の有効期限切れ・失効）は、トークンを消して `/login?expired=1` に遷移し、ログイン画面に理由を表示する（同時に飛んでいた他のリクエストは保留にして、未捕捉の例外や失敗表示を出さない）。すでにログイン画面にいるとき（ログアウト直後に返ってきた読み込み中の取得）の401も、同じく保留にする（呼び出し元の未捕捉の例外にしない）。ログイン自体の401（パスワード違い）は対象外
 
 **認証ストア（`stores/auth.ts`）:**
 - singleton promiseパターン: `initPromise` 変数でページロード時の並行初期化競合を防止
@@ -288,6 +288,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ### フロントエンドの規約
 - API呼び出し: `src/api/axios.ts` の単一 Axios インスタンスを直接使用（サービス層なし）
+- 一覧の取得は、拠点や絞り込みを続けて変えると応答の順序が入れ替わるため、`utils/latestGuard.ts` で古い応答を破棄する（新しい一覧を作るときも使う）
 - 型定義: `src/types/models.ts` に全インターフェースを集約
 - 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
 - レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成

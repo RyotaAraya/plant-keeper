@@ -132,6 +132,44 @@ test('ダッシュボードのカードから開いた一覧は、表示中の�
   await expectCardOpensList(page, /承認待ち点検/, '点検・作業記録', '全拠点', { compareCount: true })
 })
 
+test('稼働中の拠点を1つずつ全部選ぶと「全拠点」になり、拠点で絞らない（非稼働の拠点のデータも外れない）', async ({ page }) => {
+  const requests = collectListRequests(page, 'inspections')
+  await login(page, ACCOUNTS.ownerManager)
+  await openList(page, '点検・作業記録')
+
+  const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
+  await tag.click()
+  const items = page.getByRole('menuitemcheckbox')
+  await expect(items.first()).toBeVisible()
+  for (let i = 0; i < (await items.count()); i++) {
+    if ((await items.nth(i).getAttribute('aria-checked')) === 'false') await items.nth(i).click()
+  }
+  await expect(tag).toContainText('全拠点')
+  await expect.poll(() => paramsOf(requests[requests.length - 1], 'site_ids')).toHaveLength(0)
+})
+
+test('別の拠点の点検計画から「点検を実施」を開いても、点検フォームの部署は空にならず、自分の部署が表示される', async ({ page }) => {
+  await login(page, ACCOUNTS.ownerManager)
+  await openList(page, '点検計画')
+
+  // 根岸製油所の計画だけを表示する（川崎を外す）
+  const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
+  await tag.click()
+  await page.getByRole('menuitemcheckbox', { name: /根岸製油所/ }).click()
+  await page.getByRole('menuitemcheckbox', { name: /川崎製油所/ }).click()
+  await page.keyboard.press('Escape')
+  await expect(tag).toContainText('根岸製油所')
+  // 一覧が根岸の計画（シードでは1件）に切り替わるのを待つ。待たないと、切り替え前の川崎の計画を開いてしまう
+  await expect(page.locator('tbody tr')).toHaveCount(1)
+
+  await page.getByRole('button', { name: '点検を実施' }).first().click()
+  await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
+  // 設備は根岸のもの、部署は自分（川崎）の部署のまま。選択肢にない部署を選んだ状態（IDや空欄の表示）にならない
+  const department = page.locator('.v-field', { has: page.getByLabel('部署 *', { exact: true }) })
+  await expect(department).toContainText('川崎製油所')
+  await expect(department).toContainText('電気保全課')
+})
+
 test('拠点の絞り込みはすべての拠点データの一覧で同じ部品になっている', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
   await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('川崎製油所')

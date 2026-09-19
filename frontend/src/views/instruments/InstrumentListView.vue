@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageEquipment } = usePermissions()
@@ -57,7 +58,10 @@ const headers = [
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
+const fetchInstrumentsGuard = latestGuard()
+
 async function fetchInstruments() {
+  const isLatest = fetchInstrumentsGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -67,10 +71,11 @@ async function fetchInstruments() {
     if (selectedServiceIds.value.length) params.service_ids = selectedServiceIds.value
     if (selectedLineClassIds.value.length) params.line_class_ids = selectedLineClassIds.value
     const res = await api.get('/instruments', { params })
+    if (!isLatest()) return
     instruments.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
