@@ -47,6 +47,26 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert_equal @user.email, json.dig("user", "email")
   end
 
+  # フロントは user.company.company_type で自社/協力会社を判定し、メニューやルートガードを切り替える
+  test "ログインとログイン中のユーザ情報には所属会社（種別を含む）が含まれる" do
+    company = @user.company
+
+    post "/api/v1/login", params: { user: { email: @user.email, password: "password" } }, as: :json
+    assert_equal({ "id" => company.id, "name" => company.name, "company_type" => "owner" }, json.dig("user", "company"))
+
+    get "/api/v1/current_user", headers: { "Authorization" => response.headers["Authorization"] }
+    assert_equal({ "id" => company.id, "name" => company.name, "company_type" => "owner" }, json.dig("user", "company"))
+  end
+
+  test "会社に所属しないユーザのcompanyはnull" do
+    user = create_user(company: nil)
+
+    get "/api/v1/current_user", headers: auth_headers_for(user)
+
+    assert_response :ok
+    assert_nil json.dig("user", "company")
+  end
+
   # devise 5.0.4 で respond_to_on_destroy の呼び出しが変わり、ログアウトが500になったことがある
   test "ログアウトは204を返し、失効したトークンは使えなくなる" do
     headers = auth_headers_for(@user)
