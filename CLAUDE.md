@@ -12,7 +12,9 @@ PlantKeeper — 石油プラントの保全業務を統合管理するWebアプ�
 - フロントエンド: Vue 3 + TypeScript + Vuetify 3 (日本語ロケール) + Pinia + Vue Router 4 + Axios
 - バックエンド: Rails 8 API mode + devise + devise-jwt
 - DB: PostgreSQL 16
-- インフラ: Docker（docker-compose、3コンテナ構成）
+- インフラ: Docker（docker-compose、3コンテナ構成）。デプロイ先は Render（本番・stg）、stg のDBのみ Neon
+- テスト: バックエンド Minitest、E2E Playwright（フロントの単体テストは未導入）
+- CI/CD・依存更新: GitHub Actions、Renovate（Dependabot は使わない。脆弱性アラートは GitHub 側の Dependabot alerts を参照）
 
 ## 開発コマンド
 
@@ -38,9 +40,11 @@ docker-compose exec frontend npm run lint:fix
 # バックエンド lint
 docker-compose exec backend bundle exec rubocop -A
 
-# フロントエンド ビルド確認（tsc はvuetify型エラーがあるため vite build を使用）
-cd frontend && npx vite build
+# フロントエンド 型チェック + ビルド確認（CIと同じ。vue-tsc -b → vite build）
+cd frontend && npm run build
 ```
+
+- 型チェックは `npm run typecheck`（`vue-tsc -b`。`npm run build` にも含まれる）。ルートの `tsconfig.json` は `files: []` + project references のため、`vue-tsc --noEmit` は何も検査せず常に成功する。`-b` を付けること（lefthook の typecheck も `-b`）
 
 ## テスト（バックエンド / Minitest）
 
@@ -106,7 +110,12 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - 更新は stg で動作確認してから `main` へ
 - 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。バックエンドのテスト（`test/integration/authentication_test.rb`）がこれを検証するが、フロント経由の動作は別途 stg で確認する
   - 実例: devise 5.0.4 で `respond_to_on_destroy` がキーワード引数付きで呼ばれるようになり、`SessionsController` のオーバーライドが ArgumentError → ログアウトが500になりJWTが失効しなかった（`respond_to_on_destroy(**)` で修正）
-- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行
+- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行。ジョブは5つ:
+  - `backend_scan_ruby`（Brakeman）/ `backend_lint`（RuboCop）
+  - `backend_test`（Minitest。Postgres 16 のサービスコンテナ）
+  - `e2e`（Playwright。シード済みDB + APIサーバー + ビルド済みフロントの `vite preview`。失敗時はレポートを artifact に保存）
+  - `frontend_lint_and_build`（ESLint + `npm run build`）
+  - Renovate の自動マージ（patch）もこれらの成功が条件になるため、テストが赤いと依存更新も止まる
 
 ### 本番
 - フロントエンド: `plant-keeper-web`（static site、`frontend/` を `npm run build` → `dist/` を配信）
@@ -248,6 +257,5 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - テストはバックエンド（Minitest、下記「テスト」）とE2E（Playwright、下記「E2Eテスト」）。フロントの単体テストは未導入
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
-- pre-push フック（lefthook）: ESLint → vue-tsc → RuboCop が直列実行（`docker-compose exec -T` 経由）
-- vue-tsc は Vuetify の型定義で既知のエラーあり。ビルド確認は `npx vite build` を使用
+- pre-push フック（lefthook）: ESLint → vue-tsc（`-b`）→ RuboCop が直列実行（`docker-compose exec -T` 経由）
 - シードの audit_log 部分で `Auditable must exist` バリデーションエラーが出るが、ユーザ・設備等の主要データには影響なし

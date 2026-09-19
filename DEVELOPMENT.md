@@ -102,26 +102,85 @@ docker-compose exec frontend npm run lint:fix
 # 型チェック
 docker-compose exec frontend npm run typecheck
 
-# ビルド
+# 型チェック + ビルド（CIと同じ。vue-tsc -b → vite build）
 docker-compose exec frontend npm run build
 ```
+
+> 型チェックは `vue-tsc -b`（project references のビルドモード）で行います。ルートの `tsconfig.json` は `files: []` 構成のため、`-b` なしの `vue-tsc --noEmit` は何も検査しません。
+
+## テスト
+
+### バックエンド（Minitest）
+
+認証・権限（Pundit）・点検→トラブル自動作成・資材の型番検索・モデル検証のテストが `backend/test/` にあります。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作ります。
+
+```bash
+# 初回・スキーマ変更時: テスト用DBを作り直す
+# （db:prepare は新規DBにシードを投入するので使わない）
+T=postgres://manage:manage_password@db:5432/manage_test
+docker-compose exec -e DATABASE_URL=$T -e RAILS_ENV=test backend bash -c 'bin/rails db:drop db:create db:schema:load'
+
+# 実行
+docker-compose exec -e DATABASE_URL=$T backend bin/rails test
+```
+
+コンテナの `DATABASE_URL` は開発DBを指しているため、必ず上記のように `manage_test` を指定します。`*_test` 以外のDBに接続している場合は `test/test_helper.rb` がテストを中断します（開発DBの誤初期化防止）。
+
+### E2E（Playwright）
+
+`e2e/` に、ブラウザ経由のスモークテストがあります（認証、主要画面の遷移と権限、ロール別のメニュー・ボタンの出し分け、点検で不具合報告 → トラブル自動登録）。シードのデモアカウントを使うため、`docker-compose up -d` とシード投入が済んでいる状態で実行します。
+
+```bash
+# 初回のみ（ホストのNodeで実行）
+cd e2e && npm install && npx playwright install chromium
+
+# ローカル（http://localhost:5173）に対して実行
+npx playwright test
+
+# stgに対して実行（本番は設定で拒否されます）。無料プランのAPIがスリープしていると起動に1分近くかかるため、先に起こしておく
+curl -s -o /dev/null -m 120 https://plant-keeper-api-stg.onrender.com/up
+E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
+```
+
+点検のテストは実行のたびにデータ（タイトルが `E2E ` で始まる点検・トラブル）を追加します。ローカルは `db:seed:replant`、stg は管理者の `admin/reseed` で元に戻せます。
+
+## ブランチ運用・CI・デプロイ
+
+| ブランチ | デプロイ先 |
+|----------|-----------|
+| `develop` | stg（Render + Neon） |
+| `main` | 本番（Render） |
+
+1. 変更は `develop` に反映すると stg に自動デプロイされる
+2. stg で動作確認したら、`develop` → `main` の PR を作成・マージして本番リリース（`main` へは直接 push しない）
+3. PR と `main`/`develop` への push で GitHub Actions（`.github/workflows/ci.yml`）が走る: Brakeman / RuboCop / バックエンドのテスト / フロントの lint + ビルド / E2E
+4. 依存更新は [Renovate](https://docs.renovatebot.com/)（`.github/renovate.json5`）が `develop` 向けにPRを作成する（patch は自動マージ、minor は手動、major は Dependency Dashboard で承認）
+
+Render の構成は `render.yaml`（Blueprint）に定義しています。各環境のURL・環境変数・初回セットアップは [CLAUDE.md](CLAUDE.md) の「デプロイ（Render）」を参照してください。
 
 ## プロジェクト構成
 
 ```
 .
 ├── docker-compose.yml
+├── render.yaml               Render のデプロイ定義（本番・stg）
+├── .github/
+│   ├── workflows/ci.yml      CI（GitHub Actions）
+│   └── renovate.json5        依存更新（Renovate）
 ├── backend/                  Rails 8 API
 │   ├── app/
 │   │   ├── controllers/api/v1/   API コントローラー
-│   │   └── models/               モデル（26テーブル）
+│   │   └── models/               モデル（27テーブル）
 │   ├── config/
 │   ├── db/
 │   │   ├── migrate/              マイグレーション
 │   │   ├── schema.rb
-│   │   └── seeds.rb              開発用シードデータ
+│   │   ├── seeds.rb              シードの読み込み
+│   │   └── seeds/                デモ・開発用シードデータ（番号付きファイル）
+│   ├── test/                     Minitest
 │   ├── Dockerfile
 │   └── Gemfile
+├── e2e/                      Playwright E2Eテスト
 ├── frontend/                 Vue 3 SPA
 │   ├── src/
 │   │   ├── api/                  Axios 設定
@@ -148,8 +207,10 @@ docker-compose exec frontend npm run build
 | チェック | 対象 | 内容 |
 |---------|------|------|
 | ESLint | `frontend/src/` | Vue + TypeScript の lint（自動修正） |
-| vue-tsc | `frontend/` | TypeScript 型チェック |
+| vue-tsc | `frontend/` | TypeScript 型チェック（`-b`） |
 | RuboCop | `backend/` | Ruby スタイルチェック（自動修正） |
+
+pre-push ではテストは実行しません。テストと、型チェックを含むビルドは CI（Pull Request / push）で実行されます。
 
 手動で実行する場合：
 
