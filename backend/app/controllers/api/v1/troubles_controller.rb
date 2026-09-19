@@ -7,10 +7,19 @@ module Api
       def index
         authorize Trouble
         troubles = Trouble.includes(:equipment, :instrument, reported_by: :department, assigned_to: :department).all
-        troubles = troubles.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          troubles = troubles.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
+        end
+        if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
+          troubles = troubles.where(equipment_id: equipment_ids)
+        end
         troubles = troubles.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
-        troubles = troubles.where(status: params[:status]) if params[:status].present?
-        troubles = troubles.where(priority: params[:priority]) if params[:priority].present?
+        if (statuses = value_list_param(:statuses, :status))
+          troubles = troubles.where(status: statuses)
+        end
+        if (priorities = value_list_param(:priorities, :priority))
+          troubles = troubles.where(priority: priorities)
+        end
         troubles = troubles.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
         if params[:department_id].present?
           dept_user_ids = User.where(department_id: params[:department_id]).select(:id)

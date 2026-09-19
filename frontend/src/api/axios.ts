@@ -31,11 +31,10 @@ api.interceptors.response.use(
     const sentWithToken = !!error.config?.headers?.Authorization
     if (error.response?.status === 401 && !isLoginRequest && sentWithToken) {
       localStorage.removeItem('jwt')
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login?expired=1')
-        // 画面遷移で捨てられる呼び出し元が、エラー処理（未捕捉の例外や失敗表示）に入らないよう保留にする
-        return new Promise(() => {})
-      }
+      if (window.location.pathname !== '/login') window.location.assign('/login?expired=1')
+      // 画面遷移で捨てられる呼び出し元や、ログアウト直後に（すでにログイン画面にいる状態で）返ってきた
+      // 読み込み中だった取得が、エラー処理（未捕捉の例外や失敗表示）に入らないよう保留にする
+      return new Promise(() => {})
     }
     return Promise.reject(error)
   },

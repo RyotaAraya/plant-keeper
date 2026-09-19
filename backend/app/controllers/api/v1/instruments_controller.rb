@@ -7,20 +7,12 @@ module Api
         authorize Instrument
         instruments = Instrument.includes(:equipment, :service, :line_class)
 
-        # 拠点フィルタ（複数対応）
-        if params[:site_ids].present?
-          ids = Array(params[:site_ids]).map(&:to_i).select(&:positive?)
-          instruments = instruments.joins(:equipment).where(equipments: { site_id: ids }) if ids.any?
-        elsif params[:site_id].present?
-          instruments = instruments.joins(:equipment).where(equipments: { site_id: params[:site_id] })
+        # 拠点・設備フィルタ（複数対応）
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          instruments = instruments.joins(:equipment).where(equipments: { site_id: site_ids })
         end
-
-        # 設備フィルタ（複数対応）
-        if params[:equipment_ids].present?
-          ids = Array(params[:equipment_ids]).map(&:to_i).select(&:positive?)
-          instruments = instruments.where(equipment_id: ids) if ids.any?
-        elsif params[:equipment_id].present?
-          instruments = instruments.where(equipment_id: params[:equipment_id])
+        if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
+          instruments = instruments.where(equipment_id: equipment_ids)
         end
 
         # サービスフィルタ（複数対応）

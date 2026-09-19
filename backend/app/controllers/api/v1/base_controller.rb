@@ -22,6 +22,18 @@ module Api
         [ page, per_page ]
       end
 
+      # 一覧の複数選択の絞り込み。`site_ids[]=1&site_ids[]=2` の複数指定と、従来の単一指定（`site_id=1`）のどちらも受け付ける。
+      # 指定がなければ nil を返す（呼び出し側は `if ids = id_list_param(...)` で絞り込みの有無を判定する）
+      def id_list_param(plural, singular)
+        ids = Array(params[plural]).presence || Array(params[singular])
+        ids.map { |v| v.to_s.to_i }.select(&:positive?).presence
+      end
+
+      def value_list_param(plural, singular)
+        values = Array(params[plural]).presence || Array(params[singular])
+        values.select { |v| v.is_a?(String) }.reject(&:blank?).presence
+      end
+
       def pundit_unauthorized
         render json: { error: "この操作を実行する権限がありません" }, status: :forbidden
       end

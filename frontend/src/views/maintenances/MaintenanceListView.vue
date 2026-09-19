@@ -2,22 +2,30 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const { canManageMaintenance } = usePermissions()
+const authStore = useAuthStore()
 
 const maintenances = ref<any[]>([])
-const equipments = ref<any[]>([])
+const { equipments, load: loadSiteOptions } = useSiteScopeOptions({ withDepartments: false })
 const loading = ref(false)
 const totalCount = ref(0)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
+// 通常業務では自拠点の整備だけ見ればよいため、自分の所属拠点を初期値にする
 const filters = ref({
-  equipment_id: null as number | null,
-  status: null as string | null,
+  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
+  equipment_ids: [] as number[],
+  statuses: [] as string[],
 })
 
 const form = ref({
@@ -49,23 +57,31 @@ const statusOptions = [
   { title: '完了', value: 'completed' },
 ]
 
+const fetchMaintenancesGuard = latestGuard()
+
 async function fetchMaintenances() {
+  const isLatest = fetchMaintenancesGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
-    if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
-    if (filters.value.status) params.status = filters.value.status
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
+    if (filters.value.statuses.length) params.statuses = filters.value.statuses
     const res = await api.get('/scheduled_maintenances', { params })
+    if (!isLatest()) return
     maintenances.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
-async function fetchEquipments() {
-  const res = await api.get('/equipments', { params: { per_page: 100 } })
-  equipments.value = res.data.data
+// 拠点を変えたら、表示する拠点にない設備の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+function changeSite(siteIds: number[]) {
+  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
+  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
+  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment }
+  loadSiteOptions(siteIds)
 }
 
 function getAssignees(item: any) {
@@ -107,7 +123,7 @@ function goToDetail(row: any) {
 }
 
 onMounted(() => {
-  fetchEquipments()
+  loadSiteOptions(filters.value.site_ids)
   fetchMaintenances()
 })
 watch(filters, fetchMaintenances, { deep: true })
@@ -122,28 +138,10 @@ watch(filters, fetchMaintenances, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="filters.equipment_id"
-        :items="equipments"
-        item-title="name"
-        item-value="id"
-        label="設備"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 220px"
-      />
-      <v-select
-        v-model="filters.status"
-        :items="statusOptions"
-        item-title="title"
-        item-value="value"
-        label="ステータス"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 160px"
-      />
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
     </div>
 
     <v-data-table

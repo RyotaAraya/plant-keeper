@@ -78,7 +78,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -204,6 +204,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - `policy_scope` を使っているのは users のみ（一覧の許可を緩めても、協力会社には自社メンバーだけを返す多重防御）。それ以外の一覧は拠点・会社での**行の絞り込み**をしていない（APIでは他拠点のデータも取得できる。画面の拠点は初期値と選択欄の有無で絞っているだけ）
   - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
   - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
+  - 資材の拠点別の在庫も同じ扱い。資材一覧の `stock_by_site`（拠点ごとの使える在庫。自拠点が先頭）と、詳細の `stock_summary` / `total_stock` / `usable_stock`（倉庫ごと・拠点付き）は、在庫を見られる人（自社）にだけ返し、協力会社にはキー自体を含めない。「使える在庫」は利用可（`available`）で数量1以上のもの（使用中・修理中・廃棄済みは数えない）。一覧の `stock_availability=own|others_only|none`（自拠点にあり／他拠点にだけあり／どこにもなし）も在庫を見られる人にだけ効く。資材マスタ自体は全拠点共通で、拠点で絞らない（自拠点になければ他拠点にあるかを、同じ行で探せるのが目的）
 - 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
 - レスポンス: `{ data: ... }` 形式
 
@@ -229,12 +230,14 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。判定の本体は純関数 `permissionsFor(role, companyType)` で、権限マトリクス（トップページ・ログイン画面の `PermissionMatrix.vue`）も同じ関数から「できる/できない」を求める（`constants/permissionMatrix.ts`）。判定を変えたら E2E `permission-matrix.spec.ts` が、マトリクスと実際のメニュー・バックエンドの一覧API（200/403）との食い違いを検出する。あわせて、権限ごとにメニューの全画面を開き、制限したAPIを呼んで403になる画面（未捕捉の例外）がないことも確かめる。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
+- 拠点スコープ（拠点に属するデータの一覧すべて: ダッシュボード・設備台帳・装置計器・点検計画・点検・作業記録・トラブル管理・定期整備・在庫管理・修理管理）: 日常は自拠点だけ見れば足りるため、初期値は所属拠点（`user.site_id`）で、部署は絞らない。表示する拠点は絞り込み項目と分けて、絞り込みの行の左端に `components/SiteScopeTag.vue`（銘板風のタグ）を置く。**拠点は複数選択で、空は全拠点**（メニューに「所属拠点だけ」「全拠点」のボタンがある）。全拠点にすると拠点をまたいで見られる。協力会社は拠点の一覧を見られないため、切替なしで所属拠点の表示のみ。設備・部署・倉庫の選択肢は `composables/useSiteScopeOptions.ts` などで表示する拠点の分だけ取得し、拠点を変えたら、表示しない拠点の設備・部署・倉庫の絞り込みは外す。点検フォームの設備・部署も同じ考え方で所属拠点の分だけ出し、別拠点の設備の点検（編集・点検計画からの実施）を開いたときはその設備の拠点に切り替える
+- 絞り込みの複数選択: 設備・種別・ステータス・優先度・倉庫は `components/FilterSelect.vue`（未選択は絞り込まない。選んだ項目は先頭1つ＋「ほか N」で表示。選択肢が多いものは `searchable`）。部署だけは単一選択。ダッシュボードのカード・リンクから一覧を開くときは、表示中の拠点（`?site_ids=1,2`。全拠点は `site_ids=all`、クエリなしは自拠点）と絞り込み（`?status=open,in_progress` `?priority=critical` など）をURLのクエリで引き継ぐ（変換は `utils/listQuery.ts`）。カードの数字と、開いた一覧の件数が一致する（E2E `site-scope.spec.ts` が検証）。ダッシュボード自体の拠点は、開き直すと自拠点に戻る
 - `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用
 - `orders/` には一覧ビューのみ（詳細ビューなし）
 
 **Axiosインターセプタ:**
 - リクエスト: localStorageから `jwt` を読みAuthorizationヘッダーにセット
-- レスポンス: バックエンドが `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書きする。ただし現状トークンを発行するのはログインだけなので、実質ログイン時にしか動かない（ローテーションはしていない）。トークン付きのリクエストが401になったとき（24時間の有効期限切れ・失効）は、トークンを消して `/login?expired=1` に遷移し、ログイン画面に理由を表示する（同時に飛んでいた他のリクエストは保留にして、未捕捉の例外や失敗表示を出さない）。ログイン自体の401（パスワード違い）は対象外
+- レスポンス: バックエンドが `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書きする。ただし現状トークンを発行するのはログインだけなので、実質ログイン時にしか動かない（ローテーションはしていない）。トークン付きのリクエストが401になったとき（24時間の有効期限切れ・失効）は、トークンを消して `/login?expired=1` に遷移し、ログイン画面に理由を表示する（同時に飛んでいた他のリクエストは保留にして、未捕捉の例外や失敗表示を出さない）。すでにログイン画面にいるとき（ログアウト直後に返ってきた読み込み中の取得）の401も、同じく保留にする（呼び出し元の未捕捉の例外にしない）。ログイン自体の401（パスワード違い）は対象外
 
 **認証ストア（`stores/auth.ts`）:**
 - singleton promiseパターン: `initPromise` 変数でページロード時の並行初期化競合を防止
@@ -274,7 +277,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### バックエンドの規約
 - レスポンス形式: 成功 `{ data: ... }`、エラー `{ errors: [...] }`
 - ページネーション: `page`/`per_page` パラメータ（`BaseController#pagination_params`。page は1以上、per_page は1〜1000に丸める）→ `{ data: [...], meta: { total_count, page, per_page } }`。ページネーションなしのエンドポイントもあり（users, departments, checklist_templates）
-- フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装
+- フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装。拠点・設備・種別・ステータス・優先度などの複数選択は `BaseController#id_list_param` / `value_list_param`（`site_ids[]=1&site_ids[]=2` の複数指定と、従来の単一指定 `site_id=1` のどちらも受け付ける。指定なしは絞り込まない）。拠点は、設備の拠点（在庫・修理は倉庫の拠点）で絞る。パラメータ名は複数形（`site_ids` `equipment_ids` `statuses` `priorities` `inspection_types` `warehouse_ids`）
 - 全文検索: `ILIKE '%query%'` パターン（users: name+email, troubles: title, instruments: tag_number, materials: name+part_number+normalized_part_number）
 - enum はすべて文字列型（integer ではない）
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
@@ -285,6 +288,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ### フロントエンドの規約
 - API呼び出し: `src/api/axios.ts` の単一 Axios インスタンスを直接使用（サービス層なし）
+- 一覧の取得は、拠点や絞り込みを続けて変えると応答の順序が入れ替わるため、`utils/latestGuard.ts` で古い応答を破棄する（新しい一覧を作るときも使う）
 - 型定義: `src/types/models.ts` に全インターフェースを集約
 - 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
 - レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成

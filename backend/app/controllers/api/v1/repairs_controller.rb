@@ -7,7 +7,12 @@ module Api
       def index
         authorize Repair
         repairs = Repair.includes(:stock, :requested_by, stock: :material).all
-        repairs = repairs.where(status: params[:status]) if params[:status].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          repairs = repairs.where(stock_id: Stock.where(warehouse_id: Warehouse.where(site_id: site_ids).select(:id)).select(:id))
+        end
+        if (statuses = value_list_param(:statuses, :status))
+          repairs = repairs.where(status: statuses)
+        end
 
         repairs = repairs.order(created_at: :desc)
         total_count = repairs.count

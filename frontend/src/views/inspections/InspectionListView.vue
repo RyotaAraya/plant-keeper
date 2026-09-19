@@ -1,25 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import FilterSelect from '@/components/FilterSelect.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
+import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
 const inspections = ref<any[]>([])
-const equipments = ref<any[]>([])
-const departments = ref<any[]>([])
+const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
 
-// 通常業務では自部署だけ意識すればよいため、自分の所属部署をデフォルト選択（切替可）
+// 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
+// ダッシュボードから来たときは、その拠点・ステータスで絞り込んだ状態で開く
 const filters = ref({
-  equipment_id: null as number | null,
-  department_id: authStore.user?.department_id ?? null as number | null,
-  inspection_type: null as string | null,
-  status: null as string | null,
+  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  equipment_ids: [] as number[],
+  department_id: null as number | null,
+  inspection_types: [] as string[],
+  statuses: listFromQuery(route.query.status),
 })
 
 const headers = [
@@ -67,10 +73,11 @@ async function fetchInspections() {
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
-    if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.department_id) params.department_id = filters.value.department_id
-    if (filters.value.inspection_type) params.inspection_type = filters.value.inspection_type
-    if (filters.value.status) params.status = filters.value.status
+    if (filters.value.inspection_types.length) params.inspection_types = filters.value.inspection_types
+    if (filters.value.statuses.length) params.statuses = filters.value.statuses
 
     const res = await api.get('/inspections', { params })
     if (seq !== fetchSeq) return
@@ -81,17 +88,13 @@ async function fetchInspections() {
   }
 }
 
-async function fetchEquipments() {
-  const res = await api.get('/equipments', { params: { per_page: 100 } })
-  equipments.value = res.data.data
-}
-
-async function fetchDepartments() {
-  const res = await api.get('/departments')
-  // 部署名は拠点間で重複する（例: どの拠点にも「保全部」がある）ため、拠点名を付けて区別する
-  departments.value = res.data.data
-    .map((d: any) => ({ ...d, display_name: `${d.site?.name ?? ''} ${d.full_path}` }))
-    .sort((a: any, b: any) => a.display_name.localeCompare(b.display_name, 'ja'))
+// 拠点を変えたら、表示する拠点にない設備・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+function changeSite(siteIds: number[]) {
+  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
+  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
+  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
+  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment, department_id: keepDepartment ? keepDepartment.id : null }
+  loadSiteOptions(siteIds)
 }
 
 function formatDate(dt: string) {
@@ -104,8 +107,7 @@ function goToDetail(row: any) {
 }
 
 onMounted(() => {
-  fetchEquipments()
-  fetchDepartments()
+  loadSiteOptions(filters.value.site_ids)
   fetchInspections()
 })
 watch(filters, fetchInspections, { deep: true })
@@ -120,17 +122,9 @@ watch(filters, fetchInspections, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="filters.equipment_id"
-        :items="equipments"
-        item-title="name"
-        item-value="id"
-        label="設備"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 220px"
-      />
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <v-select
         v-model="filters.department_id"
         :items="departments"
@@ -140,30 +134,10 @@ watch(filters, fetchInspections, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 240px"
+        style="max-width: 320px"
       />
-      <v-select
-        v-model="filters.inspection_type"
-        :items="inspectionTypeOptions"
-        item-title="title"
-        item-value="value"
-        label="種別"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 160px"
-      />
-      <v-select
-        v-model="filters.status"
-        :items="statusOptions"
-        item-title="title"
-        item-value="value"
-        label="ステータス"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 160px"
-      />
+      <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
     </div>
 
     <v-data-table

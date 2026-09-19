@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl } from './support'
+import { test, expect, login, resetSession, apiBaseUrl } from './support'
 
 // 権限マトリクス（トップページ・ログイン画面）と、実際のメニューが食い違わないこと。
 // マトリクスは permissionsFor（メニューの出し分けと同じ判定）から作っているが、
@@ -46,9 +46,7 @@ test('トップページの権限マトリクスは、実際にログインし�
 
   for (const role of ROLES) {
     await test.step(role.name, async () => {
-      await page.context().clearCookies()
-      await page.goto('/login')
-      await page.evaluate(() => localStorage.clear())
+      await resetSession(page)
       await login(page, role.account)
 
       for (const [label, menus] of Object.entries(MENU_BY_ROW)) {

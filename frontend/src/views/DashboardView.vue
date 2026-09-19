@@ -4,35 +4,32 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
-import { usePermissions } from '@/composables/usePermissions'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { siteIdsToQuery } from '@/utils/listQuery'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { canViewSites } = usePermissions()
 const dashboard = ref<any>(null)
 const loading = ref(true)
 
-const sites = ref<any[]>([])
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（切替可）
-const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）
+const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
 
-async function fetchSites() {
-  // 拠点の一覧を見られない協力会社は、自分の所属拠点で固定（切り替えの選択欄を出さない）
-  if (!canViewSites.value) return
-  const res = await api.get('/sites', { params: { per_page: 100, is_active: true } })
-  sites.value = res.data.data
-}
+const fetchDashboardGuard = latestGuard()
 
 async function fetchDashboard() {
+  const isLatest = fetchDashboardGuard()
   loading.value = true
   try {
     const params: any = {}
-    if (selectedSiteId.value) params.site_id = selectedSiteId.value
+    if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
     const res = await api.get('/dashboard', { params })
+    if (!isLatest()) return
     dashboard.value = res.data.data
     lastUpdated.value = formatTime(new Date())
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -51,11 +48,14 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
 }
 
-watch(selectedSiteId, fetchDashboard)
+// カードやリンクから一覧を開くとき、表示中の拠点と絞り込みを引き継ぐ（数字と、開いた一覧の件数を一致させる）
+function goList(path: string, filters: Record<string, string> = {}) {
+  router.push({ path, query: { ...filters, site_ids: siteIdsToQuery(selectedSiteIds.value) } })
+}
 
-onMounted(async () => {
-  await Promise.all([fetchDashboard(), fetchSites()])
-})
+watch(selectedSiteIds, fetchDashboard)
+
+onMounted(fetchDashboard)
 </script>
 
 <template>
@@ -69,19 +69,10 @@ onMounted(async () => {
           最終更新 {{ lastUpdated }}
         </span>
       </div>
-      <v-spacer />
-      <v-select
-        v-if="canViewSites"
-        v-model="selectedSiteId"
-        :items="sites"
-        item-title="name"
-        item-value="id"
-        label="拠点"
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 200px; max-width: 260px"
-      />
+    </div>
+
+    <div class="mb-4">
+      <SiteScopeTag v-model="selectedSiteIds" />
     </div>
 
     <v-progress-linear v-if="loading" indeterminate />
@@ -89,21 +80,21 @@ onMounted(async () => {
       <!-- 統計カード -->
       <v-row class="mb-4">
         <v-col cols="6" md="3">
-          <button class="pk-kpi pk-kpi--error" @click="router.push('/troubles?status=open')">
+          <button class="pk-kpi pk-kpi--error" @click="goList('/troubles', { status: 'open' })">
             <v-icon class="pk-kpi__icon" aria-hidden="true">mdi-alert-circle-outline</v-icon>
             <div class="pk-kpi__value pk-mono">{{ dashboard.troubles.open }}</div>
             <div class="pk-kpi__label">未対応トラブル</div>
           </button>
         </v-col>
         <v-col cols="6" md="3">
-          <button class="pk-kpi pk-kpi--warning" @click="router.push('/troubles?status=in_progress')">
+          <button class="pk-kpi pk-kpi--warning" @click="goList('/troubles', { status: 'in_progress' })">
             <v-icon class="pk-kpi__icon" aria-hidden="true">mdi-progress-wrench</v-icon>
             <div class="pk-kpi__value pk-mono">{{ dashboard.troubles.in_progress }}</div>
             <div class="pk-kpi__label">対応中トラブル</div>
           </button>
         </v-col>
         <v-col cols="6" md="3">
-          <button class="pk-kpi pk-kpi--info" @click="router.push('/inspections')">
+          <button class="pk-kpi pk-kpi--info" @click="goList('/inspections', { status: 'approval_requested' })">
             <v-icon class="pk-kpi__icon" aria-hidden="true">mdi-clipboard-check-outline</v-icon>
             <div class="pk-kpi__value pk-mono">{{ dashboard.inspections.pending_approval }}</div>
             <div class="pk-kpi__label">承認待ち点検</div>
@@ -138,7 +129,7 @@ onMounted(async () => {
                 :key="p.id"
                 :title="p.name"
                 :subtitle="`${p.equipment?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
-                @click="router.push('/inspection-plans?overdue=true')"
+                @click="goList('/inspection-plans', { overdue: 'true' })"
               >
                 <template #prepend>
                   <v-icon color="error" aria-hidden="true">mdi-clock-alert-outline</v-icon>
@@ -149,7 +140,7 @@ onMounted(async () => {
               <div class="text-grey text-center">期限超過の点検はありません</div>
             </v-card-text>
             <v-card-actions>
-              <v-btn @click="router.push('/inspection-plans')">点検計画へ</v-btn>
+              <v-btn @click="goList('/inspection-plans')">点検計画へ</v-btn>
             </v-card-actions>
           </v-card>
         </v-col>
@@ -222,7 +213,7 @@ onMounted(async () => {
               緊急トラブル: {{ dashboard.troubles.critical }}件
             </v-card-title>
             <v-card-actions>
-              <v-btn @click="router.push('/troubles')">トラブル一覧へ</v-btn>
+              <v-btn @click="goList('/troubles', { priority: 'critical', status: 'open,in_progress,resolved' })">トラブル一覧へ</v-btn>
             </v-card-actions>
           </v-card>
         </v-col>
@@ -236,11 +227,11 @@ onMounted(async () => {
             </v-card-title>
             <v-card-text>
               <div class="pk-stat-mini-row">
-                <button class="pk-stat-mini pk-stat-mini--warning" @click="router.push('/repairs')">
+                <button class="pk-stat-mini pk-stat-mini--warning" @click="goList('/repairs', { status: 'pending' })">
                   <div class="pk-stat-mini__value pk-mono">{{ dashboard.repairs.pending }}</div>
                   <div class="pk-stat-mini__label">修理待ち</div>
                 </button>
-                <button class="pk-stat-mini pk-stat-mini--info" @click="router.push('/repairs')">
+                <button class="pk-stat-mini pk-stat-mini--info" @click="goList('/repairs', { status: 'in_repair' })">
                   <div class="pk-stat-mini__value pk-mono">{{ dashboard.repairs.in_repair }}</div>
                   <div class="pk-stat-mini__label">修理中</div>
                 </button>

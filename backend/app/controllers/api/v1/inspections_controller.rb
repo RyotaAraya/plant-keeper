@@ -7,11 +7,21 @@ module Api
       def index
         authorize Inspection
         inspections = Inspection.includes(:user, :equipment, :instrument, :department, :checklist_template).all
-        inspections = inspections.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
+        # 拠点は設備の拠点で絞る（点検の部署は入力時に選ぶ値で、拠点の決め手にならない）
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          inspections = inspections.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
+        end
+        if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
+          inspections = inspections.where(equipment_id: equipment_ids)
+        end
         inspections = inspections.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
         inspections = inspections.where(department_id: params[:department_id]) if params[:department_id].present?
-        inspections = inspections.where(inspection_type: params[:inspection_type]) if params[:inspection_type].present?
-        inspections = inspections.where(status: params[:status]) if params[:status].present?
+        if (types = value_list_param(:inspection_types, :inspection_type))
+          inspections = inspections.where(inspection_type: types)
+        end
+        if (statuses = value_list_param(:statuses, :status))
+          inspections = inspections.where(status: statuses)
+        end
 
         inspections = inspections.order(inspected_at: :desc)
         total_count = inspections.count

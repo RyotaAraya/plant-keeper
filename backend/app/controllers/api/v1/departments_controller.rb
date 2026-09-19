@@ -25,7 +25,9 @@ module Api
       def index
         authorize Department
         departments = Department.includes(:site, :parent)
-        departments = departments.where(site_id: params[:site_id]) if params[:site_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          departments = departments.where(site_id: site_ids)
+        end
         departments = departments.where(department_type: params[:department_type]) if params[:department_type].present?
         departments = departments.where(level: params[:level]) if params[:level].present?
         departments = departments.where(parent_id: params[:parent_id]) if params[:parent_id].present?

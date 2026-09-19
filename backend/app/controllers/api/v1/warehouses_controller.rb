@@ -5,7 +5,9 @@ module Api
       def index
         authorize Warehouse
         warehouses = Warehouse.includes(:site).order(:name).all
-        warehouses = warehouses.where(site_id: params[:site_id]) if params[:site_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          warehouses = warehouses.where(site_id: site_ids)
+        end
         render json: {
           data: warehouses.as_json(include: { site: { only: [ :id, :name ] } })
         }

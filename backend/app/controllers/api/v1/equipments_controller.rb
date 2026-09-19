@@ -7,7 +7,9 @@ module Api
       def index
         authorize Equipment
         equipments = Equipment.includes(:site).all
-        equipments = equipments.where(site_id: params[:site_id]) if params[:site_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          equipments = equipments.where(site_id: site_ids)
+        end
 
         equipments = equipments.order(:name)
         total_count = equipments.count

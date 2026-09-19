@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const material = ref<any>(null)
 const loading = ref(true)
 
@@ -89,18 +91,32 @@ onMounted(fetchMaterial)
       </v-card>
 
       <v-row>
-        <v-col cols="12" md="6">
+        <!-- 在庫は自社のみ。見られない人には項目自体が返らない -->
+        <v-col v-if="material.stock_summary" cols="12" md="6">
           <h2 class="text-h6 mb-3">在庫状況</h2>
           <v-card variant="outlined">
             <v-card-text>
-              <div class="text-h4 text-center mb-2">{{ material.total_stock }}</div>
-              <div class="text-caption text-center text-grey mb-3">合計在庫数</div>
-              <v-table v-if="material.stock_summary?.length" density="compact">
-                <thead><tr><th>倉庫</th><th width="80" class="text-right">数量</th></tr></thead>
+              <div class="text-h4 text-center mb-2 pk-mono">{{ material.usable_stock }}</div>
+              <div class="text-caption text-center text-grey mb-3">
+                利用可の在庫数（全拠点）
+                <template v-if="material.total_stock !== material.usable_stock">／ 使用中・修理中などを含む合計 {{ material.total_stock }}</template>
+              </div>
+              <v-table v-if="material.stock_summary.length" density="compact">
+                <thead>
+                  <tr>
+                    <th>拠点・倉庫</th>
+                    <th width="80" class="text-right">利用可</th>
+                    <th width="80" class="text-right">合計</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr v-for="s in material.stock_summary" :key="s.warehouse">
-                    <td>{{ s.warehouse }}</td>
-                    <td class="text-right">{{ s.quantity }}</td>
+                  <tr v-for="s in material.stock_summary" :key="`${s.site_id}-${s.warehouse}`">
+                    <td>
+                      {{ s.site_name }} {{ s.warehouse }}
+                      <span v-if="s.site_id === authStore.user?.site_id" class="pk-site-tag ml-1">所属拠点</span>
+                    </td>
+                    <td class="text-right pk-mono">{{ s.usable_quantity }}</td>
+                    <td class="text-right pk-mono">{{ s.quantity }}</td>
                   </tr>
                 </tbody>
               </v-table>

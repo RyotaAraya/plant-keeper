@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
-const { canManageMaterial } = usePermissions()
+const { canManageMaterial, canViewStocks } = usePermissions()
+const authStore = useAuthStore()
 const materials = ref<any[]>([])
 const manufacturers = ref<any[]>([])
 const loading = ref(false)
@@ -19,6 +22,7 @@ const filters = ref({
   q: '',
   category: null as string | null,
   manufacturer_id: null as number | null,
+  stock_availability: null as string | null,
 })
 
 const form = ref({
@@ -37,14 +41,45 @@ const form = ref({
   reorder_quantity: null as number | null,
 })
 
-const headers = [
+// 在庫の列は、在庫を見られる人（自社）だけ。資材マスタは全拠点共通なので、自拠点になければ他拠点の在庫が同じ行で分かる
+const headers = computed(() => [
   { title: '型番', key: 'part_number', width: '150px' },
   { title: '資材名', key: 'name' },
   { title: 'カテゴリ', key: 'category', width: '100px' },
   { title: 'メーカー', key: 'manufacturer.name', width: '140px' },
+  ...(canViewStocks.value
+    ? [
+        { title: '自拠点の在庫', key: 'own_stock', width: '120px', align: 'end' as const },
+        { title: '他拠点の在庫', key: 'other_stock', width: '260px' },
+      ]
+    : []),
   { title: '入手性', key: 'availability', width: '90px' },
   { title: '危険物', key: 'is_hazardous', width: '70px' },
+])
+
+const stockAvailabilityOptions = [
+  { title: '自拠点に在庫あり', value: 'own' },
+  { title: '他拠点にだけ在庫あり', value: 'others_only' },
+  { title: 'どこにも在庫なし', value: 'none' },
 ]
+
+// 並べ替えできるよう、自拠点・他拠点の在庫数を行に持たせる。他拠点は所属拠点以外の合計（拠点別の内訳は stock_by_site）
+const rows = computed(() =>
+  materials.value.map((m: any) => {
+    const bySite: { site_id: number; site_name: string; quantity: number }[] = m.stock_by_site ?? []
+    const others = bySite.filter((s) => s.site_id !== authStore.user?.site_id)
+    return {
+      ...m,
+      own_stock: bySite.filter((s) => s.site_id === authStore.user?.site_id).reduce((sum, s) => sum + s.quantity, 0),
+      other_stock: others.reduce((sum, s) => sum + s.quantity, 0),
+      other_sites: others,
+    }
+  }),
+)
+
+const MAX_OTHER_SITES_SHOWN = 3
+// 「根岸製油所」→「根岸」。列の幅に収めるため、拠点名の「製油所」は省く
+const shortSiteName = (name: string) => name.replace(/製油所$/, '')
 
 const categoryLabel: Record<string, string> = {
   instrument: '計装', valve: 'バルブ', electrical: '電気', piping: '配管'
@@ -68,18 +103,23 @@ const reorderOptions = [
   { title: '使用時発注', value: 'use_based' },
 ]
 
+const fetchMaterialsGuard = latestGuard()
+
 async function fetchMaterials() {
+  const isLatest = fetchMaterialsGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.q) params.q = filters.value.q
     if (filters.value.category) params.category = filters.value.category
     if (filters.value.manufacturer_id) params.manufacturer_id = filters.value.manufacturer_id
+    if (filters.value.stock_availability) params.stock_availability = filters.value.stock_availability
     const res = await api.get('/materials', { params })
+    if (!isLatest()) return
     materials.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -185,11 +225,23 @@ watch(filters, fetchMaterials, { deep: true })
         hide-details
         style="max-width: 180px"
       />
+      <v-select
+        v-if="canViewStocks"
+        v-model="filters.stock_availability"
+        :items="stockAvailabilityOptions"
+        item-title="title"
+        item-value="value"
+        label="在庫"
+        clearable
+        density="compact"
+        hide-details
+        style="max-width: 290px"
+      />
     </div>
 
     <v-data-table
       :headers="headers"
-      :items="materials"
+      :items="rows"
       :loading="loading"
       hover
       class="cursor-pointer"
@@ -200,6 +252,26 @@ watch(filters, fetchMaterials, { deep: true })
       </template>
       <template #item.availability="{ item }">
         {{ availabilityLabel[item.availability] || item.availability }}
+      </template>
+      <template #item.own_stock="{ item }">
+        <span class="pk-mono" :class="item.own_stock === 0 ? 'text-medium-emphasis' : 'font-weight-bold'">{{ item.own_stock }}</span>
+      </template>
+      <template #item.other_stock="{ item }">
+        <span v-if="!item.other_sites.length" class="text-medium-emphasis">—</span>
+        <span v-else class="d-inline-flex flex-wrap ga-1 align-center">
+          <v-chip
+            v-for="site in item.other_sites.slice(0, MAX_OTHER_SITES_SHOWN)"
+            :key="site.site_id"
+            size="small"
+            :color="item.own_stock === 0 ? 'accent' : undefined"
+            :variant="item.own_stock === 0 ? 'tonal' : 'outlined'"
+          >
+            {{ shortSiteName(site.site_name) }} <span class="pk-mono ml-1">{{ site.quantity }}</span>
+          </v-chip>
+          <span v-if="item.other_sites.length > MAX_OTHER_SITES_SHOWN" class="text-caption text-medium-emphasis">
+            ほか{{ item.other_sites.length - MAX_OTHER_SITES_SHOWN }}拠点
+          </span>
+        </span>
       </template>
       <template #item.is_hazardous="{ item }">
         <v-icon v-if="item.is_hazardous" color="error" size="small">mdi-alert</v-icon>

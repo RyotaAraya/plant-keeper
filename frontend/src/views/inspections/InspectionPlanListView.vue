@@ -2,23 +2,32 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
+import { siteIdsFromQuery } from '@/utils/listQuery'
+import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
 const { canManageInspectionPlan } = usePermissions()
+const authStore = useAuthStore()
 
 const plans = ref<InspectionPlan[]>([])
-const equipments = ref<any[]>([])
+const { equipments, load: loadSiteOptions } = useSiteScopeOptions({ withDepartments: false })
 const templates = ref<any[]>([])
 const instruments = ref<any[]>([])
 const loading = ref(false)
 
+// 通常業務では自拠点の計画だけ見ればよいため、自分の所属拠点を初期値にする
 const filters = ref({
-  equipment_id: null as number | null,
+  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  equipment_ids: [] as number[],
   overdue: route.query.overdue === 'true',
 })
 
@@ -52,26 +61,38 @@ function dueLabel(plan: InspectionPlan) {
   return `${plan.next_due_on}（あと${plan.days_until_due}日）`
 }
 
+const fetchPlansGuard = latestGuard()
+
 async function fetchPlans() {
+  const isLatest = fetchPlansGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
-    if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.overdue) params.overdue = 'true'
     const res = await api.get('/inspection_plans', { params })
+    if (!isLatest()) return
     plans.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
 async function fetchMasters() {
-  const [eqRes, tmplRes] = await Promise.all([
-    api.get('/equipments', { params: { per_page: 100 } }),
+  const [, tmplRes] = await Promise.all([
+    loadSiteOptions(filters.value.site_ids),
     api.get('/checklist_templates'),
   ])
-  equipments.value = eqRes.data.data
   templates.value = tmplRes.data.data
+}
+
+// 拠点を変えたら、表示する拠点にない設備の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+function changeSite(siteIds: number[]) {
+  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
+  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
+  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment }
+  loadSiteOptions(siteIds)
 }
 
 function startInspection(plan: InspectionPlan) {
@@ -154,17 +175,9 @@ watch(filters, fetchPlans, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="filters.equipment_id"
-        :items="equipments"
-        item-title="name"
-        item-value="id"
-        label="設備"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 220px"
-      />
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
     </div>
 
