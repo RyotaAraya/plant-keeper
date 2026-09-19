@@ -6,7 +6,7 @@ pre-push:
       run: docker-compose exec -T frontend npx eslint src/ --fix
     typecheck:
       glob: "frontend/**/*.{vue,ts}"
-      run: docker-compose exec -T frontend npx vue-tsc --noEmit
+      run: docker-compose exec -T frontend npx vue-tsc -b
     rubocop:
       glob: "backend/**/*.rb"
       run: docker-compose exec -T backend bundle exec rubocop -A
