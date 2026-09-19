@@ -58,6 +58,27 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 - コンテナの `DATABASE_URL` は開発DBを指しているため、必ず上記のように `manage_test` を指定して実行する。`*_test` 以外のDBに接続している場合は `test/test_helper.rb` が中断する（開発DBの誤初期化防止）
 - 認証まわりなど重要な修正では、修正を一時的に戻してテストが失敗することを確認する（devise 5.0.4 のログアウト500はこの方法でテストが検出できることを確認済み）
 
+## E2Eテスト（Playwright）
+
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、点検で不具合報告 → トラブル自動登録）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+
+```bash
+# 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
+cd e2e && npm install && npx playwright install chromium
+
+# ローカル（http://localhost:5173）に対して実行
+npx playwright test
+
+# stgに対して実行（本番のデモ環境は設定で拒否される）
+E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
+```
+
+- シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実際にデータを追加する（ローカルは `db:seed:replant` か管理者の `admin/reseed` で戻せる）
+- **ログアウトするテストは専用アカウント（`ACCOUNTS.logout`）を使う。** JTIMatcher ではログアウトでそのユーザーの全セッションが失効するため、他のテストと共有すると並列実行時に巻き込まれる
+- ローカルの `vite dev` は、再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがある（`retries: 1` で吸収）。CI は `vite preview` のため影響しない
+- Vuetify の `v-select` は入力要素が覆われているため、`selectFirstOption()`（入力欄 `.v-field` を操作）を使う
+- **既知の不具合（`test.fixme` で記録）**: ログインAPI・`current_user` が `company_id` しか返さず、フロントが読む `user.company` が常に未定義。そのため `isOwnerCompany` が常に偽になり、在庫管理メニューが表示されず、ルートガード（`requiresOwner` / `requiresOwnerManager`）も自社ユーザに効かない。ヘッダーの会社名も空になる
+
 ## アクセスURL（開発用）
 
 - フロントエンド: http://localhost:5173
@@ -222,7 +243,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 - GitHub公開リポジトリ。ポートフォリオ関連の文言をコードやドキュメントに書かない
 - 日本語でコミュニケーション
-- テストはバックエンドのみ（Minitest、詳細は下記「テスト」）。フロントの単体テスト・E2Eは未導入
+- テストはバックエンド（Minitest、下記「テスト」）とE2E（Playwright、下記「E2Eテスト」）。フロントの単体テストは未導入
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
 - pre-push フック（lefthook）: ESLint → vue-tsc → RuboCop が直列実行（`docker-compose exec -T` 経由）
