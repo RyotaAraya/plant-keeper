@@ -18,6 +18,8 @@ module Api
         logs = AuditLog.includes(:user, :site).all
         # 期間は日本時間の日付（YYYY-MM-DD）で、開始日の0時から終了日の終わりまで
         from = parse_date_param(:from)
+        return if performed?
+
         to = parse_date_param(:to)
         return if performed?
 

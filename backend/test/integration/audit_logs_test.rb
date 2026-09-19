@@ -93,9 +93,28 @@ class AuditLogsTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, late_log.id
   end
 
-  test "期間に日付でない値を渡すと422になる" do
+  test "期間に日付でない値を渡すと422になる（開始日・終了日の両方が不正でも500にならない）" do
     get "/api/v1/audit_logs", params: { from: "先月" }, headers: auth_headers_for(@admin)
-
     assert_response :unprocessable_entity
+
+    get "/api/v1/audit_logs", params: { to: "来月" }, headers: auth_headers_for(@admin)
+    assert_response :unprocessable_entity
+
+    get "/api/v1/audit_logs", params: { from: "先月", to: "来月" }, headers: auth_headers_for(@admin)
+    assert_response :unprocessable_entity
+  end
+
+  test "部署・設備担当・チェックリストの記録も、その拠点で絞り込める" do
+    department = create_department(site: @equipment.site)
+    log = AuditLog.create!(user: @admin, action: "create", auditable: department, changes_json: {}, performed_at: Time.current)
+    assert_equal @equipment.site_id, log.site_id
+
+    assignment = EquipmentAssignment.create!(equipment: @equipment, user: @admin, role: "primary", started_on: Date.current)
+    assignment_log = AuditLog.create!(user: @admin, action: "create", auditable: assignment, changes_json: {}, performed_at: Time.current)
+    assert_equal @equipment.site_id, assignment_log.site_id
+
+    template = ChecklistTemplate.create!(name: "日常点検", department: department, inspection_type: "routine")
+    template_log = AuditLog.create!(user: @admin, action: "create", auditable: template, changes_json: {}, performed_at: Time.current)
+    assert_equal @equipment.site_id, template_log.site_id
   end
 end

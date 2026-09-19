@@ -269,7 +269,6 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - **修理**: 修理に出せるのは在庫あり・使用中で数量1以上の在庫のみ。修理は1個ずつで、数量2以上のロットからは1個を別行に切り出して修理の対象にする（残りは使える状態のまま）。修理の状態変更と在庫の状態変更は同一トランザクション（修理の行を `lock!`）。修理は依頼中でしか新規作成できず、更新で修理対象の在庫（`stock_id`）は変えられない
 
 ### 簡易実装方針
-- 承認フロー: UIのみ（ボタンでステータス変更、ロジックなし）
 - 価格履歴: orders テーブルで兼用
 - 使用資材記録: テキストカラム（trouble_responses.used_materials 等）
 - 監査ログ出力: CSV のみ（画面の「CSV出力」ボタン。APIは追加せず、フロントが条件に合う全件をページごとに取得して `utils/csv.ts` で組み立てる。BOM付きUTF-8、数式として解釈される先頭文字は「'」でエスケープ）
@@ -285,7 +284,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
 - 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
-- シードファイル: `db/seeds/` 配下に 01〜13 の番号付きファイルで分割
+- シードファイル: `db/seeds/` 配下に 01〜15 の番号付きファイルで分割
 - 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 
 ### フロントエンドの規約

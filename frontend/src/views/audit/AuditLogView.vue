@@ -50,11 +50,13 @@ const actionOptions = Object.entries(actionLabel).map(([value, title]) => ({ tit
 
 // 記録される対象の種類。画面には日本語の呼び名だけを出す（クラス名は出さない）
 const typeLabel: Record<string, string> = {
-  Site: '拠点', Equipment: '設備', Instrument: '計器', InspectionPlan: '点検計画',
-  Inspection: '点検', InspectionItem: '点検項目', Trouble: 'トラブル', TroubleResponse: 'トラブル対応',
+  Site: '拠点', Department: '部署', DepartmentHistory: '部署の所属', User: 'ユーザ',
+  Equipment: '設備', EquipmentAssignment: '設備担当', Instrument: '計器',
+  InspectionPlan: '点検計画', Inspection: '点検', InspectionItem: '点検項目', ChecklistTemplate: 'チェックリスト',
+  Trouble: 'トラブル', TroubleResponse: 'トラブル対応',
   ScheduledMaintenance: '定期整備', MaintenanceAssignment: '整備担当',
   Material: '資材', Manufacturer: 'メーカー', Warehouse: '倉庫', Stock: '在庫', StockTransaction: '在庫操作',
-  Order: '発注', Repair: '修理', Service: '流体', LineClass: 'ラインクラス', User: 'ユーザ',
+  Order: '発注', Repair: '修理', Service: '流体', LineClass: 'ラインクラス',
 }
 const typeOptions = Object.entries(typeLabel).map(([value, title]) => ({ title, value }))
 
