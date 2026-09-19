@@ -42,6 +42,22 @@ docker-compose exec backend bundle exec rubocop -A
 cd frontend && npx vite build
 ```
 
+## テスト（バックエンド / Minitest）
+
+`backend/test/` に、認証・権限（Pundit）・点検→トラブル自動作成・資材の型番検索・モデル検証のテストがある。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作る。CI（`backend_test`）でも実行される。
+
+```bash
+# 初回・スキーマ変更時: テスト用DBを作り直す（db:prepare は新規DBにシードを投入するので使わない）
+T=postgres://manage:manage_password@db:5432/manage_test
+docker-compose exec -e DATABASE_URL=$T -e RAILS_ENV=test backend bash -c 'bin/rails db:drop db:create db:schema:load'
+
+# 実行
+docker-compose exec -e DATABASE_URL=$T backend bin/rails test
+```
+
+- コンテナの `DATABASE_URL` は開発DBを指しているため、必ず上記のように `manage_test` を指定して実行する。`*_test` 以外のDBに接続している場合は `test/test_helper.rb` が中断する（開発DBの誤初期化防止）
+- 認証まわりなど重要な修正では、修正を一時的に戻してテストが失敗することを確認する（devise 5.0.4 のログアウト500はこの方法でテストが検出できることを確認済み）
+
 ## アクセスURL（開発用）
 
 - フロントエンド: http://localhost:5173
@@ -65,7 +81,7 @@ cd frontend && npx vite build
   - patch: 公開3日後、CI成功で `develop` へ自動マージ（`main` へのリリースは手動PR）
   - minor: PR作成のみ（手動マージ）。major: Dependency Dashboard（Issue）で承認してからPR作成
   - 更新は stg で動作確認してから `main` へ
-- 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。テストがないため、CI（lint・build・brakeman）は通っても認証の破損は検出できない
+- 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。バックエンドのテスト（`test/integration/authentication_test.rb`）がこれを検証するが、フロント経由の動作は別途 stg で確認する
   - 実例: devise 5.0.4 で `respond_to_on_destroy` がキーワード引数付きで呼ばれるようになり、`SessionsController` のオーバーライドが ArgumentError → ログアウトが500になりJWTが失効しなかった（`respond_to_on_destroy(**)` で修正）
 - CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行
 
@@ -206,7 +222,7 @@ cd frontend && npx vite build
 
 - GitHub公開リポジトリ。ポートフォリオ関連の文言をコードやドキュメントに書かない
 - 日本語でコミュニケーション
-- テストスイートなし（RSpec/Minitest/Vitest いずれも未導入）
+- テストはバックエンドのみ（Minitest、詳細は下記「テスト」）。フロントの単体テスト・E2Eは未導入
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
 - pre-push フック（lefthook）: ESLint → vue-tsc → RuboCop が直列実行（`docker-compose exec -T` 経由）

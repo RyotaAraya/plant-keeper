@@ -40,6 +40,43 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+  backend_test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/plant_keeper_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: backend
+
+      # db:prepare は新規DBにシードを投入してしまうため使わない
+      - name: Prepare test database
+        run: bin/rails db:create db:schema:load
+
+      - name: Run tests
+        run: bin/rails test
+
   frontend_lint_and_build:
     runs-on: ubuntu-latest
     defaults:
