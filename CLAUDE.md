@@ -204,6 +204,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - `policy_scope` を使っているのは users のみ（一覧の許可を緩めても、協力会社には自社メンバーだけを返す多重防御）。それ以外の一覧は拠点・会社での**行の絞り込み**をしていない（APIでは他拠点のデータも取得できる。画面の拠点は初期値と選択欄の有無で絞っているだけ）
   - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
   - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
+  - 資材の拠点別の在庫も同じ扱い。資材一覧の `stock_by_site`（拠点ごとの使える在庫。自拠点が先頭）と、詳細の `stock_summary` / `total_stock` / `usable_stock`（倉庫ごと・拠点付き）は、在庫を見られる人（自社）にだけ返し、協力会社にはキー自体を含めない。「使える在庫」は利用可（`available`）で数量1以上のもの（使用中・修理中・廃棄済みは数えない）。一覧の `stock_availability=own|others_only|none`（自拠点にあり／他拠点にだけあり／どこにもなし）も在庫を見られる人にだけ効く。資材マスタ自体は全拠点共通で、拠点で絞らない（自拠点になければ他拠点にあるかを、同じ行で探せるのが目的）
 - 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
 - レスポンス: `{ data: ... }` 形式
 

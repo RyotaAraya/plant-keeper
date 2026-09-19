@@ -86,6 +86,13 @@ stock_data = [
   # 仙台第2倉庫
   { material: "CVV-S-1.25",  wh: "仙台第2倉庫", qty: 150, purchased: "2025-06-01", status: "available" },
   { material: "TB-20A",      wh: "仙台第2倉庫", qty: 15,  purchased: "2025-05-01", status: "available" },
+  # 特殊品・特注品（一部の拠点にだけ保管。川崎にはないので、拠点をまたいで探す場面になる）
+  { material: "3301HA",      wh: "堺第1倉庫",  qty: 1,   purchased: "2025-05-01", status: "available", serial: "3301-2025-SK01" },
+  { material: "3301HA",      wh: "和歌山倉庫", qty: 1,   purchased: "2025-06-01", status: "available", serial: "3301-2025-WK01" },
+  { material: "SL-40",       wh: "和歌山倉庫", qty: 2,   purchased: "2024-11-01", status: "available", notes: "他拠点の設定圧力で製作した予備品。設定圧力の再調整が必要。" },
+  { material: "DY080",       wh: "根岸倉庫",  qty: 1,   purchased: "2025-02-01", status: "available", serial: "DY080-2025-NG01" },
+  { material: "FMR60",       wh: "仙台倉庫",  qty: 1,   purchased: "2025-03-01", status: "available", serial: "FMR60-2025-SD01" },
+  { material: "3144P",       wh: "堺第1倉庫",  qty: 2,   purchased: "2025-04-01", status: "available", serial: "3144P-2025-SK01" },
   # 修理待ち
   { material: "EJA110E",     wh: "仙台倉庫",  qty: 1,   purchased: "2024-06-01", status: "under_repair", serial: "EJA-2024-SD01" }
 ]
