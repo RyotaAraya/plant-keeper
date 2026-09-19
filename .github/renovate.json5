@@ -1,0 +1,31 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:best-practices"],
+
+  // 更新PRは develop 向け（設定ファイル自体は既定ブランチ main から読まれる）
+  baseBranchPatterns: ["develop"],
+
+  timezone: "Asia/Tokyo",
+  schedule: ["before 9am on monday"],
+  labels: ["dependencies"],
+  semanticCommits: "enabled",
+  semanticCommitType: "chore",
+  dependencyDashboard: true,
+  prConcurrentLimit: 5,
+  rebaseWhen: "conflicted",
+
+  packageRules: [
+    {
+      description: "メジャー更新はDependency Dashboardで承認してからPRを作成する（例: vuetify 4, rails 8.1）",
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+    },
+    {
+      description: "patchは公開から3日経過し、CIが成功したらdevelopへ自動マージする（mainへのリリースは手動PR）",
+      matchUpdateTypes: ["patch"],
+      automerge: true,
+      platformAutomerge: false,
+      minimumReleaseAge: "3 days",
+    },
+  ],
+}

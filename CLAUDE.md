@@ -61,7 +61,10 @@ cd frontend && npx vite build
 ### ブランチ運用
 - `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
 - `main` に push/マージすると即本番に自動デプロイされる（GitHub連携によるauto-deploy）。直接 push しない
-- dependabot の PR は `develop` 向け（`.github/dependabot.yml` の `target-branch`）。メジャー更新は stg で動作確認してから `main` へ
+- 依存関係の更新は Renovate（`.github/renovate.json5`）。更新PRは `develop` 向け。設定ファイル自体は既定ブランチ `main` から読まれる
+  - patch: 公開3日後、CI成功で `develop` へ自動マージ（`main` へのリリースは手動PR）
+  - minor: PR作成のみ（手動マージ）。major: Dependency Dashboard（Issue）で承認してからPR作成
+  - 更新は stg で動作確認してから `main` へ
 - CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行
 
 ### 本番
