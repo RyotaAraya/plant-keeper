@@ -65,6 +65,8 @@ cd frontend && npx vite build
   - patch: 公開3日後、CI成功で `develop` へ自動マージ（`main` へのリリースは手動PR）
   - minor: PR作成のみ（手動マージ）。major: Dependency Dashboard（Issue）で承認してからPR作成
   - 更新は stg で動作確認してから `main` へ
+- 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。テストがないため、CI（lint・build・brakeman）は通っても認証の破損は検出できない
+  - 実例: devise 5.0.4 で `respond_to_on_destroy` がキーワード引数付きで呼ばれるようになり、`SessionsController` のオーバーライドが ArgumentError → ログアウトが500になりJWTが失効しなかった（`respond_to_on_destroy(**)` で修正）
 - CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行
 
 ### 本番
