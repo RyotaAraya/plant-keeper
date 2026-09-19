@@ -23,8 +23,7 @@ module Api
         materials = materials.order(:name)
         total_count = materials.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         materials = materials.limit(per_page).offset((page - 1) * per_page)
 
         render json: {

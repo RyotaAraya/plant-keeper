@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -220,7 +221,7 @@ async function saveEdit() {
   try {
     const payload: any = { user: { ...editForm.value } }
     if (!editForm.value.is_active && user.value.is_active) {
-      payload.user.deactivated_on = new Date().toISOString().slice(0, 10)
+      payload.user.deactivated_on = todayForInput()
     }
     if (editForm.value.is_active && !user.value.is_active) {
       payload.user.deactivated_on = null

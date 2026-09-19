@@ -11,7 +11,16 @@ module Api
 
       rescue_from Pundit::NotAuthorizedError, with: :pundit_unauthorized
 
+      MAX_PER_PAGE = 1000
+
       private
+
+      # page は1以上、per_page は1〜MAX_PER_PAGE に丸める（0や負数で500にならず、巨大な値で全件を一度に返さない）
+      def pagination_params(default_per_page: 25)
+        page = [ params[:page].to_i, 1 ].max
+        per_page = params[:per_page].present? ? params[:per_page].to_i.clamp(1, MAX_PER_PAGE) : default_per_page
+        [ page, per_page ]
+      end
 
       def pundit_unauthorized
         render json: { error: "この操作を実行する権限がありません" }, status: :forbidden

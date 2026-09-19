@@ -4,8 +4,8 @@ import { test as base, expect, type Page } from '@playwright/test'
 export const ACCOUNTS = {
   admin: { email: 'admin@example.com', password: 'password' },
   member: { email: 'sato@example.com', password: 'password' },
-  // ログアウトするテスト専用。ログアウトするとそのユーザーの全セッションが失効する（JTIMatcher）ため、
-  // 他のテストと共有すると並列実行時に巻き込んでしまう
+  // ログアウトするテスト専用（ログアウトの副作用を他のテストから切り離しておく）。
+  // トークンは端末（ログイン）ごとに失効するため、他のテストと共有しても巻き込みはしない
   logout: { email: 'suzuki@example.com', password: 'password' },
 }
 

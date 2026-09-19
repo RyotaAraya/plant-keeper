@@ -70,7 +70,8 @@ async function fetchRepairs() {
 
 async function fetchStocks() {
   const res = await api.get('/stocks', { params: { per_page: 200 } })
-  stocks.value = res.data.data.filter((s: any) => !['under_repair', 'disposed'].includes(s.status))
+  // 修理を依頼できるのは、在庫あり・使用中で数量が1以上のもの（バックエンドの検証と同じ）
+  stocks.value = res.data.data.filter((s: any) => ['available', 'in_use'].includes(s.status) && s.quantity >= 1)
 }
 
 function openDialog() {

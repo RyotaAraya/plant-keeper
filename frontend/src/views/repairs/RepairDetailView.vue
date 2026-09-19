@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -88,8 +89,8 @@ async function saveEdit() {
 
 async function updateStatus(status: string) {
   const payload: any = { repair: { status } }
-  if (status === 'shipped') payload.repair.shipped_on = new Date().toISOString().slice(0, 10)
-  if (status === 'completed') payload.repair.completed_on = new Date().toISOString().slice(0, 10)
+  if (status === 'shipped') payload.repair.shipped_on = todayForInput()
+  if (status === 'completed') payload.repair.completed_on = todayForInput()
   await api.patch(`/repairs/${route.params.id}`, payload)
   await fetchRepair()
 }

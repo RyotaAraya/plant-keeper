@@ -1,4 +1,7 @@
 class Inspection < ApplicationRecord
+  include StatusTransitions
+  include InstrumentBelongsToEquipment
+
   belongs_to :checklist_template, optional: true
   belongs_to :user
   belongs_to :equipment
@@ -14,7 +17,6 @@ class Inspection < ApplicationRecord
   enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
-  validate :status_transition_allowed, on: :update
   validate :plan_matches_equipment
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
@@ -32,19 +34,12 @@ class Inspection < ApplicationRecord
   private
 
   def advance_inspection_plan
-    inspection_plan.complete!(inspected_at.in_time_zone(InspectionPlan::PLANT_TIME_ZONE).to_date)
+    inspection_plan.complete!(inspected_at.to_date)
   end
 
   def plan_matches_equipment
     return if inspection_plan.nil? || inspection_plan.equipment_id == equipment_id
 
     errors.add(:inspection_plan, "は選択した設備の点検計画ではありません")
-  end
-
-  def status_transition_allowed
-    return unless status_changed?
-    return if STATUS_TRANSITIONS.fetch(status_was, []).include?(status)
-
-    errors.add(:status, "「#{status_was}」から「#{status}」には変更できません")
   end
 end

@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import type { InspectionPlan } from '@/types/models'
+import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,7 +96,7 @@ const form = ref({
   checklist_template_id: null as number | null,
   inspection_type: 'periodic',
   interval_days: 30,
-  next_due_on: new Date().toISOString().slice(0, 10),
+  next_due_on: todayForInput(),
 })
 
 async function onEquipmentChange() {
@@ -118,7 +119,7 @@ function openDialog() {
     checklist_template_id: null,
     inspection_type: 'periodic',
     interval_days: 30,
-    next_due_on: new Date().toISOString().slice(0, 10),
+    next_due_on: todayForInput(),
   }
   dialog.value = true
 }

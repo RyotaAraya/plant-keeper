@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,7 +25,7 @@ const responseForm = ref({
   response_type: 'investigation',
   description: '',
   used_materials: '',
-  responded_at: new Date().toISOString().slice(0, 16),
+  responded_at: nowForInput(),
 })
 const responseErrors = ref<string[]>([])
 
@@ -50,6 +51,18 @@ const statusOptions = [
   { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]
+// バックエンド（Trouble::STATUS_TRANSITIONS）と同じ。現在のステータスと、そこから進められるものだけを選択肢にする
+const allowedNext: Record<string, string[]> = {
+  open: ['in_progress', 'resolved', 'closed'],
+  in_progress: ['open', 'resolved', 'closed'],
+  resolved: ['in_progress', 'closed'],
+  closed: [],
+}
+const selectableStatusOptions = computed(() =>
+  statusOptions.filter(
+    (o) => o.value === trouble.value?.status || (allowedNext[trouble.value?.status] ?? []).includes(o.value)
+  )
+)
 const priorityOptions = [
   { title: '低', value: 'low' },
   { title: '中', value: 'medium' },
@@ -94,9 +107,6 @@ async function saveEdit() {
   editErrors.value = []
   try {
     const payload: any = { trouble: { ...editForm.value } }
-    if (editForm.value.status === 'resolved' || editForm.value.status === 'closed') {
-      payload.trouble.resolved_at = new Date().toISOString()
-    }
     await api.patch(`/troubles/${route.params.id}`, payload)
     editDialog.value = false
     await fetchTrouble()
@@ -110,7 +120,7 @@ function openResponse() {
     response_type: 'investigation',
     description: '',
     used_materials: '',
-    responded_at: new Date().toISOString().slice(0, 16),
+    responded_at: nowForInput(),
   }
   responseErrors.value = []
   responseDialog.value = true
@@ -253,7 +263,7 @@ onMounted(fetchTrouble)
             <v-alert v-if="editErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in editErrors" :key="err">{{ err }}</div>
             </v-alert>
-            <v-select v-model="editForm.status" :items="statusOptions" item-title="title" item-value="value" label="ステータス" class="mb-2" />
+            <v-select v-model="editForm.status" :items="selectableStatusOptions" item-title="title" item-value="value" label="ステータス" class="mb-2" />
             <v-select v-model="editForm.priority" :items="priorityOptions" item-title="title" item-value="value" label="優先度" class="mb-2" />
             <v-autocomplete
               v-model="editForm.assigned_to_id"

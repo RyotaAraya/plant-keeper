@@ -13,8 +13,7 @@ module Api
         maintenances = maintenances.order(scheduled_date: :desc)
         total_count = maintenances.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         maintenances = maintenances.limit(per_page).offset((page - 1) * per_page)
 
         render json: {

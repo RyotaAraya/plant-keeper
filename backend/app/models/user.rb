@@ -1,10 +1,8 @@
 class User < ApplicationRecord
-  include Devise::JWT::RevocationStrategies::JTIMatcher
-
   # 自己登録（registerable）とパスワード再設定（recoverable）は使わない。ユーザ作成は管理者の操作に限り、
   # 公開エンドポイントを増やさない（メール送信も未設定のため、再設定は動かない）
   devise :database_authenticatable, :validatable,
-         :jwt_authenticatable, jwt_revocation_strategy: self
+         :jwt_authenticatable, jwt_revocation_strategy: JwtDenylist
 
   belongs_to :site, optional: true
   belongs_to :department, optional: true

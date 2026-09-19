@@ -2,9 +2,11 @@
 import { ref, onMounted, watch } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { todayForInput } from '@/utils/datetime'
 
 const orders = ref<any[]>([])
 const materials = ref<any[]>([])
+const warehouses = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 const dialog = ref(false)
@@ -21,7 +23,7 @@ const form = ref({
   unit_price: null as number | null,
   supplier_name: '',
   supplier_link: '',
-  ordered_on: new Date().toISOString().slice(0, 10),
+  ordered_on: todayForInput(),
   notes: '',
 })
 
@@ -84,7 +86,7 @@ function openDialog(item?: any) {
     form.value = {
       material_id: null, quantity: 1, unit_price: null,
       supplier_name: '', supplier_link: '',
-      ordered_on: new Date().toISOString().slice(0, 10), notes: '',
+      ordered_on: todayForInput(), notes: '',
     }
   }
   errors.value = []
@@ -107,10 +109,37 @@ async function save() {
 }
 
 async function updateStatus(id: number, status: string) {
-  const payload: any = { order: { status } }
-  if (status === 'received') payload.order.received_on = new Date().toISOString().slice(0, 10)
-  await api.patch(`/orders/${id}`, payload)
+  await api.patch(`/orders/${id}`, { order: { status } })
   await fetchOrders()
+}
+
+// 受領すると在庫に入庫されるため、入庫先の倉庫を選ぶ
+const receiveDialog = ref(false)
+const receiveTarget = ref<any>(null)
+const receiveForm = ref({ warehouse_id: null as number | null, received_on: todayForInput() })
+const receiveErrors = ref<string[]>([])
+
+async function fetchWarehouses() {
+  const res = await api.get('/warehouses', { params: { per_page: 100 } })
+  warehouses.value = res.data.data
+}
+
+function openReceive(item: any) {
+  receiveTarget.value = item
+  receiveForm.value = { warehouse_id: null, received_on: todayForInput() }
+  receiveErrors.value = []
+  receiveDialog.value = true
+}
+
+async function saveReceive() {
+  receiveErrors.value = []
+  try {
+    await api.patch(`/orders/${receiveTarget.value.id}`, { order: { status: 'received', ...receiveForm.value } })
+    receiveDialog.value = false
+    await fetchOrders()
+  } catch (e: any) {
+    receiveErrors.value = e.response?.data?.errors || ['受領に失敗しました']
+  }
 }
 
 function formatPrice(val: number | null) {
@@ -120,6 +149,7 @@ function formatPrice(val: number | null) {
 
 onMounted(() => {
   fetchMaterials()
+  fetchWarehouses()
   fetchOrders()
 })
 watch(filters, fetchOrders, { deep: true })
@@ -157,7 +187,7 @@ watch(filters, fetchOrders, { deep: true })
         {{ formatPrice(item.unit_price) }}
       </template>
       <template #item.status="{ item }">
-        <v-menu v-if="item.status !== 'cancelled'">
+        <v-menu v-if="!['cancelled', 'received'].includes(item.status)">
           <template #activator="{ props }">
             <v-chip v-bind="props" :color="statusColor[item.status]" size="small" style="cursor:pointer">
               {{ statusLabel[item.status] }}
@@ -168,8 +198,8 @@ watch(filters, fetchOrders, { deep: true })
             <v-list-item v-if="item.status === 'draft'" @click="updateStatus(item.id, 'ordered')">
               <v-list-item-title>発注確定</v-list-item-title>
             </v-list-item>
-            <v-list-item v-if="item.status === 'ordered'" @click="updateStatus(item.id, 'received')">
-              <v-list-item-title>受領</v-list-item-title>
+            <v-list-item v-if="item.status === 'ordered'" @click="openReceive(item)">
+              <v-list-item-title>受領（入庫）</v-list-item-title>
             </v-list-item>
             <v-list-item @click="updateStatus(item.id, 'cancelled')">
               <v-list-item-title class="text-error">キャンセル</v-list-item-title>
@@ -211,6 +241,34 @@ watch(filters, fetchOrders, { deep: true })
           <v-spacer />
           <v-btn @click="dialog = false">キャンセル</v-btn>
           <v-btn color="primary" @click="save">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="receiveDialog" max-width="480">
+      <v-card>
+        <v-card-title>発注の受領（入庫）</v-card-title>
+        <v-card-text>
+          <v-alert v-if="receiveErrors.length" type="error" density="compact" class="mb-4">
+            <div v-for="err in receiveErrors" :key="err">{{ err }}</div>
+          </v-alert>
+          <div v-if="receiveTarget" class="mb-4">
+            {{ receiveTarget.material?.name }} × {{ receiveTarget.quantity }} を在庫に入庫します。
+          </div>
+          <v-select
+            v-model="receiveForm.warehouse_id"
+            :items="warehouses"
+            item-title="name"
+            item-value="id"
+            label="入庫先の倉庫 *"
+            class="mb-2"
+          />
+          <v-text-field v-model="receiveForm.received_on" label="受領日 *" type="date" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="receiveDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" @click="saveReceive">受領して入庫</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
