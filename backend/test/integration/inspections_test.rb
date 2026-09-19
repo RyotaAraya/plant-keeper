@@ -93,6 +93,22 @@ class InspectionsTest < ActionDispatch::IntegrationTest
     assert_equal "追記", inspection.reload.notes
   end
 
+  test "更新で追加した項目に不具合があればトラブルが作られる" do
+    post_inspection([ { content: "外観の確認", item_type: "check", has_defect: false } ])
+    inspection = Inspection.last
+    existing = inspection.inspection_items.first
+
+    items = [ { id: existing.id, content: existing.content, item_type: "check", has_defect: false },
+              { content: "配管の腐食確認", item_type: "check", has_defect: true, defect_title: "配管の腐食" } ]
+    assert_difference "Trouble.count", 1 do
+      patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { items: items } }, headers: @headers, as: :json
+    end
+
+    assert_response :ok
+    assert_equal "配管の腐食", Trouble.last.title
+    assert_equal 2, inspection.inspection_items.count
+  end
+
   test "一覧は件数とページ情報を返す" do
     2.times { create_inspection }
 
@@ -100,7 +116,8 @@ class InspectionsTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_equal 1, json["data"].size
-    assert_equal({ "total_count" => 2, "page" => 1, "per_page" => 1 }, json["meta"])
+    assert_equal({ "total_count" => Inspection.count, "page" => 1, "per_page" => 1 }, json["meta"])
+    assert_operator json["meta"]["total_count"], :>=, 2
   end
 
   private

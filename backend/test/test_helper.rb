@@ -6,7 +6,7 @@ require_relative "../config/environment"
 db_name = ActiveRecord::Base.connection_db_config.database.to_s
 unless db_name.end_with?("_test")
   abort "テストは *_test のDBでのみ実行できます（現在の接続先: #{db_name}）。" \
-        "docker-compose の場合は README/CLAUDE.md の「テスト」の手順で DATABASE_URL を指定してください。"
+        "docker-compose の場合は CLAUDE.md の「テスト」の手順で DATABASE_URL を指定してください。"
 end
 
 require "rails/test_help"
