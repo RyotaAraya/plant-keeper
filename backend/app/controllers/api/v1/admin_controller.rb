@@ -14,6 +14,8 @@ module Api
           return
         end
 
+        # 本番のWebプロセスでは Rake が未ロードのため、Rake::Task を参照する前に require する
+        require "rake"
         Rails.application.load_tasks unless Rake::Task.task_defined?("db:seed:replant")
         Rake::Task["db:seed:replant"].reenable
 
