@@ -131,4 +131,15 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
 
     assert_response :no_content
   end
+
+  test "無効化（退職）されたユーザの発行済みトークンは、以降のリクエストで使えなくなる" do
+    headers = auth_headers_for(@user)
+    get "/api/v1/sites", headers: headers
+    assert_response :ok
+
+    @user.update!(is_active: false)
+
+    get "/api/v1/sites", headers: headers
+    assert_response :unauthorized
+  end
 end

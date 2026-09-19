@@ -71,4 +71,28 @@ class StockLedgerTest < ActionDispatch::IntegrationTest
     assert_equal 3, tx.quantity
     assert_equal Stock.last, tx.stock
   end
+
+  test "在庫のステータスを直接変えられるのは 在庫あり⇔使用中 だけ（廃棄・修理は台帳/修理管理を通す）" do
+    patch "/api/v1/stocks/#{@stock.id}", headers: auth_headers_for(@member), as: :json, params: { stock: { status: "in_use" } }
+    assert_response :ok
+    assert_equal "in_use", @stock.reload.status
+
+    patch "/api/v1/stocks/#{@stock.id}", headers: auth_headers_for(@member), as: :json, params: { stock: { status: "disposed" } }
+    assert_response :unprocessable_entity
+
+    @stock.update!(status: "under_repair")
+    patch "/api/v1/stocks/#{@stock.id}", headers: auth_headers_for(@member), as: :json, params: { stock: { status: "available" } }
+    assert_response :unprocessable_entity
+    assert_equal "under_repair", @stock.reload.status
+  end
+
+  test "在庫は「在庫あり」「使用中」でしか新規登録できない" do
+    assert_no_difference "Stock.count" do
+      post "/api/v1/stocks", headers: auth_headers_for(@member), as: :json, params: {
+        stock: { material_id: @material.id, warehouse_id: @warehouse.id, quantity: 1, status: "disposed" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
 end

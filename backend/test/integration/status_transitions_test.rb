@@ -146,4 +146,26 @@ class StatusTransitionsTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
   end
+
+  test "修理は依頼中（pending）でしか新規作成できない" do
+    stock = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "available")
+
+    assert_no_difference "Repair.count" do
+      post "/api/v1/repairs", params: { repair: { stock_id: stock.id, status: "completed" } }, headers: @headers, as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "available", stock.reload.status
+  end
+
+  test "修理の更新で、修理対象の在庫（stock_id）は差し替えられない" do
+    repair = create_repair
+    other = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "available")
+
+    patch_json "/api/v1/repairs/#{repair.id}", { repair: { stock_id: other.id, repair_vendor: "修理業者" } }
+
+    assert_response :ok
+    assert_not_equal other.id, repair.reload.stock_id
+    assert_equal "修理業者", repair.repair_vendor
+  end
 end

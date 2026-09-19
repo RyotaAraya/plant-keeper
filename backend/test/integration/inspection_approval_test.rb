@@ -114,4 +114,15 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
     assert_equal [ "1.0", "9.9" ], updated.changes_json["measured_value"]
     assert_equal drop.id, logs.find_by(action: "delete").auditable_id
   end
+
+  test "承認依頼中の点検を差し戻せるのは承認者（管理者/マネージャー）だけで、作成者本人でも不可" do
+    inspection = create_inspection(status: "approval_requested")
+
+    patch_inspection(inspection, @author, { status: "submitted" })
+    assert_response :forbidden
+    assert_equal "approval_requested", inspection.reload.status
+
+    patch_inspection(inspection, @manager, { status: "submitted" })
+    assert_response :ok
+  end
 end

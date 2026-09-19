@@ -3,6 +3,8 @@ module Api
     class StocksController < BaseController
       before_action :set_stock, only: [ :show, :update ]
 
+      MANUAL_STATUSES = %w[available in_use].freeze
+
       # GET /api/v1/stocks
       def index
         authorize Stock
@@ -53,6 +55,10 @@ module Api
         stock = Stock.new(create_params)
         authorize stock
 
+        unless MANUAL_STATUSES.include?(stock.status)
+          return render json: { errors: [ "新規登録できるのは「在庫あり」または「使用中」のみです" ] }, status: :unprocessable_entity
+        end
+
         ActiveRecord::Base.transaction do
           stock.save!
           record_audit_log("create", stock)
@@ -75,6 +81,13 @@ module Api
       # PATCH /api/v1/stocks/:id
       def update
         authorize @stock
+
+        # 修理中・廃棄済は、修理管理・廃棄の入出庫を通して変える（直接書き換えると修理や台帳と食い違う）
+        new_status = update_params[:status]
+        if new_status.present? && new_status != @stock.status && !(MANUAL_STATUSES.include?(new_status) && MANUAL_STATUSES.include?(@stock.status))
+          return render json: { errors: [ "ステータスを直接変更できるのは「在庫あり」と「使用中」の間だけです" ] }, status: :unprocessable_entity
+        end
+
         if @stock.update(update_params)
           record_audit_log("update", @stock)
           render json: { data: @stock.as_json }

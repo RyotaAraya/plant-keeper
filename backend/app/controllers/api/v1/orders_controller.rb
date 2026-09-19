@@ -64,6 +64,8 @@ module Api
         authorize @order
 
         ActiveRecord::Base.transaction do
+          # 同時に受領されても、二重に入庫しないよう、発注の行をロックして最新の状態から更新する
+          @order.lock!
           @order.update!(order_params)
           record_audit_log("update", @order)
           receive_into_stock! if @order.saved_change_to_status? && @order.received?

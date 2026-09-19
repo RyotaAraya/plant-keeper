@@ -121,4 +121,32 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     end
     assert_response :unprocessable_entity
   end
+
+  test "受領は発注の行をロックして更新する（二重受領による在庫の二重加算の防止）" do
+    order = create_order
+    sql = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| sql << payload[:sql] }
+
+    receive(order)
+
+    assert_response :ok
+    assert sql.any? { |s| s.include?('FROM "orders"') && s.include?("FOR UPDATE") }, "orders を FOR UPDATE で読んでいない"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
+
+  test "受領済の発注は、数量・資材・入庫先を変更できない（備考は変更できる）" do
+    order = create_order(quantity: 4)
+    receive(order)
+    other_warehouse = Warehouse.create!(name: "第二倉庫", site: @warehouse.site)
+
+    { quantity: 99, warehouse_id: other_warehouse.id, material_id: create_material(part_number: "X-1").id }.each do |attr, value|
+      patch "/api/v1/orders/#{order.id}", params: { order: { attr => value } }, headers: @headers, as: :json
+      assert_response :unprocessable_entity, attr
+    end
+
+    patch "/api/v1/orders/#{order.id}", params: { order: { notes: "検収済" } }, headers: @headers, as: :json
+    assert_response :ok
+    assert_equal 4, order.reload.quantity
+  end
 end
