@@ -64,6 +64,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://plant-keeper-web-stg.onrender.com
+      # 管理者による「デモデータの再投入」(admin/reseed) を許可する。本番には設定しない（既定は無効）
+      - key: ALLOW_DEMO_RESEED
+        value: "true"
       - key: DATABASE_URL
         sync: false
 

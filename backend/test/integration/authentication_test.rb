@@ -13,6 +13,27 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert_equal @user.id, json.dig("user", "id")
   end
 
+  test "ログイン成功は監査ログ(login)に記録され、失敗は記録されない" do
+    assert_difference -> { AuditLog.where(action: "login", user: @user).count }, 1 do
+      post "/api/v1/login", params: { user: { email: @user.email, password: "password" } }, as: :json
+    end
+    assert_equal "User", AuditLog.last.auditable_type
+    assert_equal @user.id, AuditLog.last.auditable_id
+
+    assert_no_difference "AuditLog.count" do
+      post "/api/v1/login", params: { user: { email: @user.email, password: "wrong" } }, as: :json
+    end
+  end
+
+  test "自己登録とパスワード再設定のエンドポイントは公開しない" do
+    post "/api/v1/signup", params: { user: { email: "new@example.com", password: "password123", name: "新規" } }, as: :json
+    assert_response :not_found
+
+    post "/api/v1/password", params: { user: { email: @user.email } }, as: :json
+    assert_response :not_found
+    assert_not User.exists?(email: "new@example.com")
+  end
+
   test "パスワードが違うとログインできない" do
     post "/api/v1/login", params: { user: { email: @user.email, password: "wrong" } }, as: :json
 

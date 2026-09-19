@@ -12,12 +12,14 @@ export function usePermissions() {
   const isContractorManager = computed(() => role.value === 'manager' && companyType.value === 'contractor')
   const isOwnerCompany = computed(() => companyType.value === 'owner')
   const isWorker = computed(() => role.value === 'worker')
+  const isManager = computed(() => role.value === 'manager')
 
   // admin || owner_manager が共通パターン
   const canManageCore = computed(() => isAdmin.value || isOwnerManager.value)
 
   return {
     isAdmin,
+    isManager,
     isOwnerManager,
     isOwnerCompany,
     isWorker,
@@ -34,6 +36,9 @@ export function usePermissions() {
     // 各ビュー内ボタン制御用
     canManageSite: isAdmin,
     canManageEquipment: canManageCore,
+    canManageInspectionPlan: canManageCore,
+    // バックエンドの InspectionPolicy#approve? に対応（承認・差し戻しは管理者/マネージャー）
+    canApproveInspection: computed(() => isAdmin.value || isManager.value),
     canManageMaintenance: canManageCore,
     canManageEquipmentAssignment: canManageCore,
     canManageMaterial: canManageCore,

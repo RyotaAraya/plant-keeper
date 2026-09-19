@@ -28,6 +28,7 @@ const navItems = [
   { title: '拠点管理', icon: 'mdi-domain', to: '/sites' },
   { title: '設備台帳', icon: 'mdi-factory', to: '/equipments' },
   { title: '装置・計器', icon: 'mdi-gauge', to: '/instruments' },
+  { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },
   { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
   { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },
   { title: '定期整備', icon: 'mdi-wrench-outline', to: '/maintenances' },

@@ -3,6 +3,16 @@ module Api
     class SessionsController < Devise::SessionsController
       respond_to :json
 
+      # ログイン成功を監査ログに残す（失敗は Devise が401を返し、ここには来ない）
+      def create
+        super do |resource|
+          AuditLog.create!(
+            user: resource, action: "login", auditable: resource,
+            ip_address: request.remote_ip, performed_at: Time.current
+          )
+        end
+      end
+
       private
 
       def respond_with(resource, _opts = {})

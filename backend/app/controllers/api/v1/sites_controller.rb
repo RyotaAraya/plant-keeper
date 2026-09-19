@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/sites
       def index
+        authorize Site
         sites = Site.all
         sites = sites.where(is_active: params[:is_active]) if params[:is_active].present?
 
@@ -23,6 +24,7 @@ module Api
 
       # GET /api/v1/sites/:id
       def show
+        authorize @site
         render json: {
           data: @site.as_json.merge(
             equipments_count: @site.equipments.count,

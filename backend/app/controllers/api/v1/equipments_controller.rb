@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/equipments
       def index
+        authorize Equipment
         equipments = Equipment.includes(:site).all
         equipments = equipments.where(site_id: params[:site_id]) if params[:site_id].present?
 
@@ -23,6 +24,7 @@ module Api
 
       # GET /api/v1/equipments/:id
       def show
+        authorize @equipment
         render json: {
           data: @equipment.as_json(
             include: {

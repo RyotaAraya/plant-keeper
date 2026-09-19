@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/scheduled_maintenances
       def index
+        authorize ScheduledMaintenance
         maintenances = ScheduledMaintenance.includes(:equipment, maintenance_assignments: :user).all
         maintenances = maintenances.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
         maintenances = maintenances.where(status: params[:status]) if params[:status].present?
@@ -32,6 +33,7 @@ module Api
 
       # GET /api/v1/scheduled_maintenances/:id
       def show
+        authorize @maintenance
         render json: {
           data: @maintenance.as_json(
             include: {

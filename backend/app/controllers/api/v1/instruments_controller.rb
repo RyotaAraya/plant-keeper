@@ -4,6 +4,7 @@ module Api
       before_action :set_instrument, only: [ :show, :update ]
 
       def index
+        authorize Instrument
         instruments = Instrument.includes(:equipment, :service, :line_class)
 
         # 拠点フィルタ（複数対応）
@@ -61,6 +62,7 @@ module Api
       end
 
       def show
+        authorize @instrument
         render json: {
           data: @instrument.as_json(include: {
             equipment: { only: [ :id, :name ], include: { site: { only: [ :id, :name ] } } },

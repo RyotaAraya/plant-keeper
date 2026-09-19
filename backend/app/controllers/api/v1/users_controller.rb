@@ -5,7 +5,8 @@ module Api
 
       # GET /api/v1/users
       def index
-        users = User.includes(:company, department: { parent: :parent }).all
+        authorize User
+        users = policy_scope(User).includes(:company, department: { parent: :parent })
         users = users.where(company_id: params[:company_id]) if params[:company_id].present?
         users = users.where(department_id: params[:department_id]) if params[:department_id].present?
         users = users.where(employment_type: params[:employment_type]) if params[:employment_type].present?
@@ -53,7 +54,11 @@ module Api
       end
 
       def user_json(user)
-        json = user.as_json(only: [ :id, :email, :name, :employment_type, :system_role, :company_id, :department_id, :site_id, :position, :is_active, :join_year, :home_prefecture, :previous_company, :deactivated_on, :created_at ])
+        user_policy = policy(user)
+        fields = [ :id, :name, :employment_type, :system_role, :company_id, :department_id, :site_id, :position, :is_active, :created_at ]
+        fields << :email if user_policy.view_email?
+        fields.push(:join_year, :home_prefecture, :previous_company, :deactivated_on) if user_policy.view_profile_details?
+        json = user.as_json(only: fields)
         if user.company
           json[:company] = { id: user.company.id, name: user.company.name, company_type: user.company.company_type }
         end

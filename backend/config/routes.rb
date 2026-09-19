@@ -2,11 +2,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   devise_for :users, path: "api/v1",
-    path_names: { sign_in: "login", sign_out: "logout", registration: "signup" },
-    controllers: {
-      sessions: "api/v1/sessions",
-      registrations: "api/v1/registrations"
-    }
+    path_names: { sign_in: "login", sign_out: "logout" },
+    controllers: { sessions: "api/v1/sessions" }
 
   namespace :api do
     namespace :v1 do
@@ -28,6 +25,7 @@ Rails.application.routes.draw do
           post :duplicate
         end
       end
+      resources :inspection_plans, only: [ :index, :create, :update ]
       resources :inspections, only: [ :index, :show, :create, :update ]
       resources :troubles, only: [ :index, :show, :create, :update ]
       resources :trouble_responses, only: [ :create, :update ]

@@ -6,13 +6,15 @@ module Api
         transaction = StockTransaction.new(transaction_params)
         authorize transaction
         transaction.user = current_user
-        transaction.from_warehouse_id = transaction.stock&.warehouse_id if transaction.transfer?
 
         ActiveRecord::Base.transaction do
+          # 同時に入出庫されても数量が狂わないよう、在庫行を先にロックしてから読む
+          stock = Stock.lock.find_by(id: transaction.stock_id)
+          transaction.stock = stock
+          transaction.from_warehouse_id = stock&.warehouse_id if transaction.transfer?
           transaction.save!
           record_audit_log("create", transaction)
 
-          stock = transaction.stock
           case transaction.transaction_type
           when "incoming"
             stock.update!(quantity: stock.quantity + transaction.quantity)
@@ -32,14 +34,17 @@ module Api
             raise ActiveRecord::RecordInvalid.new(stock), "在庫数が不足しています" if new_qty < 0
             stock.update!(quantity: new_qty)
 
-            Stock.create!(
+            # 移動先に同じロット（資材・購入日・状態が同じ、シリアル無し）があれば数量を足し、行を増やさない
+            destination = Stock.lock.find_or_initialize_by(
               material_id: stock.material_id,
               warehouse_id: transaction.to_warehouse_id,
-              quantity: transaction.quantity,
               purchased_on: stock.purchased_on,
               status: stock.status,
-              notes: stock.notes
+              serial_number: stock.serial_number.presence
             )
+            destination.notes ||= stock.notes
+            destination.quantity += transaction.quantity
+            destination.save!
           end
         end
 

@@ -58,6 +58,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/inspection-plans',
+      name: 'InspectionPlans',
+      component: () => import('@/views/inspections/InspectionPlanListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/inspections',
       name: 'Inspections',
       component: () => import('@/views/inspections/InspectionListView.vue'),

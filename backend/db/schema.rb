@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -122,6 +122,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
   end
 
+  create_table "inspection_plans", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "equipment_id", null: false
+    t.bigint "instrument_id"
+    t.bigint "checklist_template_id"
+    t.string "inspection_type", null: false
+    t.integer "interval_days", null: false
+    t.date "last_inspected_on"
+    t.date "next_due_on", null: false
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["checklist_template_id"], name: "index_inspection_plans_on_checklist_template_id"
+    t.index ["equipment_id"], name: "index_inspection_plans_on_equipment_id"
+    t.index ["instrument_id"], name: "index_inspection_plans_on_instrument_id"
+    t.index ["next_due_on"], name: "index_inspection_plans_on_next_due_on"
+    t.check_constraint "interval_days > 0", name: "inspection_plans_interval_positive"
+  end
+
   create_table "inspections", force: :cascade do |t|
     t.bigint "checklist_template_id"
     t.bigint "user_id", null: false
@@ -134,9 +153,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "inspection_plan_id"
     t.index ["checklist_template_id"], name: "index_inspections_on_checklist_template_id"
     t.index ["department_id"], name: "index_inspections_on_department_id"
     t.index ["equipment_id"], name: "index_inspections_on_equipment_id"
+    t.index ["inspection_plan_id"], name: "index_inspections_on_inspection_plan_id"
     t.index ["inspection_type"], name: "index_inspections_on_inspection_type"
     t.index ["instrument_id"], name: "index_inspections_on_instrument_id"
     t.index ["status"], name: "index_inspections_on_status"
@@ -153,10 +174,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["equipment_id", "tag_number"], name: "index_instruments_on_equipment_id_and_tag_number", unique: true
     t.index ["equipment_id"], name: "index_instruments_on_equipment_id"
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"
     t.index ["service_id"], name: "index_instruments_on_service_id"
-    t.index ["tag_number"], name: "index_instruments_on_tag_number", unique: true
+    t.index ["tag_number"], name: "index_instruments_on_tag_number"
   end
 
   create_table "line_classes", force: :cascade do |t|
@@ -308,6 +330,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
     t.index ["stock_id"], name: "index_stock_transactions_on_stock_id"
     t.index ["transaction_type"], name: "index_stock_transactions_on_transaction_type"
     t.index ["user_id"], name: "index_stock_transactions_on_user_id"
+    t.check_constraint "quantity > 0", name: "stock_transactions_quantity_positive"
   end
 
   create_table "stocks", force: :cascade do |t|
@@ -323,6 +346,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
     t.index ["material_id"], name: "index_stocks_on_material_id"
     t.index ["status"], name: "index_stocks_on_status"
     t.index ["warehouse_id"], name: "index_stocks_on_warehouse_id"
+    t.check_constraint "quantity >= 0", name: "stocks_quantity_non_negative"
   end
 
   create_table "trouble_responses", force: :cascade do |t|
@@ -415,9 +439,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_083632) do
   add_foreign_key "inspection_items", "checklist_template_items"
   add_foreign_key "inspection_items", "inspections"
   add_foreign_key "inspection_items", "instruments"
+  add_foreign_key "inspection_plans", "checklist_templates"
+  add_foreign_key "inspection_plans", "equipments"
+  add_foreign_key "inspection_plans", "instruments"
   add_foreign_key "inspections", "checklist_templates"
   add_foreign_key "inspections", "departments"
   add_foreign_key "inspections", "equipments"
+  add_foreign_key "inspections", "inspection_plans"
   add_foreign_key "inspections", "instruments"
   add_foreign_key "inspections", "users"
   add_foreign_key "instruments", "equipments"
