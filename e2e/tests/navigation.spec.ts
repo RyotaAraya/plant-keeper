@@ -36,10 +36,8 @@ test('一般ユーザには管理系メニューが表示されず、URL直打�
   await expect(page).toHaveURL(/\/dashboard/)
 })
 
-// 既知の不具合: ログインAPI・current_user が company_id しか返さず、フロントが読む user.company が常に未定義になる。
-// そのため「自社所属」の判定（isOwnerCompany）が常に偽になり、在庫管理メニューが表示されず、ヘッダーの会社名も空になる。
-// 修正したら fixme を外す。
-test.fixme('自社所属のユーザには在庫管理メニューが表示され、ヘッダーに会社名が出る', async ({ page }) => {
+// 自社/協力会社の判定はログインAPIが返す user.company に依存する（company_id のみだと常に「協力会社扱い」になる）
+test('自社所属のユーザには在庫管理メニューが表示され、ヘッダーに会社名が出る', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
 
   await expect(page.getByRole('banner')).toContainText('プラント管理株式会社')

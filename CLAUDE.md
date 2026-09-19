@@ -78,7 +78,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - **ログアウトするテストは専用アカウント（`ACCOUNTS.logout`）を使う。** JTIMatcher ではログアウトでそのユーザーの全セッションが失効するため、他のテストと共有すると並列実行時に巻き込まれる
 - ローカルの `vite dev` は、再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがある（`retries: 1` で吸収）。CI は `vite preview` のため影響しない
 - Vuetify の `v-select` は入力要素が覆われているため、`selectFirstOption()`（入力欄 `.v-field` を操作）を使う
-- **既知の不具合（`test.fixme` で記録）**: ログインAPI・`current_user` が `company_id` しか返さず、フロントが読む `user.company` が常に未定義。そのため `isOwnerCompany` が常に偽になり、在庫管理メニューが表示されず、ルートガード（`requiresOwner` / `requiresOwnerManager`）も自社ユーザに効かない。ヘッダーの会社名も空になる
+- 自社/協力会社によるメニュー表示・ルートガードは、ログインAPIが返す `user.company` に依存する。`UserSerializer` から `company` を外すと全員が「協力会社扱い」になり在庫管理メニューなどが消える（過去に実際に発生。`navigation.spec.ts` の「自社所属のユーザには…」が検出する）
 
 ## アクセスURL（開発用）
 
@@ -171,7 +171,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - レスポンス: `{ data: ... }` 形式
 
 **シリアライズの使い分け:**
-- `UserSerializer`（PORO）: 認証系レスポンスのみ（`POST /login`、`GET /current_user`）。返却フィールドはIDのみで、company/departmentオブジェクトのネストなし
+- `UserSerializer`（PORO）: 認証系レスポンスのみ（`POST /login`、`GET /current_user`）。基本はIDのみで、`company`（`id`・`name`・`company_type`）だけネストして返す。フロントの自社/協力会社の判定（`isOwnerCompany` など）とヘッダーの会社名が `user.company` を参照するため。departmentのネストはなし
 - `user_json` ヘルパー: users一覧・詳細画面のレスポンスでcompany/departmentをネスト返却
 - その他モデル: コントローラ内で `as_json(include: ...)` インライン（ActiveModel::Serializers不使用）
 
