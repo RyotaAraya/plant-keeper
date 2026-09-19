@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -94,13 +95,11 @@ watch(selectedSiteIds, fetchEquipments)
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">設備台帳</h1>
-      <v-spacer />
+    <PageHeader title="設備台帳" description="拠点にある設備の台帳です。設備ごとの計器・担当者・整備・変更履歴を確認します。">
       <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
     </div>
 

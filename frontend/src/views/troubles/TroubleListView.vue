@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
@@ -162,13 +163,11 @@ watch(filters, fetchTroubles, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">トラブル管理</h1>
-      <v-spacer />
+    <PageHeader title="トラブル管理" description="設備の不具合・故障の報告と対応状況を追います。点検で見つかった不具合も自動で並びます。">
       <v-btn v-if="canCreateTrouble" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
       <v-text-field

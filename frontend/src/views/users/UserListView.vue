@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 const router = useRouter()
 const users = ref<any[]>([])
@@ -117,11 +118,9 @@ watch([filters, showInactive], fetchUsers, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">ユーザ管理</h1>
-    </div>
+    <PageHeader title="ユーザ管理" description="ユーザの所属会社・雇用区分・権限を管理します。退職・復帰の対応もここで行います。" />
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <v-text-field
         v-model="filters.q"
         label="名前・メール検索"

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 const tab = ref('services')
 
@@ -293,20 +294,8 @@ onMounted(() => {
 
 <template>
   <MainLayout>
-    <h1 class="text-h5 mb-4">設定</h1>
+    <PageHeader title="設定" description="他の画面の選択肢になるマスタ（流体・ラインクラス・チェックリスト・メーカー・倉庫）を管理します。" />
 
-    <v-card class="mb-4" variant="outlined">
-      <v-card-title class="text-subtitle-1">
-        <v-icon class="mr-2" color="warning" aria-hidden="true">mdi-database-refresh</v-icon>
-        デモデータの再投入
-      </v-card-title>
-      <v-card-text>
-        現在の全データを削除し、初期デモデータを再投入します。デモ環境用の機能です。
-      </v-card-text>
-      <v-card-actions>
-        <v-btn color="warning" variant="tonal" @click="reseedDialog = true">再投入する</v-btn>
-      </v-card-actions>
-    </v-card>
 
     <v-dialog v-model="reseedDialog" max-width="440">
       <v-card>
@@ -567,5 +556,18 @@ onMounted(() => {
         </v-dialog>
       </v-window-item>
     </v-window>
+
+    <v-card class="mt-8" variant="outlined">
+      <v-card-title class="text-subtitle-1">
+        <v-icon class="mr-2" color="warning" aria-hidden="true">mdi-database-refresh</v-icon>
+        デモデータの再投入
+      </v-card-title>
+      <v-card-text>
+        現在の全データを削除し、初期デモデータを再投入します。デモ環境用の機能です。
+      </v-card-text>
+      <v-card-actions>
+        <v-btn color="warning" variant="tonal" @click="reseedDialog = true">再投入する</v-btn>
+      </v-card-actions>
+    </v-card>
   </MainLayout>
 </template>

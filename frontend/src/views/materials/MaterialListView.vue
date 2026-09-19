@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
@@ -187,13 +188,11 @@ watch(filters, fetchMaterials, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">資材管理</h1>
-      <v-spacer />
+    <PageHeader title="資材管理" description="部品や消耗品の資材マスタです。型番の表記ゆれを吸収して探せ、他拠点の在庫も同じ行で分かります。">
       <v-btn v-if="canManageMaterial" color="primary" prepend-icon="mdi-plus" @click="openDialog()">新規登録</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <v-text-field
         v-model="filters.q"
         label="資材名・型番検索"

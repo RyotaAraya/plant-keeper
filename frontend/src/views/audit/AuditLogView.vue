@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 const logs = ref<any[]>([])
 const loading = ref(false)
@@ -101,9 +102,9 @@ watch(filters, fetchLogs, { deep: true })
 
 <template>
   <MainLayout>
-    <h1 class="text-h5 mb-4">監査ログ</h1>
+    <PageHeader title="監査ログ" description="誰がいつ何を変更したかの記録です。絞り込んで確認し、CSVで出力できます。" />
 
-    <div class="d-flex ga-4 mb-4">
+    <div class="pk-filters">
       <v-select
         v-model="filters.action"
         :items="actionOptions"

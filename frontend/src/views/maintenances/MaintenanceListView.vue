@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
@@ -131,13 +132,11 @@ watch(filters, fetchMaintenances, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">定期整備</h1>
-      <v-spacer />
+    <PageHeader title="定期整備" description="年次点検整備・触媒交換・法定検査など、まとまった整備の予定と実績です。日々の点検は「点検計画」へ。">
       <v-btn v-if="canManageMaintenance" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />

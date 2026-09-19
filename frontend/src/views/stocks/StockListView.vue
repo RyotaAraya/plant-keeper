@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
@@ -139,11 +140,9 @@ watch(filters, fetchStocks, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">在庫管理</h1>
-    </div>
+    <PageHeader title="在庫管理" description="倉庫にある資材の数量です。入庫・出庫・移動を記録し、古いロットから使えるよう購入日順に管理します。" />
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.warehouse_ids" :items="warehouses" item-title="display_name" item-value="id" label="倉庫" style="max-width: 260px" />

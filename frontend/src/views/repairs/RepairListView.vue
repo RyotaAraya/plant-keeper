@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
@@ -134,13 +135,11 @@ watch(() => filters.value.site_ids, fetchStocks)
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">修理管理</h1>
-      <v-spacer />
+    <PageHeader title="修理管理" description="故障した在庫品を修理業者に出し、戻ってくるまでを追います。修理せず廃棄する場合もここで記録します。">
       <v-btn v-if="canManageRepairs" color="primary" prepend-icon="mdi-plus" @click="openDialog()">修理依頼</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag v-model="filters.site_ids" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />

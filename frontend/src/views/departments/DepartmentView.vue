@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -222,25 +223,24 @@ onMounted(() => {
 <template>
   <MainLayout>
     <!-- ヘッダー -->
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">部署管理</h1>
-      <v-spacer />
+    <PageHeader title="部署管理" description="拠点ごとの部署（部・課・チーム）の階層と、所属メンバーを管理します。">
       <v-btn color="primary" prepend-icon="mdi-plus" @click="openDeptCreate()">部署を追加</v-btn>
-    </div>
+    </PageHeader>
 
     <!-- 拠点フィルタ -->
-    <v-select
-      v-model="selectedSiteId"
-      :items="sites"
-      item-title="name"
-      item-value="id"
-      label="拠点で絞り込み"
-      clearable
-      density="compact"
-      hide-details
-      style="max-width: 280px"
-      class="mb-4"
-    />
+    <div class="pk-filters">
+      <v-select
+        v-model="selectedSiteId"
+        :items="sites"
+        item-title="name"
+        item-value="id"
+        label="拠点で絞り込み"
+        clearable
+        density="compact"
+        hide-details
+        style="max-width: 280px"
+      />
+    </div>
 
     <div class="d-flex ga-4 align-start">
       <!-- 左: フラットリスト -->

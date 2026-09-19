@@ -122,3 +122,45 @@ h1, h2, h3,
     display: none;
   }
 }
+
+/* 画面のタイトルは、サイドバーの選択表示で分かるため画面上には出さない（h1 は読み上げ・文書構造用に残す） */
+.pk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 一覧の絞り込み行。入力欄は白地で枠を薄くして表より前に出さず、
+   条件を入れた項目だけ枠を濃くして、何で絞っているかを一目で分かるようにする */
+.pk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pk-filters .v-field {
+  --v-field-border-opacity: 0.22;
+  background: rgb(var(--v-theme-surface));
+}
+
+.pk-filters .v-field--dirty {
+  --v-field-border-opacity: 1;
+  --v-field-border-width: 1px;
+  color: var(--pk-steel-dark);
+}
+
+.pk-filters .v-field--dirty .v-field__outline {
+  color: var(--pk-steel);
+}
+
+.pk-filters .v-field--dirty .v-label.v-field-label--floating {
+  color: var(--pk-steel);
+}
