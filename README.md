@@ -18,7 +18,7 @@
 - **修理管理** — 外部修理の送付・返却追跡
 
 ### 組織管理
-- **ユーザ管理** — 6ロール（管理者/監督者/保全/運転/環境/協力会社）、退職・復帰対応
+- **ユーザ管理** — 所属会社（自社/協力会社）・雇用区分・権限の3軸管理、退職・復帰対応
 - **部署管理** — 部→課→チームの3階層組織、役職管理
 - **拠点管理** — 複数拠点の横断管理
 
@@ -33,8 +33,28 @@
 | フロントエンド | Vue 3, TypeScript, Vuetify 3, Pinia, Vue Router 4, Axios |
 | バックエンド | Ruby on Rails 8 (API mode), Devise, Devise-JWT |
 | データベース | PostgreSQL 16 |
-| インフラ | Docker, docker-compose |
-| コード品質 | ESLint, RuboCop, vue-tsc, Lefthook |
+| インフラ | Docker, docker-compose（開発）/ Render, Neon（デプロイ） |
+| テスト | Minitest（バックエンド）, Playwright（E2E） |
+| CI/CD・依存更新 | GitHub Actions, Renovate |
+| コード品質 | ESLint, RuboCop, Brakeman, vue-tsc, Lefthook |
+
+## 環境
+
+| 環境 | ブランチ | フロントエンド | API |
+|------|----------|----------------|-----|
+| 本番（デモ） | `main` | https://plant-keeper-web.onrender.com | https://plant-keeper-api.onrender.com/api/v1 |
+| stg | `develop` | https://plant-keeper-web-stg.onrender.com | https://plant-keeper-api-stg.onrender.com/api/v1 |
+
+- `develop` への push で stg に、`main` へのマージで本番に自動デプロイされます。stg で動作確認してから `develop` → `main` の PR でリリースします
+- 無料プランのため、しばらくアクセスがないとスリープし、初回アクセス時は起動に数十秒〜1分ほどかかります
+- 本番のDBは Render Postgres、stg のDBは Neon です
+
+## 開発フロー
+
+- **テスト**: `backend/test/` に Minitest（認証・権限・点検→トラブル自動作成・資材検索・モデル検証）、`e2e/` に Playwright のスモークテスト（認証・画面遷移・ロール別の表示制御・点検から不具合報告→トラブル登録）
+- **CI**（GitHub Actions）: PR と `main`/`develop` への push で、Brakeman、RuboCop、バックエンドのテスト、フロントの lint + ビルド、E2E を実行
+- **依存更新**: [Renovate](https://docs.renovatebot.com/) が毎週月曜の朝に `develop` 向けの更新PRを作成。patch は公開3日後にCI成功で自動マージ、minor は手動マージ、major は承認制
+- 開発コマンド・テストの実行方法・デプロイ手順・設計上の規約は [CLAUDE.md](CLAUDE.md) にまとめています
 
 ## アーキテクチャ
 
@@ -48,7 +68,18 @@ db                 PostgreSQL 16 (:5432)
 
 - JWT認証（Authorization ヘッダー）
 - フロントエンド → バックエンドの通信は Axios + CORS
-- 26テーブルのリレーショナルデータモデル
+- 27テーブルのリレーショナルデータモデル
+
+## ローカルでの起動
+
+Docker Desktop が必要です。
+
+```bash
+docker-compose up -d
+docker-compose exec backend bundle exec rails db:create db:migrate db:seed
+```
+
+http://localhost:5173 を開き、デモアカウントでログインできます（管理者: `admin@example.com` / `password`）。
 
 ## ライセンス
 

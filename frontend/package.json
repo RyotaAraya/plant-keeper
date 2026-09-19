@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc -b"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
