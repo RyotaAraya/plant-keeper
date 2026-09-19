@@ -47,4 +47,55 @@ class AuditLogsTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_operator json["data"].size, :>=, 2
   end
+
+  # --- 拠点・期間の絞り込み ---
+
+  test "監査ログの拠点は、記録した対象データの拠点になる（設備は設備の拠点、資材など全社共通のものは拠点なし）" do
+    assert_equal @equipment.site_id, @trouble_log.site_id
+    assert_equal @equipment.site_id, @other_log.site_id
+
+    material_log = AuditLog.create!(user: @admin, action: "create", auditable: create_material(part_number: "AB-100"), changes_json: {}, performed_at: Time.current)
+    assert_nil material_log.site_id
+  end
+
+  test "拠点（複数可）で絞り込める。拠点なしのログは、拠点を指定すると出ない" do
+    other_equipment = create_equipment(site: create_site(name: "別の製油所"), name: "別の設備")
+    other_log = AuditLog.create!(user: @admin, action: "create", auditable: other_equipment, changes_json: {}, performed_at: Time.current)
+    common_log = AuditLog.create!(user: @admin, action: "create", auditable: create_material(part_number: "AB-100"), changes_json: {}, performed_at: Time.current)
+
+    get "/api/v1/audit_logs", params: { site_ids: [ @equipment.site_id ] }, headers: auth_headers_for(@admin)
+    assert_response :ok
+    ids = json["data"].map { |log| log["id"] }
+    assert_includes ids, @trouble_log.id
+    assert_not_includes ids, other_log.id
+    assert_not_includes ids, common_log.id
+    assert_equal @equipment.site.name, json["data"].first["site"]["name"]
+
+    get "/api/v1/audit_logs", params: { site_ids: [ @equipment.site_id, other_equipment.site_id ] }, headers: auth_headers_for(@admin)
+    assert_includes json["data"].map { |log| log["id"] }, other_log.id
+
+    get "/api/v1/audit_logs", headers: auth_headers_for(@admin)
+    assert_includes json["data"].map { |log| log["id"] }, common_log.id
+  end
+
+  test "期間は日本時間の日付で、開始日の0時から終了日の終わりまでを含む" do
+    old_log = AuditLog.create!(user: @admin, action: "update", auditable: @equipment, changes_json: {}, performed_at: Time.zone.local(2026, 8, 31, 23, 59))
+    start_log = AuditLog.create!(user: @admin, action: "update", auditable: @equipment, changes_json: {}, performed_at: Time.zone.local(2026, 9, 1, 0, 0))
+    end_log = AuditLog.create!(user: @admin, action: "update", auditable: @equipment, changes_json: {}, performed_at: Time.zone.local(2026, 9, 30, 23, 59, 59))
+    late_log = AuditLog.create!(user: @admin, action: "update", auditable: @equipment, changes_json: {}, performed_at: Time.zone.local(2026, 10, 1, 0, 0))
+
+    get "/api/v1/audit_logs", params: { from: "2026-09-01", to: "2026-09-30" }, headers: auth_headers_for(@admin)
+    assert_response :ok
+    ids = json["data"].map { |log| log["id"] }
+    assert_includes ids, start_log.id
+    assert_includes ids, end_log.id
+    assert_not_includes ids, old_log.id
+    assert_not_includes ids, late_log.id
+  end
+
+  test "期間に日付でない値を渡すと422になる" do
+    get "/api/v1/audit_logs", params: { from: "先月" }, headers: auth_headers_for(@admin)
+
+    assert_response :unprocessable_entity
+  end
 end

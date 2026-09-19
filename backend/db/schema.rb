@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_19_130000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_20_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,9 +23,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_130000) do
     t.string "ip_address"
     t.datetime "performed_at", null: false
     t.datetime "created_at", null: false
+    t.bigint "site_id"
     t.index ["action"], name: "index_audit_logs_on_action"
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["performed_at"], name: "index_audit_logs_on_performed_at"
+    t.index ["site_id"], name: "index_audit_logs_on_site_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
 
@@ -435,6 +437,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_130000) do
     t.index ["site_id"], name: "index_warehouses_on_site_id"
   end
 
+  add_foreign_key "audit_logs", "sites"
   add_foreign_key "audit_logs", "users"
   add_foreign_key "checklist_template_items", "checklist_templates"
   add_foreign_key "checklist_templates", "departments"

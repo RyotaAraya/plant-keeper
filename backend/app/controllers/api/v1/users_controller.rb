@@ -6,8 +6,11 @@ module Api
       # GET /api/v1/users
       def index
         authorize User
-        users = policy_scope(User).includes(:company, department: { parent: :parent })
+        users = policy_scope(User).includes(:company, :site, department: { parent: :parent })
         users = users.where(company_id: params[:company_id]) if params[:company_id].present?
+        if (site_ids = id_list_param(:site_ids, :site_id))
+          users = users.where(site_id: site_ids)
+        end
         users = users.where(department_id: params[:department_id]) if params[:department_id].present?
         users = users.where(employment_type: params[:employment_type]) if params[:employment_type].present?
         users = users.where(system_role: params[:system_role]) if params[:system_role].present?
@@ -50,7 +53,7 @@ module Api
       private
 
       def set_user
-        @user = User.includes(:company, department: { parent: :parent }, equipment_assignments: :equipment).find(params[:id])
+        @user = User.includes(:company, :site, department: { parent: :parent }, equipment_assignments: :equipment).find(params[:id])
       end
 
       def user_json(user)
@@ -62,6 +65,7 @@ module Api
         if user.company
           json[:company] = { id: user.company.id, name: user.company.name, company_type: user.company.company_type }
         end
+        json[:site] = { id: user.site.id, name: user.site.name } if user.site
         if user.department
           json[:department] = {
             id: user.department.id,
