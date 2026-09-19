@@ -69,7 +69,8 @@ cd e2e && npm install && npx playwright install chromium
 # ローカル（http://localhost:5173）に対して実行
 npx playwright test
 
-# stgに対して実行（本番のデモ環境は設定で拒否される）
+# stgに対して実行（本番のデモ環境は設定で拒否される）。無料プランでAPIがスリープしていると起動に1分近くかかるため、先に起こしておく
+curl -s -o /dev/null -m 120 https://plant-keeper-api-stg.onrender.com/up
 E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ```
 
