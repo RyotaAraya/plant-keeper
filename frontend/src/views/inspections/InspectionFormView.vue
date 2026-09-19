@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 
@@ -12,9 +13,9 @@ const authStore = useAuthStore()
 const editId = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!editId.value && route.name === 'InspectionEdit')
 
-const equipments = ref<any[]>([])
+// 設備・部署の選択肢は拠点ごと。通常は自分の所属拠点の分だけを出す
+const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const instruments = ref<any[]>([])
-const departments = ref<any[]>([])
 const templates = ref<any[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
@@ -45,14 +46,19 @@ const itemTypeOptions = [
 ]
 
 async function fetchMasters() {
-  const [eqRes, deptRes, tmplRes] = await Promise.all([
-    api.get('/equipments', { params: { per_page: 100 } }),
-    api.get('/departments'),
+  const [, tmplRes] = await Promise.all([
+    loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
     api.get('/checklist_templates'),
   ])
-  equipments.value = eqRes.data.data
-  departments.value = deptRes.data.data
   templates.value = tmplRes.data.data
+}
+
+// 別拠点の設備の点検（編集や、点検計画からの実施）を開いたときは、その設備の拠点の選択肢に切り替える
+async function ensureOptionsCoverEquipment() {
+  const id = form.value.equipment_id
+  if (!id || equipments.value.some((e) => e.id === id)) return
+  const res = await api.get(`/equipments/${id}`)
+  await loadSiteOptions([res.data.data.site_id])
 }
 
 async function fetchInstruments() {
@@ -181,6 +187,7 @@ onMounted(async () => {
   await fetchMasters()
   await loadExisting()
   await prefillFromPlan()
+  await ensureOptionsCoverEquipment()
 })
 </script>
 
@@ -222,7 +229,7 @@ onMounted(async () => {
             <v-select
               v-model="form.department_id"
               :items="departments"
-              item-title="name"
+              item-title="display_name"
               item-value="id"
               label="部署 *"
             />

@@ -1,4 +1,4 @@
-import { test, expect, login } from './support'
+import { test, expect, login, resetSession } from './support'
 import type { Page } from '@playwright/test'
 
 const ACCOUNTS = {
@@ -7,18 +7,15 @@ const ACCOUNTS = {
   contractorWorker: { email: 'honda@example.com', password: 'password' },
 }
 
-// 承認待ちの点検の詳細画面を開く（一覧の部署フィルタは自分の所属が初期値のため外す）
+// 承認待ちの点検の詳細画面を開く
 async function openApprovalRequestedInspection(page: Page) {
   await page.getByRole('link', { name: '点検・作業記録', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '点検・作業記録' })).toBeVisible()
 
-  const dept = page.locator('.v-field', { has: page.getByLabel('部署', { exact: true }) })
-  if (await dept.locator('.v-field__clearable .v-icon').isVisible()) {
-    await dept.hover()
-    await dept.locator('.v-field__clearable .v-icon').click()
-  }
   await page.locator('.v-field', { has: page.getByLabel('ステータス', { exact: true }) }).click()
   await page.getByRole('option', { name: '承認待ち' }).click()
+  // 複数選択のメニューは選んでも開いたままなので閉じる
+  await page.keyboard.press('Escape')
 
   // 絞り込みが一覧に反映される前に先頭行を開くと、別ステータスの点検を開いてしまう（遅い環境で起きる）ため、
   // 表示中の全行が「承認待ち」になるまで待つ
@@ -45,9 +42,7 @@ test('承認待ちの点検を承認・差し戻しできるのはマネージ�
 
 test('一般ユーザと協力会社の作業員には承認ボタンが表示されない', async ({ page }) => {
   for (const account of [ACCOUNTS.ownerMember, ACCOUNTS.contractorWorker]) {
-    await page.context().clearCookies()
-    await page.goto('/login')
-    await page.evaluate(() => localStorage.clear())
+    await resetSession(page)
     await login(page, account)
     await openApprovalRequestedInspection(page)
     await expect(page.getByRole('button', { name: '承認', exact: true })).toHaveCount(0)

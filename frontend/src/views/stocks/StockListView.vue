@@ -2,20 +2,27 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 
 const router = useRouter()
 const { canManageStockTransaction } = usePermissions()
+const authStore = useAuthStore()
 const stocks = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 
+// 通常業務では自拠点の在庫だけ見ればよいため、自分の所属拠点を初期値にする。
+// 拠点をまたいで探すときは、拠点で「全拠点」を選ぶ
 const filters = ref({
-  warehouse_id: null as number | null,
-  status: null as string | null,
+  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
+  warehouse_ids: [] as number[],
+  statuses: [] as string[],
 })
 
 // Transaction dialog
@@ -62,8 +69,9 @@ async function fetchStocks() {
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
-    if (filters.value.warehouse_id) params.warehouse_id = filters.value.warehouse_id
-    if (filters.value.status) params.status = filters.value.status
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.warehouse_ids.length) params.warehouse_ids = filters.value.warehouse_ids
+    if (filters.value.statuses.length) params.statuses = filters.value.statuses
     const res = await api.get('/stocks', { params })
     stocks.value = res.data.data
     totalCount.value = res.data.meta.total_count
@@ -72,9 +80,18 @@ async function fetchStocks() {
   }
 }
 
-async function fetchWarehouses() {
-  const res = await api.get('/warehouses')
-  warehouses.value = res.data.data
+async function fetchWarehouses(siteIds: number[]) {
+  const res = await api.get('/warehouses', { params: siteIds.length ? { site_ids: siteIds } : {} })
+  // 倉庫名は拠点間で重複しうるため、拠点が1つに決まらないときは拠点名を付ける
+  warehouses.value = res.data.data.map((w: any) => ({ ...w, display_name: siteIds.length === 1 ? w.name : `${w.site?.name ?? ''} ${w.name}` }))
+}
+
+// 拠点を変えたら、表示する拠点にない倉庫の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+function changeSite(siteIds: number[]) {
+  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
+  const keepWarehouses = filters.value.warehouse_ids.filter((id) => warehouses.value.find((w) => w.id === id && shown(w.site_id)))
+  filters.value = { ...filters.value, site_ids: siteIds, warehouse_ids: keepWarehouses }
+  fetchWarehouses(siteIds)
 }
 
 function openTx(stock: any) {
@@ -105,7 +122,7 @@ function goToDetail(row: any) {
 }
 
 onMounted(() => {
-  fetchWarehouses()
+  fetchWarehouses(filters.value.site_ids)
   fetchStocks()
 })
 watch(filters, fetchStocks, { deep: true })
@@ -118,28 +135,10 @@ watch(filters, fetchStocks, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="filters.warehouse_id"
-        :items="warehouses"
-        item-title="name"
-        item-value="id"
-        label="倉庫"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 200px"
-      />
-      <v-select
-        v-model="filters.status"
-        :items="statusOptions"
-        item-title="title"
-        item-value="value"
-        label="ステータス"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 160px"
-      />
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
+      <FilterSelect v-model="filters.warehouse_ids" :items="warehouses" item-title="display_name" item-value="id" label="倉庫" style="max-width: 260px" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
     </div>
 
     <v-data-table

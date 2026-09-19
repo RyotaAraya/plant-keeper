@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -13,8 +14,8 @@ const authStore = useAuthStore()
 const equipments = ref<any[]>([])
 const sites = ref<any[]>([])
 const loading = ref(false)
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
-const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）
+const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ name: '', description: '', site_id: null as number | null })
@@ -30,8 +31,8 @@ const headers = [
 async function fetchEquipments() {
   loading.value = true
   try {
-    const params: any = { per_page: 100 }
-    if (selectedSiteId.value) params.site_id = selectedSiteId.value
+    const params: any = { per_page: 1000 }
+    if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
     const res = await api.get('/equipments', { params })
     equipments.value = res.data.data
   } finally {
@@ -39,8 +40,8 @@ async function fetchEquipments() {
   }
 }
 
+// 設備の作成・編集ダイアログの拠点の選択肢（拠点の絞り込みは SiteScopeTag が自分で取得する）
 async function fetchSites() {
-  // 拠点の一覧を見られない協力会社は、自分の所属拠点で固定（絞り込みの選択欄を出さない）
   if (!canViewSites.value) return
   const res = await api.get('/sites', { params: { per_page: 100 } })
   sites.value = res.data.data
@@ -48,7 +49,7 @@ async function fetchSites() {
 
 function openCreate() {
   editingId.value = null
-  form.value = { name: '', description: '', site_id: selectedSiteId.value }
+  form.value = { name: '', description: '', site_id: selectedSiteIds.value.length === 1 ? (selectedSiteIds.value[0] ?? null) : null }
   errors.value = []
   dialog.value = true
 }
@@ -83,7 +84,7 @@ onMounted(() => {
   fetchSites()
   fetchEquipments()
 })
-watch(selectedSiteId, fetchEquipments)
+watch(selectedSiteIds, fetchEquipments)
 </script>
 
 <template>
@@ -94,18 +95,8 @@ watch(selectedSiteId, fetchEquipments)
       <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
-    <div v-if="canViewSites" class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="selectedSiteId"
-        :items="sites"
-        item-title="name"
-        item-value="id"
-        label="拠点"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 250px"
-      />
+    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+      <SiteScopeTag v-model="selectedSiteIds" />
     </div>
 
     <v-data-table

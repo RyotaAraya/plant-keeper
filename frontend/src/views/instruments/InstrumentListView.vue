@@ -2,16 +2,17 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { canManageEquipment, canViewSites } = usePermissions()
+const { canManageEquipment } = usePermissions()
 const authStore = useAuthStore()
 
 const instruments = ref<any[]>([])
-const sites = ref<any[]>([])
 const equipments = ref<any[]>([])
 const services = ref<any[]>([])
 const lineClasses = ref<any[]>([])
@@ -61,10 +62,10 @@ async function fetchInstruments() {
   try {
     const params: any = { per_page: 1000 }
     if (search.value) params.q = search.value
-    if (selectedSiteIds.value.length) params['site_ids[]'] = selectedSiteIds.value
-    if (selectedEquipmentIds.value.length) params['equipment_ids[]'] = selectedEquipmentIds.value
-    if (selectedServiceIds.value.length) params['service_ids[]'] = selectedServiceIds.value
-    if (selectedLineClassIds.value.length) params['line_class_ids[]'] = selectedLineClassIds.value
+    if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
+    if (selectedEquipmentIds.value.length) params.equipment_ids = selectedEquipmentIds.value
+    if (selectedServiceIds.value.length) params.service_ids = selectedServiceIds.value
+    if (selectedLineClassIds.value.length) params.line_class_ids = selectedLineClassIds.value
     const res = await api.get('/instruments', { params })
     instruments.value = res.data.data
     totalCount.value = res.data.meta.total_count
@@ -74,14 +75,11 @@ async function fetchInstruments() {
 }
 
 async function fetchMasters() {
-  const [siteRes, eqRes, svcRes, lcRes] = await Promise.all([
-    // 拠点の一覧を見られない協力会社は取得しない（所属拠点で固定）
-    canViewSites.value ? api.get('/sites', { params: { per_page: 100, is_active: true } }) : Promise.resolve(null),
-    api.get('/equipments', { params: { per_page: 200 } }),
+  const [eqRes, svcRes, lcRes] = await Promise.all([
+    api.get('/equipments', { params: { per_page: 1000 } }),
     api.get('/services'),
     api.get('/line_classes'),
   ])
-  sites.value = siteRes?.data.data ?? []
   equipments.value = eqRes.data.data
   services.value = svcRes.data.data
   lineClasses.value = lcRes.data.data
@@ -169,6 +167,8 @@ onMounted(() => {
 
     <!-- フィルタパネル -->
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+      <SiteScopeTag v-model="selectedSiteIds" />
+      <v-divider vertical class="pk-scope-divider" />
       <v-text-field
         v-model="search"
         label="タグ番号・種別・設置場所"
@@ -178,63 +178,9 @@ onMounted(() => {
         hide-details
         style="min-width: 200px; max-width: 260px"
       />
-      <v-autocomplete
-        v-if="canViewSites"
-        v-model="selectedSiteIds"
-        :items="sites"
-        item-title="name"
-        item-value="id"
-        label="拠点"
-        multiple
-        chips
-        closable-chips
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 160px; max-width: 260px"
-      />
-      <v-autocomplete
-        v-model="selectedEquipmentIds"
-        :items="filteredEquipments"
-        item-title="name"
-        item-value="id"
-        label="設備"
-        multiple
-        chips
-        closable-chips
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 200px; max-width: 320px"
-      />
-      <v-autocomplete
-        v-model="selectedServiceIds"
-        :items="services"
-        item-title="name"
-        item-value="id"
-        label="サービス・流体"
-        multiple
-        chips
-        closable-chips
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 160px; max-width: 260px"
-      />
-      <v-autocomplete
-        v-model="selectedLineClassIds"
-        :items="lineClasses"
-        item-title="code"
-        item-value="id"
-        label="ラインクラス"
-        multiple
-        chips
-        closable-chips
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 160px; max-width: 260px"
-      />
+      <FilterSelect v-model="selectedEquipmentIds" :items="filteredEquipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+      <FilterSelect v-model="selectedServiceIds" :items="services" item-title="name" item-value="id" label="サービス・流体" searchable style="max-width: 240px" />
+      <FilterSelect v-model="selectedLineClassIds" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" searchable style="max-width: 240px" />
     </div>
 
     <!-- 件数表示 -->

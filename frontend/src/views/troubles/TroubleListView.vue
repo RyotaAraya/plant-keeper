@@ -1,30 +1,36 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import FilterSelect from '@/components/FilterSelect.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
+import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 
+const route = useRoute()
 const router = useRouter()
 const { canCreateTrouble } = usePermissions()
 const authStore = useAuthStore()
 
 const troubles = ref<any[]>([])
-const equipments = ref<any[]>([])
-const departments = ref<any[]>([])
+const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
-// 通常業務では自部署だけ意識すればよいため、自分の所属部署をデフォルト選択（切替可）
+// 通常業務では自拠点のトラブルだけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
+// ダッシュボードから来たときは、その拠点・ステータス・優先度で絞り込んだ状態で開く
 const filters = ref({
-  status: null as string | null,
-  priority: null as string | null,
-  equipment_id: null as number | null,
-  department_id: authStore.user?.department_id ?? null as number | null,
+  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  statuses: listFromQuery(route.query.status),
+  priorities: listFromQuery(route.query.priority),
+  equipment_ids: [] as number[],
+  department_id: null as number | null,
   q: '',
 })
 
@@ -80,9 +86,10 @@ async function fetchTroubles() {
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
-    if (filters.value.status) params.status = filters.value.status
-    if (filters.value.priority) params.priority = filters.value.priority
-    if (filters.value.equipment_id) params.equipment_id = filters.value.equipment_id
+    if (filters.value.statuses.length) params.statuses = filters.value.statuses
+    if (filters.value.priorities.length) params.priorities = filters.value.priorities
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.q) params.q = filters.value.q
     const res = await api.get('/troubles', { params })
@@ -93,17 +100,13 @@ async function fetchTroubles() {
   }
 }
 
-async function fetchEquipments() {
-  const res = await api.get('/equipments', { params: { per_page: 100 } })
-  equipments.value = res.data.data
-}
-
-async function fetchDepartments() {
-  const res = await api.get('/departments')
-  // 部署名は拠点間で重複する（例: どの拠点にも「保全部」がある）ため、拠点名を付けて区別する
-  departments.value = res.data.data
-    .map((d: any) => ({ ...d, display_name: `${d.site?.name ?? ''} ${d.full_path}` }))
-    .sort((a: any, b: any) => a.display_name.localeCompare(b.display_name, 'ja'))
+// 拠点を変えたら、表示する拠点にない設備・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+function changeSite(siteIds: number[]) {
+  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
+  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
+  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
+  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment, department_id: keepDepartment ? keepDepartment.id : null }
+  loadSiteOptions(siteIds)
 }
 
 async function fetchInstruments() {
@@ -146,8 +149,7 @@ function goToDetail(row: any) {
 }
 
 onMounted(() => {
-  fetchEquipments()
-  fetchDepartments()
+  loadSiteOptions(filters.value.site_ids)
   fetchTroubles()
 })
 watch(filters, fetchTroubles, { deep: true })
@@ -162,6 +164,8 @@ watch(filters, fetchTroubles, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
       <v-text-field
         v-model="filters.q"
         label="タイトル検索"
@@ -171,17 +175,7 @@ watch(filters, fetchTroubles, { deep: true })
         hide-details
         style="max-width: 220px"
       />
-      <v-select
-        v-model="filters.equipment_id"
-        :items="equipments"
-        item-title="name"
-        item-value="id"
-        label="設備"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 200px"
-      />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <v-select
         v-model="filters.department_id"
         :items="departments"
@@ -191,30 +185,10 @@ watch(filters, fetchTroubles, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 240px"
+        style="max-width: 320px"
       />
-      <v-select
-        v-model="filters.status"
-        :items="statusOptions"
-        item-title="title"
-        item-value="value"
-        label="ステータス"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 140px"
-      />
-      <v-select
-        v-model="filters.priority"
-        :items="priorityOptions"
-        item-title="title"
-        item-value="value"
-        label="優先度"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 120px"
-      />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" style="max-width: 200px" />
     </div>
 
     <v-data-table

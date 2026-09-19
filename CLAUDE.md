@@ -78,7 +78,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -229,6 +229,8 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。判定の本体は純関数 `permissionsFor(role, companyType)` で、権限マトリクス（トップページ・ログイン画面の `PermissionMatrix.vue`）も同じ関数から「できる/できない」を求める（`constants/permissionMatrix.ts`）。判定を変えたら E2E `permission-matrix.spec.ts` が、マトリクスと実際のメニュー・バックエンドの一覧API（200/403）との食い違いを検出する。あわせて、権限ごとにメニューの全画面を開き、制限したAPIを呼んで403になる画面（未捕捉の例外）がないことも確かめる。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
+- 拠点スコープ（拠点に属するデータの一覧すべて: ダッシュボード・設備台帳・装置計器・点検計画・点検・作業記録・トラブル管理・定期整備・在庫管理・修理管理）: 日常は自拠点だけ見れば足りるため、初期値は所属拠点（`user.site_id`）で、部署は絞らない。表示する拠点は絞り込み項目と分けて、絞り込みの行の左端に `components/SiteScopeTag.vue`（銘板風のタグ）を置く。**拠点は複数選択で、空は全拠点**（メニューに「所属拠点だけ」「全拠点」のボタンがある）。全拠点にすると拠点をまたいで見られる。協力会社は拠点の一覧を見られないため、切替なしで所属拠点の表示のみ。設備・部署・倉庫の選択肢は `composables/useSiteScopeOptions.ts` などで表示する拠点の分だけ取得し、拠点を変えたら、表示しない拠点の設備・部署・倉庫の絞り込みは外す。点検フォームの設備・部署も同じ考え方で所属拠点の分だけ出し、別拠点の設備の点検（編集・点検計画からの実施）を開いたときはその設備の拠点に切り替える
+- 絞り込みの複数選択: 設備・種別・ステータス・優先度・倉庫は `components/FilterSelect.vue`（未選択は絞り込まない。選んだ項目は先頭1つ＋「ほか N」で表示。選択肢が多いものは `searchable`）。部署だけは単一選択。ダッシュボードのカード・リンクから一覧を開くときは、表示中の拠点（`?site_ids=1,2`。全拠点は `site_ids=all`、クエリなしは自拠点）と絞り込み（`?status=open,in_progress` `?priority=critical` など）をURLのクエリで引き継ぐ（変換は `utils/listQuery.ts`）。カードの数字と、開いた一覧の件数が一致する（E2E `site-scope.spec.ts` が検証）。ダッシュボード自体の拠点は、開き直すと自拠点に戻る
 - `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用
 - `orders/` には一覧ビューのみ（詳細ビューなし）
 
@@ -274,7 +276,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### バックエンドの規約
 - レスポンス形式: 成功 `{ data: ... }`、エラー `{ errors: [...] }`
 - ページネーション: `page`/`per_page` パラメータ（`BaseController#pagination_params`。page は1以上、per_page は1〜1000に丸める）→ `{ data: [...], meta: { total_count, page, per_page } }`。ページネーションなしのエンドポイントもあり（users, departments, checklist_templates）
-- フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装
+- フィルタリング: コントローラ内で `if params[:x].present?` チェーンで実装。拠点・設備・種別・ステータス・優先度などの複数選択は `BaseController#id_list_param` / `value_list_param`（`site_ids[]=1&site_ids[]=2` の複数指定と、従来の単一指定 `site_id=1` のどちらも受け付ける。指定なしは絞り込まない）。拠点は、設備の拠点（在庫・修理は倉庫の拠点）で絞る。パラメータ名は複数形（`site_ids` `equipment_ids` `statuses` `priorities` `inspection_types` `warehouse_ids`）
 - 全文検索: `ILIKE '%query%'` パターン（users: name+email, troubles: title, instruments: tag_number, materials: name+part_number+normalized_part_number）
 - enum はすべて文字列型（integer ではない）
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）

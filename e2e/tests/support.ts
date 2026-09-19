@@ -16,6 +16,15 @@ export function apiBaseUrl(): string {
   return 'http://localhost:3000/api/v1'
 }
 
+// 別のアカウントでログインし直す前に、保存済みのトークンを消す。
+// アプリを起動しない静的ファイルのページで消すこと（`/login` を開いてから消すと、トークンが残ったままアプリが
+// ダッシュボードへ移って取得を始め、消した直後にトークンなしの401になり、未捕捉の例外として検出される）
+export async function resetSession(page: Page) {
+  await page.context().clearCookies()
+  await page.goto('/vite.svg')
+  await page.evaluate(() => localStorage.clear())
+}
+
 export async function login(page: Page, account: { email: string; password: string }) {
   await page.goto('/login')
   await page.getByLabel('メールアドレス').fill(account.email)

@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useAuthStore } from '@/stores/auth'
+import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 
+const route = useRoute()
 const router = useRouter()
 const { canManageRepairs } = usePermissions()
+const authStore = useAuthStore()
 
 const repairs = ref<any[]>([])
 const stocks = ref<any[]>([])
@@ -16,8 +22,10 @@ const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
+// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ダッシュボードから来たときは、その拠点・ステータス）
 const filters = ref({
-  status: null as string | null,
+  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  statuses: listFromQuery(route.query.status),
 })
 
 const form = ref({
@@ -59,7 +67,8 @@ async function fetchRepairs() {
   loading.value = true
   try {
     const params: any = { page: page.value, per_page: 25 }
-    if (filters.value.status) params.status = filters.value.status
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+    if (filters.value.statuses.length) params.statuses = filters.value.statuses
     const res = await api.get('/repairs', { params })
     repairs.value = res.data.data
     totalCount.value = res.data.meta.total_count
@@ -68,8 +77,11 @@ async function fetchRepairs() {
   }
 }
 
+// 修理依頼ダイアログの選択肢。表示する拠点の在庫だけを出す
 async function fetchStocks() {
-  const res = await api.get('/stocks', { params: { per_page: 200 } })
+  const params: any = { per_page: 1000 }
+  if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
+  const res = await api.get('/stocks', { params })
   // 修理を依頼できるのは、在庫あり・使用中で数量が1以上のもの（バックエンドの検証と同じ）
   stocks.value = res.data.data.filter((s: any) => ['available', 'in_use'].includes(s.status) && s.quantity >= 1)
 }
@@ -101,7 +113,13 @@ onMounted(() => {
   fetchRepairs()
   fetchStocks()
 })
-watch([filters, page], fetchRepairs, { deep: true })
+// 絞り込みを変えたら1ページ目に戻す（ページ番号だけが残って空の一覧になるのを防ぐ）
+watch(filters, () => {
+  fetchStocks()
+  if (page.value !== 1) page.value = 1
+  else fetchRepairs()
+}, { deep: true })
+watch(page, fetchRepairs)
 </script>
 
 <template>
@@ -113,17 +131,9 @@ watch([filters, page], fetchRepairs, { deep: true })
     </div>
 
     <div class="d-flex ga-4 mb-4 flex-wrap align-center">
-      <v-select
-        v-model="filters.status"
-        :items="statusOptions"
-        item-title="title"
-        item-value="value"
-        label="ステータス"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 160px"
-      />
+      <SiteScopeTag v-model="filters.site_ids" />
+      <v-divider vertical class="pk-scope-divider" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
     </div>
 
     <v-data-table

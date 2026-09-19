@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, login, resetSession, ACCOUNTS } from './support'
 
 const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 
@@ -40,8 +40,7 @@ test('計画の追加ボタンはマネージャーにだけ表示される', as
   await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()
   await expect(page.getByRole('button', { name: '計画を追加' })).toHaveCount(0)
 
-  await page.context().clearCookies()
-  await page.evaluate(() => localStorage.clear())
+  await resetSession(page)
   await login(page, OWNER_MANAGER)
   await page.getByRole('link', { name: '点検計画', exact: true }).click()
   await expect(page.getByRole('button', { name: '計画を追加' })).toBeVisible()

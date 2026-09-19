@@ -110,3 +110,15 @@ h1, h2, h3,
   font-weight: 500;
   white-space: nowrap;
 }
+
+/* 一覧の「表示する拠点」と、その右の絞り込み項目を区切る縦線。幅が狭く折り返すときは出さない */
+.pk-scope-divider {
+  align-self: stretch;
+  margin: 0.25rem 0;
+}
+
+@media (max-width: 600px) {
+  .pk-scope-divider {
+    display: none;
+  }
+}
