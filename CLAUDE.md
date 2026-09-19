@@ -62,7 +62,7 @@ cd frontend && npm run build
 
 ## テスト（バックエンド / Minitest）
 
-`backend/test/` に、認証・権限（Pundit）・点検→トラブル自動作成・資材の型番検索・モデル検証のテストがある。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作る。CI（`backend_test`）でも実行される。
+`backend/test/` に、認証・権限（Pundit）・点検の承認フロー・点検計画・在庫台帳・点検→トラブル自動作成・資材の型番検索・モデル検証のテストがある。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作る。CI（`backend_test`）でも実行される。
 
 ```bash
 # 初回・スキーマ変更時: テスト用DBを作り直す（db:prepare は新規DBにシードを投入するので使わない）
@@ -78,7 +78,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、点検で不具合報告 → トラブル自動登録）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -94,6 +94,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 - シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実行のたびに点検とトラブル（タイトルが `E2E ` で始まる）を1件ずつ追加するため、繰り返し実行すると一覧に溜まる。ローカルは `db:seed:replant`、stg は管理者の `admin/reseed` で戻せる
 - トラブル一覧の行クリックは初期表示の再描画で空振りすることがあるため、詳細画面へは `openFirstTrouble()` を使う（遷移までリトライし、到達も検証する）
+- 承認・点検計画のテストは、提出・承認まではせず画面の出し分けと遷移までを確認する（提出すると計画の期限が進み、シードの状態が変わって再実行できなくなるため）
 - **ログアウトするテストは専用アカウント（`ACCOUNTS.logout`）を使う。** JTIMatcher ではログアウトでそのユーザーの全セッションが失効するため、他のテストと共有すると並列実行時に巻き込まれる
 - ローカルの `vite dev` は、再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがある（`retries: 1` で吸収）。CI は `vite preview` のため影響しない
 - Vuetify の `v-select` は入力要素が覆われているため、`selectFirstOption()`（入力欄 `.v-field` を操作）を使う
@@ -114,6 +115,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 - 設定ファイル: `render.yaml`（Blueprint）。本番・stg の両サービスをこの1ファイルで定義
 - 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
+- `admin/reseed`（管理者によるデモデータの全削除→再投入）は環境変数 `ALLOW_DEMO_RESEED=true` のサーバでだけ動く。`render.yaml` で stg のAPIにだけ設定しており、**本番は既定で無効**（デモ管理者のパスワードが公開されているため、誰でも本番の全データを消せる状態にしない）。本番で必要なときだけRenderダッシュボードで一時的に設定する
 
 ### ブランチ運用
 - `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
@@ -153,7 +155,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ## 設計ドキュメント
 
 - `要求仕様書.md` — 機能要件、業務フロー、設計方針
-- `データモデル設計.md` — 27テーブルのER図・テーブル定義・簡易化メモ
+- `データモデル設計.md` — 28テーブルのER図・テーブル定義・簡易化メモ
 - `実装タスク表.md` — フェーズ別の実装タスク進捗表
 
 ## アーキテクチャ
@@ -187,10 +189,15 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ### バックエンド構造
 - API: `/api/v1` 名前空間、全コントローラが `BaseController`（`authenticate_user!`）を継承
-- 認証: devise-jwt、トークンは Authorization ヘッダーで送受信
-- JWT revocation: `JTIMatcher` 戦略（usersテーブルの`jti`カラムで管理）
+- 認証: devise-jwt、トークンは Authorization ヘッダーで送受信。Devise は `database_authenticatable` / `validatable` / `jwt_authenticatable` のみ（自己登録・パスワード再設定は使わない。エンドポイントも無い）。ログイン成功は監査ログ（`login`）に記録される
+- JWT revocation: `JTIMatcher` 戦略（usersテーブルの`jti`カラムで管理）。jti はユーザに1つなので、**どこか1端末でログアウトするとそのユーザの全端末のトークンが失効する**
+- JWT の有効期限は24時間で、リフレッシュはない。トークンを発行するのはログインだけ（`dispatch_requests` がログインのみ）
 - 認可: Pundit（`BaseController` に `include Pundit::Authorization`）。各モデルに対応するポリシーファイルあり（`app/policies/`）。`ApplicationPolicy` のヘルパー: `admin?`、`owner_manager?`、`owner_company?`
-- 監査ログ: `BaseController#record_audit_log(action, resource)` ヘルパーで統一記録（`resource.saved_changes` を `changes_json` に保存）
+  - `BaseController` は `after_action :verify_authorized` を持つ。**新しいアクションで `authorize` を呼び忘れると500になる**（黙って全員に公開されるのを防ぐ。自分自身の情報だけを返す `current_user#show` のみ `skip_after_action`）。ログイン前のデモアカウント一覧（`demo#accounts`）は `BaseController` を継承しない
+  - `policy_scope` を使っているのは users のみ（協力会社のユーザには自社メンバーだけを返す）。それ以外の一覧は拠点・会社での絞り込みをしていない（全拠点のデータが見える）
+  - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
+  - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
+- 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
 - レスポンス: `{ data: ... }` 形式
 
 **シリアライズの使い分け:**
@@ -220,7 +227,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 **Axiosインターセプタ:**
 - リクエスト: localStorageから `jwt` を読みAuthorizationヘッダーにセット
-- レスポンス: バックエンドが新しい `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書き（JWTローテーションを透過的に処理）
+- レスポンス: バックエンドが `Authorization` ヘッダーを返した場合、localStorageの `jwt` を上書きする。ただし現状トークンを発行するのはログインだけなので、実質ログイン時にしか動かない（ローテーションはしていない）。401（期限切れ）を受けたときの自動処理はない
 
 **認証ストア（`stores/auth.ts`）:**
 - singleton promiseパターン: `initPromise` 変数でページロード時の並行初期化競合を防止
@@ -235,6 +242,12 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 正規化検索: materials.normalized_part_number（ハイフン除去、`before_save` で自動設定）。検索時もクエリ側で同様にハイフン除去してから `ILIKE` 検索
 - 添付ファイル: ActiveStorage（has_many_attached）— 専用テーブルなし
 - 在庫: `purchased_on: :asc` 順（FIFO）
+
+### 業務ルール（実装済みの不変条件）
+- **点検の承認フロー**: `draft ⇄ submitted → approval_requested → approved`（承認依頼中からは `submitted` へ差し戻し可）。遷移は `Inspection::STATUS_TRANSITIONS` とモデルの検証で強制する。更新できるのは作成者本人か管理者/マネージャー、承認できるのは管理者/マネージャーのみ（`InspectionPolicy#approve?`）。`approved` は誰も変更できず、承認依頼中は内容（項目含む）を編集できない。新規作成できる状態は `draft` / `submitted` のみ
+- **点検計画（`inspection_plans`）**: 設備（計器）ごとの周期と次回期限。点検が `draft` を出たとき（`after_save`）に `next_due_on` を「実施日（JST）+ 周期」へ進める。期限の「今日」は `InspectionPlan.today`（JST）で判定する（DBはUTCのため、朝の時間帯に前日扱いにならないように）。点検の設備と計画の設備は一致しなければならない
+- **在庫**: 数量は入出庫・移動（`POST /stock_transactions`）でのみ変更する。在庫行を `lock`（`SELECT ... FOR UPDATE`）してから更新し、DBの CHECK 制約（`quantity >= 0`）でも守る。`PATCH /stocks` は数量・倉庫・資材を変更できない。在庫を初期数量つきで登録すると、入庫として台帳にも残る。移動先に同じロット（資材・購入日・状態が同じでシリアルなし）があれば数量を足す
+- **タグ番号**: `instruments.tag_number` は拠点内で一意（別拠点なら同じ番号があり得る）。モデルで拠点内の一意を検証し、DBの一意制約は設備内のみ
 
 ### 簡易実装方針
 - 承認フロー: UIのみ（ボタンでステータス変更、ロジックなし）
@@ -291,4 +304,17 @@ curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <to
 - `equipment` は Rails で不可算名詞扱い。`config/initializers/inflections.rb` で `irregular "equipment", "equipments"` を定義済み
 - JWT認証: ログイン POST /api/v1/login、ログアウト DELETE /api/v1/logout
 - pre-push フック（lefthook）: ESLint → vue-tsc（`-b`）→ RuboCop が直列実行（`docker-compose exec -T` 経由）
-- シードの audit_log 部分で `Auditable must exist` バリデーションエラーが出るが、ユーザ・設備等の主要データには影響なし
+
+## 既知の制約（未対応）
+
+設計レビューで挙がったもののうち、意図的に未対応のもの。手を入れるときはここを更新する。
+
+- 1ユーザ1 jti のため、複数端末（PCと現場のタブレット）の同時ログインは、どこかでログアウトすると全端末が切れる。トークンはlocalStorage保管で、期限切れ（24時間）時の自動再ログインもない
+- オフライン入力に対応していない（通信が切れると入力中の点検が失われる）
+- 添付ファイル（ActiveStorage）は `:local` で、Renderの無料プランは再デプロイ・スリープでファイルが消える
+- 拠点・会社によるデータの絞り込み（policy_scope）は users のみ。一覧の `per_page` に上限がない箇所が残っている
+- 点検・トラブルで、計器が設備に属することを検証していない（点検計画のみ検証する）。トラブル・修理・発注の状態遷移も制約していない
+- 在庫は「ロット」と「個体（シリアル）」が同じ行で、数量が2以上のロットから1個だけ修理に出せない。発注の入荷は在庫に反映されない。使用資材はテキストで、出庫がトラブルや整備に紐づかない
+- 計測値は文字列で、単位・許容値・判定を持たない。配管・作業指示（Work Order）のエンティティはない
+- 発注点は資材マスタに1つ（全拠点共通）で、在庫は拠点別のため、ダッシュボードで拠点を絞ったときのアラートは「その拠点の在庫 vs 全社の発注点」になる
+- アプリのタイムゾーンはUTCのまま。JSTで判定するのは点検計画の期限のみ

@@ -10,14 +10,16 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
 
   test "拠点の作成は管理者のみ" do
     member = create_user(system_role: "member", company: @owner)
+    member_headers = auth_headers_for(member)
     assert_no_difference "Site.count" do
-      post "/api/v1/sites", params: { site: { name: "新拠点" } }, headers: auth_headers_for(member), as: :json
+      post "/api/v1/sites", params: { site: { name: "新拠点" } }, headers: member_headers, as: :json
     end
     assert_response :forbidden
 
     admin = create_user(system_role: "admin", company: @owner)
+    admin_headers = auth_headers_for(admin) # ログインも監査ログに残るため、件数の比較より前に済ませる
     assert_difference [ "Site.count", "AuditLog.count" ], 1 do
-      post "/api/v1/sites", params: { site: { name: "新拠点" } }, headers: auth_headers_for(admin), as: :json
+      post "/api/v1/sites", params: { site: { name: "新拠点" } }, headers: admin_headers, as: :json
     end
     assert_response :created
   end
@@ -62,6 +64,17 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :forbidden
+  end
+
+  test "デモデータの再投入は、環境変数で許可されていないサーバでは管理者でも実行できない" do
+    admin = create_user(system_role: "admin", company: @owner)
+
+    assert_no_difference "User.count" do
+      post "/api/v1/admin/reseed", headers: auth_headers_for(admin)
+    end
+
+    assert_response :forbidden
+    assert_match(/無効/, json["errors"].join)
   end
 
   test "デモアカウント一覧は認証なしで取得できるが、認証情報は含まない" do

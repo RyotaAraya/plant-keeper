@@ -3,6 +3,7 @@ module Api
     class ManufacturersController < BaseController
       # GET /api/v1/manufacturers
       def index
+        authorize Manufacturer
         manufacturers = Manufacturer.order(:name).all
         render json: { data: manufacturers.as_json }
       end

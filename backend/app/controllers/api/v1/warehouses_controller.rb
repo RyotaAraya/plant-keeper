@@ -3,6 +3,7 @@ module Api
     class WarehousesController < BaseController
       # GET /api/v1/warehouses
       def index
+        authorize Warehouse
         warehouses = Warehouse.includes(:site).order(:name).all
         warehouses = warehouses.where(site_id: params[:site_id]) if params[:site_id].present?
         render json: {

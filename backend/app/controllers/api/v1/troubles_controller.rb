@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/troubles
       def index
+        authorize Trouble
         troubles = Trouble.includes(:equipment, :instrument, reported_by: :department, assigned_to: :department).all
         troubles = troubles.where(equipment_id: params[:equipment_id]) if params[:equipment_id].present?
         troubles = troubles.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
@@ -42,6 +43,7 @@ module Api
 
       # GET /api/v1/troubles/:id
       def show
+        authorize @trouble
         render json: {
           data: @trouble.as_json(
             include: {

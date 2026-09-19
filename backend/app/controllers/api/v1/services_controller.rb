@@ -2,6 +2,7 @@ module Api
   module V1
     class ServicesController < BaseController
       def index
+        authorize Service
         render json: { data: Service.order(:name).as_json }
       end
 

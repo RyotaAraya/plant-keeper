@@ -3,11 +3,24 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+const { isAdmin, isManager, canApproveInspection } = usePermissions()
 const inspection = ref<any>(null)
 const loading = ref(true)
+const actionError = ref('')
+
+// バックエンドの InspectionPolicy#update? に対応（承認済みは誰も変更不可。作成者本人か管理者/マネージャーのみ）
+const canEdit = computed(
+  () =>
+    !!inspection.value &&
+    inspection.value.status !== 'approved' &&
+    (isAdmin.value || isManager.value || authStore.user?.id === inspection.value.user_id)
+)
 
 const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
@@ -41,7 +54,12 @@ async function fetchInspection() {
 }
 
 async function updateStatus(status: string) {
-  await api.patch(`/inspections/${route.params.id}`, { inspection: { status } })
+  actionError.value = ''
+  try {
+    await api.patch(`/inspections/${route.params.id}`, { inspection: { status } })
+  } catch (e: any) {
+    actionError.value = e.response?.data?.errors?.join('、') || e.response?.data?.error || '更新に失敗しました'
+  }
   await fetchInspection()
 }
 
@@ -61,13 +79,15 @@ onMounted(fetchInspection)
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/inspections')" />
         <h1 class="text-h5 ml-2">点検記録詳細</h1>
         <v-spacer />
-        <v-btn v-if="inspection.status === 'draft'" class="mr-2" variant="outlined" @click="router.push(`/inspections/${inspection.id}/edit`)">
+        <v-btn v-if="inspection.status === 'draft' && canEdit" class="mr-2" variant="outlined" @click="router.push(`/inspections/${inspection.id}/edit`)">
           <v-icon start>mdi-pencil</v-icon>編集
         </v-btn>
-        <v-btn v-if="inspection.status === 'draft'" color="primary" @click="updateStatus('submitted')">提出</v-btn>
-        <v-btn v-if="inspection.status === 'submitted'" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
-        <v-btn v-if="inspection.status === 'approval_requested'" color="success" @click="updateStatus('approved')">承認</v-btn>
+        <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
+        <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
+        <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" class="mr-2" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
+        <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
       </div>
+      <v-alert v-if="actionError" type="error" variant="tonal" closable class="mb-4" @click:close="actionError = ''">{{ actionError }}</v-alert>
 
       <v-card class="mb-4">
         <v-card-text>

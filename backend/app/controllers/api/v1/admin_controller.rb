@@ -3,15 +3,18 @@ module Api
     class AdminController < BaseController
       # POST /api/v1/admin/reseed
       # デモ環境のデータを初期状態に戻す（全データ削除→再投入）。
-      # 管理者のみ実行可能。シェル・SSHが使えない環境（Render無料プラン等）で
-      # デモデータをリフレッシュするための代替手段。
+      # シェル・SSHが使えない環境（Render無料プラン等）でデモデータをリフレッシュするための代替手段。
+      # 管理者のみ。かつ ALLOW_DEMO_RESEED=true を設定したサーバ（stg等）でだけ動く
+      # （既定は無効。公開デモの管理者パスワードは公開されているため、誰でも全データを消せる状態にしない）
       def reseed
-        unless current_user.admin?
-          render json: { errors: [ "この操作は管理者のみ実行できます" ] }, status: :forbidden
+        authorize :admin, :reseed?
+
+        unless ENV["ALLOW_DEMO_RESEED"] == "true"
+          render json: { errors: [ "このサーバではデモデータの再投入は無効です" ] }, status: :forbidden
           return
         end
 
-        Rails.application.load_tasks
+        Rails.application.load_tasks unless Rake::Task.task_defined?("db:seed:replant")
         Rake::Task["db:seed:replant"].reenable
 
         original_check = ENV["DISABLE_DATABASE_ENVIRONMENT_CHECK"]
@@ -24,8 +27,11 @@ module Api
         end
 
         render json: { data: { message: "デモデータを再投入しました" } }
+      rescue Pundit::NotAuthorizedError
+        raise
       rescue StandardError => e
-        render json: { errors: [ e.message ] }, status: :internal_server_error
+        Rails.logger.error("reseed failed: #{e.class}: #{e.message}")
+        render json: { errors: [ "再投入に失敗しました（詳細はサーバログを参照）" ] }, status: :internal_server_error
       end
     end
   end

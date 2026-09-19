@@ -114,6 +114,41 @@ onMounted(async () => {
       </v-row>
 
       <v-row>
+        <!-- 点検期限 -->
+        <v-col cols="12" md="6">
+          <v-card>
+            <v-card-title>
+              <v-icon class="mr-2" aria-hidden="true">mdi-calendar-alert</v-icon>
+              点検期限
+              <v-chip v-if="dashboard.inspection_plans.overdue > 0" class="ml-2" size="x-small" color="error">
+                超過{{ dashboard.inspection_plans.overdue }}件
+              </v-chip>
+              <v-chip v-if="dashboard.inspection_plans.due_soon > 0" class="ml-2" size="x-small" color="warning">
+                7日以内{{ dashboard.inspection_plans.due_soon }}件
+              </v-chip>
+            </v-card-title>
+            <v-list v-if="dashboard.inspection_plans.overdue_list?.length" density="compact">
+              <v-list-item
+                v-for="p in dashboard.inspection_plans.overdue_list"
+                :key="p.id"
+                :title="p.name"
+                :subtitle="`${p.equipment?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
+                @click="router.push('/inspection-plans?overdue=true')"
+              >
+                <template #prepend>
+                  <v-icon color="error" aria-hidden="true">mdi-clock-alert-outline</v-icon>
+                </template>
+              </v-list-item>
+            </v-list>
+            <v-card-text v-else>
+              <div class="text-grey text-center">期限超過の点検はありません</div>
+            </v-card-text>
+            <v-card-actions>
+              <v-btn @click="router.push('/inspection-plans')">点検計画へ</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+
         <!-- 直近の定期整備 -->
         <v-col cols="12" md="6">
           <v-card>
@@ -146,8 +181,8 @@ onMounted(async () => {
           </v-card>
         </v-col>
 
-        <!-- 在庫アラート -->
-        <v-col cols="12" md="6">
+        <!-- 在庫アラート（権限のない人には項目自体が返らない） -->
+        <v-col v-if="dashboard.stock_alerts" cols="12" md="6">
           <v-card>
             <v-card-title>
               <v-icon class="mr-2" aria-hidden="true">mdi-alert</v-icon>
@@ -187,8 +222,8 @@ onMounted(async () => {
           </v-card>
         </v-col>
 
-        <!-- 修理状況 -->
-        <v-col cols="12" md="6">
+        <!-- 修理状況（権限のない人には項目自体が返らない） -->
+        <v-col v-if="dashboard.repairs && dashboard.orders" cols="12" md="6">
           <v-card>
             <v-card-title>
               <v-icon class="mr-2" aria-hidden="true">mdi-tools</v-icon>
@@ -218,7 +253,7 @@ onMounted(async () => {
         </v-col>
 
         <!-- 最近の発注 -->
-        <v-col cols="12" md="6">
+        <v-col v-if="dashboard.orders" cols="12" md="6">
           <v-card>
             <v-card-title>
               <v-icon class="mr-2" aria-hidden="true">mdi-cart</v-icon>

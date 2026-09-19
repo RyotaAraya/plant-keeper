@@ -2,6 +2,7 @@ module Api
   module V1
     class CompaniesController < BaseController
       def index
+        authorize Company
         companies = Company.all
         companies = companies.where(company_type: params[:company_type]) if params[:company_type].present?
         companies = companies.where(is_active: true) unless params[:include_inactive] == "true"

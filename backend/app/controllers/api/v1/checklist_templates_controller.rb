@@ -5,6 +5,7 @@ module Api
 
       # GET /api/v1/checklist_templates
       def index
+        authorize ChecklistTemplate
         templates = ChecklistTemplate.includes(:department, :checklist_template_items).all
         templates = templates.where(department_id: params[:department_id]) if params[:department_id].present?
         templates = templates.where(inspection_type: params[:inspection_type]) if params[:inspection_type].present?
@@ -21,6 +22,7 @@ module Api
 
       # GET /api/v1/checklist_templates/:id
       def show
+        authorize @template
         render json: {
           data: @template.as_json(
             include: {

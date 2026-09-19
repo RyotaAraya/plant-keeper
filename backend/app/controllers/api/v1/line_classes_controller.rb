@@ -2,6 +2,7 @@ module Api
   module V1
     class LineClassesController < BaseController
       def index
+        authorize LineClass
         render json: { data: LineClass.order(:code).as_json }
       end
 

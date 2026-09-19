@@ -150,6 +150,7 @@ export interface ChecklistTemplateItem {
 export interface Inspection {
   id: number
   checklist_template_id: number | null
+  inspection_plan_id: number | null
   user_id: number
   equipment_id: number
   instrument_id: number | null
@@ -160,6 +161,24 @@ export interface Inspection {
   notes: string | null
   created_at: string
   updated_at: string
+}
+
+export interface InspectionPlan {
+  id: number
+  name: string
+  equipment_id: number
+  instrument_id: number | null
+  checklist_template_id: number | null
+  inspection_type: string
+  interval_days: number
+  last_inspected_on: string | null
+  next_due_on: string
+  is_active: boolean
+  overdue: boolean
+  days_until_due: number
+  equipment?: { id: number; name: string; site_id: number }
+  instrument?: { id: number; tag_number: string } | null
+  checklist_template?: { id: number; name: string } | null
 }
 
 export interface InspectionItem {

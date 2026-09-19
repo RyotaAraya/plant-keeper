@@ -51,20 +51,32 @@ module Api
 
       # POST /api/v1/stocks
       def create
-        stock = Stock.new(stock_params)
+        stock = Stock.new(create_params)
         authorize stock
-        if stock.save
+
+        ActiveRecord::Base.transaction do
+          stock.save!
           record_audit_log("create", stock)
-          render json: { data: stock.as_json }, status: :created
-        else
-          render json: { errors: stock.errors.full_messages }, status: :unprocessable_entity
+
+          # 初期数量も台帳（入庫）に残す。台帳を通さない在庫は監査で追えないため
+          if stock.quantity.positive?
+            initial = stock.stock_transactions.create!(
+              user: current_user, transaction_type: "incoming", quantity: stock.quantity,
+              reason: "初期登録", transacted_at: Time.current
+            )
+            record_audit_log("create", initial)
+          end
         end
+
+        render json: { data: stock.as_json }, status: :created
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/stocks/:id
       def update
         authorize @stock
-        if @stock.update(stock_params)
+        if @stock.update(update_params)
           record_audit_log("update", @stock)
           render json: { data: @stock.as_json }
         else
@@ -82,11 +94,16 @@ module Api
         ).find(params[:id])
       end
 
-      def stock_params
+      def create_params
         params.require(:stock).permit(
           :material_id, :warehouse_id, :quantity,
           :purchased_on, :status, :serial_number, :notes
         )
+      end
+
+      # 数量・倉庫・資材は入出庫/移動（stock_transactions）でのみ変える。直接書き換えると台帳と残高がずれる
+      def update_params
+        params.require(:stock).permit(:purchased_on, :status, :serial_number, :notes)
       end
     end
   end
