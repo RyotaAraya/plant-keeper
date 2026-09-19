@@ -77,13 +77,23 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
     assert_match(/無効/, json["errors"].join)
   end
 
-  test "デモアカウント一覧は認証なしで取得できるが、認証情報は含まない" do
-    create_user(system_role: "member", company: @owner)
+  test "デモアカウント一覧は認証なしで取得でき、権限（会社種別×ロール）ごとに1人ずつ。認証情報は含まない" do
+    demo = {
+      "admin@example.com" => [ "admin", @owner ],
+      "suzuki@example.com" => [ "manager", @owner ],
+      "sato@example.com" => [ "member", @owner ],
+      "yoshida@example.com" => [ "manager", @contractor ],
+      "honda@example.com" => [ "worker", @contractor ]
+    }
+    demo.each { |email, (role, company)| create_user(email: email, system_role: role, company: company) }
+    create_user(system_role: "member", company: @owner, name: "一覧に出ない一般ユーザ")
+    create_user(email: "hashimoto@example.com", system_role: "admin", company: @owner)
 
     get "/api/v1/demo_accounts"
 
     assert_response :ok
-    account = json["data"].first
-    assert_equal %w[company_name department_path email employment_type id name system_role], account.keys.sort
+    assert_equal demo.keys, json["data"].map { |a| a["email"] }, "権限ごとの代表1人だけを、決まった順序で返す"
+    assert_equal %w[company_name company_type department_path email employment_type id name system_role], json["data"].first.keys.sort
+    assert_equal %w[owner owner owner contractor contractor], json["data"].map { |a| a["company_type"] }
   end
 end

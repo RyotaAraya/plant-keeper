@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import HeroCanvas from '@/components/home/HeroCanvas.vue'
+import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import inspectionsShot from '@/assets/screenshots/inspections.png'
 import materialsShot from '@/assets/screenshots/materials.png'
 import departmentsShot from '@/assets/screenshots/departments.png'
@@ -120,6 +121,19 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
             </figure>
           </div>
         </div>
+      </v-container>
+    </section>
+
+    <!-- 権限ごとにできること -->
+    <section id="permissions" class="px-4 px-sm-8 py-12 py-sm-16 pk-permissions">
+      <v-container>
+        <div class="pk-permissions__intro mb-8">
+          <h2 class="text-h4 font-weight-bold mb-2">権限ごとに、できることが違います</h2>
+          <p class="text-body-2 text-medium-emphasis">
+            自社と協力会社で、見られる範囲も操作できる範囲も分かれます。デモアカウントは、この5つの権限に1人ずつ用意しています。
+          </p>
+        </div>
+        <PermissionMatrix />
       </v-container>
     </section>
 
@@ -416,6 +430,18 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   font-size: 0.7rem;
   color: #8a9296;
   border-top: 1px solid var(--pk-line);
+}
+
+.pk-permissions {
+  border-top: 1px solid var(--pk-line);
+}
+
+.pk-permissions__intro {
+  max-width: 640px;
+}
+
+.pk-permissions__intro p {
+  text-wrap: pretty;
 }
 
 .pk-story {

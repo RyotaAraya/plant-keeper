@@ -107,9 +107,13 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ## ログイン情報（開発用）
 
-- 管理者(admin): admin@example.com / password
-- 管理者(manager): suzuki@example.com / password
-- 一般(member): sato@example.com / password
+- 自社 システム管理者(admin): admin@example.com / password
+- 自社 業務管理者(manager): suzuki@example.com / password
+- 自社 一般(member): sato@example.com / password
+- 協力会社 業務管理者(manager): yoshida@example.com / password
+- 協力会社 技能員(worker): honda@example.com / password
+
+ログイン画面のデモアカウント一覧（`GET /demo_accounts`）は、上の**権限ごとに1人ずつの5人だけ**を返す（`DemoController::DEMO_ACCOUNT_EMAILS`）。シードのユーザ（数十人）は点検の実施者や設備担当など、データの整合のために残してあり、減らしていない。
 
 ## デプロイ（Render）
 
@@ -220,7 +224,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### フロントエンド構造
 - ルーティング: `meta: { requiresAuth: true }` でガード、遅延ロード
 - 認証: `stores/auth.ts` で JWT を localStorage 管理、axios インターセプタで自動付与
-- 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
+- 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。判定の本体は純関数 `permissionsFor(role, companyType)` で、権限マトリクス（トップページ・ログイン画面の `PermissionMatrix.vue`）も同じ関数から「できる/できない」を求める（`constants/permissionMatrix.ts`）。判定を変えたら E2E `permission-matrix.spec.ts` が、マトリクスと実際のメニューの食い違いを検出する。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
 - `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用
@@ -300,6 +304,7 @@ curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <to
 ## トラブルシューティング
 
 - **HMRが効かない**: Docker + macOS のため `vite.config.ts` で `usePolling: true` 設定済み。それでも反映されなければ `docker-compose restart frontend`
+- **デモアカウントを増やしたい**: `DemoController::DEMO_ACCOUNT_EMAILS` に足す。権限マトリクスは5つの権限（`frontend/src/constants/permissionMatrix.ts` の `MATRIX_ROLES`）が前提なので、権限の組み合わせを増やすときはそちらも直す
 - **APIが401**: JWTの有効期限切れ（24時間）。画面ではログイン画面に戻る。再ログインする
 - **マイグレーションがずれた（開発DBのみ）**: `db:migrate:reset` → `db:seed`。接続先が開発DBであることを確認してから実行する
 - **backendが起動しない**: puma のPIDファイル残り。`docker-compose.yml` の command で `rm -f tmp/pids/server.pid` 済みだが、解消しなければ `docker-compose down` → `up -d`
