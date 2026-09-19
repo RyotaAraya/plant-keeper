@@ -9,6 +9,13 @@ export const ACCOUNTS = {
   logout: { email: 'suzuki@example.com', password: 'password' },
 }
 
+// バックエンドAPIのURL。E2E_API_URL で指定するか、画面のURL（E2E_BASE_URL）から推定する（stg。ローカル/CIは :3000）
+export function apiBaseUrl(): string {
+  if (process.env.E2E_API_URL) return process.env.E2E_API_URL
+  if ((process.env.E2E_BASE_URL ?? '').includes('plant-keeper-web-stg')) return 'https://plant-keeper-api-stg.onrender.com/api/v1'
+  return 'http://localhost:3000/api/v1'
+}
+
 export async function login(page: Page, account: { email: string; password: string }) {
   await page.goto('/login')
   await page.getByLabel('メールアドレス').fill(account.email)
