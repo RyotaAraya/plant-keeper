@@ -23,6 +23,18 @@ export async function selectFirstOption(page: Page, label: string) {
   await page.getByRole('option').first().click()
 }
 
+// トラブル管理の先頭行から詳細画面を開く。一覧は初期表示の再取得で行が差し替わることがあり、
+// クリックが空振りしうるため、詳細画面に遷移するまでクリックをリトライする。
+// 「詳細画面に到達していないのに、ボタンがないことの確認だけ通る」状態を防ぐため、到達も検証する
+export async function openFirstTrouble(page: Page) {
+  await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
+  await expect(async () => {
+    await page.locator('tbody tr').first().click()
+    await expect(page).toHaveURL(/\/troubles\/\d+/, { timeout: 2_000 })
+  }).toPass({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('トラブル管理')
+}
+
 // 全テスト共通: 未捕捉のJS例外・APIの5xxが出ていないことを保証する
 // （依存更新でフロントが壊れたときに、画面の見た目の確認だけでは気づけない不具合を拾う）
 export const test = base.extend<{ runtimeGuard: void }>({

@@ -60,7 +60,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、点検で不具合報告 → トラブル自動登録）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、点検で不具合報告 → トラブル自動登録）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -74,7 +74,8 @@ curl -s -o /dev/null -m 120 https://plant-keeper-api-stg.onrender.com/up
 E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ```
 
-- シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実際にデータを追加する（ローカルは `db:seed:replant` か管理者の `admin/reseed` で戻せる）
+- シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実行のたびに点検とトラブル（タイトルが `E2E ` で始まる）を1件ずつ追加するため、繰り返し実行すると一覧に溜まる。ローカルは `db:seed:replant`、stg は管理者の `admin/reseed` で戻せる
+- トラブル一覧の行クリックは初期表示の再描画で空振りすることがあるため、詳細画面へは `openFirstTrouble()` を使う（遷移までリトライし、到達も検証する）
 - **ログアウトするテストは専用アカウント（`ACCOUNTS.logout`）を使う。** JTIMatcher ではログアウトでそのユーザーの全セッションが失効するため、他のテストと共有すると並列実行時に巻き込まれる
 - ローカルの `vite dev` は、再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがある（`retries: 1` で吸収）。CI は `vite preview` のため影響しない
 - Vuetify の `v-select` は入力要素が覆われているため、`selectFirstOption()`（入力欄 `.v-field` を操作）を使う
