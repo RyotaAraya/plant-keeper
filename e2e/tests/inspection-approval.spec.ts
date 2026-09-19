@@ -20,6 +20,14 @@ async function openApprovalRequestedInspection(page: Page) {
   await page.locator('.v-field', { has: page.getByLabel('ステータス', { exact: true }) }).click()
   await page.getByRole('option', { name: '承認待ち' }).click()
 
+  // 絞り込みが一覧に反映される前に先頭行を開くと、別ステータスの点検を開いてしまう（遅い環境で起きる）ため、
+  // 表示中の全行が「承認待ち」になるまで待つ
+  await expect(async () => {
+    const rows = await page.locator('tbody tr').allInnerTexts()
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) expect(row).toContain('承認待ち')
+  }).toPass({ timeout: 15_000 })
+
   await expect(async () => {
     await page.locator('tbody tr').first().click()
     await expect(page).toHaveURL(/\/inspections\/\d+$/, { timeout: 2_000 })
