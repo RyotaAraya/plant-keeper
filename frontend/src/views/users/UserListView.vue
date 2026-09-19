@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const users = ref<any[]>([])
-const departmentTree = ref<any[]>([])
+const { departments, load: loadSiteOptions } = useSiteScopeOptions({ withEquipments: false })
 const loading = ref(false)
 const showInactive = ref(false)
 
+// 通常業務では自拠点のユーザだけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）
 const filters = ref({
+  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
   q: '',
   employment_type: null as string | null,
   system_role: null as string | null,
@@ -23,6 +30,7 @@ const headers = [
   { title: 'メール', key: 'email' },
   { title: '在籍区分', key: 'employment_type', width: '100px' },
   { title: '権限', key: 'system_role', width: '80px' },
+  { title: '拠点', key: 'site.name', width: '120px' },
   { title: '所属会社', key: 'company', width: '140px' },
   { title: '部署', key: 'department_path', width: '280px' },
   { title: '入社年', key: 'join_year', width: '80px' },
@@ -48,50 +56,34 @@ const systemRoleOptions = [
   { title: '技能員', value: 'worker' },
 ]
 
-const levelLabel: Record<string, string> = {
-  division: '部', section: '課', team: 'チーム',
-}
-
-// ツリーをフラットリストに変換（インデント付き）
-function flattenTree(nodes: any[], depth = 0): any[] {
-  const result: any[] = []
-  for (const node of nodes) {
-    const indent = '\u00A0\u00A0'.repeat(depth)
-    result.push({
-      id: node.id,
-      name: node.name,
-      title: `${indent}${node.name}（${levelLabel[node.level] || node.level}）`,
-      level: node.level,
-      depth,
-    })
-    if (node.children?.length) {
-      result.push(...flattenTree(node.children, depth + 1))
-    }
+// 拠点を変えたら、表示する拠点にない部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+async function changeSite(siteIds: number[]) {
+  filters.value = { ...filters.value, site_ids: siteIds }
+  await loadSiteOptions(siteIds)
+  if (filters.value.department_id && !departments.value.some((d) => d.id === filters.value.department_id)) {
+    filters.value = { ...filters.value, department_id: null }
   }
-  return result
 }
 
-const flatDepartments = computed(() => flattenTree(departmentTree.value))
+const fetchUsersGuard = latestGuard()
 
 async function fetchUsers() {
+  const isLatest = fetchUsersGuard()
   loading.value = true
   try {
     const params: any = {}
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.q) params.q = filters.value.q
     if (filters.value.employment_type) params.employment_type = filters.value.employment_type
     if (filters.value.system_role) params.system_role = filters.value.system_role
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (!showInactive.value) params.is_active = true
     const res = await api.get('/users', { params })
+    if (!isLatest()) return
     users.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
-}
-
-async function fetchDepartments() {
-  const res = await api.get('/departments', { params: { tree: 'true' } })
-  departmentTree.value = res.data.data
 }
 
 function goToDetail(row: any) {
@@ -110,7 +102,7 @@ function nameInitial(name: string) {
 }
 
 onMounted(() => {
-  fetchDepartments()
+  loadSiteOptions(filters.value.site_ids)
   fetchUsers()
 })
 watch([filters, showInactive], fetchUsers, { deep: true })
@@ -121,6 +113,8 @@ watch([filters, showInactive], fetchUsers, { deep: true })
     <PageHeader title="ユーザ管理" description="ユーザの所属会社・雇用区分・権限を管理します。退職・復帰の対応もここで行います。" />
 
     <div class="pk-filters">
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
       <v-text-field
         v-model="filters.q"
         label="名前・メール検索"
@@ -154,14 +148,14 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       />
       <v-select
         v-model="filters.department_id"
-        :items="flatDepartments"
-        item-title="title"
+        :items="departments"
+        item-title="display_name"
         item-value="id"
         label="部署"
         clearable
         density="compact"
         hide-details
-        style="max-width: 260px"
+        style="max-width: 320px"
       />
       <v-switch v-model="showInactive" label="退職者表示" density="compact" hide-details />
     </div>

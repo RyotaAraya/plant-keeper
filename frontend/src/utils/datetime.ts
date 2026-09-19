@@ -12,3 +12,11 @@ export function todayForInput(d: Date = new Date()): string {
 export function nowForInput(d: Date = new Date()): string {
   return `${todayForInput(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+// 期間の初期値用。n か月前の同じ日（月末をはみ出す場合はその月の末日）
+export function monthsAgoForInput(months: number, d: Date = new Date()): string {
+  const target = new Date(d.getFullYear(), d.getMonth() - months, 1)
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(d.getDate(), lastDay))
+  return todayForInput(target)
+}
