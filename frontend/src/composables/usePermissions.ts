@@ -1,21 +1,24 @@
-import { computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-export function usePermissions() {
-  const authStore = useAuthStore()
+export interface RoleContext {
+  role?: string | null
+  companyType?: string | null
+}
 
-  const role = computed(() => authStore.user?.system_role)
-  const companyType = computed(() => authStore.user?.company?.company_type)
-
-  const isAdmin = computed(() => role.value === 'admin')
-  const isOwnerManager = computed(() => role.value === 'manager' && companyType.value === 'owner')
-  const isContractorManager = computed(() => role.value === 'manager' && companyType.value === 'contractor')
-  const isOwnerCompany = computed(() => companyType.value === 'owner')
-  const isWorker = computed(() => role.value === 'worker')
-  const isManager = computed(() => role.value === 'manager')
+// 役割（system_role）と会社種別から、使える機能を決める。バックエンドの Pundit ポリシーに対応する。
+// メニュー・ボタンの出し分け（usePermissions）と、権限マトリクスの表示（PermissionMatrix）が
+// 同じ判定を使うことで、画面の説明と実際の挙動が食い違わないようにする
+export function permissionsFor({ role, companyType }: RoleContext) {
+  const isAdmin = role === 'admin'
+  const isManager = role === 'manager'
+  const isWorker = role === 'worker'
+  const isOwnerCompany = companyType === 'owner'
+  const isOwnerManager = isManager && isOwnerCompany
+  const isContractorManager = isManager && companyType === 'contractor'
 
   // admin || owner_manager が共通パターン
-  const canManageCore = computed(() => isAdmin.value || isOwnerManager.value)
+  const canManageCore = isAdmin || isOwnerManager
 
   return {
     isAdmin,
@@ -24,6 +27,14 @@ export function usePermissions() {
     isOwnerCompany,
     isWorker,
 
+    // 全員（ログインしていれば誰でも）
+    canViewRecords: true,
+    canInputInspection: true,
+
+    // 拠点の一覧とユーザ一覧は自社のみ（協力会社は自分の所属拠点をヘッダーで見られるだけ）
+    canViewSites: isOwnerCompany,
+    canViewUsers: isOwnerCompany,
+
     // SideNav 用
     canManageUsers: isAdmin,
     canViewAuditLogs: isAdmin,
@@ -31,20 +42,37 @@ export function usePermissions() {
     canManageOrders: canManageCore,
     canManageRepairs: canManageCore,
     canViewStocks: isOwnerCompany,
-    canViewMaterials: computed(() => !isWorker.value),
+    canViewMaterials: !isWorker,
 
     // 各ビュー内ボタン制御用
     canManageSite: isAdmin,
     canManageEquipment: canManageCore,
     canManageInspectionPlan: canManageCore,
     // バックエンドの InspectionPolicy#approve? に対応（承認・差し戻しは管理者/マネージャー）
-    canApproveInspection: computed(() => isAdmin.value || isManager.value),
+    canApproveInspection: isAdmin || isManager,
     canManageMaintenance: canManageCore,
     canManageEquipmentAssignment: canManageCore,
     canManageMaterial: canManageCore,
     canManageStockTransaction: canManageCore,
-    canCreateTrouble: computed(() => !isWorker.value),
-    canUpdateTrouble: computed(() => isAdmin.value || isOwnerManager.value || isContractorManager.value),
-    canCreateTroubleResponse: computed(() => !isWorker.value),
+    canCreateTrouble: !isWorker,
+    canUpdateTrouble: isAdmin || isOwnerManager || isContractorManager,
+    canCreateTroubleResponse: !isWorker,
   }
+}
+
+export type Permissions = ReturnType<typeof permissionsFor>
+
+export function usePermissions() {
+  const authStore = useAuthStore()
+
+  const current = computed(() =>
+    permissionsFor({
+      role: authStore.user?.system_role,
+      companyType: authStore.user?.company?.company_type,
+    })
+  )
+
+  return Object.fromEntries(
+    (Object.keys(current.value) as (keyof Permissions)[]).map((key) => [key, computed(() => current.value[key])])
+  ) as { [K in keyof Permissions]: ComputedRef<Permissions[K]> }
 }

@@ -7,7 +7,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { canManageEquipment } = usePermissions()
+const { canManageEquipment, canViewSites } = usePermissions()
 const authStore = useAuthStore()
 
 const equipments = ref<any[]>([])
@@ -40,6 +40,8 @@ async function fetchEquipments() {
 }
 
 async function fetchSites() {
+  // 拠点の一覧を見られない協力会社は、自分の所属拠点で固定（絞り込みの選択欄を出さない）
+  if (!canViewSites.value) return
   const res = await api.get('/sites', { params: { per_page: 100 } })
   sites.value = res.data.data
 }
@@ -92,7 +94,7 @@ watch(selectedSiteId, fetchEquipments)
       <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </div>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div v-if="canViewSites" class="d-flex ga-4 mb-4 flex-wrap align-center">
       <v-select
         v-model="selectedSiteId"
         :items="sites"

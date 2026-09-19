@@ -107,9 +107,13 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ## ログイン情報（開発用）
 
-- 管理者(admin): admin@example.com / password
-- 管理者(manager): suzuki@example.com / password
-- 一般(member): sato@example.com / password
+- 自社 システム管理者(admin): admin@example.com / password
+- 自社 業務管理者(manager): suzuki@example.com / password
+- 自社 一般(member): sato@example.com / password
+- 協力会社 業務管理者(manager): yoshida@example.com / password
+- 協力会社 技能員(worker): honda@example.com / password
+
+ログイン画面のデモアカウント一覧（`GET /demo_accounts`）は、上の**権限ごとに1人ずつの5人だけ**を返す（`DemoController::DEMO_ACCOUNT_EMAILS`。所属拠点 `site_name` も返し、名前の横に表示する）。シードのユーザ（数十人）は点検の実施者や設備担当など、データの整合のために残してあり、減らしていない。
 
 ## デプロイ（Render）
 
@@ -195,7 +199,9 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - JWT の有効期限は24時間で、リフレッシュはない。トークンを発行するのはログインだけ（`dispatch_requests` がログインのみ）
 - 認可: Pundit（`BaseController` に `include Pundit::Authorization`）。各モデルに対応するポリシーファイルあり（`app/policies/`）。`ApplicationPolicy` のヘルパー: `admin?`、`owner_manager?`、`owner_company?`
   - `BaseController` は `after_action :verify_authorized` を持つ。**新しいアクションで `authorize` を呼び忘れると500になる**（黙って全員に公開されるのを防ぐ。自分自身の情報だけを返す `current_user#show` のみ `skip_after_action`）。ログイン前のデモアカウント一覧（`demo#accounts`）は `BaseController` を継承しない
-  - `policy_scope` を使っているのは users のみ（協力会社のユーザには自社メンバーだけを返す）。それ以外の一覧は拠点・会社での絞り込みをしていない（全拠点のデータが見える）
+  - **閲覧の制限（画面とAPI単位）**: 協力会社（業務管理者・技能員）は、拠点の一覧・詳細（`SitePolicy#index?/show?`）とユーザ一覧（`UserPolicy#index?`）を見られない（403。メニューにも出ず、`/sites` を直接開いてもダッシュボードに戻される）。ほかに、資材は技能員不可、在庫は自社のみ、発注・修理は自社のマネージャー以上、といった既存の制限がある
+  - 自分の所属拠点は、協力会社にも分かるようにヘッダー右上に表示する（`UserSerializer` が `site: { id, name }` を返す）。拠点の一覧を見られない協力会社の画面（ダッシュボード・設備台帳・装置計器）は、拠点の選択欄を出さず、所属拠点で固定する。ユーザ一覧を見られない協力会社のトラブル編集は、担当者の選択欄を出さない
+  - `policy_scope` を使っているのは users のみ（一覧の許可を緩めても、協力会社には自社メンバーだけを返す多重防御）。それ以外の一覧は拠点・会社での**行の絞り込み**をしていない（APIでは他拠点のデータも取得できる。画面の拠点は初期値と選択欄の有無で絞っているだけ）
   - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
   - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
 - 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
@@ -220,7 +226,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### フロントエンド構造
 - ルーティング: `meta: { requiresAuth: true }` でガード、遅延ロード
 - 認証: `stores/auth.ts` で JWT を localStorage 管理、axios インターセプタで自動付与
-- 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
+- 認可: `composables/usePermissions.ts` — バックエンドの Pundit ポリシーに対応した computed プロパティ群。判定の本体は純関数 `permissionsFor(role, companyType)` で、権限マトリクス（トップページ・ログイン画面の `PermissionMatrix.vue`）も同じ関数から「できる/できない」を求める（`constants/permissionMatrix.ts`）。判定を変えたら E2E `permission-matrix.spec.ts` が、マトリクスと実際のメニュー・バックエンドの一覧API（200/403）との食い違いを検出する。あわせて、権限ごとにメニューの全画面を開き、制限したAPIを呼んで403になる画面（未捕捉の例外）がないことも確かめる。`canManageCore = isAdmin || isOwnerManager` が共通パターン。SideNavのメニュー表示制御と各ビュー内のボタン表示制御の両方で使用
 - 画面パターン: `*ListView.vue`（一覧+フィルタ） + `*DetailView.vue`（詳細+編集ダイアログ）
 - UIパターン: カスケードセレクト（拠点→部→課→チーム）に `initializing` フラグで watch 連鎖抑制
 - `InspectionFormView.vue` は `/inspections/new` と `/inspections/:id/edit` で共用
@@ -300,6 +306,7 @@ curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <to
 ## トラブルシューティング
 
 - **HMRが効かない**: Docker + macOS のため `vite.config.ts` で `usePolling: true` 設定済み。それでも反映されなければ `docker-compose restart frontend`
+- **デモアカウントを増やしたい**: `DemoController::DEMO_ACCOUNT_EMAILS` に足す。権限マトリクスは5つの権限（`frontend/src/constants/permissionMatrix.ts` の `MATRIX_ROLES`）が前提なので、権限の組み合わせを増やすときはそちらも直す
 - **APIが401**: JWTの有効期限切れ（24時間）。画面ではログイン画面に戻る。再ログインする
 - **マイグレーションがずれた（開発DBのみ）**: `db:migrate:reset` → `db:seed`。接続先が開発DBであることを確認してから実行する
 - **backendが起動しない**: puma のPIDファイル残り。`docker-compose.yml` の command で `rm -f tmp/pids/server.pid` 済みだが、解消しなければ `docker-compose down` → `up -d`
@@ -320,7 +327,7 @@ curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <to
 - トークンはlocalStorage保管（XSSで盗まれうる）で、リフレッシュ（有効期限の延長）はない。24時間で再ログインになる
 - オフライン入力に対応していない（通信が切れると入力中の点検が失われる）
 - 添付ファイル（ActiveStorage）は `:local` で、Renderの無料プランは再デプロイ・スリープでファイルが消える
-- 拠点・会社によるデータの絞り込み（policy_scope）は users のみ
+- 拠点・会社によるデータの**行の絞り込み**（policy_scope）は users のみ。協力会社でも、APIでは他拠点の設備・点検などを取得できる（拠点の一覧・詳細とユーザ一覧を見られないだけ）
 - 在庫の修理は1個ずつ。使用資材はテキストで、出庫がトラブルや整備に紐づかない
 - 計測値は文字列で、単位・許容値・判定を持たない。配管・作業指示（Work Order）のエンティティはない
 - 発注点は資材マスタに1つ（全拠点共通）で、在庫は拠点別のため、ダッシュボードで拠点を絞ったときのアラートは「その拠点の在庫 vs 全社の発注点」になる

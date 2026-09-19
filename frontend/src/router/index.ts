@@ -25,13 +25,13 @@ const router = createRouter({
       path: '/sites',
       name: 'Sites',
       component: () => import('@/views/sites/SiteListView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresOwner: true },
     },
     {
       path: '/sites/:id',
       name: 'SiteDetail',
       component: () => import('@/views/sites/SiteDetailView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresOwner: true },
     },
     {
       path: '/equipments',

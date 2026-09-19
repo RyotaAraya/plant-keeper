@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
+import PermissionMatrix from '@/components/PermissionMatrix.vue'
+import { roleKeyOf } from '@/constants/permissionMatrix'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -20,10 +23,24 @@ interface DemoAccount {
   system_role: string
   employment_type: string
   company_name: string | null
+  company_type: string | null
+  site_name: string | null
   department_path: string | null
 }
 
 const demoAccounts = ref<DemoAccount[]>([])
+
+// デモアカウントにカーソル/フォーカスを合わせている間、権限マトリクスでその権限の列を強調する
+const highlightRole = ref<string | null>(null)
+
+// 画面が狭いと、ブランド側（左）が上に積まれて、マトリクスがフォームを押し下げてしまうため、
+// 狭いときはフォームの下に出す
+const { width } = useDisplay()
+const isNarrow = computed(() => width.value < 900)
+
+function roleKeyFor(account: DemoAccount) {
+  return roleKeyOf(account.company_type, account.system_role)
+}
 
 const roleLabel: Record<string, string> = {
   admin: 'システム管理者',
@@ -98,9 +115,17 @@ async function loginAs(accountEmail: string) {
         <v-icon color="#E7B778" size="26">mdi-gauge-full</v-icon>
         <span>PlantKeeper</span>
       </router-link>
-      <div class="pk-login__brand-copy">
-        <h1>プラント保全業務を、<br />まるごと一つに。</h1>
-        <p>設備台帳・点検記録・トラブル管理・資材管理を一元化した、現場発の統合管理システムです。</p>
+      <div class="pk-login__brand-main">
+        <div class="pk-login__brand-copy">
+          <h1>プラント保全業務を、<br />まるごと一つに。</h1>
+          <p>設備台帳・点検記録・トラブル管理・資材管理を一元化した、現場発の統合管理システムです。</p>
+        </div>
+
+        <section v-if="!isNarrow" class="pk-login__matrix" aria-labelledby="pk-matrix-title-wide">
+          <h2 id="pk-matrix-title-wide" class="pk-login__matrix-title">権限ごとに、できることが違います</h2>
+          <p class="pk-login__matrix-lead">右のデモアカウントを選ぶと、その権限の列が光ります。</p>
+          <PermissionMatrix variant="dark" dense :highlight="highlightRole" />
+        </section>
       </div>
       <router-link to="/" class="pk-login__back">
         <v-icon size="16" class="mr-1">mdi-arrow-left</v-icon>
@@ -153,7 +178,7 @@ async function loginAs(accountEmail: string) {
 
         <template v-if="demoAccounts.length > 0">
           <v-divider class="my-6" />
-          <div class="text-caption text-medium-emphasis mb-2">デモアカウント（クリックでログイン）</div>
+          <div class="text-caption text-medium-emphasis mb-2">デモアカウント（権限ごとに1人。クリックでログイン）</div>
           <div class="pk-demo-list">
             <button
               v-for="account in demoAccounts"
@@ -162,12 +187,19 @@ async function loginAs(accountEmail: string) {
               class="pk-demo-item"
               :disabled="loading"
               @click="loginAs(account.email)"
+              @mouseenter="highlightRole = roleKeyFor(account)"
+              @mouseleave="highlightRole = null"
+              @focus="highlightRole = roleKeyFor(account)"
+              @blur="highlightRole = null"
             >
               <v-avatar :color="avatarColor(account.id)" size="34" aria-hidden="true">
                 <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
               </v-avatar>
               <div class="pk-demo-item__body">
-                <div class="pk-demo-item__name">{{ account.name }}</div>
+                <div class="pk-demo-item__name">
+                  {{ account.name }}
+                  <span v-if="account.site_name" class="pk-site-tag ml-1"><v-icon size="13" aria-hidden="true">mdi-domain</v-icon>{{ account.site_name }}</span>
+                </div>
                 <div class="pk-demo-item__meta">
                   {{ [account.company_name, account.department_path].filter(Boolean).join(' / ') }}
                 </div>
@@ -179,6 +211,11 @@ async function loginAs(accountEmail: string) {
           </div>
         </template>
       </div>
+
+      <section v-if="isNarrow" class="pk-login__matrix pk-login__matrix--narrow" aria-labelledby="pk-matrix-title-narrow">
+        <h2 id="pk-matrix-title-narrow" class="text-subtitle-1 font-weight-bold mb-3">権限ごとに、できることが違います</h2>
+        <PermissionMatrix dense :highlight="highlightRole" />
+      </section>
     </main>
   </div>
 </template>
@@ -212,6 +249,32 @@ async function loginAs(accountEmail: string) {
   font-size: 1.1rem;
   color: #f5f6f5;
   text-decoration: none;
+}
+
+.pk-login__brand-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem 0;
+}
+
+.pk-login__matrix-title {
+  font-family: var(--pk-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.pk-login__matrix-lead {
+  margin: 0 0 0.9rem;
+  font-size: 0.8125rem;
+  color: rgba(245, 246, 245, 0.62);
+}
+
+.pk-login__matrix--narrow {
+  width: 100%;
+  max-width: 620px;
+  margin-top: 2.5rem;
 }
 
 .pk-login__brand-copy h1 {
@@ -256,12 +319,11 @@ async function loginAs(accountEmail: string) {
   max-width: 400px;
 }
 
+
 .pk-demo-list {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  max-height: 260px;
-  overflow-y: auto;
 }
 
 .pk-demo-item {
@@ -307,6 +369,11 @@ async function loginAs(accountEmail: string) {
 }
 
 @media (max-width: 900px) {
+  .pk-login__form {
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
   .pk-login {
     grid-template-columns: 1fr;
     min-height: 0;
