@@ -12,7 +12,7 @@ module Api
       ].freeze
 
       def accounts
-        users = User.includes(:company, department: { parent: :parent })
+        users = User.includes(:company, :site, department: { parent: :parent })
                     .where(is_active: true, email: DEMO_ACCOUNT_EMAILS)
                     .sort_by { |u| DEMO_ACCOUNT_EMAILS.index(u.email) }
 
@@ -26,6 +26,7 @@ module Api
               employment_type: u.employment_type,
               company_name: u.company&.name,
               company_type: u.company&.company_type,
+              site_name: u.site&.name,
               department_path: u.department&.full_path
             }
           }

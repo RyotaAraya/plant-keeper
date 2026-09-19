@@ -16,6 +16,7 @@ const MENU_BY_ROW: Record<string, string[]> = {
   資材を見る: ['資材管理'],
   在庫を見る: ['在庫管理'],
   発注・修理を管理する: ['発注管理', '修理管理'],
+  拠点・ユーザの一覧を見る: ['拠点管理'],
   '拠点・ユーザ・部署・監査ログ・設定を管理する': ['ユーザ管理', '監査ログ', '部署管理', '設定'],
 }
 
@@ -68,4 +69,13 @@ test('ログイン画面のデモアカウントは権限ごとに1人で、選�
 
   await page.mouse.move(0, 0)
   await expect(page.locator('.pk-matrix__role.is-active')).toHaveCount(0)
+})
+
+test('ログイン画面のデモアカウントに、所属拠点が表示される', async ({ page }) => {
+  await page.goto('/login')
+  const accounts = page.locator('.pk-demo-item')
+  await expect(accounts).toHaveCount(ROLES.length)
+  for (let i = 0; i < ROLES.length; i++) {
+    await expect(accounts.nth(i).locator('.pk-site-tag')).toContainText('製油所')
+  }
 })

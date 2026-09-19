@@ -84,6 +84,7 @@ export interface User {
   system_role: string
   company_id: number | null
   company?: { id: number; name: string; company_type: string }
+  site?: { id: number; name: string } | null
   department_id: number | null
   department?: {
     id: number

@@ -24,6 +24,7 @@ interface DemoAccount {
   employment_type: string
   company_name: string | null
   company_type: string | null
+  site_name: string | null
   department_path: string | null
 }
 
@@ -195,7 +196,10 @@ async function loginAs(accountEmail: string) {
                 <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(account.name) }}</span>
               </v-avatar>
               <div class="pk-demo-item__body">
-                <div class="pk-demo-item__name">{{ account.name }}</div>
+                <div class="pk-demo-item__name">
+                  {{ account.name }}
+                  <span v-if="account.site_name" class="pk-site-tag ml-1"><v-icon size="13" aria-hidden="true">mdi-domain</v-icon>{{ account.site_name }}</span>
+                </div>
                 <div class="pk-demo-item__meta">
                   {{ [account.company_name, account.department_path].filter(Boolean).join(' / ') }}
                 </div>

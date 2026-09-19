@@ -7,7 +7,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { canManageEquipment } = usePermissions()
+const { canManageEquipment, canViewSites } = usePermissions()
 const authStore = useAuthStore()
 
 const instruments = ref<any[]>([])
@@ -75,12 +75,13 @@ async function fetchInstruments() {
 
 async function fetchMasters() {
   const [siteRes, eqRes, svcRes, lcRes] = await Promise.all([
-    api.get('/sites', { params: { per_page: 100, is_active: true } }),
+    // 拠点の一覧を見られない協力会社は取得しない（所属拠点で固定）
+    canViewSites.value ? api.get('/sites', { params: { per_page: 100, is_active: true } }) : Promise.resolve(null),
     api.get('/equipments', { params: { per_page: 200 } }),
     api.get('/services'),
     api.get('/line_classes'),
   ])
-  sites.value = siteRes.data.data
+  sites.value = siteRes?.data.data ?? []
   equipments.value = eqRes.data.data
   services.value = svcRes.data.data
   lineClasses.value = lcRes.data.data
@@ -178,6 +179,7 @@ onMounted(() => {
         style="min-width: 200px; max-width: 260px"
       />
       <v-autocomplete
+        v-if="canViewSites"
         v-model="selectedSiteIds"
         :items="sites"
         item-title="name"

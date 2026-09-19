@@ -51,16 +51,45 @@ class AccessControlTest < ActionDispatch::IntegrationTest
     assert_equal %w[inspection_plans inspections maintenances orders repairs stock_alerts troubles], json["data"].keys.sort
   end
 
-  test "協力会社のユーザには、自社（協力会社）のメンバーだけが、メールアドレス等なしで見える" do
+  test "協力会社（業務管理者・技能員）は拠点を見られず、自社ユーザは見られる" do
+    site = create_site
+    contractor_manager = create_user(system_role: "manager", company: @contractor)
     worker = create_user(system_role: "worker", company: @contractor)
-    colleague = create_user(system_role: "worker", company: @contractor, name: "同じ会社の人")
-    create_user(system_role: "member", company: @owner, name: "自社の社員")
 
-    get "/api/v1/users", headers: auth_headers_for(worker)
+    [ contractor_manager, worker ].each do |user|
+      headers = auth_headers_for(user)
+      get "/api/v1/sites", headers: headers
+      assert_response :forbidden
+      get "/api/v1/sites/#{site.id}", headers: headers
+      assert_response :forbidden
+    end
 
+    %w[admin manager member].each do |role|
+      user = create_user(system_role: role, company: @owner)
+      get "/api/v1/sites", headers: auth_headers_for(user)
+      assert_response :ok, role
+    end
+  end
+
+  test "協力会社（業務管理者・技能員）はユーザ一覧を見られず、自社ユーザは見られる" do
+    [ create_user(system_role: "manager", company: @contractor), create_user(system_role: "worker", company: @contractor) ].each do |user|
+      get "/api/v1/users", headers: auth_headers_for(user)
+      assert_response :forbidden
+    end
+
+    member = create_user(system_role: "member", company: @owner)
+    get "/api/v1/users", headers: auth_headers_for(member)
     assert_response :ok
-    assert_equal [ colleague.id, worker.id ].sort, json["data"].map { |u| u["id"] }.sort
-    assert json["data"].none? { |u| u.key?("email") || u.key?("home_prefecture") || u.key?("previous_company") }
+  end
+
+  test "ユーザ一覧を絞る範囲（policy_scope）は、協力会社なら自社のメンバーだけ（一覧の許可を緩めても他社のユーザは見えない）" do
+    worker = create_user(system_role: "worker", company: @contractor)
+    colleague = create_user(system_role: "worker", company: @contractor)
+    create_user(system_role: "member", company: @owner)
+
+    visible = UserPolicy::Scope.new(worker, User).resolve
+
+    assert_equal [ colleague.id, worker.id ].sort, visible.pluck(:id).sort
   end
 
   test "自社の一般ユーザはメールアドレスまで、プロフィールの詳細は管理者だけ" do

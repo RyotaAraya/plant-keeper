@@ -55,7 +55,11 @@ export const MATRIX_GROUPS: MatrixGroup[] = [
   },
   {
     title: '管理',
-    rows: [{ label: '拠点・ユーザ・部署・監査ログ・設定を管理する', allowed: (p) => p.canManageUsers }],
+    rows: [
+      // 協力会社は、自分の所属拠点をヘッダーで見られるだけ（一覧は見られない）
+      { label: '拠点・ユーザの一覧を見る', allowed: (p) => p.canViewSites && p.canViewUsers },
+      { label: '拠点・ユーザ・部署・監査ログ・設定を管理する', allowed: (p) => p.canManageUsers },
+    ],
   },
 ]
 

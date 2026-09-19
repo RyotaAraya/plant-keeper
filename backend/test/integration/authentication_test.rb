@@ -34,6 +34,20 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert_not User.exists?(email: "new@example.com")
   end
 
+  test "ログインと現在のユーザ情報には、所属拠点（ヘッダー表示用）が含まれる。拠点がなければnull" do
+    site = create_site(name: "川崎製油所")
+    with_site = create_user(site: site)
+
+    post "/api/v1/login", params: { user: { email: with_site.email, password: "password" } }, as: :json
+    assert_equal({ "id" => site.id, "name" => "川崎製油所" }, json.dig("user", "site"))
+
+    get "/api/v1/current_user", headers: auth_headers_for(with_site)
+    assert_equal "川崎製油所", json.dig("user", "site", "name")
+
+    get "/api/v1/current_user", headers: auth_headers_for(create_user)
+    assert_nil json.dig("user", "site")
+  end
+
   test "パスワードが違うとログインできない" do
     post "/api/v1/login", params: { user: { email: @user.email, password: "wrong" } }, as: :json
 

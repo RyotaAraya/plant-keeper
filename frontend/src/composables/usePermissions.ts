@@ -31,6 +31,10 @@ export function permissionsFor({ role, companyType }: RoleContext) {
     canViewRecords: true,
     canInputInspection: true,
 
+    // 拠点の一覧とユーザ一覧は自社のみ（協力会社は自分の所属拠点をヘッダーで見られるだけ）
+    canViewSites: isOwnerCompany,
+    canViewUsers: isOwnerCompany,
+
     // SideNav 用
     canManageUsers: isAdmin,
     canViewAuditLogs: isAdmin,

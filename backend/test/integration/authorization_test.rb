@@ -85,7 +85,8 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
       "yoshida@example.com" => [ "manager", @contractor ],
       "honda@example.com" => [ "worker", @contractor ]
     }
-    demo.each { |email, (role, company)| create_user(email: email, system_role: role, company: company) }
+    kawasaki = create_site(name: "川崎製油所")
+    demo.each { |email, (role, company)| create_user(email: email, system_role: role, company: company, site: kawasaki) }
     create_user(system_role: "member", company: @owner, name: "一覧に出ない一般ユーザ")
     create_user(email: "hashimoto@example.com", system_role: "admin", company: @owner)
 
@@ -93,7 +94,8 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_equal demo.keys, json["data"].map { |a| a["email"] }, "権限ごとの代表1人だけを、決まった順序で返す"
-    assert_equal %w[company_name company_type department_path email employment_type id name system_role], json["data"].first.keys.sort
+    assert_equal %w[company_name company_type department_path email employment_type id name site_name system_role], json["data"].first.keys.sort
+    assert_equal [ "川崎製油所" ], json["data"].map { |a| a["site_name"] }.uniq
     assert_equal %w[owner owner owner contractor contractor], json["data"].map { |a| a["company_type"] }
   end
 end

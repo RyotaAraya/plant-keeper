@@ -21,11 +21,12 @@ const {
   canManageRepairs,
   canViewStocks,
   canViewMaterials,
+  canViewSites,
 } = usePermissions()
 
 const navItems = [
   { title: 'ダッシュボード', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
-  { title: '拠点管理', icon: 'mdi-domain', to: '/sites' },
+  { title: '拠点管理', icon: 'mdi-domain', to: '/sites', permission: canViewSites },
   { title: '設備台帳', icon: 'mdi-factory', to: '/equipments' },
   { title: '装置・計器', icon: 'mdi-gauge', to: '/instruments' },
   { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },

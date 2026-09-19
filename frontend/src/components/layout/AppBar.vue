@@ -23,6 +23,8 @@ const roleLabel = computed(() => {
 })
 
 const companyName = computed(() => authStore.user?.company?.name ?? '')
+// 所属拠点。拠点の一覧を見られない協力会社にも、自分の拠点だけは分かるようにする
+const siteName = computed(() => authStore.user?.site?.name ?? '')
 
 async function handleLogout() {
   await authStore.logout()
@@ -35,7 +37,10 @@ async function handleLogout() {
     <v-app-bar-nav-icon @click="$emit('toggle-drawer')" />
     <v-spacer />
     <div v-if="authStore.user" class="mr-4 text-right">
-      <div class="text-body-2 font-weight-medium">{{ authStore.user.name }}</div>
+      <div class="text-body-2 font-weight-medium">
+        <span v-if="siteName" class="pk-site-tag mr-2"><v-icon size="14" aria-hidden="true">mdi-domain</v-icon>{{ siteName }}</span>
+        {{ authStore.user.name }}
+      </div>
       <div class="text-caption text-medium-emphasis pk-mono">{{ roleLabel }} / {{ companyName }}</div>
     </div>
     <v-btn icon variant="text" aria-label="ログアウト" @click="handleLogout">

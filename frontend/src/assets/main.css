@@ -96,3 +96,17 @@ h1, h2, h3,
     scroll-behavior: auto !important;
   }
 }
+
+/* 所属拠点を、名前に添える銘板風のタグ（ヘッダーとログイン画面のデモアカウントで共通） */
+.pk-site-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--pk-line);
+  background: var(--pk-mist);
+  color: var(--pk-steel);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}

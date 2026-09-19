@@ -9,7 +9,7 @@ import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
-const { canUpdateTrouble, canCreateTroubleResponse } = usePermissions()
+const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers } = usePermissions()
 const trouble = ref<any>(null)
 const loading = ref(true)
 const users = ref<any[]>([])
@@ -93,7 +93,8 @@ async function fetchUsers() {
 }
 
 async function openEdit() {
-  await fetchUsers()
+  // ユーザ一覧を見られない協力会社は、担当者の選択欄を出さない（担当者は変更できない）
+  if (canViewUsers.value) await fetchUsers()
   editForm.value = {
     status: trouble.value.status,
     priority: trouble.value.priority,
@@ -266,6 +267,7 @@ onMounted(fetchTrouble)
             <v-select v-model="editForm.status" :items="selectableStatusOptions" item-title="title" item-value="value" label="ステータス" class="mb-2" />
             <v-select v-model="editForm.priority" :items="priorityOptions" item-title="title" item-value="value" label="優先度" class="mb-2" />
             <v-autocomplete
+              v-if="canViewUsers"
               v-model="editForm.assigned_to_id"
               :items="users"
               item-title="name"

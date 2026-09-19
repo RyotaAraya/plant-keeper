@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { canViewSites } = usePermissions()
 const dashboard = ref<any>(null)
 const loading = ref(true)
 
@@ -15,6 +17,8 @@ const sites = ref<any[]>([])
 const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
 
 async function fetchSites() {
+  // 拠点の一覧を見られない協力会社は、自分の所属拠点で固定（切り替えの選択欄を出さない）
+  if (!canViewSites.value) return
   const res = await api.get('/sites', { params: { per_page: 100, is_active: true } })
   sites.value = res.data.data
 }
@@ -67,6 +71,7 @@ onMounted(async () => {
       </div>
       <v-spacer />
       <v-select
+        v-if="canViewSites"
         v-model="selectedSiteId"
         :items="sites"
         item-title="name"
