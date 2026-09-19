@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_19_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -181,6 +181,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
     t.index ["tag_number"], name: "index_instruments_on_tag_number"
   end
 
+  create_table "jwt_denylists", force: :cascade do |t|
+    t.string "jti", null: false
+    t.datetime "exp", null: false
+    t.index ["exp"], name: "index_jwt_denylists_on_exp"
+    t.index ["jti"], name: "index_jwt_denylists_on_jti", unique: true
+  end
+
   create_table "line_classes", force: :cascade do |t|
     t.string "code", null: false
     t.text "description"
@@ -254,9 +261,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "warehouse_id"
     t.index ["material_id"], name: "index_orders_on_material_id"
     t.index ["status"], name: "index_orders_on_status"
     t.index ["user_id"], name: "index_orders_on_user_id"
+    t.index ["warehouse_id"], name: "index_orders_on_warehouse_id"
   end
 
   create_table "repairs", force: :cascade do |t|
@@ -398,7 +407,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
     t.string "previous_company"
     t.boolean "is_active", default: true, null: false
     t.date "deactivated_on"
-    t.string "jti", null: false
+    t.string "jti"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "position"
@@ -458,6 +467,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_19_110000) do
   add_foreign_key "materials", "manufacturers"
   add_foreign_key "orders", "materials"
   add_foreign_key "orders", "users"
+  add_foreign_key "orders", "warehouses"
   add_foreign_key "repairs", "stocks"
   add_foreign_key "repairs", "troubles"
   add_foreign_key "repairs", "users", column: "requested_by_id"

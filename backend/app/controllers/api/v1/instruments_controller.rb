@@ -47,8 +47,7 @@ module Api
         instruments = instruments.order(:tag_number)
         total_count = instruments.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         instruments = instruments.limit(per_page).offset((page - 1) * per_page)
 
         render json: {

@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,7 +48,7 @@ async function saveEquipment() {
 
 // --- 設備担当追加 ---
 const assignDialog = ref(false)
-const assignForm = ref({ user_id: null as number | null, role: '', started_on: new Date().toISOString().slice(0, 10) })
+const assignForm = ref({ user_id: null as number | null, role: '', started_on: todayForInput() })
 const assignErrors = ref<string[]>([])
 const users = ref<any[]>([])
 
@@ -56,7 +57,7 @@ async function openAssignDialog() {
     const res = await api.get('/users', { params: { per_page: 200 } })
     users.value = res.data.data
   }
-  assignForm.value = { user_id: null, role: '', started_on: new Date().toISOString().slice(0, 10) }
+  assignForm.value = { user_id: null, role: '', started_on: todayForInput() }
   assignErrors.value = []
   assignDialog.value = true
 }
@@ -99,7 +100,7 @@ function pastAssignments() {
 
 async function endAssignment(assignment: any) {
   await api.patch(`/equipment_assignments/${assignment.id}`, {
-    equipment_assignment: { ended_on: new Date().toISOString().slice(0, 10) }
+    equipment_assignment: { ended_on: todayForInput() }
   })
   await fetchEquipment()
 }

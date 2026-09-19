@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
+import { nowForInput } from '@/utils/datetime'
 
 const router = useRouter()
 const { canCreateTrouble } = usePermissions()
@@ -33,7 +34,7 @@ const form = ref({
   title: '',
   description: '',
   priority: 'medium',
-  reported_at: new Date().toISOString().slice(0, 16),
+  reported_at: nowForInput(),
 })
 
 const instruments = ref<any[]>([])
@@ -118,7 +119,7 @@ function openCreate() {
     title: '',
     description: '',
     priority: 'medium',
-    reported_at: new Date().toISOString().slice(0, 16),
+    reported_at: nowForInput(),
   }
   errors.value = []
   dialog.value = true

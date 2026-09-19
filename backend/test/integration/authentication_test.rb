@@ -101,9 +101,45 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "同じユーザが複数の端末でログインでき、一方でログアウトしても他方は使い続けられる" do
+    pc = auth_headers_for(@user)
+    tablet = auth_headers_for(@user)
+    assert_not_equal pc["Authorization"], tablet["Authorization"]
+
+    delete "/api/v1/logout", headers: pc
+    assert_response :no_content
+
+    get "/api/v1/sites", headers: pc
+    assert_response :unauthorized
+    get "/api/v1/sites", headers: tablet
+    assert_response :ok
+  end
+
+  test "ログアウトすると、期限切れの失効記録は掃除される" do
+    JwtDenylist.create!(jti: "expired-token", exp: 1.day.ago)
+    JwtDenylist.create!(jti: "still-valid-token", exp: 1.day.from_now)
+
+    delete "/api/v1/logout", headers: auth_headers_for(@user)
+
+    assert_response :no_content
+    assert_not JwtDenylist.exists?(jti: "expired-token")
+    assert JwtDenylist.exists?(jti: "still-valid-token")
+  end
+
   test "トークンなしでログアウトしてもエラーにならない" do
     delete "/api/v1/logout"
 
     assert_response :no_content
+  end
+
+  test "無効化（退職）されたユーザの発行済みトークンは、以降のリクエストで使えなくなる" do
+    headers = auth_headers_for(@user)
+    get "/api/v1/sites", headers: headers
+    assert_response :ok
+
+    @user.update!(is_active: false)
+
+    get "/api/v1/sites", headers: headers
+    assert_response :unauthorized
   end
 end

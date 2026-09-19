@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 
 const authStore = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 
 const email = ref('')
 const password = ref('')
-const errorMessage = ref('')
+const errorMessage = ref(route.query.expired ? 'ログインの有効期限が切れました。もう一度ログインしてください。' : '')
 const loading = ref(false)
 
 interface DemoAccount {

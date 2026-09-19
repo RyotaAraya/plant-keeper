@@ -32,3 +32,32 @@ test('ログイン → ダッシュボード表示 → ログアウトでログ�
   await page.goto('/dashboard')
   await expect(page).toHaveURL(/\/login/)
 })
+
+test('トークンが期限切れ・失効していると、ログイン画面に戻り、その旨が表示される', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+
+  // 24時間の有効期限が切れた状態を、無効なトークンで再現する
+  await page.evaluate(() => localStorage.setItem('jwt', 'invalid.token.value'))
+  await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/login\?expired=1/)
+  await expect(page.getByText('有効期限が切れました')).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('jwt'))).toBeNull()
+})
+
+test('同じユーザが2つの端末でログインでき、片方でログアウトしても他方は使い続けられる', async ({ browser }) => {
+  const pc = await (await browser.newContext()).newPage()
+  const tablet = await (await browser.newContext()).newPage()
+  await login(pc, ACCOUNTS.member)
+  await login(tablet, ACCOUNTS.member)
+
+  await pc.getByRole('button', { name: 'ログアウト' }).click()
+  await expect(pc).toHaveURL(/\/login/)
+
+  // 別端末のセッションは生きている（再読み込みしてもログインしたまま）
+  await tablet.reload()
+  await expect(tablet.getByRole('heading', { level: 1, name: /ようこそ/ })).toBeVisible()
+
+  await pc.context().close()
+  await tablet.context().close()
+})

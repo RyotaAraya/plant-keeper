@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,7 +18,7 @@ const txForm = ref({
   transaction_type: 'outgoing',
   quantity: 1,
   reason: '',
-  transacted_at: new Date().toISOString().slice(0, 16),
+  transacted_at: nowForInput(),
   to_warehouse_id: null as number | null,
 })
 const txErrors = ref<string[]>([])
@@ -65,7 +66,7 @@ function openTx() {
     transaction_type: 'outgoing',
     quantity: 1,
     reason: '',
-    transacted_at: new Date().toISOString().slice(0, 16),
+    transacted_at: nowForInput(),
     to_warehouse_id: null,
   }
   txErrors.value = []

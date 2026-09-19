@@ -18,8 +18,7 @@ module Api
         logs = logs.order(performed_at: :desc)
         total_count = logs.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 50).to_i
+        page, per_page = pagination_params(default_per_page: 50)
         logs = logs.limit(per_page).offset((page - 1) * per_page)
 
         render json: {

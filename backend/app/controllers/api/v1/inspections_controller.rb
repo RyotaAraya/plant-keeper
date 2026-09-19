@@ -16,8 +16,7 @@ module Api
         inspections = inspections.order(inspected_at: :desc)
         total_count = inspections.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         inspections = inspections.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
@@ -90,7 +89,10 @@ module Api
       def update
         authorize @inspection
         @inspection.assign_attributes(inspection_params)
-        authorize @inspection, :approve? if @inspection.status_changed? && @inspection.approved?
+        # 承認と差し戻し（承認依頼中から出る操作）は承認者のみ。作成者本人でも自分で差し戻せない
+        if @inspection.status_changed? && (@inspection.approved? || @inspection.status_was == "approval_requested")
+          authorize @inspection, :approve?
+        end
 
         if content_edit_while_approval_requested?
           return render json: { errors: [ "承認依頼中の点検は内容を編集できません。差し戻してから編集してください" ] },

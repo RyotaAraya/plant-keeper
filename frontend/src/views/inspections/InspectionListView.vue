@@ -58,7 +58,12 @@ const statusOptions = [
   { title: '承認済', value: 'approved' },
 ]
 
+// 絞り込みを続けて変えると取得が重なり、古い取得の応答が後から返ると新しい結果を上書きしてしまう。
+// 最新の取得だけを反映する
+let fetchSeq = 0
+
 async function fetchInspections() {
+  const seq = ++fetchSeq
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -68,10 +73,11 @@ async function fetchInspections() {
     if (filters.value.status) params.status = filters.value.status
 
     const res = await api.get('/inspections', { params })
+    if (seq !== fetchSeq) return
     inspections.value = res.data.data
     totalCount.value = res.data.meta.total_count
   } finally {
-    loading.value = false
+    if (seq === fetchSeq) loading.value = false
   }
 }
 

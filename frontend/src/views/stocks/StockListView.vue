@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { nowForInput } from '@/utils/datetime'
 
 const router = useRouter()
 const { canManageStockTransaction } = usePermissions()
@@ -24,7 +25,7 @@ const txForm = ref({
   transaction_type: 'outgoing',
   quantity: 1,
   reason: '',
-  transacted_at: new Date().toISOString().slice(0, 16),
+  transacted_at: nowForInput(),
 })
 const txErrors = ref<string[]>([])
 
@@ -82,7 +83,7 @@ function openTx(stock: any) {
     transaction_type: 'outgoing',
     quantity: 1,
     reason: '',
-    transacted_at: new Date().toISOString().slice(0, 16),
+    transacted_at: nowForInput(),
   }
   txErrors.value = []
   txDialog.value = true

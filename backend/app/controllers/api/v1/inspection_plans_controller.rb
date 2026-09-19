@@ -17,8 +17,7 @@ module Api
         plans = plans.order(:next_due_on, :id)
         total_count = plans.count
 
-        page = [ (params[:page] || 1).to_i, 1 ].max
-        per_page = (params[:per_page] || 25).to_i.clamp(1, 1000)
+        page, per_page = pagination_params
         plans = plans.limit(per_page).offset((page - 1) * per_page)
 
         render json: { data: plans.map { |plan| plan_json(plan) }, meta: { total_count: total_count, page: page, per_page: per_page } }

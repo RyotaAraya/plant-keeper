@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
+import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,7 +26,7 @@ const form = ref({
   checklist_template_id: null as number | null,
   inspection_plan_id: null as number | null,
   inspection_type: 'routine',
-  inspected_at: new Date().toISOString().slice(0, 16),
+  inspected_at: nowForInput(),
   notes: '',
   items: [] as any[],
 })

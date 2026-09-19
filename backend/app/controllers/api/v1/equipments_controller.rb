@@ -12,8 +12,7 @@ module Api
         equipments = equipments.order(:name)
         total_count = equipments.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         equipments = equipments.limit(per_page).offset((page - 1) * per_page)
 
         render json: {

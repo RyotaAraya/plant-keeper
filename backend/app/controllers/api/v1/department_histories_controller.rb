@@ -2,7 +2,7 @@ module Api
   module V1
     class DepartmentHistoriesController < BaseController
       def create
-        dh = DepartmentHistory.new(dh_params.merge(started_on: Date.today))
+        dh = DepartmentHistory.new(dh_params.merge(started_on: Date.current))
         authorize dh
         if dh.save
           record_audit_log("create", dh)
@@ -30,7 +30,7 @@ module Api
       def destroy
         dh = DepartmentHistory.find(params[:id])
         authorize dh
-        dh.update(ended_on: Date.today)
+        dh.update(ended_on: Date.current)
         head :no_content
       end
 

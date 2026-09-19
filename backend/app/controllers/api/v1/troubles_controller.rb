@@ -24,8 +24,7 @@ module Api
         troubles = troubles.order(reported_at: :desc)
         total_count = troubles.count
 
-        page = (params[:page] || 1).to_i
-        per_page = (params[:per_page] || 25).to_i
+        page, per_page = pagination_params
         troubles = troubles.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
@@ -109,7 +108,7 @@ module Api
       def trouble_params
         params.require(:trouble).permit(
           :equipment_id, :instrument_id, :assigned_to_id,
-          :title, :description, :status, :priority, :reported_at, :resolved_at
+          :title, :description, :status, :priority, :reported_at
         )
       end
     end

@@ -60,7 +60,7 @@ module Api
               planned: maintenances_scope.planned.count,
               in_progress: maintenances_scope.in_progress.count,
               upcoming: maintenances_scope.planned
-                .where(scheduled_date: Date.today..30.days.from_now)
+                .where(scheduled_date: Date.current..30.days.from_now)
                 .order(:scheduled_date)
                 .limit(5)
                 .as_json(include: { equipment: { only: [ :id, :name ] } })
