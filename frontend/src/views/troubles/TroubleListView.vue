@@ -48,13 +48,13 @@ const form = ref({
 const instruments = ref<any[]>([])
 
 const headers = [
-  { title: '報告日', key: 'reported_at', width: '130px' },
-  { title: '優先度', key: 'priority', width: '80px' },
-  { title: 'タイトル', key: 'title' },
+  { title: '報告日', key: 'reported_at', width: '110px' },
+  { title: '優先度', key: 'priority', width: '70px' },
+  { title: 'タイトル', key: 'title', minWidth: '300px' },
   { title: '設備', key: 'equipment.name', width: '150px' },
-  { title: '計器', key: 'instrument.tag_number', width: '120px' },
+  { title: '計器', key: 'instrument.tag_number', width: '90px' },
   { title: '部署', key: 'department_display', width: '120px' },
-  { title: '担当者', key: 'assigned_to.name', width: '100px' },
+  { title: '担当者', key: 'assigned_to.name', width: '90px' },
   { title: 'ステータス', key: 'status', width: '110px' },
 ]
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -25,17 +25,18 @@ const filters = ref({
   department_id: null as number | null,
 })
 
-const headers = [
+// 1行に収まる列だけにする。入社年は詳細画面で見られる。
+// 拠点は、1拠点だけ表示しているときは絞り込み欄で分かるので出さない。状態は、退職者を表示するときだけ出す（通常は全員「在籍」）
+const headers = computed(() => [
   { title: '名前', key: 'name' },
   { title: 'メール', key: 'email' },
-  { title: '在籍区分', key: 'employment_type', width: '100px' },
-  { title: '権限', key: 'system_role', width: '80px' },
-  { title: '拠点', key: 'site.name', width: '120px' },
-  { title: '所属会社', key: 'company', width: '140px' },
-  { title: '部署', key: 'department_path', width: '280px' },
-  { title: '入社年', key: 'join_year', width: '80px' },
-  { title: '状態', key: 'is_active', width: '80px' },
-]
+  { title: '権限', key: 'system_role' },
+  { title: '在籍区分', key: 'employment_type' },
+  { title: '所属会社', key: 'company' },
+  ...(filters.value.site_ids.length === 1 ? [] : [{ title: '拠点', key: 'site.name' }]),
+  { title: '部署', key: 'department_path' },
+  ...(showInactive.value ? [{ title: '状態', key: 'is_active' }] : []),
+])
 
 const employmentTypeLabel: Record<string, string> = {
   employee: '正社員', dispatch: '派遣社員', contractor: '協力会社員',
@@ -84,6 +85,10 @@ async function fetchUsers() {
   } finally {
     if (isLatest()) loading.value = false
   }
+}
+
+function departmentPath(user: any): string {
+  return user.company?.company_type === 'owner' ? (user.department?.full_path || '—') : '—'
 }
 
 function goToDetail(row: any) {
@@ -165,7 +170,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       :items="users"
       :loading="loading"
       hover
-      class="cursor-pointer"
+      class="cursor-pointer pk-users"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.name="{ item }">
@@ -173,8 +178,11 @@ watch([filters, showInactive], fetchUsers, { deep: true })
           <v-avatar :color="avatarColor(item.id)" size="32">
             <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(item.name) }}</span>
           </v-avatar>
-          <span>{{ item.name }}</span>
+          <span class="pk-users__name">{{ item.name }}</span>
         </div>
+      </template>
+      <template #item.email="{ item }">
+        <span class="pk-users__ellipsis text-medium-emphasis" :title="item.email">{{ item.email }}</span>
       </template>
       <template #item.employment_type="{ item }">
         {{ employmentTypeLabel[item.employment_type] || item.employment_type }}
@@ -183,7 +191,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         {{ systemRoleLabel[item.system_role] || item.system_role }}
       </template>
       <template #item.company="{ item }">
-        <span class="mr-1">{{ item.company?.name || '—' }}</span>
+        <span class="mr-2">{{ item.company?.name || '—' }}</span>
         <v-chip
           v-if="item.company"
           :color="item.company.company_type === 'owner' ? 'primary' : 'orange'"
@@ -195,7 +203,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         </v-chip>
       </template>
       <template #item.department_path="{ item }">
-        {{ item.company?.company_type === 'owner' ? (item.department?.full_path || '—') : '—' }}
+        <span class="pk-users__ellipsis" :title="departmentPath(item)">{{ departmentPath(item) }}</span>
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'success' : 'grey'" size="x-small">
@@ -209,5 +217,23 @@ watch([filters, showInactive], fetchUsers, { deep: true })
 <style scoped>
 .cursor-pointer :deep(tbody tr) {
   cursor: pointer;
+}
+
+/* 各セルは折り返さず1行にする。長いメールと部署だけは、省略して全体を（title で）読めるようにする */
+.pk-users :deep(td),
+.pk-users :deep(th) {
+  padding: 0 12px !important;
+  white-space: nowrap;
+}
+
+.pk-users__name {
+  font-weight: 500;
+}
+
+.pk-users__ellipsis {
+  display: block;
+  max-width: 17rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

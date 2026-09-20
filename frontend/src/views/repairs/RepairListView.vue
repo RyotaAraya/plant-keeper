@@ -38,11 +38,11 @@ const form = ref({
 })
 
 const headers = [
-  { title: '資材名', key: 'stock.material.name' },
-  { title: '型番', key: 'stock.material.part_number', width: '130px' },
+  { title: '資材名', key: 'stock.material.name', minWidth: '230px' },
+  { title: '型番', key: 'stock.material.part_number', width: '110px' },
   { title: 'シリアル番号', key: 'stock.serial_number', width: '140px' },
   { title: 'ステータス', key: 'status', width: '110px' },
-  { title: '修理業者', key: 'repair_vendor', width: '130px' },
+  { title: '修理業者', key: 'repair_vendor', minWidth: '300px' },
   { title: '発送日', key: 'shipped_on', width: '110px' },
   { title: '依頼者', key: 'requested_by.name', width: '100px' },
 ]

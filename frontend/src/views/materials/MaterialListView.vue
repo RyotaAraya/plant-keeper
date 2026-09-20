@@ -45,16 +45,16 @@ const form = ref({
 // 在庫の列は、在庫を見られる人（自社）だけ。資材マスタは全拠点共通なので、自拠点になければ他拠点の在庫が同じ行で分かる
 const headers = computed(() => [
   { title: '型番', key: 'part_number', width: '150px' },
-  { title: '資材名', key: 'name' },
-  { title: 'カテゴリ', key: 'category', width: '100px' },
-  { title: 'メーカー', key: 'manufacturer.name', width: '140px' },
+  { title: '資材名', key: 'name', minWidth: '260px' },
+  { title: 'カテゴリ', key: 'category', width: '90px' },
+  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
   ...(canViewStocks.value
     ? [
-        { title: '自拠点の在庫', key: 'own_stock', width: '120px', align: 'end' as const },
-        { title: '他拠点の在庫', key: 'other_stock', width: '260px' },
+        { title: '自拠点の在庫', key: 'own_stock', width: '110px', align: 'end' as const },
+        { title: '他拠点の在庫', key: 'other_stock', width: '230px' },
       ]
     : []),
-  { title: '入手性', key: 'availability', width: '90px' },
+  { title: '入手性', key: 'availability', width: '80px' },
   { title: '危険物', key: 'is_hazardous', width: '70px' },
 ])
 
@@ -246,6 +246,9 @@ watch(filters, fetchMaterials, { deep: true })
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.part_number="{ item }">
+        <span class="text-no-wrap">{{ item.part_number }}</span>
+      </template>
       <template #item.category="{ item }">
         {{ categoryLabel[item.category] || item.category }}
       </template>

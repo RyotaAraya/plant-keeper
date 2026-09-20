@@ -41,7 +41,7 @@ const txErrors = ref<string[]>([])
 const headers = [
   { title: '資材名', key: 'material.name' },
   { title: '型番', key: 'material.part_number', width: '130px' },
-  { title: '倉庫', key: 'warehouse.name', width: '130px' },
+  { title: '倉庫', key: 'warehouse.name', minWidth: '170px' },
   { title: '数量', key: 'quantity', width: '80px' },
   { title: '購入日', key: 'purchased_on', width: '110px' },
   { title: 'ステータス', key: 'status', width: '110px' },

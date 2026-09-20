@@ -30,7 +30,7 @@ const filters = ref({
 })
 
 const headers = [
-  { title: '日時', key: 'performed_at', width: '160px' },
+  { title: '日時', key: 'performed_at', width: '175px' },
   { title: 'ユーザ', key: 'user.name', width: '130px' },
   { title: '操作', key: 'action', width: '90px' },
   { title: '対象', key: 'auditable_type', width: '120px' },
