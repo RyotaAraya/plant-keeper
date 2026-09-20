@@ -19,18 +19,22 @@ class ReferenceStandardCalibration < ApplicationRecord
     errors.add(:valid_until, "は実施日以降にしてください") if valid_until < performed_on
   end
 
+  # 基準器の校正のうち、最新のものか。読み込み済みの関連（作りかけの記録を含む）ではなく、DBから求める
+  # （過去の日付の校正を後から記録しても、最新の扱いにしない）
+  def latest?
+    self.class.where(reference_standard_id: reference_standard_id).order(performed_on: :desc, id: :desc).first == self
+  end
+
   # 最新の校正なら、基準器の校正計画の次回期限を、この校正の有効期限に進める
   def reschedule_plan
-    # 読み込み済みの関連（作りかけの記録を含む）ではなく、DBから最新を求める（過去の日付の校正を後から記録しても、計画を戻さない）
-    latest = self.class.where(reference_standard_id: reference_standard_id).order(performed_on: :desc, id: :desc).first
-    return unless latest == self
+    return unless latest?
 
     reference_standard.inspection_plans.each { |plan| plan.reschedule!(last_inspected_on: performed_on, next_due_on: valid_until) }
   end
 
-  # メーカーに出していた基準器が、合格で戻ったら使用可に戻す
+  # メーカーに出していた基準器が、最新の校正が合格で戻ったら使用可に戻す（過去の日付の校正を後から記録しても戻さない）
   def recover_from_calibration
-    return unless result_pass? && reference_standard.status_in_calibration?
+    return unless result_pass? && reference_standard.status_in_calibration? && latest?
 
     reference_standard.update!(status: "usable")
   end

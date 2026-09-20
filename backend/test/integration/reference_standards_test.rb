@@ -141,6 +141,18 @@ class ReferenceStandardsTest < ActionDispatch::IntegrationTest
     assert_equal "usable", standard.reload.status
   end
 
+  test "過去の日付の合格の校正を後から記録しても、校正中の基準器は使用可に戻らない" do
+    standard = create_standard
+    calibrate(standard, days_ago: 10)
+    standard.update!(status: "in_calibration")
+
+    post_calibration(standard, performed_on: (@today - 200).to_s)
+    assert_equal "in_calibration", standard.reload.status
+
+    post_calibration(standard, performed_on: @today.to_s)
+    assert_equal "usable", standard.reload.status
+  end
+
   test "使用停止にすると校正計画も止まり、使用可に戻すと再開する" do
     standard = create_standard
     plan = standard.inspection_plans.first

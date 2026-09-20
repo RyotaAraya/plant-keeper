@@ -89,7 +89,8 @@ const reasonsFor = (use: InspectionReferenceStandardUse) => {
               </template>
             </td>
             <td>
-              <v-btn-toggle v-model="use.pre_check_passed" density="compact" variant="outlined" divided color="primary">
+              <!-- 選択を外すと undefined になるため、未確認は null にそろえる（「未確認」の表示と、送る値のため） -->
+              <v-btn-toggle :model-value="use.pre_check_passed" density="compact" variant="outlined" divided color="primary" @update:model-value="(value: boolean | null | undefined) => (use.pre_check_passed = value ?? null)">
                 <v-btn :value="true" size="small">OK</v-btn>
                 <v-btn :value="false" size="small">NG</v-btn>
               </v-btn-toggle>

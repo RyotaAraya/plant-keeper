@@ -97,6 +97,11 @@ test('点検で基準器を選ぶと、点検日に使えるかが分かり、�
     await expect(valid).toContainText('未確認') // 使用前の1点チェックは、OK/NGを選ぶまで未確認
     await valid.getByRole('button', { name: 'OK', exact: true }).click()
     await expect(valid).not.toContainText('未確認')
+    // もう一度押して選択を外すと、未確認に戻る（表示も、送る値も）
+    await valid.getByRole('button', { name: 'OK', exact: true }).click()
+    await expect(valid).toContainText('未確認')
+    await valid.getByRole('button', { name: 'OK', exact: true }).click()
+    await expect(valid).not.toContainText('未確認')
   })
 
   await test.step('校正の有効期限が切れた基準器は、使えない理由が出る', async () => {
