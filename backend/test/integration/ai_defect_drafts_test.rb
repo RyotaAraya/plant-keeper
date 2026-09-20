@@ -2,23 +2,7 @@ require "test_helper"
 
 # 不具合報告のAI支援（要求仕様書 2.5）。AIのAPIは呼ばず、クライアントを差し替えて検証する
 class AiDefectDraftsTest < ActionDispatch::IntegrationTest
-  # 呼ばれた内容を記録し、決めた応答（または例外）を返す
-  class StubClient
-    attr_reader :calls
-
-    def initialize(json: nil, error: nil)
-      @json = json
-      @error = error
-      @calls = []
-    end
-
-    def complete(system:, user:, schema:)
-      @calls << { system: system, user: user, schema: schema }
-      raise @error if @error
-
-      AiClient::Response.new(json: @json, input_tokens: 120, output_tokens: 80)
-    end
-  end
+  include AiTestSupport
 
   GOOD_JSON = {
     "title" => "PT-101 指示値のふらつき",
@@ -30,9 +14,7 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
   }.freeze
 
   setup do
-    @saved_env = ENV.to_h.slice("ANTHROPIC_API_KEY", "AI_PROVIDER", "AI_ENABLED", "AI_DAILY_LIMIT_PER_USER", "AI_DAILY_LIMIT_TOTAL")
-    ENV["ANTHROPIC_API_KEY"] = "test-key"
-    %w[AI_PROVIDER AI_ENABLED AI_DAILY_LIMIT_PER_USER AI_DAILY_LIMIT_TOTAL].each { |k| ENV.delete(k) }
+    setup_ai_env
 
     @user = create_user(name: "山田太郎")
     @site = create_site
@@ -43,11 +25,7 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     use_client(StubClient.new(json: GOOD_JSON))
   end
 
-  teardown do
-    AiClient.override = nil
-    %w[ANTHROPIC_API_KEY AI_PROVIDER AI_ENABLED AI_DAILY_LIMIT_PER_USER AI_DAILY_LIMIT_TOTAL].each { |k| ENV.delete(k) }
-    @saved_env.each { |k, v| ENV[k] = v }
-  end
+  teardown { teardown_ai_env }
 
   test "現場メモから下書きが返り、何も保存されない（提案と監査ログだけ）" do
     assert_no_difference [ "Trouble.count", "Inspection.count" ] do
@@ -331,11 +309,6 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     yield
   ensure
     AuditLog.singleton_class.remove_method(:create!)
-  end
-
-  def use_client(client)
-    @client = client
-    AiClient.override = client
   end
 
   def post_draft(memo:, equipment_id: @equipment.id, instrument_id: @instrument.id, item_label: nil, headers: @headers)

@@ -97,4 +97,13 @@ export const test = base.extend<{ runtimeGuard: void }>({
   ],
 })
 
+// AI支援のE2Eは、本物のAPIを呼ばない: バックエンドが AI_PROVIDER=fake（APIを呼ばないダミー）のときだけ実行し、
+// 本物のAI（キーあり。stg など）や無効（キーなし）ではスキップする。provider は /ai/status の値。
+// CI は fake で起動するため実行する（fake でなければ、AIの画面が検証されないまま黙ってスキップされないよう、失敗にする）
+export function requireFakeAi(provider: string | null | undefined) {
+  if (provider === 'fake') return
+  expect(process.env.CI, 'CIでは、バックエンドを AI_PROVIDER=fake で起動する').toBeFalsy()
+  test.skip(true, `本物のAIは呼ばない（バックエンドが AI_PROVIDER=fake のときだけ実行する。いまは ${provider ?? '無効'}）`)
+}
+
 export { expect }

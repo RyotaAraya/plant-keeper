@@ -15,7 +15,7 @@ PlantKeeper — 石油プラントの保全業務を統合管理するWebアプ�
 - インフラ: Docker（docker-compose、3コンテナ構成）。デプロイ先は Render（本番・stg）、stg のDBのみ Neon
 - テスト: バックエンド Minitest、E2E Playwright（フロントの単体テストは未導入）
 - CI/CD・依存更新: GitHub Actions、Renovate（Dependabot は使わない。脆弱性アラートは GitHub 側の Dependabot alerts を参照）
-- AI: Claude API（`anthropic` gem。不具合報告の下書き。既定モデルは Haiku 4.5）。キー未設定の環境では機能ごと無効で、他の機能は変わらない
+- AI: Claude API（`anthropic` gem。不具合報告の下書き・類似トラブルの提示・対応記録の下書き。既定モデルは Haiku 4.5）。キー未設定の環境では機能ごと無効で、他の機能は変わらない
 
 ## セットアップ（初回）
 
@@ -63,7 +63,7 @@ cd frontend && npm run build
 
 ## テスト（バックエンド / Minitest）
 
-`backend/test/` に、認証・権限（Pundit）・点検の承認フロー・点検計画・在庫台帳・点検→トラブル自動作成・AI支援（`ai_defect_drafts_test.rb`。AIのAPIは呼ばず、`AiClient.override` でスタブに差し替える）・資材の型番検索・モデル検証のテストがある。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作る。CI（`backend_test`）でも実行される。
+`backend/test/` に、認証・権限（Pundit）・点検の承認フロー・点検計画・在庫台帳・点検→トラブル自動作成・AI支援（`ai_defect_drafts_test.rb`・`ai_similar_troubles_test.rb`・`ai_response_drafts_test.rb`。AIのAPIは呼ばず、`AiClient.override` でスタブに差し替える。スタブと環境変数の準備は `test/support/ai_test_support.rb`）・資材の型番検索・モデル検証のテストがある。フィクスチャは使わず、`test/support/test_data.rb` のヘルパーでテストごとにデータを作る。CI（`backend_test`）でも実行される。
 
 ```bash
 # 初回・スキーマ変更時: テスト用DBを作り直す（db:prepare は新規DBにシードを投入するので使わない）
@@ -79,7 +79,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示、設備の適用法規（法規区分の表示・色・選択欄・法定検査の周期）の表示、計器の校正条件と5点校正の入力・合否の表示、基準器の台帳・校正の状態・点検での基準器の選択と提出時の拒否、チェックリストの機器 × 周期の構成と廃止したテンプレートが選択肢に出ないこと、複数設備の定期整備を作って検収を記録し完了まで進める流れ、系列に登録して次回を作ると周期が来た設備だけが対象になること、計器を一括追加して作業から点検を実施すると完了になり未完了の作業がある間は検収へ進めないこと、トラブルを定期整備に回すと定修待ちになり作業の完了・見送りに連動すること、シードのデモ（A号ボイラー整備の系列）の表示、不具合報告のAI下書き（`ai-defect-draft.spec.ts`）の作成・反映・保存時の提案IDの送信）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示、設備の適用法規（法規区分の表示・色・選択欄・法定検査の周期）の表示、計器の校正条件と5点校正の入力・合否の表示、基準器の台帳・校正の状態・点検での基準器の選択と提出時の拒否、チェックリストの機器 × 周期の構成と廃止したテンプレートが選択肢に出ないこと、複数設備の定期整備を作って検収を記録し完了まで進める流れ、系列に登録して次回を作ると周期が来た設備だけが対象になること、計器を一括追加して作業から点検を実施すると完了になり未完了の作業がある間は検収へ進めないこと、トラブルを定期整備に回すと定修待ちになり作業の完了・見送りに連動すること、シードのデモ（A号ボイラー整備の系列）の表示、不具合報告のAI下書き（`ai-defect-draft.spec.ts`）の作成・反映・保存時の提案IDの送信、類似トラブルの提示（`ai-similar-troubles.spec.ts`。トラブル詳細と点検フォーム）、対応記録のAI下書き（`ai-response-draft.spec.ts`）の作成・反映・保存時の提案IDの送信）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -93,7 +93,7 @@ curl -s -o /dev/null -m 120 https://plant-keeper-api-stg.onrender.com/up
 E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ```
 
-- **AI支援のE2Eは、本物のAPIを呼ばない**。バックエンドが `AI_PROVIDER=fake`（APIを呼ばないダミー）のときだけ実行し、本物のAI（キーあり。stg など）や無効（キーなし）ではスキップする（判定は `GET /ai/status` の `provider`）。CI は `ci.yml` の「Start API」で fake にしてあり、fake でなければ失敗にして黙ってスキップされるのを防ぐ。ローカルで実行するには `AI_PROVIDER=fake docker-compose up -d backend`
+- **AI支援のE2Eは、本物のAPIを呼ばない**。バックエンドが `AI_PROVIDER=fake`（APIを呼ばないダミー）のときだけ実行し、本物のAI（キーあり。stg など）や無効（キーなし）ではスキップする（判定は `GET /ai/status` の `provider`）。判定は `support.ts` の `requireFakeAi(provider)`（AIのE2Eはこれを使う）。CI は `ci.yml` の「Start API」で fake にしてあり、fake でなければ失敗にして黙ってスキップされるのを防ぐ。`ai-response-draft.spec.ts` は実行のたびに、シードのトラブル「FT-301 オリフィス閉塞疑い」に対応記録（内容が `E2E ` で始まる）を1件ずつ追加する（類似トラブルのE2Eは何も保存しない）。ローカルで実行するには `AI_PROVIDER=fake docker-compose up -d backend`
 - シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実行のたびに点検とトラブル（タイトルが `E2E ` で始まる）を1件ずつ追加するため、繰り返し実行すると一覧に溜まる。ローカルは `db:seed:replant`、stg は管理者の `admin/reseed` で戻せる
 - トラブル一覧の行クリックは初期表示の再描画で空振りすることがあるため、詳細画面へは `openFirstTrouble()` を使う（遷移までリトライし、到達も検証する）
 - 承認・点検計画のテストは、提出・承認まではせず画面の出し分けと遷移までを確認する（提出すると計画の期限が進み、シードの状態が変わって再実行できなくなるため）
@@ -152,7 +152,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - バックエンド: `plant-keeper-api-stg` — https://plant-keeper-api-stg.onrender.com/api/v1
 - DB: Neon（無料Postgres）。Render管理外のため `DATABASE_URL` は Render ダッシュボードで手動設定する（Neonの接続文字列、`sslmode=require` 付き。`db:migrate` がadvisory lockを使うため、プーラー経由ではなくdirect接続（Connectで Connection pooling をオフ）を使う）
 - `DEVISE_JWT_SECRET_KEY` は本番と別の値を設定する。`RAILS_MASTER_KEY` も手動設定
-- AI支援を使うには、本番・stg のAPIに環境変数 `ANTHROPIC_API_KEY`（`render.yaml` に `sync: false` で定義済み。ダッシュボードで設定）を入れる。未設定なら点検フォームにAIのボタンは出ない。任意で `AI_MODEL`（既定 `claude-haiku-4-5`）、`AI_DAILY_LIMIT_PER_USER`（既定20）、`AI_DAILY_LIMIT_TOTAL`（既定200）、`AI_ENABLED=false`（キーがあっても止める）。公開デモの費用の濫用を防ぐため、上限は必ず効いている（0以下や数値でない値は既定に戻す）。ローカルは `ANTHROPIC_API_KEY=... docker-compose up -d backend`（`docker-compose.yml` が環境変数を渡す）
+- AI支援を使うには、本番・stg のAPIに環境変数 `ANTHROPIC_API_KEY`（`render.yaml` に `sync: false` で定義済み。ダッシュボードで設定）を入れる。未設定なら点検フォーム・トラブル詳細にAIのボタンは出ない。任意で `AI_MODEL`（既定 `claude-haiku-4-5`）、`AI_DAILY_LIMIT_PER_USER`（既定20）、`AI_DAILY_LIMIT_TOTAL`（既定200）、`AI_ENABLED=false`（キーがあっても止める）。公開デモの費用の濫用を防ぐため、上限は必ず効いている（0以下や数値でない値は既定に戻す）。ローカルは `ANTHROPIC_API_KEY=... docker-compose up -d backend`（`docker-compose.yml` が環境変数を渡す）
 - 初回のみシード投入が必要（Render無料プランはシェルが使えないためローカルから実行。`db:migrate` は初回デプロイで実行済みのため `db:seed` のみ）:
   ```bash
   docker-compose exec -e DATABASE_URL='<Neonの接続文字列>' backend bundle exec rails db:seed
@@ -270,7 +270,10 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - **定期整備の系列と複製**: 系列（`maintenance_series`）は繰り返しのまとまりで、設備ごとの周期（`maintenance_series_equipments.interval_months`）を持つ。定期整備は `maintenance_series_id` で系列に属す（同じ拠点の系列だけ）。「次回を作る」は `MaintenanceSuccessor` が提案する（`GET /scheduled_maintenances/:id/next_suggestion`。日付=前回の予定開始日+系列の最短の周期、名称の年を進める（年がなければ先頭に付ける）、対象設備=前回まで最後に含めた日から「周期−1か月」を過ぎた系列の設備。系列の周期が未登録の設備は入れない。系列に属さない整備は対象設備を引き継ぎ日付は空）。確認・修正した内容で `POST /scheduled_maintenances/:id/duplicate` が複製する（系列・説明・担当者を引き継ぎ、状態は計画中。検収・実績・使用資材は引き継がない）。系列の作成・編集・複製・提案は管理者と自社のマネージャー、見るのは全員。系列の周期の変更前後は監査ログ `changes_json.intervals` に残す
 - **定期整備の作業**（`maintenance_tasks`）: 部署ごとの、設備・計器の点検・整備・交換・工事（`kind`）。対象設備は定期整備の対象設備のどれか、計器はその設備の計器、部署は定期整備と同じ拠点（未定は NULL）、チェックリストは点検の作業だけ（`MaintenanceTask` の検証）。状態は 未着手/実施中/完了/見送り（`STATUS_TRANSITIONS`）で、完了にすると完了日が入る。**一括追加**（`POST /scheduled_maintenances/:id/tasks/bulk`）は、設備の計器を種類ごとの定修点検つきで点検の作業にする（`MaintenanceTask.template_key_for`: 伝送器・調節弁（positioner）・遮断弁（`shutoff_valve`）・安全弁（`safety_valve`）。手動弁など対応がない計器と、すでに作業のある計器は飛ばす）。**点検（`inspections.maintenance_task_id`）が下書きを出ると作業を完了にする**（完了日は点検日。見送りは変えない）。**検収へ進めるのは未完了の作業がないとき**、**作業のある設備は対象設備から外せない**（`ScheduledMaintenance` の検証）。追加・削除・一括追加は管理者と自社のマネージャー、**状態・備考の更新は全員**（`MaintenanceTaskPolicy`。それ以外の項目は管理者・マネージャーの更新だけが反映される）。「次回を作る」は、対象設備に残る設備の作業を未着手に戻して引き継ぐ。チェックリストの周期（`checklist_templates.cycle`: patrol/monthly/annual/turnaround）が定修のものは点検計画に使えない（`InspectionPlan` の検証。変更したときだけ）
 - **トラブルの定期整備への持ち込み**: トラブルの状態 `deferred`（定修待ち）は手動では選べず、`POST /troubles/:id/defer_to_maintenance`（既存の `scheduled_maintenance_id`＝計画中・準備中・同じ拠点、または `new_maintenance`）でだけなる。対象は未対応・対応中で、有効な作業がまだないトラブル。整備（`overhaul`）の作業を `trouble_id` つきで作り、トラブルの設備が定期整備の対象設備になければ追加して監査ログに残す。**作業の状態にトラブルが連動する**（`MaintenanceTask` のコールバック: 完了→解決済、見送り・削除→未対応。作業を進め直せば定修待ちに戻る）。定修待ちのトラブルは、有効な作業がなければならない（`Trouble` の検証）。操作は管理者と自社のマネージャー（`TroublePolicy#defer_to_maintenance?`）。「次回を作る」ではトラブルの作業は引き継がない
-- **AI支援（不具合報告の下書き。設計は要求仕様書 2.5）**: `POST /ai/defect_drafts`（現場メモ → タイトル・内容・優先度と、参考の推定原因・確認したい点）と `GET /ai/status`（ボタンを出すか・残り回数）。**AIは提案までで、何も保存しない**（提案の記録 `ai_suggestions` と監査ログだけ。トラブルができるのは、人が反映して点検を保存したとき）。構成は `AiConfig`（環境変数）→ `AiClient`（`Claude`=Anthropic API / `Fake`=`AI_PROVIDER=fake`）→ `DefectDraftGenerator`（プロンプト・JSONスキーマ・出力の検証）→ `AiController`。スキーマ（`output_config.format`）では文字数・個数の制約を表せないため、長さ・個数・未知の優先度は `sanitize` で検証して捨てる。**プロンプト（`SYSTEM_PROMPT`）・スキーマ（`SCHEMA`）・`sanitize` は3点セットで直す**。メモは指示ではなくデータとして `<memo>` に入れ、`< >` は全角にして区切りの偽装を防ぐ。応急処置・運転継続の判断・担当者や状態の指定は出させない（プロンプトで禁止）。設備・計器の情報はサーバーがDBから作る（個人情報は渡さない）。**1日（日本時間）の回数はユーザ別・全体の上限**で、`AiSuggestion.reserve!` がアドバイザリロックの中で数えて記録を作り、失敗した呼び出しも数える。失敗（APIの障害・拒否・切れた応答・不正な形）は502、タイムアウト（15秒。再試行しない）は504で、点検の入力は止めない。**失敗として記録するのはAIの呼び出しと出力の検証（`request_draft`）だけ**で、成功の記録（状態と監査ログ）は1つのトランザクション（監査ログが書けなければ成功の記録も戻して500。呼び出しは数えたまま）。点検の項目に `ai_suggestion_id` を付けて保存すると、点検から自動作成されたトラブルの監査ログ（`changes_json.ai_suggestion_id`）に残る。本人が今回の設備・計器について作った成功済みの提案のIDだけを認め、それ以外は黙って無視する（設備を変えたあとに送られても点検の保存を止めない）。フロントは `components/DefectAiAssist.vue`（点検フォームの不具合入力欄）
+- **AI支援（不具合報告の下書き。設計は要求仕様書 2.5）**: `POST /ai/defect_drafts`（現場メモ → タイトル・内容・優先度と、参考の推定原因・確認したい点）と `GET /ai/status`（ボタンを出すか・残り回数）。**AIは提案までで、何も保存しない**（提案の記録 `ai_suggestions` と監査ログだけ。トラブルができるのは、人が反映して点検を保存したとき）。構成は `AiConfig`（環境変数）→ `AiClient`（`Claude`=Anthropic API / `Fake`=`AI_PROVIDER=fake`）→ `DefectDraftGenerator`（プロンプト・JSONスキーマ・出力の検証）→ `AiController`。スキーマ（`output_config.format`）では文字数・個数の制約を表せないため、長さ・個数・未知の優先度は `sanitize` で検証して捨てる。**プロンプト（`SYSTEM_PROMPT`）・スキーマ（`SCHEMA`）・`sanitize` は3点セットで直す**。メモは指示ではなくデータとして `<memo>` に入れ、`< >` は全角にして区切りの偽装を防ぐ。応急処置・運転継続の判断・担当者や状態の指定は出させない（プロンプトで禁止）。設備・計器の情報はサーバーがDBから作る（個人情報は渡さない）。**1日（日本時間）の回数はユーザ別・全体の上限**で、`AiSuggestion.reserve!` がアドバイザリロックの中で数えて記録を作り、失敗した呼び出しも数える。失敗（APIの障害・拒否・切れた応答・不正な形）は502、タイムアウト（15秒。再試行しない）は504で、点検の入力は止めない。**失敗として記録するのはAIの呼び出しと出力の検証（`request_draft`）だけ**で、成功の記録（状態と監査ログ）は1つのトランザクション（監査ログが書けなければ成功の記録も戻して500。呼び出しは数えたまま）。点検の項目に `ai_suggestion_id` を付けて保存すると、点検から自動作成されたトラブルの監査ログ（`changes_json.ai_suggestion_id`）に残る。本人が今回の設備・計器について作った成功済みの提案のIDだけを認め、それ以外は黙って無視する（設備を変えたあとに送られても点検の保存を止めない）。フロントは `components/DefectAiAssist.vue`（点検フォームの不具合入力欄）。
+  - **類似トラブル**（要求仕様書 2.5.1）: `POST /ai/similar_troubles`（`equipment_id`・`instrument_id`・`memo`・`exclude_trouble_id`）。`SimilarTroubleFinder` が**候補をSQLで絞り**（同じ計器 → 同じ種類・同じ流体の計器 → 同じ設備。最大20件。拠点をまたぐ）、AIは症状が似ているものを最大3件選んで対応を要約するだけ。**返ったIDが候補になければ捨て**、タイトル・状態などはDBの値を返す（AIの文章は `similarity`・`how_handled` だけ）。候補が0件のときはAIを呼ばず、回数にも数えない（`candidates_count: 0`）。**選ぶ前に、症状を書き出して比べさせる**（`memo_symptom`・`candidate_symptom`・`same_symptom`。`same_symptom` が真でない・症状が空のものは `sanitize` が捨てる。文章の指示だけでは、実際のモデルが症状の違う候補や、症状のないメモへの候補を選んだため）。対応記録のない候補の `how_handled` は「対応記録なし」に固定（AIの文章を使わない）。プロンプト・スキーマ・`sanitize` は3点セット。フロントは `composables/useSimilarTroubles.ts`（点検フォームの `DefectAiAssist` とトラブル詳細で共用）と `components/SimilarTroubleList.vue`（トラブルへのリンクは、入力中の画面を離れないよう別タブ）
+  - **対応記録の下書き**（要求仕様書 2.5.2）: `POST /ai/response_drafts`（`trouble_id`・`memo`。設備・計器はトラブルからサーバーが求める）。`ResponseDraftGenerator`（対応種別・対応内容・使用資材・確認したい点。種別が決められないときは `unknown` → 提案なし）。権限は `TroubleResponsePolicy#create?`（協力会社の技能員は使えない）。対応記録の作成時に `trouble_response[ai_suggestion_id]` を送ると、本人が同じトラブルについて作った成功済みの `response_draft` のIDだけを認め、対応記録作成の監査ログ（`changes_json.ai_suggestion_id`）に残す（一致しないIDは黙って無視）。フロントは `components/ResponseAiAssist.vue`（対応記録ダイアログ）
+  - 3つのジェネレータで共有する部品（設備・計器の説明、`<>` のエスケープ、長さの検証）は `AiPromptSupport`。**1日の回数の上限は3機能で合算**（`AiSuggestion.reserve!` が種類を問わず数える）。`AiController` は上限の予約 → 呼び出し → 成功の記録の流れを `run_ai` に共通化していて、種類ごとの違い（画面に出す文言）は `KIND_TEXT`。`AiClient::Fake` はスキーマの項目で何を返すか決める
 - **タグ番号**: `instruments.tag_number` は拠点内で一意（別拠点なら同じ番号があり得る）。モデルで拠点内の一意を検証し、DBの一意制約は設備内のみ
 
 - **タイムゾーン**: アプリは日本時間（`config.time_zone = "Tokyo"`。DBへの保存はUTC）。日時の入力は日本時間として解釈され、返す日時は「+09:00」付き。「今日」「今月」はコード上 `Date.current` / `Time.current`（`Date.today` は使わない）。フロントのフォーム初期値は `utils/datetime.ts`（`nowForInput` / `todayForInput`）を使う（`toISOString()` はUTCなので、日本時間の朝に前日になる）
@@ -355,5 +358,6 @@ curl -X DELETE http://localhost:3000/api/v1/logout -H 'Authorization: Bearer <to
 - 発注点は資材マスタに1つ（全拠点共通）で、在庫は拠点別のため、ダッシュボードで拠点を絞ったときのアラートは「その拠点の在庫 vs 全社の発注点」になる
 - AIの呼び出しは同期で、最大15秒 puma のスレッドを占有する（デモの規模では許容。上限で頻度は抑えている）
 - 本物のAnthropic APIを呼ぶ経路（`AiClient::Claude`）は、自動テストではスタブ・fakeのため検証していない。キーを設定したら、stg で下書きが返ることを手で確認する（リクエストの形は、SDKを通してローカルのスタブに送って確認済み）
+- 類似トラブル・対応記録の下書きのプロンプトは、実際のモデル（Haiku 4.5）で評価した（2026-09-21。開発DBのシードデータ。評価のスクリプトはリポジトリにない）。類似トラブルは、症状の書き出しと `same_symptom` の判定を入れて、無関係なメモ・指示だけのメモ・症状の違うメモ（3種類×4回）は全回0件、信号途絶のメモは配線断線を4/4で選んだ。**残る限界**: 同じ設備の別の計器の「指示の低下」（例: 流量伝送器の徐々の低下に、液位計の指示低）を似ているとして混ぜることがある（4回中2回）。対応の要約が、記録より少し断定的になることがある（例:「配線を交換した」を「断線が原因と確認した」と書く）。対応記録の下書きは、8種類のメモ（清掃・交換・読み取れない・様子見・指示を仕込む・校正・運転継続の判断つき・調査と交換）で、メモにない原因・数値・資材の追加や、運転継続の判断・指示への追従はなかった（確認したい点に「〜は必要か」のような、作業を促す質問が混ざることがある）。モデルやプロンプトを変えたら、同じ観点で評価し直す
 - `users.jti` カラムが残っている（使っていない。次のリリースで削除する）
 - `scheduled_maintenances` の旧の列（`equipment_id` / `scheduled_date` / `completed_date`）が残っている（使っていない。次のリリースで削除する。移行は `BackfillScheduledMaintenanceParents`）

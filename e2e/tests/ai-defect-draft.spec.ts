@@ -1,18 +1,11 @@
-import { test, expect, login, selectFirstOption, ACCOUNTS } from './support'
+import { test, expect, login, selectFirstOption, requireFakeAi, ACCOUNTS } from './support'
 
-// 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**: バックエンドが AI_PROVIDER=fake（APIを呼ばないダミー）のときだけ
-// 実行し、本物のAI（キーあり）や無効（キーなし）のバックエンドではスキップする（判定はバックエンドの /ai/status の provider）。
-// CI は fake で起動するため実行する（fake でなければ、黙ってスキップされないよう失敗にする）
+// 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）
 test('現場メモからAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   await login(page, ACCOUNTS.member)
   const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
   await page.goto('/inspections/new')
-  const provider = (await (await statusResponse).json()).data.provider
-  if (provider !== 'fake') {
-    // CIで黙ってスキップされて、AIの画面が検証されないままになるのを防ぐ
-    expect(process.env.CI, 'CIでは、バックエンドを AI_PROVIDER=fake で起動する').toBeFalsy()
-    test.skip(true, `本物のAIは呼ばない（バックエンドが AI_PROVIDER=fake のときだけ実行する。いまは ${provider ?? '無効'}）`)
-  }
+  requireFakeAi((await (await statusResponse).json()).data.provider)
   await selectFirstOption(page, '設備 *')
   await selectFirstOption(page, '部署 *')
   await page.getByRole('button', { name: '項目追加' }).click()

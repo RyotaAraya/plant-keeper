@@ -1,9 +1,12 @@
 <script setup lang="ts">
 // 点検で見つけた不具合の現場メモから、トラブル報告の下書きをAIに作ってもらう。
 // AIは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は点検を保存したとき）。
+// 同じメモで、過去の類似トラブルも探せる（要求仕様書 2.5.1。こちらも表示するだけで、何も変えない）。
 // AIが使えない・失敗したときも、下の入力欄はそのまま使える
 import { ref } from 'vue'
 import api from '@/api/axios'
+import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
+import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import type { AiDefectDraft, AiStatus } from '@/types/models'
 
 const props = defineProps<{
@@ -21,10 +24,16 @@ const emit = defineEmits<{
 
 const PRIORITY_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
 
+const similar = useSimilarTroubles((count) => emit('remaining', count))
+
 const memo = ref('')
 const loading = ref(false)
 const draft = ref<AiDefectDraft | null>(null)
 const error = ref('')
+
+function searchSimilar() {
+  return similar.search({ equipmentId: props.equipmentId, instrumentId: props.instrumentId, memo: memo.value })
+}
 
 async function generate() {
   if (!props.equipmentId) {
@@ -88,10 +97,24 @@ function apply() {
       >
         AIで整える
       </v-btn>
+      <v-btn
+        size="small"
+        variant="tonal"
+        color="primary"
+        prepend-icon="mdi-history"
+        :loading="similar.loading.value"
+        :disabled="!memo.trim() || status.remaining_today <= 0"
+        data-testid="ai-similar-button"
+        @click="searchSimilar"
+      >
+        過去の類似トラブルを探す
+      </v-btn>
       <span class="text-caption text-medium-emphasis">今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</span>
     </div>
 
     <v-alert v-if="error" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-error">{{ error }}</v-alert>
+    <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
+    <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="similar.clear()" />
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
       <v-card-text class="text-body-2">

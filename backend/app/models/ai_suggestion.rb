@@ -1,7 +1,7 @@
-# AIの提案の記録。提案はあくまで下書きで、確定するのは人（トラブルになるのは、人が点検を保存したとき）。
-# トラブルがAIの下書きをもとに作られたかは、トラブル作成の監査ログの ai_suggestion_id でたどる
+# AIの提案の記録。提案はあくまで下書きで、確定するのは人（トラブルになるのは、人が点検を保存したとき。対応記録になるのは、人が対応記録を保存したとき）。
+# トラブル・対応記録がAIの下書きをもとに作られたかは、その作成の監査ログの ai_suggestion_id でたどる
 class AiSuggestion < ApplicationRecord
-  KINDS = %w[defect_draft].freeze
+  KINDS = %w[defect_draft similar_troubles response_draft].freeze
   # pending=呼び出し中（またはサーバが落ちて結果が残らなかったもの） / succeeded / failed
   STATUSES = %w[pending succeeded failed].freeze
   # 上限の判定と作成を直列にするためのアドバイザリロックのキー（他の用途と重ならない任意の値）

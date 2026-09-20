@@ -4,6 +4,8 @@
 # 現場メモは作業員が自由に書くため、AIへの指示ではなくデータとして渡す（<memo> の中の指示には従わせない）。
 # 返ってきたJSONは形と長さをここで検証し、使えない値は捨てる（未知の優先度は「提案なし」にする）
 class DefectDraftGenerator
+  include AiPromptSupport
+
   # 応答の形が使えない（タイトルがない等）
   class InvalidOutput < StandardError; end
 
@@ -12,14 +14,6 @@ class DefectDraftGenerator
   REASON_MAX = 200
   LIST_MAX_ITEMS = 3
   LIST_ITEM_MAX = 150
-  HAZARD_LABELS = { "low" => "低", "medium" => "中", "high" => "高" }.freeze
-  # 計器の種類は英語名で持っているため、AIには現場の呼び方で渡す（英語名のままだと「トランスミッタ」などと訳される）
-  INSTRUMENT_TYPE_LABELS = {
-    "temperature_transmitter" => "温度伝送器", "pressure_transmitter" => "圧力伝送器",
-    "flow_transmitter" => "流量伝送器", "level_transmitter" => "液面伝送器",
-    "pressure_valve" => "調節弁（圧力）", "level_valve" => "調節弁（液面）",
-    "shutoff_valve" => "遮断弁", "hand_valve" => "手動弁"
-  }.freeze
 
   SYSTEM_PROMPT = <<~PROMPT
     あなたは、石油プラントの計装保全の現場で、点検中に見つけた不具合の報告を整える助手です。
@@ -74,30 +68,10 @@ class DefectDraftGenerator
 
   # 設備・計器の情報はDBから作る（画面から送られた値は使わない）。個人に関する情報（ユーザ名など）は含めない
   def build_message(equipment, instrument, item_label, memo)
-    lines = [ "設備: #{equipment.name}" ]
-    if instrument
-      lines << "計器: タグ番号 #{instrument.tag_number}#{"、種類 #{INSTRUMENT_TYPE_LABELS.fetch(instrument.instrument_type, instrument.instrument_type)}" if instrument.instrument_type.present?}"
-      lines.concat(service_lines(instrument.service))
-    end
+    lines = equipment_lines(equipment, instrument)
     lines << "点検項目: #{escape(item_label)}" if item_label.present?
 
     "<equipment_info>\n#{lines.join("\n")}\n</equipment_info>\n<memo>\n#{escape(memo)}\n</memo>"
-  end
-
-  def service_lines(service)
-    return [] unless service
-
-    detail = [ ("温度 #{service.temperature}" if service.temperature.present?),
-               ("圧力 #{service.pressure}" if service.pressure.present?),
-               ("危険性 #{HAZARD_LABELS.fetch(service.hazard_level, service.hazard_level)}" if service.hazard_level.present?) ].compact
-    lines = [ "サービス（流体）: #{service.name}#{"（#{detail.join("、")}）" if detail.any?}" ]
-    lines << "危険性の説明: #{service.hazard_description}" if service.hazard_description.present?
-    lines
-  end
-
-  # 入力の中の < > で、<memo> などの区切りを偽装されないようにする
-  def escape(text)
-    text.to_s.tr("<>", "＜＞")
   end
 
   def sanitize(raw)
@@ -111,18 +85,8 @@ class DefectDraftGenerator
       "description" => clean(raw["description"], DESCRIPTION_MAX).to_s,
       "priority" => (raw["priority"] if Trouble.priorities.key?(raw["priority"])),
       "priority_reason" => clean(raw["priority_reason"], REASON_MAX).to_s,
-      "possible_causes" => clean_list(raw["possible_causes"]),
-      "check_points" => clean_list(raw["check_points"])
+      "possible_causes" => clean_list(raw["possible_causes"], max_items: LIST_MAX_ITEMS, item_max: LIST_ITEM_MAX),
+      "check_points" => clean_list(raw["check_points"], max_items: LIST_MAX_ITEMS, item_max: LIST_ITEM_MAX)
     }
-  end
-
-  def clean(value, max)
-    value.strip.truncate(max) if value.is_a?(String)
-  end
-
-  def clean_list(value)
-    return [] unless value.is_a?(Array)
-
-    value.filter_map { |item| clean(item, LIST_ITEM_MAX).presence }.first(LIST_MAX_ITEMS)
   end
 end

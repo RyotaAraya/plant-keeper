@@ -38,6 +38,8 @@ Rails.application.routes.draw do
       # AI支援（不具合報告の下書き）
       get "ai/status", to: "ai#status"
       post "ai/defect_drafts", to: "ai#defect_draft"
+      post "ai/similar_troubles", to: "ai#similar_troubles"
+      post "ai/response_drafts", to: "ai#response_draft"
       resources :scheduled_maintenances, only: [ :index, :show, :create, :update ] do
         member do
           get :next_suggestion
