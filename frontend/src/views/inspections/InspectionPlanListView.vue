@@ -11,6 +11,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
+import { coveredEquipments, equipmentNames } from '@/utils/equipment'
 import { intervalLabel } from '@/utils/interval'
 import { regulationColor } from '@/utils/regulation'
 import type { RegulationInspection } from '@/types/models'
@@ -109,6 +110,8 @@ function startInspection(plan: InspectionPlan) {
   const query: Record<string, string> = {
     inspection_plan_id: String(plan.id),
     equipment_id: String(plan.equipment_id ?? ''),
+    // 複数の設備をまとめた計画は、その設備すべてを点検に引き継ぐ（先頭が代表の設備）
+    equipment_ids: coveredEquipments(plan).map((e) => e.id).join(','),
     inspection_type: plan.inspection_type,
   }
   if (plan.instrument_id) query.instrument_id = String(plan.instrument_id)
@@ -122,6 +125,8 @@ const saving = ref(false)
 const errors = ref<string[]>([])
 const form = ref({
   name: '',
+  // 対象の設備。複数の設備をまとめた計画（巡回など）を作れる。先頭が代表の設備（equipment_id）
+  equipment_ids: [] as number[],
   equipment_id: null as number | null,
   instrument_id: null as number | null,
   checklist_template_id: null as number | null,
@@ -138,8 +143,10 @@ const equipmentChangeGuard = latestGuard()
 async function onEquipmentChange() {
   const isLatest = equipmentChangeGuard()
   form.value.instrument_id = null
+  form.value.equipment_id = form.value.equipment_ids[0] ?? null
   legalInspections.value = []
-  if (!form.value.equipment_id) {
+  // 計器の指定と、法定検査の周期の目安は、設備が1つのときだけ
+  if (form.value.equipment_ids.length !== 1) {
     instruments.value = []
     return
   }
@@ -169,6 +176,7 @@ function openDialog() {
   legalInspections.value = []
   form.value = {
     name: '',
+    equipment_ids: [],
     equipment_id: null,
     instrument_id: null,
     checklist_template_id: null,
@@ -228,7 +236,7 @@ watch(filters, fetchPlans, { deep: true })
           {{ item.reference_standard.name }}
           <v-chip size="x-small" label variant="tonal" color="brown" class="ml-1">基準器</v-chip>
         </template>
-        <template v-else>{{ item.equipment?.name }}</template>
+        <template v-else>{{ equipmentNames(item) }}</template>
       </template>
       <template #item.interval_days="{ item }"><span class="text-no-wrap">{{ item.interval_days }}日ごと</span></template>
       <template #item.last_inspected_on="{ item }">{{ item.last_inspected_on ?? '未実施' }}</template>
@@ -247,11 +255,16 @@ watch(filters, fetchPlans, { deep: true })
           <v-alert v-if="errors.length" type="error" variant="tonal" class="mb-3">{{ errors.join('、') }}</v-alert>
           <v-text-field v-model="form.name" label="計画名" class="mb-2" />
           <v-select
-            v-model="form.equipment_id"
+            v-model="form.equipment_ids"
             :items="equipments"
             item-title="name"
             item-value="id"
             label="設備"
+            multiple
+            chips
+            closable-chips
+            hint="複数の設備をまとめた計画（巡回など）を作れます（同じ拠点の設備。最初に選んだ設備が代表になります）"
+            persistent-hint
             class="mb-2"
             @update:model-value="onEquipmentChange"
           />
@@ -271,6 +284,7 @@ watch(filters, fetchPlans, { deep: true })
             </v-chip>
           </div>
           <v-select
+            v-if="form.equipment_ids.length <= 1"
             v-model="form.instrument_id"
             :items="instruments"
             item-title="tag_number"

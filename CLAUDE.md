@@ -163,7 +163,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ## 設計ドキュメント
 
 - `要求仕様書.md` — 機能要件、業務フロー、設計方針
-- `データモデル設計.md` — 41テーブルのER図・テーブル定義・簡易化メモ
+- `データモデル設計.md` — 42テーブルのER図・テーブル定義・簡易化メモ
 - `実装タスク表.md` — フェーズ別の実装タスク進捗表
 
 ## アーキテクチャ
@@ -259,7 +259,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 在庫: `purchased_on: :asc` 順（FIFO）
 
 ### 業務ルール（実装済みの不変条件）
-- **複数の設備をまとめた点検**（巡回など。要求仕様書 2.2）: `inspections.equipment_id` は**代表の設備**（先頭に選んだ設備。一覧・拠点の絞り込み・集計・監査ログの拠点はこれで判定）で、点検で見た設備の全体は `inspection_equipments`（代表の設備を必ず含み、同じ拠点だけ。設備が1つでも1行持つ）。API は `equipment_ids`（先頭が代表になる）か従来の `equipment_id` を受け付け、`Inspection#covered_equipment_ids`（保存前の入力を含む）で検証する。**`inspection_params` に `equipment_ids` を入れない**（`has_many :equipments` の `equipment_ids=` が、検証なしに直接書き込むため。コントローラの `apply_equipment_ids` が代表の設備と入力をセットする）。項目に `equipment_id`（不具合の設備。空は代表の設備）を持ち、トラブルはその設備で作る。点検の計器は代表の設備のものなので、別の設備のトラブルには引き継がない。設備の絞り込みは `inspection_equipments` で行う（代表の設備でなくても当てはまる）。承認依頼中は設備を変えられない。設備の増減は監査ログの `changes_json.equipment_ids`（[前, 後]）に残す。フロントは、点検フォームの「設備」が複数選択で、複数選択のときは点検の計器を選ばず、不具合の項目に「不具合の設備」を出す
+- **複数の設備をまとめた点検・点検計画**（巡回など。要求仕様書 2.2）: `equipment_id` は**代表の設備**（先頭に選んだ設備。一覧・拠点の絞り込み・集計・監査ログの拠点はこれで判定）で、対象の設備の全体は中間テーブル（点検は `inspection_equipments`、計画は `inspection_plan_equipments`。代表の設備を必ず含み、同じ拠点だけ。設備が1つでも1行持つ。基準器の校正計画は持たない）。共通の処理は、モデルの `CoversEquipments`（`covered_equipment_ids`・同じ拠点の検証・保存後の同期。含めるクラスが `equipment_links` を定義する）とコントローラの `EquipmentIdsParam`。API は `equipment_ids`（先頭が代表になる）か従来の `equipment_id` を受け付ける。**`*_params` に `equipment_ids` を入れない**（`has_many :equipments` の `equipment_ids=` が、検証なしに直接書き込むため。`apply_equipment_ids` が代表の設備と入力をセットする）。計画は、計器を指定できるのが設備1つのときだけ。計画から点検を開くと、対象の設備すべてを引き継ぐ（画面のクエリ `equipment_ids`）。デモの巡回の計画（川崎・根岸の「製造部 巡回点検」）は、`GroupDemoPatrolPlans` が既存環境をまとめ設備にする。以下は点検について。項目に `equipment_id`（不具合の設備。空は代表の設備）を持ち、トラブルはその設備で作る。点検の計器は代表の設備のものなので、別の設備のトラブルには引き継がない。設備の絞り込みは `inspection_equipments` で行う（代表の設備でなくても当てはまる）。承認依頼中は設備を変えられない。設備の増減は監査ログの `changes_json.equipment_ids`（[前, 後]）に残す。フロントは、点検フォームの「設備」が複数選択で、複数選択のときは点検の計器を選ばず、不具合の項目に「不具合の設備」を出す
 - **点検の承認フロー**: `draft ⇄ submitted → approval_requested → approved`（承認依頼中からは `submitted` へ差し戻し可）。遷移は `Inspection::STATUS_TRANSITIONS` とモデルの検証で強制する。更新できるのは作成者本人か管理者/マネージャー。承認と差し戻し（承認依頼中から出る操作）は管理者/マネージャーのみ（`InspectionPolicy#approve?`。作成者本人でも自分で差し戻せない）。`approved` は誰も変更できず、承認依頼中は内容（項目含む）を編集できない。新規作成できる状態は `draft` / `submitted` のみ
 - **点検計画（`inspection_plans`）**: 設備（計器）ごとの周期と次回期限。点検が `draft` を出たとき（`after_save`）に `next_due_on` を「実施日 + 周期」へ進める。期限の「今日」は `InspectionPlan.today`（日本時間）で判定する。点検の設備と計画の設備は一致しなければならない
 - **在庫**: 数量は入出庫・移動（`POST /stock_transactions`）でのみ変更する。在庫行を `lock`（`SELECT ... FOR UPDATE`）してから更新し、DBの CHECK 制約（`quantity >= 0`）でも守る。`PATCH /stocks` は数量・倉庫・資材を変更できず、ステータスは「在庫あり」⇔「使用中」の間だけ直接変えられる（修理中・廃棄済は修理管理・廃棄の入出庫を通す）。新規登録できるのも「在庫あり」「使用中」のみ。在庫を初期数量つきで登録すると、入庫として台帳にも残る。移動先に同じロット（資材・購入日・状態が同じでシリアルなし）があれば数量を足す

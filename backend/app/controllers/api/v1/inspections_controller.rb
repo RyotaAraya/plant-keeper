@@ -1,6 +1,8 @@
 module Api
   module V1
     class InspectionsController < BaseController
+      include EquipmentIdsParam
+
       before_action :set_inspection, only: [ :show, :update ]
 
       # 使った基準器（点検日に効いていた校正つき）
@@ -82,7 +84,7 @@ module Api
         inspection = Inspection.new(inspection_params)
         authorize inspection
         inspection.user = current_user
-        apply_equipment_ids(inspection)
+        apply_equipment_ids(inspection, :inspection)
 
         # 承認フローを飛び越えた状態での新規作成は不可（下書き・提出済のみ）
         unless %w[draft submitted].include?(inspection.status)
@@ -115,9 +117,9 @@ module Api
       # PATCH /api/v1/inspections/:id
       def update
         authorize @inspection
-        equipment_ids_before = @inspection.inspection_equipments.pluck(:equipment_id).sort
+        equipment_ids_before = equipment_ids_of(@inspection)
         @inspection.assign_attributes(inspection_params)
-        apply_equipment_ids(@inspection)
+        apply_equipment_ids(@inspection, :inspection)
         # 承認と差し戻し（承認依頼中から出る操作）は承認者のみ。作成者本人でも自分で差し戻せない
         if @inspection.status_changed? && (@inspection.approved? || @inspection.status_was == "approval_requested")
           authorize @inspection, :approve?
@@ -189,30 +191,8 @@ module Api
       end
 
       def equipment_ids_changed?
-        ids = equipment_ids_param
-        ids.present? && ids.sort != @inspection.inspection_equipments.pluck(:equipment_id).sort
-      end
-
-      # 点検で見た設備。equipment_ids が送られたら、先頭を代表の設備にする（送られなければ equipment_id のまま）
-      def equipment_ids_param
-        return unless params[:inspection].key?(:equipment_ids)
-
-        Array(params[:inspection][:equipment_ids]).map(&:to_i).select(&:positive?).uniq.presence
-      end
-
-      def apply_equipment_ids(inspection)
-        return unless (ids = equipment_ids_param)
-
-        inspection.equipment_id = ids.first
-        inspection.equipment_ids_input = ids
-      end
-
-      # 監査ログの変更内容。設備が2つ以上、または変わったときだけ、点検で見た設備のIDを [前, 後] で残す
-      def equipment_ids_changes(before, inspection)
-        after = inspection.inspection_equipments.reload.pluck(:equipment_id).sort
-        return {} if before.nil? ? after.size < 2 : before == after
-
-        { "equipment_ids" => [ before, after ] }
+        ids = equipment_ids_param(:inspection)
+        ids.present? && ids.sort != equipment_ids_of(@inspection)
       end
 
       # 使った基準器と使用前の1点チェック。reference_standards が送られたときだけ、送られた内容に合わせる（無ければ変えない）

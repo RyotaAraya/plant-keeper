@@ -9,6 +9,7 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { equipmentNames } from '@/utils/equipment'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,12 +39,6 @@ const headers = [
   { title: '部署', key: 'department.name', width: '140px' },
   { title: 'ステータス', key: 'status', width: '120px' },
 ]
-
-// 複数の設備をまとめて点検した記録は、設備が並ぶ（代表の設備が先頭）
-function equipmentNames(item: any): string {
-  const list: { id: number; name: string }[] = item.equipments?.length ? item.equipments : item.equipment ? [item.equipment] : []
-  return [...list].sort((a, b) => Number(b.id === item.equipment_id) - Number(a.id === item.equipment_id)).map((e) => e.name).join('、')
-}
 
 const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'

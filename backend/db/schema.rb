@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -169,6 +169,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_070000) do
     t.index ["equipment_id"], name: "index_inspection_items_on_equipment_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
+  end
+
+  create_table "inspection_plan_equipments", force: :cascade do |t|
+    t.bigint "inspection_plan_id", null: false
+    t.bigint "equipment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_inspection_plan_equipments_on_equipment_id"
+    t.index ["inspection_plan_id", "equipment_id"], name: "index_inspection_plan_equipments_on_plan_and_equipment", unique: true
+    t.index ["inspection_plan_id"], name: "index_inspection_plan_equipments_on_inspection_plan_id"
   end
 
   create_table "inspection_plans", force: :cascade do |t|
@@ -660,6 +670,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_070000) do
   add_foreign_key "inspection_items", "equipments"
   add_foreign_key "inspection_items", "inspections"
   add_foreign_key "inspection_items", "instruments"
+  add_foreign_key "inspection_plan_equipments", "equipments"
+  add_foreign_key "inspection_plan_equipments", "inspection_plans"
   add_foreign_key "inspection_plans", "checklist_templates"
   add_foreign_key "inspection_plans", "equipments"
   add_foreign_key "inspection_plans", "instruments"

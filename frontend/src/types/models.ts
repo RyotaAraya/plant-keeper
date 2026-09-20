@@ -277,6 +277,8 @@ export interface InspectionPlan {
   overdue: boolean
   days_until_due: number
   equipment?: { id: number; name: string; site_id: number } | null
+  // 対象の設備（代表の設備 equipment_id を含む。複数の設備をまとめた計画は2つ以上）
+  equipments?: { id: number; name: string; site_id: number }[]
   reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null

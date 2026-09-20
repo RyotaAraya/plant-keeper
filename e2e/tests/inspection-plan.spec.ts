@@ -45,3 +45,21 @@ test('計画の追加ボタンはマネージャーにだけ表示される', as
   await page.getByRole('link', { name: '点検計画', exact: true }).click()
   await expect(page.getByRole('button', { name: '計画を追加' })).toBeVisible()
 })
+
+// 巡回の計画は、装置ごとではなく、いくつかの装置をまとめて1件にする
+test('複数の設備をまとめた巡回の計画から「点検を実施」を開くと、その設備すべてが点検に引き継がれる', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+
+  const row = page.getByRole('row', { name: /製造部 巡回点検/ })
+  await expect(row).toContainText('常圧蒸留装置、')
+  await expect(row).toContainText('重油間接脱硫装置')
+  await row.getByRole('button', { name: '点検を実施' }).click()
+
+  await expect(page).toHaveURL(/\/inspections\/new\?.*equipment_ids=/)
+  const equipment = page.locator('.v-field', { has: page.getByLabel('設備 *') })
+  for (const name of ['常圧蒸留装置', '重油間接脱硫装置', '流動接触分解装置', '減圧蒸留装置', '接触改質装置']) {
+    await expect(equipment).toContainText(name)
+  }
+  await expect(page.getByLabel('計器（任意）')).toHaveCount(0) // 複数の設備をまとめた点検は、計器を選ばない
+})

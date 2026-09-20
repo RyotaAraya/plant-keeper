@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { RESULT_COLOR, RESULT_LABEL, calibrationInputFrom } from '@/utils/calibration'
+import { coveredEquipments } from '@/utils/equipment'
 
 const route = useRoute()
 const router = useRouter()
@@ -42,12 +43,7 @@ const itemTypeLabel: Record<string, string> = {
 }
 
 // 点検で見た設備。代表の設備が先頭（複数の設備をまとめて点検した記録は、2つ以上になる）
-const coveredEquipments = computed(() => {
-  const current = inspection.value
-  if (!current) return []
-  const list: { id: number; name: string }[] = current.equipments?.length ? current.equipments : current.equipment ? [current.equipment] : []
-  return [...list].sort((a, b) => Number(b.id === current.equipment_id) - Number(a.id === current.equipment_id))
-})
+const inspectionEquipments = computed(() => coveredEquipments(inspection.value))
 
 const defectItems = computed(() => {
   if (!inspection.value?.inspection_items) return []
@@ -123,7 +119,7 @@ onMounted(fetchInspection)
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">設備</div>
-              <div v-for="equipment in coveredEquipments" :key="equipment.id" data-testid="inspection-equipment">
+              <div v-for="equipment in inspectionEquipments" :key="equipment.id" data-testid="inspection-equipment">
                 <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${equipment.id}`)">
                   {{ equipment.name }}
                 </a>

@@ -285,7 +285,10 @@ async function prefillFromPlan() {
   if (q.inspection_plan_id) form.value.inspection_plan_id = Number(q.inspection_plan_id)
   if (q.maintenance_task_id) form.value.maintenance_task_id = Number(q.maintenance_task_id)
   form.value.equipment_id = q.equipment_id ? Number(q.equipment_id) : null
-  form.value.equipment_ids = form.value.equipment_id ? [form.value.equipment_id] : []
+  // 複数の設備をまとめた計画（巡回など）は、その設備すべてを引き継ぐ（先頭が代表の設備）
+  const planEquipmentIds = String(q.equipment_ids ?? '').split(',').map(Number).filter((id) => id > 0)
+  form.value.equipment_ids = planEquipmentIds.length ? planEquipmentIds : form.value.equipment_id ? [form.value.equipment_id] : []
+  form.value.equipment_id = form.value.equipment_ids[0] ?? null
   form.value.instrument_id = q.instrument_id ? Number(q.instrument_id) : null
   form.value.checklist_template_id = q.checklist_template_id ? Number(q.checklist_template_id) : null
   if (q.inspection_type) form.value.inspection_type = String(q.inspection_type)

@@ -1,6 +1,7 @@
 class Inspection < ApplicationRecord
   include StatusTransitions
   include InstrumentBelongsToEquipment
+  include CoversEquipments
 
   belongs_to :checklist_template, optional: true
   belongs_to :user
@@ -34,14 +35,8 @@ class Inspection < ApplicationRecord
   enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
-  validate :equipments_are_in_one_site
   validate :plan_matches_equipment
   validate :task_matches_equipment
-
-  # 点検で見た設備のID（代表の設備を含む）。画面から送られたときだけ、保存後にその内容に合わせる。
-  # 送られなければ変えない（代表の設備を変えたときは、その設備だけにする）
-  attr_writer :equipment_ids_input
-  after_save :sync_equipments
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
   after_save :advance_inspection_plan, if: -> { inspection_plan && saved_change_to_status? && !draft? }
@@ -57,11 +52,8 @@ class Inspection < ApplicationRecord
     "approved" => []
   }.freeze
 
-  # 点検で見た設備のID（保存前の入力を含む。代表の設備が先頭）
-  def covered_equipment_ids
-    saved = @equipment_ids_input.nil? ? (persisted? ? inspection_equipments.pluck(:equipment_id) : []) : @equipment_ids_input
-    ([ equipment_id ] + saved).compact.uniq
-  end
+  # CoversEquipments が使う、点検で見た設備の中間テーブル
+  def equipment_links = inspection_equipments
 
   # 提出（下書きを出る）ときに、使った基準器が点検日に使えるかを確認する。使えなければ UnusableReferenceStandards
   def check_reference_standards!
@@ -104,30 +96,6 @@ class Inspection < ApplicationRecord
 
   def complete_maintenance_task
     maintenance_task.complete_by_inspection!(inspected_at.to_date)
-  end
-
-  # 複数の設備をまとめて点検できるのは、同じ拠点の設備どうしだけ（定期整備の対象設備と同じ）
-  def equipments_are_in_one_site
-    ids = covered_equipment_ids
-    return if ids.size <= 1
-
-    found = Equipment.where(id: ids).pluck(:site_id)
-    errors.add(:base, "選択した設備が見つかりません") if found.size != ids.size
-    errors.add(:base, "まとめて点検できるのは、同じ拠点の設備だけです") if found.uniq.size > 1
-  end
-
-  def sync_equipments
-    ids = if !@equipment_ids_input.nil?
-      covered_equipment_ids
-    elsif saved_change_to_equipment_id?
-      [ equipment_id ]
-    else
-      return
-    end
-    inspection_equipments.where.not(equipment_id: ids).destroy_all
-    (ids - inspection_equipments.pluck(:equipment_id)).each { |id| inspection_equipments.create!(equipment_id: id) }
-    equipments.reset
-    @equipment_ids_input = nil
   end
 
   def task_matches_equipment

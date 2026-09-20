@@ -16,7 +16,9 @@ end
 
 [
   # 川崎製油所
-  { name: "常圧蒸留装置 巡回点検", equipment: plan_equipment("川崎製油所", "常圧蒸留装置"), template: "巡回点検",
+  # 巡回は装置ごとではなく、運転部門がいくつかの装置をまとめて見て回る（先頭が代表の設備）
+  { name: "製造部 巡回点検", equipment: plan_equipment("川崎製油所", "常圧蒸留装置"), template: "巡回点検",
+    equipments: %w[常圧蒸留装置 重油間接脱硫装置 流動接触分解装置 減圧蒸留装置 接触改質装置].map { |name| plan_equipment("川崎製油所", name) },
     type: "routine", interval: 7, last: today - 9 },
   { name: "FT-301 流量伝送器 ゼロ点確認", equipment: plan_equipment("川崎製油所", "常圧蒸留装置"), instrument: plan_instrument("FT-301"),
     template: "伝送器 月次点検", type: "periodic", interval: 90, last: today - 100 },
@@ -27,7 +29,8 @@ end
   { name: "テレメータ計器 月次点検", equipment: plan_equipment("川崎製油所", "重油間接脱硫装置"), template: "伝送器 月次点検",
     type: "telemetry", interval: 30, last: today - 12 },
   # 根岸製油所
-  { name: "常圧蒸留装置 巡回点検", equipment: plan_equipment("根岸製油所", "常圧蒸留装置"), template: "根岸 巡回点検",
+  { name: "製造部 巡回点検", equipment: plan_equipment("根岸製油所", "常圧蒸留装置"), template: "根岸 巡回点検",
+    equipments: %w[常圧蒸留装置 軽油脱硫装置].map { |name| plan_equipment("根岸製油所", name) },
     type: "routine", interval: 7, last: today - 8 },
   # 調節弁・遮断弁（年次。デモ用の計画で、既存環境には追加しない）
   { name: "PV-201 調節弁 年次点検", equipment: plan_equipment("川崎製油所", "常圧蒸留装置"), instrument: plan_instrument("PV-201"),
@@ -38,7 +41,7 @@ end
 ].each do |attrs|
   interval = attrs[:interval]
   InspectionPlan.create!(
-    name: attrs[:name], equipment: attrs[:equipment], instrument: attrs[:instrument],
+    name: attrs[:name], equipment: attrs[:equipment], equipment_ids_input: attrs[:equipments]&.map(&:id), instrument: attrs[:instrument],
     checklist_template: plan_template(attrs[:template]), inspection_type: attrs[:type],
     interval_days: interval, last_inspected_on: attrs[:last], next_due_on: attrs[:last] + interval
   )
