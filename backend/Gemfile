@@ -39,6 +39,9 @@ gem "devise-jwt"
 # Authorization
 gem "pundit"
 
+# AI (Claude API): 不具合報告の下書き
+gem "anthropic", "~> 1.72"
+
 group :development do
   gem "annotate"
 end

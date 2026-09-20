@@ -26,6 +26,9 @@ services:
       DATABASE_URL: postgres://manage:manage_password@db:5432/manage_development
       RAILS_ENV: development
       DEVISE_JWT_SECRET_KEY: dev_jwt_secret_key_change_in_production
+      # AI支援（不具合報告の下書き）。ANTHROPIC_API_KEY を渡すとAPIを呼ぶ。AI_PROVIDER=fake はAPIを呼ばないダミー（E2E・キーなしの確認用）。どちらも未設定ならAIのボタンは出ない
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-}
 
   frontend:
     build:

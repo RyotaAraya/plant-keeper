@@ -1,15 +1,20 @@
 class Inspection < ApplicationRecord
   include StatusTransitions
   include InstrumentBelongsToEquipment
+  include CoversEquipments
 
   belongs_to :checklist_template, optional: true
   belongs_to :user
+  # 代表の設備（点検で見た設備の先頭。一覧・集計・拠点の判定に使う）。ほかの設備は equipments に持つ
   belongs_to :equipment
   belongs_to :department
   belongs_to :instrument, optional: true
   belongs_to :inspection_plan, optional: true
   belongs_to :maintenance_task, optional: true
 
+  has_many :inspection_equipments, dependent: :destroy
+  # 点検で見た設備（代表の設備を含む）。複数の設備をまとめて点検（巡回など）したときに、2つ以上になる
+  has_many :equipments, through: :inspection_equipments
   has_many :inspection_items, -> { order(:position) }, dependent: :destroy
   has_many :inspection_reference_standards, dependent: :destroy
   has_many :reference_standards, through: :inspection_reference_standards
@@ -30,7 +35,7 @@ class Inspection < ApplicationRecord
   enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
-  validate :plan_matches_equipment
+  validate :plan_matches_equipment, if: :plan_check_needed?
   validate :task_matches_equipment
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
@@ -46,6 +51,9 @@ class Inspection < ApplicationRecord
     "approval_requested" => %w[submitted approved],
     "approved" => []
   }.freeze
+
+  # CoversEquipments が使う、点検で見た設備の中間テーブル
+  def equipment_links = inspection_equipments
 
   # 提出（下書きを出る）ときに、使った基準器が点検日に使えるかを確認する。使えなければ UnusableReferenceStandards
   def check_reference_standards!
@@ -91,14 +99,25 @@ class Inspection < ApplicationRecord
   end
 
   def task_matches_equipment
-    return if maintenance_task.nil? || maintenance_task.equipment_id == equipment_id
+    return if maintenance_task.nil? || covered_equipment_ids.include?(maintenance_task.equipment_id)
 
     errors.add(:maintenance_task, "は選択した設備の作業ではありません")
   end
 
-  def plan_matches_equipment
-    return if inspection_plan.nil? || inspection_plan.equipment_id == equipment_id
+  # 作成時と、計画・設備を変えるときだけ確認する（計画に設備があとから足されても、過去の点検の承認などの更新は止めない）
+  def plan_check_needed?
+    new_record? || will_save_change_to_inspection_plan_id? || will_save_change_to_equipment_id? || !@equipment_ids_input.nil?
+  end
 
-    errors.add(:inspection_plan, "は選択した設備の点検計画ではありません")
+  # 計画に基づく点検は、計画の対象設備をすべて含まなければならない。
+  # 一部の設備だけ見た点検で、計画の次回期限が進まないようにするため（点検にはほかの設備が加わっていてよい）
+  def plan_matches_equipment
+    return if inspection_plan.nil?
+
+    required = inspection_plan.covered_equipment_ids
+    missing = required - covered_equipment_ids
+    return if required.any? && missing.empty?
+
+    errors.add(:inspection_plan, required.empty? ? "は設備の点検計画ではありません" : "の対象設備が、この点検に含まれていません（#{Equipment.where(id: missing).pluck(:name).join("、")}）")
   end
 end

@@ -2,6 +2,8 @@ class InspectionItem < ApplicationRecord
   belongs_to :inspection
   belongs_to :checklist_template_item, optional: true
   belongs_to :instrument, optional: true
+  # 項目の対象設備。複数の設備の点検で、不具合がどの設備のものかを表す。空は点検の代表の設備
+  belongs_to :equipment, optional: true
 
   has_one :trouble, dependent: :nullify
 
@@ -12,6 +14,7 @@ class InspectionItem < ApplicationRecord
 
   validates :content, presence: true
   validates :position, presence: true
+  validate :equipment_belongs_to_inspection
   validate :instrument_belongs_to_inspection_equipment
   validate :calibration_can_be_recorded
 
@@ -47,10 +50,18 @@ class InspectionItem < ApplicationRecord
     errors.add(:base, "この計器には校正範囲・許容差が設定されていないため、5点校正を記録できません（装置・計器で設定してください）")
   end
 
-  # 項目の計器は、点検の対象設備の計器でなければならない
+  # 項目の設備は、点検で見た設備のどれかでなければならない
+  def equipment_belongs_to_inspection
+    return if equipment_id.nil? || inspection.nil?
+
+    errors.add(:equipment, "は点検の対象設備ではありません") unless inspection.covered_equipment_ids.include?(equipment_id)
+  end
+
+  # 項目の計器は、項目の設備（なければ点検で見た設備）の計器でなければならない
   def instrument_belongs_to_inspection_equipment
     return if instrument.nil? || inspection.nil?
 
-    errors.add(:instrument, "は点検の対象設備の計器ではありません") if instrument.equipment_id != inspection.equipment_id
+    allowed = equipment_id ? [ equipment_id ] : inspection.covered_equipment_ids
+    errors.add(:instrument, "は点検の対象設備の計器ではありません") unless allowed.include?(instrument.equipment_id)
   end
 end

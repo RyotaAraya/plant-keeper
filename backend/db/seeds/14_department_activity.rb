@@ -84,7 +84,8 @@ leaf_departments.each_with_index do |dept, idx|
   next if user.nil? || equipments.empty?
 
   items = item_sets[kind]
-  inspection_type = kind == :operation ? "operation_check" : "routine"
+  # 計器チームの点検は、巡回（運転員が装置を見て回る）ではなく、計器ごとの定期点検
+  inspection_type = { operation: "operation_check", instrument: "periodic" }.fetch(kind, "routine")
 
   # 点検5件（それぞれ複数項目）
   5.times do |i|

@@ -257,6 +257,8 @@ export interface Inspection {
   notes: string | null
   created_at: string
   updated_at: string
+  // 点検で見た設備（代表の設備 equipment_id を含む。複数の設備をまとめた点検は2つ以上）
+  equipments?: { id: number; name: string }[]
 }
 
 export interface InspectionPlan {
@@ -275,6 +277,8 @@ export interface InspectionPlan {
   overdue: boolean
   days_until_due: number
   equipment?: { id: number; name: string; site_id: number } | null
+  // 対象の設備（代表の設備 equipment_id を含む。複数の設備をまとめた計画は2つ以上）
+  equipments?: { id: number; name: string; site_id: number }[]
   reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
@@ -291,6 +295,8 @@ export interface InspectionItem {
   measured_value: string | null
   text_value: string | null
   has_defect: boolean
+  // 複数の設備をまとめた点検で、項目の対象設備（空は代表の設備）
+  equipment_id: number | null
   instrument_id: number | null
   created_at: string
   updated_at: string
@@ -524,4 +530,26 @@ export interface InspectionReferenceStandardUse {
   reference_standard_id: number
   pre_check_passed: boolean | null
   pre_check_note: string
+}
+
+// AI支援（不具合報告の下書き）
+export interface AiStatus {
+  enabled: boolean
+  // どのAIか。fake=APIを呼ばないダミー / claude=本物 / null=無効
+  provider: 'fake' | 'claude' | null
+  daily_limit: number
+  remaining_today: number
+  max_memo_length: number
+}
+
+export interface AiDefectDraft {
+  suggestion_id: number
+  title: string
+  description: string
+  // AIが提案しない（使えない値だった）ときは null
+  priority: 'low' | 'medium' | 'high' | 'critical' | null
+  priority_reason: string
+  possible_causes: string[]
+  check_points: string[]
+  remaining_today: number
 }

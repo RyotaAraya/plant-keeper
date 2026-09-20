@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS } from './support'
+import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS, selectOption } from './support'
 import type { Page } from '@playwright/test'
 
 const WORKER = { email: 'honda@example.com', password: 'password' }
@@ -8,11 +8,6 @@ async function apiGet(page: Page, path: string) {
   const res = await page.request.get(`${apiBaseUrl()}${path}`, { headers: { Authorization: `Bearer ${token}` } })
   expect(res.ok()).toBeTruthy()
   return (await res.json()).data
-}
-
-async function selectOption(page: Page, label: string, optionName: string) {
-  await page.locator('.v-field', { has: page.getByLabel(label, { exact: true }) }).click()
-  await page.getByRole('option', { name: optionName }).click()
 }
 
 // 基準器（校正に使う圧力校正器・マルチテスタなど）の台帳: 校正の状態（期限切れ・期限間近・不合格）が一覧で分かる。

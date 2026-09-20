@@ -2,6 +2,7 @@
 # 点検記録（Inspection）だけでは「やった」ことしか分からず、「やるべきなのにやっていない」を検出できないため
 class InspectionPlan < ApplicationRecord
   include InstrumentBelongsToEquipment
+  include CoversEquipments
 
   # 点検の対象は、設備か、基準器（年次の校正）のどちらか一方
   belongs_to :equipment, optional: true
@@ -10,6 +11,9 @@ class InspectionPlan < ApplicationRecord
   belongs_to :checklist_template, optional: true
 
   has_many :inspections, dependent: :nullify
+  has_many :inspection_plan_equipments, dependent: :destroy
+  # 対象の設備（代表の設備を含む）。複数の設備をまとめた計画（巡回など）は、2つ以上になる
+  has_many :equipments, through: :inspection_plan_equipments
 
   enum :inspection_type, { routine: "routine", periodic: "periodic", telemetry: "telemetry", operation_check: "operation_check" }
 
@@ -18,6 +22,7 @@ class InspectionPlan < ApplicationRecord
   validates :next_due_on, presence: true
   validate :exactly_one_target
   validate :template_is_not_turnaround
+  validate :instrument_only_for_single_equipment
 
   scope :active, -> { where(is_active: true) }
   scope :overdue, -> { active.where(next_due_on: ...today) }
@@ -48,7 +53,15 @@ class InspectionPlan < ApplicationRecord
     update!(last_inspected_on: last_inspected_on, next_due_on: next_due_on)
   end
 
+  # CoversEquipments が使う、対象設備の中間テーブル
+  def equipment_links = inspection_plan_equipments
+
   private
+
+  # 計器を指定できるのは、設備が1つの計画だけ（計器は代表の設備のもの）
+  def instrument_only_for_single_equipment
+    errors.add(:instrument, "は、複数の設備をまとめた計画には指定できません") if instrument_id.present? && covered_equipment_ids.size > 1
+  end
 
   # 定修のチェックリストは、点検計画ではなく、定期整備の作業で使う（変更したときだけ確認する）
   def template_is_not_turnaround

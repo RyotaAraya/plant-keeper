@@ -29,11 +29,30 @@ class ChecklistTemplateCatalogTest < ActiveSupport::TestCase
     end
   end
 
-  test "機器の種類 × 周期: 伝送器は巡回・月次・年次・定修、調節弁・遮断弁・安全弁は巡回・年次・定修、タンク液面計は年次" do
-    expected = %w[伝送器].product(%w[巡回 月次 年次 定修]) + %w[調節弁 遮断弁・インターロック 安全弁].product(%w[巡回 年次 定修]) + [ %w[タンク液面計 年次] ]
-    expected_names = expected.map { |device, cycle| "#{device} #{cycle}点検" }
+  test "機器の種類 × 周期: 伝送器は月次・年次・定修、調節弁・遮断弁・安全弁は年次・定修、タンク液面計は年次。巡回は機器で分けず「巡回点検」1つ" do
+    expected = %w[伝送器].product(%w[月次 年次 定修]) + %w[調節弁 遮断弁・インターロック 安全弁].product(%w[年次 定修]) + [ %w[タンク液面計 年次] ]
+    expected_names = expected.map { |device, cycle| "#{device} #{cycle}点検" } + [ "巡回点検" ]
 
     assert_equal expected_names.sort, TEMPLATES.map { |t| t[:name] }.reject { |name| name.match?(/\A(根岸|堺) /) }.sort
+  end
+
+  test "巡回点検は、単独の計器の点検ではなく装置単位のざっくりした目視で、指示値の確認を項目に持たない（異常はDCSで分かる）" do
+    patrol_names = TEMPLATES.select { |t| t[:cycle] == "patrol" }.map { |t| t[:name] }
+
+    assert_equal [ "巡回点検", "根岸 巡回点検", "堺 巡回点検" ].sort, patrol_names.sort
+    patrol_names.each do |name|
+      items = BY_NAME.fetch(name)[:items]
+      assert items.none? { |content, _| content.include?("指示値") }, name
+      assert items.all? { |_, type| %w[check text].include?(type) }, "巡回は測定値・校正を記録しない: #{name}"
+      assert_operator items.size, :<=, 6, "ざっくりした巡回のため項目は少なく: #{name}"
+    end
+  end
+
+  test "巡回点検は運転部門（製造部）のテンプレート、それ以外は計装保全課のテンプレート" do
+    TEMPLATES.each do |template|
+      expected = template[:cycle] == "patrol" ? [ "製造部" ] : [ "保全部", "計装保全課" ]
+      assert_equal expected, template[:dept_path], template[:name]
+    end
   end
 
   test "5点校正の項目は、校正をする周期（伝送器の年次・定修、調節弁の年次・定修、タンク液面計の年次）にだけある" do
@@ -53,10 +72,11 @@ class ChecklistTemplateCatalogTest < ActiveSupport::TestCase
     assert_equal [ "伝送器 月次点検", "伝送器 年次点検", "調節弁 年次点検" ].sort, names_with_item(/自動に戻した/).sort
   end
 
-  test "拠点ごとの巡回点検は、川崎の伝送器 巡回点検と同じ項目" do
-    kawasaki = BY_NAME.fetch("伝送器 巡回点検")[:items]
+  test "拠点ごとの巡回点検は、川崎の巡回点検と同じ項目" do
+    kawasaki = BY_NAME.fetch("巡回点検")[:items]
 
-    assert_equal kawasaki, BY_NAME.fetch("根岸 伝送器 巡回点検")[:items]
-    assert_equal [ "根岸製油所", "堺製油所" ], [ BY_NAME.fetch("根岸 伝送器 巡回点検")[:site], BY_NAME.fetch("堺 伝送器 巡回点検")[:site] ]
+    assert_equal kawasaki, BY_NAME.fetch("根岸 巡回点検")[:items]
+    assert_equal kawasaki, BY_NAME.fetch("堺 巡回点検")[:items]
+    assert_equal [ "根岸製油所", "堺製油所" ], [ BY_NAME.fetch("根岸 巡回点検")[:site], BY_NAME.fetch("堺 巡回点検")[:site] ]
   end
 end

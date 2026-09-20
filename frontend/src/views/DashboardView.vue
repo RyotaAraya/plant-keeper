@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { equipmentSummary } from '@/utils/equipment'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -128,7 +129,7 @@ onMounted(fetchDashboard)
                 v-for="p in dashboard.inspection_plans.overdue_list"
                 :key="p.id"
                 :title="p.name"
-                :subtitle="`${p.equipment?.name ?? p.reference_standard?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
+                :subtitle="`${equipmentSummary(p) || p.reference_standard?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
                 @click="goList('/inspection-plans', { overdue: 'true' })"
               >
                 <template #prepend>

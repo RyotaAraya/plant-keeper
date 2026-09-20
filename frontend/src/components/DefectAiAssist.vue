@@ -1,0 +1,123 @@
+<script setup lang="ts">
+// 点検で見つけた不具合の現場メモから、トラブル報告の下書きをAIに作ってもらう。
+// AIは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は点検を保存したとき）。
+// AIが使えない・失敗したときも、下の入力欄はそのまま使える
+import { ref } from 'vue'
+import api from '@/api/axios'
+import type { AiDefectDraft, AiStatus } from '@/types/models'
+
+const props = defineProps<{
+  status: AiStatus
+  equipmentId: number | null
+  instrumentId: number | null
+  itemLabel: string
+  // 入力欄にすでにタイトルがあるとき（反映で置き換わるため、確認する）
+  hasExisting: boolean
+}>()
+const emit = defineEmits<{
+  apply: [draft: AiDefectDraft]
+  remaining: [count: number]
+}>()
+
+const PRIORITY_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
+
+const memo = ref('')
+const loading = ref(false)
+const draft = ref<AiDefectDraft | null>(null)
+const error = ref('')
+
+async function generate() {
+  if (!props.equipmentId) {
+    error.value = '先に設備を選んでください'
+    return
+  }
+  loading.value = true
+  error.value = ''
+  draft.value = null
+  try {
+    const res = await api.post('/ai/defect_drafts', {
+      equipment_id: props.equipmentId,
+      instrument_id: props.instrumentId,
+      item_label: props.itemLabel,
+      memo: memo.value,
+    })
+    draft.value = res.data.data
+    emit('remaining', res.data.data.remaining_today)
+  } catch (e: any) {
+    error.value = e.response?.data?.errors?.[0] || 'AIから下書きを取得できませんでした。点検の入力はAIなしで続けられます'
+    // 上限に達した場合などに、画面の残り回数を実際に合わせる
+    if (e.response?.status === 429) emit('remaining', 0)
+  } finally {
+    loading.value = false
+  }
+}
+
+function apply() {
+  if (!draft.value) return
+  // 断ったときは、下書きを残す（押し直せるように）
+  if (props.hasExisting && !confirm('入力済みのタイトル・説明を、AIの下書きで置き換えます。よろしいですか？')) return
+  emit('apply', draft.value)
+  draft.value = null
+}
+</script>
+
+<template>
+  <div class="pk-ai-assist mb-2" data-testid="ai-assist">
+    <v-textarea
+      v-model="memo"
+      label="現場メモ（AIで整える）"
+      placeholder="例: PT-101の指示値が数秒おきに上下している。昨日から。"
+      rows="2"
+      auto-grow
+      density="compact"
+      :counter="status.max_memo_length"
+      :maxlength="status.max_memo_length"
+      hide-details="auto"
+      data-testid="ai-memo"
+    />
+    <div class="d-flex align-center ga-3 mt-1">
+      <v-btn
+        size="small"
+        variant="tonal"
+        color="primary"
+        prepend-icon="mdi-robot-outline"
+        :loading="loading"
+        :disabled="!memo.trim() || status.remaining_today <= 0"
+        data-testid="ai-draft-button"
+        @click="generate"
+      >
+        AIで整える
+      </v-btn>
+      <span class="text-caption text-medium-emphasis">今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</span>
+    </div>
+
+    <v-alert v-if="error" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-error">{{ error }}</v-alert>
+
+    <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
+      <v-card-text class="text-body-2">
+        <div class="text-caption text-medium-emphasis mb-2">AIの下書きです。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</div>
+        <div><span class="text-medium-emphasis">タイトル:</span> {{ draft.title }}</div>
+        <div v-if="draft.description"><span class="text-medium-emphasis">説明:</span> {{ draft.description }}</div>
+        <div>
+          <span class="text-medium-emphasis">優先度:</span>
+          <template v-if="draft.priority">{{ PRIORITY_LABEL[draft.priority] }}</template>
+          <template v-else>提案なし（入力欄の値のまま）</template>
+          <span v-if="draft.priority_reason" class="text-medium-emphasis">（{{ draft.priority_reason }}）</span>
+        </div>
+        <div v-if="draft.possible_causes.length" class="mt-2">
+          <div class="text-medium-emphasis">推定原因の候補（可能性であり、断定ではありません。反映されません）</div>
+          <ul class="ml-5"><li v-for="c in draft.possible_causes" :key="c">{{ c }}</li></ul>
+        </div>
+        <div v-if="draft.check_points.length" class="mt-2">
+          <div class="text-medium-emphasis">確認したい点（反映されません）</div>
+          <ul class="ml-5"><li v-for="c in draft.check_points" :key="c">{{ c }}</li></ul>
+        </div>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn size="small" variant="text" @click="draft = null">破棄</v-btn>
+        <v-btn size="small" color="primary" variant="flat" data-testid="ai-apply" @click="apply">タイトル・説明・優先度を入力欄に反映</v-btn>
+      </v-card-actions>
+    </v-card>
+  </div>
+</template>

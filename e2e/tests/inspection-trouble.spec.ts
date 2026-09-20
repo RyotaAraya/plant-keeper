@@ -23,3 +23,12 @@ test('点検で不具合を報告すると、トラブル管理に登録され�
   await page.getByRole('textbox', { name: 'タイトル検索' }).fill(title)
   await expect(page.getByRole('row', { name: new RegExp(title) })).toBeVisible()
 })
+
+// 新規の点検記録の部署は、自分の所属部署が初期値
+test('新規の点検記録では、部署が自分の所属部署になっている', async ({ page }) => {
+  await login(page, ACCOUNTS.member) // 佐藤（計器Aチーム）
+  await page.goto('/inspections/new')
+  await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
+
+  await expect(page.locator('.v-field', { has: page.getByLabel('部署 *', { exact: true }) })).toContainText('計器Aチーム')
+})

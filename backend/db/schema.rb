@@ -10,9 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "ai_suggestions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "equipment_id", null: false
+    t.bigint "instrument_id"
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "model"
+    t.jsonb "input_json", default: {}, null: false
+    t.jsonb "output_json"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.string "error_class"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_ai_suggestions_on_created_at"
+    t.index ["equipment_id"], name: "index_ai_suggestions_on_equipment_id"
+    t.index ["instrument_id"], name: "index_ai_suggestions_on_instrument_id"
+    t.index ["user_id", "created_at"], name: "index_ai_suggestions_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_ai_suggestions_on_user_id"
+  end
 
   create_table "audit_logs", force: :cascade do |t|
     t.bigint "user_id"
@@ -118,6 +139,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_040000) do
     t.index ["site_id"], name: "index_equipments_on_site_id"
   end
 
+  create_table "inspection_equipments", force: :cascade do |t|
+    t.bigint "inspection_id", null: false
+    t.bigint "equipment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_inspection_equipments_on_equipment_id"
+    t.index ["inspection_id", "equipment_id"], name: "index_inspection_equipments_on_inspection_id_and_equipment_id", unique: true
+    t.index ["inspection_id"], name: "index_inspection_equipments_on_inspection_id"
+  end
+
   create_table "inspection_items", force: :cascade do |t|
     t.bigint "inspection_id", null: false
     t.bigint "checklist_template_item_id"
@@ -133,9 +164,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_040000) do
     t.datetime "updated_at", null: false
     t.jsonb "calibration_data"
     t.string "calibration_result"
+    t.bigint "equipment_id"
     t.index ["checklist_template_item_id"], name: "index_inspection_items_on_checklist_template_item_id"
+    t.index ["equipment_id"], name: "index_inspection_items_on_equipment_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
+  end
+
+  create_table "inspection_plan_equipments", force: :cascade do |t|
+    t.bigint "inspection_plan_id", null: false
+    t.bigint "equipment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_inspection_plan_equipments_on_equipment_id"
+    t.index ["inspection_plan_id", "equipment_id"], name: "index_inspection_plan_equipments_on_plan_and_equipment", unique: true
+    t.index ["inspection_plan_id"], name: "index_inspection_plan_equipments_on_inspection_plan_id"
   end
 
   create_table "inspection_plans", force: :cascade do |t|
@@ -605,6 +648,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_040000) do
     t.index ["site_id"], name: "index_warehouses_on_site_id"
   end
 
+  add_foreign_key "ai_suggestions", "equipments"
+  add_foreign_key "ai_suggestions", "instruments"
+  add_foreign_key "ai_suggestions", "users"
   add_foreign_key "audit_logs", "sites"
   add_foreign_key "audit_logs", "users"
   add_foreign_key "checklist_template_items", "checklist_templates"
@@ -618,9 +664,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_040000) do
   add_foreign_key "equipment_regulations", "equipments"
   add_foreign_key "equipment_regulations", "regulations"
   add_foreign_key "equipments", "sites"
+  add_foreign_key "inspection_equipments", "equipments"
+  add_foreign_key "inspection_equipments", "inspections"
   add_foreign_key "inspection_items", "checklist_template_items"
+  add_foreign_key "inspection_items", "equipments"
   add_foreign_key "inspection_items", "inspections"
   add_foreign_key "inspection_items", "instruments"
+  add_foreign_key "inspection_plan_equipments", "equipments"
+  add_foreign_key "inspection_plan_equipments", "inspection_plans"
   add_foreign_key "inspection_plans", "checklist_templates"
   add_foreign_key "inspection_plans", "equipments"
   add_foreign_key "inspection_plans", "instruments"

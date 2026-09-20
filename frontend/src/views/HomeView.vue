@@ -7,12 +7,19 @@ import inspectionsShot from '@/assets/screenshots/inspections.png'
 import materialsShot from '@/assets/screenshots/materials.png'
 import departmentsShot from '@/assets/screenshots/departments.png'
 import dashboardShot from '@/assets/screenshots/dashboard.png'
+import aiDraftShot from '@/assets/screenshots/ai-draft.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 function goToApp() {
   router.push(authStore.isLoggedIn ? '/dashboard' : '/login')
+}
+
+// ヒーローの「AI支援」から、機能の並びのAI支援の行へ移る（動きを減らす設定のときは、滑らかにスクロールしない）
+function scrollToAi() {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById('ai')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
 }
 
 const featureGroups = [
@@ -42,6 +49,21 @@ const featureGroups = [
     shot: departmentsShot,
     shotAlt: '部署管理画面のスクリーンショット。保全部の下の計装保全課を選択し、所属チームとメンバー（鈴木一郎、課長）が表示されている',
     shotCaption: '実際の部署管理画面',
+  },
+  {
+    key: 'ai',
+    icon: 'mdi-robot-outline',
+    title: 'AI支援',
+    description: '点検中のメモから、トラブル報告の下書きを作ります。タイトル・優先度・推定原因の候補まで整えます。',
+    points: [
+      'AIは提案まで。入力欄に反映するかは、人が決めます',
+      '応急処置の手順や、運転を続けてよいかの判断は出しません',
+      '呼び出しは記録され、AIの案と確定した内容を突き合わせられます',
+    ],
+    shot: aiDraftShot,
+    shotAlt: '点検記録の入力画面のスクリーンショット。現場メモの下に、AIの下書きが表示されている。タイトル・説明・優先度と、推定原因の候補、確認したい点が並び、「入力欄に反映」ボタンがある',
+    shotCaption: '実際の点検記録の入力画面。「反映」を押すまで、入力欄は変わりません',
+    fit: true,
   },
 ]
 
@@ -77,6 +99,11 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
             <p class="pk-hero__tagline">
               現場の保全業務を、まるごと一つに。
             </p>
+            <button type="button" class="pk-hero__ai" @click="scrollToAi">
+              <span class="pk-hero__ai-icon"><v-icon size="20">mdi-robot</v-icon></span>
+              <span class="pk-hero__ai-text"><strong>AI支援</strong>点検中のメモから、トラブル報告の下書きを作ります</span>
+              <v-icon size="18" class="pk-hero__ai-chevron">mdi-chevron-down</v-icon>
+            </button>
             <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
               デモアカウントで試す
             </v-btn>
@@ -103,17 +130,20 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
           <p class="text-body-2 text-medium-emphasis">現場から本社まで、保全にまつわる情報をひとつのシステムに集約</p>
         </div>
         <div class="pk-feature-rows">
-          <div v-for="group in featureGroups" :key="group.title" class="pk-feature-row">
+          <div v-for="group in featureGroups" :id="group.key === 'ai' ? 'ai' : undefined" :key="group.title" class="pk-feature-row">
             <div class="pk-feature-row__text">
               <div class="pk-feature-row__heading">
                 <v-icon color="primary" size="22">{{ group.icon }}</v-icon>
                 <h3 class="text-h6 font-weight-bold">{{ group.title }}</h3>
               </div>
               <p class="text-body-2 text-medium-emphasis">{{ group.description }}</p>
+              <ul v-if="group.points" class="pk-feature-row__points">
+                <li v-for="point in group.points" :key="point">{{ point }}</li>
+              </ul>
             </div>
 
             <figure class="pk-shot pk-feature-row__shot">
-              <div class="pk-shot__frame">
+              <div class="pk-shot__frame" :class="{ 'pk-shot__frame--fit': group.fit }">
                 <img :src="group.shot" :alt="group.shotAlt" class="pk-shot__img" loading="lazy" />
                 <div class="pk-shot__fade" />
               </div>
@@ -329,7 +359,63 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   font-weight: 500;
   font-size: clamp(1.05rem, 2.6vw, 1.6rem);
   color: rgba(245, 246, 245, 0.8);
+  margin-bottom: 1rem;
+}
+
+/* ヒーローの「AI支援」の札。ヘッダーの琥珀と、角四角のアイコンで、主役（ブランド）より控えめに */
+.pk-hero__ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 100%;
   margin-bottom: 2rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: left;
+  color: rgba(245, 246, 245, 0.88);
+  background: rgba(231, 183, 120, 0.08);
+  border: 1px solid rgba(231, 183, 120, 0.45);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pk-hero__ai:hover {
+  background: rgba(231, 183, 120, 0.16);
+  border-color: #e7b778;
+}
+
+.pk-hero__ai:focus-visible {
+  outline: 2px solid #e7b778;
+  outline-offset: 3px;
+}
+
+.pk-hero__ai-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  color: var(--pk-ink);
+  background: #e7b778;
+}
+
+.pk-hero__ai-text {
+  min-width: 0;
+  word-break: auto-phrase;
+}
+
+.pk-hero__ai-text strong {
+  margin-right: 0.6em;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pk-hero__ai-chevron {
+  flex: 0 0 auto;
+  opacity: 0.7;
 }
 
 .pk-hero__note {
@@ -344,6 +430,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 }
 
 .pk-feature-row {
+  scroll-margin-top: 5rem;
   display: flex;
   align-items: flex-start;
   gap: clamp(2rem, 5vw, 4rem);
@@ -359,6 +446,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-feature-row__text {
   flex: 0 0 300px;
   max-width: 300px;
+  word-break: auto-phrase;
 }
 
 .pk-feature-row__heading {
@@ -371,6 +459,20 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-feature-row__shot {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.pk-feature-row__points {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pk-feature-row__points li {
+  padding: 0.4rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #4a575c;
+  border-top: 1px solid var(--pk-line);
 }
 
 @media (max-width: 900px) {
@@ -416,6 +518,19 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* 切り出した画面は、上だけを見せず、全体を見せる */
+.pk-shot__frame--fit {
+  height: auto;
+}
+
+.pk-shot__frame--fit .pk-shot__img {
+  position: static;
+}
+
+.pk-shot__frame--fit .pk-shot__fade {
+  display: none;
 }
 
 .pk-shot__fade {

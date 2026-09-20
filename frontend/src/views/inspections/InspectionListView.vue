@@ -9,6 +9,7 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { equipmentNames } from '@/utils/equipment'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,7 +33,7 @@ const filters = ref({
 const headers = [
   { title: '点検日時', key: 'inspected_at', width: '160px' },
   { title: '種別', key: 'inspection_type', width: '110px' },
-  { title: '設備', key: 'equipment.name' },
+  { title: '設備', key: 'equipments', sortable: false },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
   { title: '実施者', key: 'user.name', width: '120px' },
   { title: '部署', key: 'department.name', width: '140px' },
@@ -149,6 +150,9 @@ watch(filters, fetchInspections, { deep: true })
     >
       <template #item.inspected_at="{ item }">
         {{ formatDate(item.inspected_at) }}
+      </template>
+      <template #item.equipments="{ item }">
+        {{ equipmentNames(item) }}
       </template>
       <template #item.inspection_type="{ item }">
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}

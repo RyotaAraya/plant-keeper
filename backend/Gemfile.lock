@@ -75,6 +75,10 @@ GEM
     annotate (2.6.5)
       activerecord (>= 2.3.0)
       rake (>= 0.8.7)
+    anthropic (1.72.0)
+      base64 (~> 0.1)
+      connection_pool (>= 2, < 4)
+      standardwebhooks (~> 1.0)
     ast (2.4.3)
     base64 (0.3.0)
     bcrypt (3.1.22)
@@ -308,6 +312,7 @@ GEM
       net-sftp (>= 2.1.2)
       net-ssh (>= 2.8.0)
       ostruct
+    standardwebhooks (1.0.1)
     stringio (3.2.0)
     thor (1.5.0)
     thruster (0.1.26-aarch64-linux)
@@ -342,6 +347,7 @@ PLATFORMS
 
 DEPENDENCIES
   annotate
+  anthropic (~> 1.72)
   bootsnap
   brakeman
   debug

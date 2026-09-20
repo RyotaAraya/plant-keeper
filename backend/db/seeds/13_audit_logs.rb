@@ -15,8 +15,8 @@ morita = user_by("morita@example.com")
 
 t3 = Trouble.find_by!(title: "FT-301 オリフィス閉塞疑い")
 t1 = Trouble.find_by!(title: "PV-201 グランドパッキン漏れ")
-insp3 = Inspection.joins(:instrument).find_by!(instruments: { tag_number: "TV-601" }, status: "approval_requested")
-insp9 = Inspection.joins(:instrument).find_by!(instruments: { tag_number: "TV-S101" }, status: "approved")
+insp3 = Inspection.where(status: "approval_requested").order(:id).first!
+insp9 = Inspection.joins(:equipment).where(equipments: { site_id: Site.find_by!(name: "堺製油所").id }, status: "approved").order(:id).first!
 
 AuditLog.create!(user: tanaka, action: "login", auditable_type: "User", auditable_id: tanaka.id, ip_address: "192.168.1.100", performed_at: 1.hour.ago)
 AuditLog.create!(user: sato, action: "create", auditable_type: "Trouble", auditable_id: t3.id, changes_json: { title: [ nil, "FT-301 オリフィス閉塞疑い" ], status: [ nil, "open" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)

@@ -1,19 +1,22 @@
 module Api
   module V1
     class InspectionPlansController < BaseController
+      include EquipmentIdsParam
+
       before_action :set_plan, only: [ :update ]
 
       # GET /api/v1/inspection_plans
       # overdue=true で期限超過のみ、due_within=N で N日以内に期限が来るもの。既定は有効な計画のみ（is_active=false で無効も）
       def index
         authorize InspectionPlan
-        plans = InspectionPlan.includes(:equipment, :reference_standard, :instrument, :checklist_template)
+        plans = InspectionPlan.includes(:equipment, :equipments, :reference_standard, :instrument, :checklist_template)
         plans = plans.where(is_active: params[:is_active] == "false" ? false : true)
         if (site_ids = id_list_param(:site_ids, :site_id))
           plans = plans.for_sites(site_ids)
         end
         if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
-          plans = plans.where(equipment_id: equipment_ids)
+          # まとめた設備のどれかに当てはまればよい（代表の設備でなくても）
+          plans = plans.where(id: InspectionPlanEquipment.where(equipment_id: equipment_ids).select(:inspection_plan_id))
         end
         plans = plans.overdue if params[:overdue] == "true"
         plans = plans.due_within(params[:due_within].to_i) if params[:due_within].present?
@@ -31,8 +34,9 @@ module Api
       def create
         plan = InspectionPlan.new(plan_params)
         authorize plan
+        apply_equipment_ids(plan, :inspection_plan)
         if plan.save
-          record_audit_log("create", plan)
+          record_audit_log("create", plan, changes: plan.saved_changes.except("updated_at", "created_at").merge(equipment_ids_changes(nil, plan)))
           render json: { data: plan_json(plan) }, status: :created
         else
           render json: { errors: plan.errors.full_messages }, status: :unprocessable_entity
@@ -42,8 +46,11 @@ module Api
       # PATCH /api/v1/inspection_plans/:id
       def update
         authorize @plan
-        if @plan.update(plan_params)
-          record_audit_log("update", @plan)
+        equipment_ids_before = equipment_ids_of(@plan)
+        @plan.assign_attributes(plan_params)
+        apply_equipment_ids(@plan, :inspection_plan)
+        if @plan.save
+          record_audit_log("update", @plan, changes: @plan.saved_changes.except("updated_at", "created_at").merge(equipment_ids_changes(equipment_ids_before, @plan)))
           render json: { data: plan_json(@plan) }
         else
           render json: { errors: @plan.errors.full_messages }, status: :unprocessable_entity
@@ -61,6 +68,7 @@ module Api
           methods: [ :overdue, :days_until_due ],
           include: {
             equipment: { only: [ :id, :name, :site_id ] },
+            equipments: { only: [ :id, :name, :site_id ] },
             reference_standard: { only: [ :id, :name, :management_number, :site_id ] },
             instrument: { only: [ :id, :tag_number ] },
             checklist_template: { only: [ :id, :name ] }

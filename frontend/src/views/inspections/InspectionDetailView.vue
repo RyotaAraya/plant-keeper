@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { RESULT_COLOR, RESULT_LABEL, calibrationInputFrom } from '@/utils/calibration'
+import { coveredEquipments } from '@/utils/equipment'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,6 +41,9 @@ const itemTypeLabel: Record<string, string> = {
   calibration: '5点校正',
   check: 'チェック', measurement: '計測値', text: 'テキスト'
 }
+
+// 点検で見た設備。代表の設備が先頭（複数の設備をまとめて点検した記録は、2つ以上になる）
+const inspectionEquipments = computed(() => coveredEquipments(inspection.value))
 
 const defectItems = computed(() => {
   if (!inspection.value?.inspection_items) return []
@@ -115,9 +119,9 @@ onMounted(fetchInspection)
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">設備</div>
-              <div>
-                <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${inspection.equipment?.id}`)">
-                  {{ inspection.equipment?.name }}
+              <div v-for="equipment in inspectionEquipments" :key="equipment.id" data-testid="inspection-equipment">
+                <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${equipment.id}`)">
+                  {{ equipment.name }}
                 </a>
               </div>
             </v-col>
@@ -238,7 +242,10 @@ onMounted(fetchInspection)
                   <v-icon start size="x-small">mdi-alert</v-icon>あり
                 </v-chip>
               </td>
-              <td>{{ item.instrument?.tag_number || '' }}</td>
+              <td>
+                <div>{{ item.instrument?.tag_number || '' }}</div>
+                <div v-if="item.equipment" class="text-caption text-medium-emphasis">{{ item.equipment.name }}</div>
+              </td>
             </tr>
             <tr v-if="item.item_type === 'calibration' && item.calibration_data">
               <td />
@@ -257,7 +264,7 @@ onMounted(fetchInspection)
             v-for="item in defectItems"
             :key="item.id"
             :title="item.trouble?.title || `不具合（項目${item.position}）`"
-            :subtitle="item.content"
+            :subtitle="item.equipment ? `${item.equipment.name}: ${item.content}` : item.content"
             @click="item.trouble && router.push(`/troubles/${item.trouble.id}`)"
           >
             <template #prepend>

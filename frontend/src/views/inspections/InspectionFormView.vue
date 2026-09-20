@@ -3,11 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationTable from '@/components/CalibrationTable.vue'
+import DefectAiAssist from '@/components/DefectAiAssist.vue'
 import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
-import type { InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
+import type { AiDefectDraft, AiStatus, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
@@ -24,8 +25,12 @@ const templates = ref<any[]>([])
 const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
+// AI支援の状況。AIが使えない環境（null・無効）では、AIのボタンを出さない
+const aiStatus = ref<AiStatus | null>(null)
 
 const form = ref({
+  // 点検で見た設備。複数の設備をまとめて点検（巡回など）できる。先頭が代表の設備（equipment_id）
+  equipment_ids: [] as number[],
   equipment_id: null as number | null,
   instrument_id: null as number | null,
   department_id: null as number | null,
@@ -38,6 +43,15 @@ const form = ref({
   items: [] as any[],
   reference_standards: [] as InspectionReferenceStandardUse[],
 })
+
+// 点検で見た設備（選択肢のうち、選ばれているもの）
+const selectedEquipments = computed(() => equipments.value.filter((e) => form.value.equipment_ids.includes(e.id)))
+const multipleEquipments = computed(() => form.value.equipment_ids.length > 1)
+
+// 項目の計器の選択肢: 項目の設備が決まっていればその設備の計器、なければ点検で見た設備すべての計器
+function instrumentsFor(item: any) {
+  return item.equipment_id ? instruments.value.filter((i: any) => i.equipment_id === item.equipment_id) : instruments.value
+}
 
 // 選択肢は有効なテンプレートだけ（廃止したものは、この点検が参照している場合だけ残す）
 const templateOptions = computed(() => templates.value.filter((t: any) => t.is_active || t.id === form.value.checklist_template_id))
@@ -105,18 +119,51 @@ async function ensureDepartmentInOptions() {
   if (dept) departments.value = [...departments.value, { ...dept, display_name: `${dept.site?.name ?? ''} ${dept.full_path}` }]
 }
 
+// 点検で見た設備すべての計器
 async function fetchInstruments() {
-  if (!form.value.equipment_id) {
+  if (!form.value.equipment_ids.length) {
     instruments.value = []
     return
   }
-  const res = await api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } })
+  const res = await api.get('/instruments', { params: { equipment_ids: form.value.equipment_ids, per_page: 1000 } })
   instruments.value = res.data.data
 }
 
+async function fetchAiStatus() {
+  try {
+    aiStatus.value = (await api.get('/ai/status')).data.data
+  } catch {
+    // AIの状況が取れなくても、点検の入力には影響しない（AIのボタンを出さないだけ）
+    aiStatus.value = null
+  }
+}
+
+// AIの下書きを、項目の不具合の入力欄に入れる（タイトル・説明・優先度だけ。保存は点検を保存したとき）。
+// どの提案をもとにしたかを、保存時に送る（監査ログに残り、AIの案と人が確定した内容を突き合わせられる）
+function applyAiDraft(item: any, draft: AiDefectDraft) {
+  item.defect_title = draft.title
+  item.defect_description = draft.description
+  if (draft.priority) item.defect_priority = draft.priority
+  item.ai_suggestion_id = draft.suggestion_id
+}
+
 async function onEquipmentChange() {
-  form.value.instrument_id = null
+  const ids = form.value.equipment_ids
+  const primary = ids[0] ?? null
+  // 点検の計器は代表の設備のもの。代表の設備が変わったとき、または複数の設備をまとめたときは、選び直す（未選択にする）
+  if (primary !== form.value.equipment_id || ids.length > 1) form.value.instrument_id = null
+  form.value.equipment_id = primary
+  form.value.items.forEach((item) => {
+    // 別の設備についての提案は、この点検のトラブルには結びつけない
+    item.ai_suggestion_id = null
+    if (item.equipment_id && !ids.includes(item.equipment_id)) item.equipment_id = null
+  })
   await fetchInstruments()
+}
+
+// 複数の設備をまとめた点検で、不具合がどの設備のものかを決める（初期値は代表の設備）
+function onDefectToggle(item: any, on: boolean | null) {
+  if (on && multipleEquipments.value && !item.equipment_id) item.equipment_id = form.value.equipment_ids[0]
 }
 
 function loadTemplate() {
@@ -135,6 +182,8 @@ function loadTemplate() {
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
+    ai_suggestion_id: null,
+    equipment_id: null,
     instrument_id: null,
     calibration: item.item_type === 'calibration' ? emptyCalibrationInput() : null,
     calibration_snapshot: null,
@@ -152,6 +201,8 @@ function addItem() {
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
+    ai_suggestion_id: null,
+    equipment_id: null,
     instrument_id: null,
     calibration: null,
     calibration_snapshot: null,
@@ -190,6 +241,7 @@ async function loadExisting() {
   const res = await api.get(`/inspections/${editId.value}`)
   const data = res.data.data
   form.value = {
+    equipment_ids: [data.equipment_id, ...(data.equipments || []).map((e: any) => e.id).filter((id: number) => id !== data.equipment_id)],
     equipment_id: data.equipment_id,
     instrument_id: data.instrument_id,
     department_id: data.department_id,
@@ -216,6 +268,8 @@ async function loadExisting() {
       defect_title: '',
       defect_description: '',
       defect_priority: 'medium',
+      ai_suggestion_id: null,
+      equipment_id: item.equipment_id ?? null,
       instrument_id: item.instrument_id,
       calibration: item.item_type === 'calibration' ? calibrationInputFrom(item.calibration_data) : null,
       calibration_snapshot: item.calibration_data?.snapshot ?? null,
@@ -231,6 +285,10 @@ async function prefillFromPlan() {
   if (q.inspection_plan_id) form.value.inspection_plan_id = Number(q.inspection_plan_id)
   if (q.maintenance_task_id) form.value.maintenance_task_id = Number(q.maintenance_task_id)
   form.value.equipment_id = q.equipment_id ? Number(q.equipment_id) : null
+  // 複数の設備をまとめた計画（巡回など）は、その設備すべてを引き継ぐ（先頭が代表の設備）
+  const planEquipmentIds = String(q.equipment_ids ?? '').split(',').map(Number).filter((id) => id > 0)
+  form.value.equipment_ids = planEquipmentIds.length ? planEquipmentIds : form.value.equipment_id ? [form.value.equipment_id] : []
+  form.value.equipment_id = form.value.equipment_ids[0] ?? null
   form.value.instrument_id = q.instrument_id ? Number(q.instrument_id) : null
   form.value.checklist_template_id = q.checklist_template_id ? Number(q.checklist_template_id) : null
   if (q.inspection_type) form.value.inspection_type = String(q.inspection_type)
@@ -240,10 +298,18 @@ async function prefillFromPlan() {
   if (form.value.checklist_template_id) loadTemplate()
 }
 
+// 新規の点検記録の部署は、自分の所属部署を初期値にする（編集は記録の部署のまま。所属のない協力会社は未選択）
+function defaultDepartment() {
+  if (isEdit.value || form.value.department_id) return
+  form.value.department_id = authStore.user?.department_id ?? null
+}
+
 onMounted(async () => {
+  void fetchAiStatus()
   await fetchMasters()
   await loadExisting()
   await prefillFromPlan()
+  defaultDepartment()
   await ensureOptionsCoverEquipment()
   await ensureDepartmentInOptions()
 })
@@ -269,15 +335,20 @@ onMounted(async () => {
         <v-row>
           <v-col cols="12" md="6">
             <v-select
-              v-model="form.equipment_id"
+              v-model="form.equipment_ids"
               :items="equipments"
               item-title="name"
               item-value="id"
               label="設備 *"
+              multiple
+              chips
+              closable-chips
+              hint="複数の設備をまとめて点検できます（同じ拠点の設備。最初に選んだ設備が代表になります）"
+              persistent-hint
               @update:model-value="onEquipmentChange"
             />
           </v-col>
-          <v-col cols="12" md="6">
+          <v-col v-if="!multipleEquipments" cols="12" md="6">
             <v-select
               v-model="form.instrument_id"
               :items="instruments"
@@ -369,7 +440,7 @@ onMounted(async () => {
             <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-select v-model="item.instrument_id" :items="instruments" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
+            <v-select v-model="item.instrument_id" :items="instrumentsFor(item)" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
           </v-col>
         </v-row>
         <v-row dense>
@@ -383,7 +454,7 @@ onMounted(async () => {
             <v-text-field v-model="item.text_value" label="テキスト" density="compact" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" />
+            <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" @update:model-value="onDefectToggle(item, $event)" />
           </v-col>
         </v-row>
         <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
@@ -392,24 +463,49 @@ onMounted(async () => {
           </v-col>
         </v-row>
         <v-expand-transition>
-          <v-row v-if="item.has_defect" dense class="mt-1">
-            <v-col cols="12" md="5">
-              <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field v-model="item.defect_description" label="説明" density="compact" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-select
-                v-model="item.defect_priority"
-                :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
-                item-title="title"
-                item-value="value"
-                label="優先度"
-                density="compact"
-              />
-            </v-col>
-          </v-row>
+          <div v-if="item.has_defect" class="mt-1">
+            <DefectAiAssist
+              v-if="aiStatus?.enabled"
+              :status="aiStatus"
+              :equipment-id="item.equipment_id ?? form.equipment_id"
+              :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
+              :item-label="item.content"
+              :has-existing="!!item.defect_title"
+              @apply="applyAiDraft(item, $event)"
+              @remaining="aiStatus.remaining_today = $event"
+            />
+            <v-row v-if="multipleEquipments" dense>
+              <v-col cols="12" md="5">
+                <v-select
+                  v-model="item.equipment_id"
+                  :items="selectedEquipments"
+                  item-title="name"
+                  item-value="id"
+                  label="不具合の設備 *"
+                  density="compact"
+                  color="error"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12" md="5">
+                <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="item.defect_description" label="説明" density="compact" />
+              </v-col>
+              <v-col cols="6" md="3">
+                <v-select
+                  v-model="item.defect_priority"
+                  :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
+                  item-title="title"
+                  item-value="value"
+                  label="優先度"
+                  density="compact"
+                />
+              </v-col>
+            </v-row>
+          </div>
         </v-expand-transition>
       </v-card-text>
     </v-card>

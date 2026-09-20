@@ -7,6 +7,7 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
     @site = Site.create!(name: "川崎製油所")
     division = create_department(site: @site, name: "保全部")
     @section = create_department(site: @site, name: "計装保全課", level: "section", parent: division)
+    @operations = create_department(site: @site, name: "製造部")
     @equipment = create_equipment(site: @site)
     @today = InspectionPlan.today
   end
@@ -34,8 +35,8 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
     assert_equal ChecklistTemplateCatalog::TEMPLATES.find { |t| t[:name] == template.name }[:items],
                  template.checklist_template_items.map { |i| [ i.content, i.item_type ] }
     assert_equal (1..template.checklist_template_items.size).to_a, template.checklist_template_items.map(&:position)
-    assert_nil ChecklistTemplate.find_by(name: "根岸 伝送器 巡回点検")
-    assert_nil ChecklistTemplate.find_by(name: "堺 伝送器 巡回点検")
+    assert_nil ChecklistTemplate.find_by(name: "根岸 巡回点検")
+    assert_nil ChecklistTemplate.find_by(name: "堺 巡回点検")
   end
 
   test "旧テンプレートは、消さずに廃止にし、過去の点検記録の参照は残る。利用者が作ったテンプレートには触れない" do
@@ -61,7 +62,7 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
 
     run_migration
 
-    assert_equal "伝送器 巡回点検", routine.reload.checklist_template.name
+    assert_equal "巡回点検", routine.reload.checklist_template.name
     assert_equal "タンク液面計 年次点検", tank.reload.checklist_template.name
     assert_equal "独自チェックリスト", custom.reload.checklist_template.name
   end

@@ -119,6 +119,9 @@ jobs:
 
       - name: Start API
         working-directory: backend
+        env:
+          # AI支援のE2Eは、APIを呼ばないダミーのAIで行う（費用・外部通信・結果のぶれを避ける）
+          AI_PROVIDER: fake
         run: |
           nohup bin/rails server -b 0.0.0.0 -p 3000 > "$RUNNER_TEMP/rails.log" 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3000/up > /dev/null && exit 0; sleep 2; done

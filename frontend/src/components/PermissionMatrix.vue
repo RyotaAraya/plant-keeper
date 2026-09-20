@@ -120,6 +120,8 @@ const columnGroups = computed(() => {
 }
 
 .pk-matrix__scroll {
+  /* 表の中の、読み上げ専用の隠しテキスト（絶対配置）が、枠の外にはみ出して横スクロールを起こさないようにする */
+  position: relative;
   overflow-x: auto;
   background: var(--m-surface);
   border: 1px solid var(--m-rule);
