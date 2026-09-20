@@ -35,41 +35,14 @@ templates[:boiler_safety] = ChecklistTemplate.create!(name: "ボイラー安全�
 templates[:ng_routine] = ChecklistTemplate.create!(name: "根岸 計器日常点検チェックリスト", department: ng_inst_sec, inspection_type: "routine")
 templates[:sk_routine] = ChecklistTemplate.create!(name: "堺 計器日常点検チェックリスト", department: sk_inst_sec, inspection_type: "routine")
 
-# テンプレート項目
-[
-  { pos: 1, content: "伝送器の指示値を確認", type: "check" },
-  { pos: 2, content: "伝送器の指示値を記録（mA）", type: "measurement" },
-  { pos: 3, content: "配管・継手からの漏れを確認", type: "check" },
-  { pos: 4, content: "ケーブル・端子の損傷を確認", type: "check" },
-  { pos: 5, content: "接地線の接続状態を確認", type: "check" },
-  { pos: 6, content: "異常振動・異音の有無を確認", type: "check" },
-  { pos: 7, content: "特記事項", type: "text" }
-].each do |item|
-  ChecklistTemplateItem.create!(checklist_template: templates[:routine_inst], position: item[:pos], content: item[:content], item_type: item[:type])
-end
+# テンプレート項目（定義は db/data/checklist_template_items.rb。既存環境へは BackfillChecklistTemplateItems で補充する）
+require Rails.root.join("db/data/checklist_template_items")
 
-[
-  { pos: 1, content: "弁体の外観確認（腐食・損傷）", type: "check" },
-  { pos: 2, content: "グランドパッキンからの漏れを確認", type: "check" },
-  { pos: 3, content: "ポジショナー指示値を確認（%）", type: "measurement" },
-  { pos: 4, content: "フルストロークテスト実施", type: "check" },
-  { pos: 5, content: "開→閉 応答時間（秒）", type: "measurement" },
-  { pos: 6, content: "閉→開 応答時間（秒）", type: "measurement" },
-  { pos: 7, content: "エア配管の漏れを確認", type: "check" },
-  { pos: 8, content: "特記事項", type: "text" }
-].each do |item|
-  ChecklistTemplateItem.create!(checklist_template: templates[:periodic_valve], position: item[:pos], content: item[:content], item_type: item[:type])
-end
-
-[
-  { pos: 1, content: "モーター回転方向を確認", type: "check" },
-  { pos: 2, content: "絶縁抵抗値（MΩ）", type: "measurement" },
-  { pos: 3, content: "ベアリング温度（℃）", type: "measurement" },
-  { pos: 4, content: "異常振動・異音の有無", type: "check" },
-  { pos: 5, content: "端子の増し締め確認", type: "check" },
-  { pos: 6, content: "特記事項", type: "text" }
-].each do |item|
-  ChecklistTemplateItem.create!(checklist_template: templates[:elec_daily], position: item[:pos], content: item[:content], item_type: item[:type])
+templates.each_value do |template|
+  items = ChecklistTemplateItemCatalog::ITEMS.fetch(template.name)
+  items.each_with_index do |(content, item_type), index|
+    ChecklistTemplateItem.create!(checklist_template: template, position: index + 1, content: content, item_type: item_type)
+  end
 end
 
 puts "点検記録を作成中..."

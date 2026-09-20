@@ -285,6 +285,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
 - シードファイル: `db/seeds/` 配下に 01〜15 の番号付きファイルで分割
+- チェックリストテンプレートの点検項目は `db/data/checklist_template_items.rb`（テンプレート名 → 項目）が定義元。シードと、既存環境（stg・本番）へ補充するマイグレーション `BackfillChecklistTemplateItems`（名前が一致し項目が空のテンプレートだけが対象）が共有する。テンプレートを増やすときはカタログにも足す（シードは `fetch` で失敗する）。項目を変えても既存環境の項目は更新されない（デプロイのたびに流れるのは新しいマイグレーションだけ）
 - 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 
 ### フロントエンドの規約
