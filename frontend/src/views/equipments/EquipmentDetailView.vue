@@ -7,6 +7,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
+import RegulationChip from '@/components/RegulationChip.vue'
+import RegulationSelect from '@/components/RegulationSelect.vue'
 import type { Regulation } from '@/types/models'
 
 const route = useRoute()
@@ -22,17 +24,11 @@ const editDialog = ref(false)
 const editForm = ref({ name: '', description: '', site_id: null as number | null, regulation_ids: [] as number[] })
 const editErrors = ref<string[]>([])
 const sites = ref<any[]>([])
-// 設備に適用できる法規区分（計器単位のもの＝取引メータなどは除く）
-const regulationOptions = ref<Regulation[]>([])
 
 async function openEditEquipment() {
   if (!sites.value.length) {
     const res = await api.get('/sites', { params: { per_page: 100 } })
     sites.value = res.data.data
-  }
-  if (!regulationOptions.value.length) {
-    const res = await api.get('/regulations', { params: { target: 'equipment' } })
-    regulationOptions.value = res.data.data
   }
   editForm.value = {
     name: equipment.value.name,
@@ -138,9 +134,7 @@ onMounted(fetchEquipment)
         <v-card-text>
           <p v-if="equipment.description">{{ equipment.description }}</p>
           <div v-if="equipment.regulations?.length" class="mt-2">
-            <v-chip v-for="regulation in equipment.regulations" :key="regulation.id" size="small" label class="mr-1" prepend-icon="mdi-scale-balance">
-              {{ regulation.name }}
-            </v-chip>
+            <RegulationChip v-for="regulation in equipment.regulations" :key="regulation.id" :regulation="regulation" class="mr-1" />
           </div>
           <v-row class="mt-2">
             <v-col cols="6" md="3">
@@ -188,7 +182,7 @@ onMounted(fetchEquipment)
           </v-alert>
           <p v-if="!(equipment.regulations || []).length" class="text-body-2 text-grey ml-4">適用される法規区分はありません</p>
           <v-card v-for="regulation in equipment.regulations" :key="regulation.id" variant="outlined" class="mb-3">
-            <v-card-title class="text-subtitle-1">{{ regulation.name }}</v-card-title>
+            <v-card-title class="text-subtitle-1"><RegulationChip :regulation="regulation" size="default" /></v-card-title>
             <v-card-subtitle>{{ regulation.law_name }}</v-card-subtitle>
             <v-table density="compact">
               <thead>
@@ -281,19 +275,7 @@ onMounted(fetchEquipment)
           </v-alert>
           <v-select v-model="editForm.site_id" :items="sites" item-title="name" item-value="id" label="拠点" class="mb-2" />
           <v-text-field v-model="editForm.name" label="設備名" class="mb-2" />
-          <v-select
-            v-model="editForm.regulation_ids"
-            :items="regulationOptions"
-            item-title="name"
-            item-value="id"
-            label="適用法規"
-            multiple
-            chips
-            closable-chips
-            hint="設備が対象になる法規。法定検査の周期や、付属機器の点検周期の起点になります"
-            persistent-hint
-            class="mb-2"
-          />
+          <RegulationSelect v-model="editForm.regulation_ids" class="mb-4" />
           <v-textarea v-model="editForm.description" label="説明" rows="3" />
         </v-card-text>
         <v-card-actions>

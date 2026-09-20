@@ -5,6 +5,8 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import RegulationChip from '@/components/RegulationChip.vue'
+import RegulationSelect from '@/components/RegulationSelect.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
@@ -20,7 +22,7 @@ const loading = ref(false)
 const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
-const form = ref({ name: '', description: '', site_id: null as number | null })
+const form = ref({ name: '', description: '', site_id: null as number | null, regulation_ids: [] as number[] })
 const errors = ref<string[]>([])
 
 const headers = [
@@ -56,14 +58,19 @@ async function fetchSites() {
 
 function openCreate() {
   editingId.value = null
-  form.value = { name: '', description: '', site_id: selectedSiteIds.value.length === 1 ? (selectedSiteIds.value[0] ?? null) : null }
+  form.value = { name: '', description: '', site_id: selectedSiteIds.value.length === 1 ? (selectedSiteIds.value[0] ?? null) : null, regulation_ids: [] }
   errors.value = []
   dialog.value = true
 }
 
 function openEdit(item: any) {
   editingId.value = item.id
-  form.value = { name: item.name, description: item.description || '', site_id: item.site_id }
+  form.value = {
+    name: item.name,
+    description: item.description || '',
+    site_id: item.site_id,
+    regulation_ids: (item.regulations || []).map((r: { id: number }) => r.id),
+  }
   errors.value = []
   dialog.value = true
 }
@@ -113,7 +120,7 @@ watch(selectedSiteIds, fetchEquipments)
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.regulations="{ item }">
-        <v-chip v-for="regulation in item.regulations" :key="regulation.id" size="x-small" label class="mr-1">{{ regulation.name }}</v-chip>
+        <RegulationChip v-for="regulation in item.regulations" :key="regulation.id" :regulation="regulation" class="mr-1 my-1" />
       </template>
       <template #item.actions="{ item }">
         <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
@@ -136,6 +143,7 @@ watch(selectedSiteIds, fetchEquipments)
             class="mb-2"
           />
           <v-text-field v-model="form.name" label="設備名" class="mb-2" />
+          <RegulationSelect v-model="form.regulation_ids" class="mb-4" />
           <v-textarea v-model="form.description" label="説明" rows="3" />
         </v-card-text>
         <v-card-actions>

@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
+import { regulationColor } from '@/utils/regulation'
 import type { RegulationInspection } from '@/types/models'
 import { siteIdsFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
@@ -124,7 +125,7 @@ const form = ref({
 })
 
 // 選んだ設備に適用される法規の、法定検査（周期の目安として表示する）
-const legalInspections = ref<(RegulationInspection & { regulation_name: string })[]>([])
+const legalInspections = ref<(RegulationInspection & { regulation_code: string; regulation_name: string })[]>([])
 
 async function onEquipmentChange() {
   form.value.instrument_id = null
@@ -139,7 +140,7 @@ async function onEquipmentChange() {
   ])
   instruments.value = instrumentRes.data.data
   legalInspections.value = (equipmentRes.data.data.regulations || []).flatMap((regulation: any) =>
-    (regulation.regulation_inspections || []).map((inspection: RegulationInspection) => ({ ...inspection, regulation_name: regulation.name })),
+    (regulation.regulation_inspections || []).map((inspection: RegulationInspection) => ({ ...inspection, regulation_code: regulation.code, regulation_name: regulation.name })),
   )
 }
 
@@ -241,6 +242,8 @@ watch(filters, fetchPlans, { deep: true })
               :key="`${inspection.regulation_name}-${inspection.id}`"
               size="small"
               label
+              variant="tonal"
+              :color="regulationColor(inspection.regulation_code)"
               class="mr-1 mb-1"
               @click="applyLegalInspection(inspection)"
             >
