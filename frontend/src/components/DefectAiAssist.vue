@@ -80,7 +80,7 @@ function apply() {
         size="small"
         variant="tonal"
         color="primary"
-        prepend-icon="mdi-creation"
+        prepend-icon="mdi-robot-outline"
         :loading="loading"
         :disabled="!memo.trim() || status.remaining_today <= 0"
         data-testid="ai-draft-button"

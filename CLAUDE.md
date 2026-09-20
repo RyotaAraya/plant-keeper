@@ -308,6 +308,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成。サイドバーは業務のグループ（日々の保全・設備・資材・管理）で分け、見える項目のないグループは出さない（項目名はE2Eがリンク名で辿るため変えない）
 - 画面の見出し: `components/layout/PageHeader.vue`。画面名はサイドバーで分かるため画面上には出さず（h1 は読み上げ用に残す）、その画面の役割を1行で示す。右端は操作ボタン（スロット）
 - 絞り込み行: `class="pk-filters"`（`assets/main.css`）。入力欄は白地・薄い枠で、条件を入れた項目だけ枠が濃くなる
+- トップページ（`views/HomeView.vue`）の「主な機能」は、保全管理・資材管理・組織管理・AI支援の4行で、**AIは4つ目の機能として並べる（主役にしない。ヒーローには見出し下に一文だけ）**。AI支援の行の画面（`assets/screenshots/ai-draft.png`）は、本物のAPIで撮った静的なスクリーンショットで、画面やプロンプトを大きく変えたときに撮り直す（現場の人が読んで不自然でない例にする。例: 水素は無臭なので「水素の臭い」にしない）。AI支援の説明（AIは提案まで・応急処置や運転継続の判断は出さない・記録される）は、要求仕様書 2.5 に合わせる。この説明は、APIキーを設定した環境でだけ実際に動く（未設定の環境では、点検フォームにボタンが出ない）
 - Pinia は router より先に登録（router の `beforeEach` で `useAuthStore()` を使用するため）
 
 ## API認証の動作確認（curl）
