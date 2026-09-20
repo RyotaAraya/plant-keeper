@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api/axios'
 import { TEMPLATE_CYCLE_LABEL } from '@/constants/maintenanceStatus'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -7,22 +7,81 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 
 const tab = ref('services')
 
-// デモデータ再投入
+// デモデータ再投入（数分かかるため、バックグラウンドで始めて、状態を確認し続ける）
+type ReseedStatus = 'idle' | 'running' | 'succeeded' | 'failed'
+const RESEED_POLL_MS = 3000
 const reseedDialog = ref(false)
-const reseeding = ref(false)
+const reseedStatus = ref<ReseedStatus>('idle')
 const reseedError = ref('')
-const reseedDone = ref(false)
+const reseedStarting = ref(false)
+let reseedTimer: number | undefined
+
+function stopReseedPolling() {
+  if (reseedTimer) window.clearInterval(reseedTimer)
+  reseedTimer = undefined
+}
+
+function startReseedPolling() {
+  stopReseedPolling()
+  reseedTimer = window.setInterval(pollReseed, RESEED_POLL_MS)
+}
+
+// 再投入中はユーザ（ログイン情報）も空になるため、状態の確認はログイン不要のAPI。サーバが忙しくて失敗しても、確認を続ける
+async function fetchReseedStatus(): Promise<{ status: ReseedStatus; error?: string } | null> {
+  try {
+    return (await api.get('/admin/reseed')).data.data
+  } catch {
+    return null
+  }
+}
+
+async function pollReseed() {
+  const state = await fetchReseedStatus()
+  if (!state || state.status === 'running') return
+  stopReseedPolling()
+  if (state.status === 'idle') {
+    // 実行中にサーバが再起動すると、状態が失われて未実行に戻る
+    reseedStatus.value = 'failed'
+    reseedError.value = '再投入の状態が分からなくなりました（サーバが再起動した可能性があります）。データを確認し、必要ならもう一度実行してください'
+  } else {
+    reseedStatus.value = state.status
+    reseedError.value = state.error ?? ''
+  }
+}
+
+async function openReseedDialog() {
+  reseedDialog.value = true
+  if (reseedStatus.value === 'running') return
+  reseedStatus.value = 'idle'
+  reseedError.value = ''
+}
 
 async function reseed() {
-  reseeding.value = true
+  reseedStarting.value = true
   reseedError.value = ''
   try {
     await api.post('/admin/reseed')
-    reseedDone.value = true
+    reseedStatus.value = 'running'
+    startReseedPolling()
   } catch (e: any) {
-    reseedError.value = e.response?.data?.errors?.join('、') || '再投入に失敗しました'
+    if (e.response?.status === 409) {
+      // すでに実行中（別の画面から始めた場合など）
+      reseedStatus.value = 'running'
+      startReseedPolling()
+    } else {
+      reseedError.value = e.response?.data?.errors?.join('、') || '再投入を始められませんでした'
+    }
   } finally {
-    reseeding.value = false
+    reseedStarting.value = false
+  }
+}
+
+// 画面を開き直したとき、実行中なら続きを確認する
+async function resumeReseed() {
+  const state = await fetchReseedStatus()
+  if (state?.status === 'running') {
+    reseedStatus.value = 'running'
+    startReseedPolling()
   }
 }
 
@@ -287,7 +346,10 @@ async function saveWh() {
   }
 }
 
+onBeforeUnmount(stopReseedPolling)
+
 onMounted(() => {
+  resumeReseed()
   fetchServices()
   fetchLineClasses()
   fetchDepartments()
@@ -305,23 +367,33 @@ onMounted(() => {
 
     <v-dialog v-model="reseedDialog" max-width="440">
       <v-card>
-        <v-card-title>デモデータを再投入しますか？</v-card-title>
+        <v-card-title>
+          <template v-if="reseedStatus === 'idle'">デモデータを再投入しますか？</template>
+          <template v-else-if="reseedStatus === 'running'">再投入しています</template>
+          <template v-else-if="reseedStatus === 'succeeded'">再投入しました</template>
+          <template v-else>再投入に失敗しました</template>
+        </v-card-title>
         <v-card-text>
-          <template v-if="!reseedDone">
+          <template v-if="reseedStatus === 'idle'">
             現在登録されている全データ（拠点・設備・点検・トラブル等）が削除され、初期デモデータに置き換わります。この操作は取り消せません。
+            数分（stgでは約4分）かかります。
           </template>
-          <template v-else>
+          <template v-else-if="reseedStatus === 'running'">
+            <v-progress-linear indeterminate color="warning" class="mb-3" data-testid="reseed-progress" />
+            サーバで実行中です。この画面を閉じても処理は続きます（途中で止めることはできません）。もう一度実行しないでください。
+          </template>
+          <template v-else-if="reseedStatus === 'succeeded'">
             デモデータを再投入しました。
           </template>
           <v-alert v-if="reseedError" type="error" density="compact" class="mt-3">{{ reseedError }}</v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <template v-if="!reseedDone">
-            <v-btn @click="reseedDialog = false">キャンセル</v-btn>
-            <v-btn color="warning" :loading="reseeding" @click="reseed">実行する</v-btn>
+          <template v-if="reseedStatus === 'idle'">
+            <v-btn @click="reseedDialog = false">やめる</v-btn>
+            <v-btn color="warning" :loading="reseedStarting" @click="reseed">実行する</v-btn>
           </template>
-          <v-btn v-else color="primary" @click="reseedDialog = false; reseedDone = false">閉じる</v-btn>
+          <v-btn v-else color="primary" @click="reseedDialog = false">閉じる</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -596,9 +668,14 @@ onMounted(() => {
       </v-card-title>
       <v-card-text>
         現在の全データを削除し、初期デモデータを再投入します。デモ環境用の機能です。
+        <v-alert v-if="reseedStatus === 'running'" type="info" density="compact" class="mt-3" data-testid="reseed-running">
+          再投入を実行中です（数分かかります）。終わるまで、データが揃っていないことがあります。
+        </v-alert>
+        <v-alert v-else-if="reseedStatus === 'succeeded'" type="success" density="compact" class="mt-3">デモデータを再投入しました。</v-alert>
+        <v-alert v-else-if="reseedStatus === 'failed'" type="error" density="compact" class="mt-3">{{ reseedError || '再投入に失敗しました' }}</v-alert>
       </v-card-text>
       <v-card-actions>
-        <v-btn color="warning" variant="tonal" @click="reseedDialog = true">再投入する</v-btn>
+        <v-btn color="warning" variant="tonal" :disabled="reseedStatus === 'running'" @click="openReseedDialog">再投入する</v-btn>
       </v-card-actions>
     </v-card>
   </MainLayout>

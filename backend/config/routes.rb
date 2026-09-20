@@ -70,6 +70,7 @@ Rails.application.routes.draw do
 
       # 管理者用ユーティリティ
       post "admin/reseed", to: "admin#reseed"
+      get "admin/reseed", to: "admin#reseed_status"
     end
   end
 end
