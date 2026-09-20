@@ -6,14 +6,14 @@ async function selectOption(page: Page, label: string, optionName: string) {
   await page.getByRole('option', { name: optionName }).click()
 }
 
-// チェックリストは「機器の種類 × 周期」（巡回・月次・年次・定修）。廃止した旧テンプレートは、点検の選択肢に出ない
+// チェックリストは「機器の種類 × 周期」（月次・年次・定修）。巡回は機器で分けず、装置単位の「巡回点検」1つ。廃止した旧テンプレートは、点検の選択肢に出ない
 test('設定のチェックリストに、機器の種類 × 周期のテンプレートが並び、項目数が多すぎない', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '設定', exact: true }).click()
   await page.getByRole('tab', { name: 'チェックリスト' }).click()
 
   // 1テンプレートの項目数は4〜12件（点検が過剰にならないように）
-  for (const name of ['伝送器 巡回点検', '伝送器 月次点検', '伝送器 年次点検', '伝送器 定修点検', '調節弁 年次点検', '遮断弁・インターロック 年次点検', '安全弁 定修点検', 'タンク液面計 年次点検']) {
+  for (const name of ['巡回点検', '伝送器 月次点検', '伝送器 年次点検', '伝送器 定修点検', '調節弁 年次点検', '遮断弁・インターロック 年次点検', '安全弁 定修点検', 'タンク液面計 年次点検']) {
     const row = page.getByRole('row', { name: new RegExp(`^${name}`) })
     await expect(row, name).toBeVisible()
     const count = Number(await row.getByRole('cell').nth(4).innerText()) // 名前・種別・周期・部署・項目数
@@ -22,7 +22,7 @@ test('設定のチェックリストに、機器の種類 × 周期のテンプ�
   }
   // 周期（巡回・月次・年次・定修）も一覧に出る
   await expect(page.getByRole('row', { name: /^伝送器 定修点検/ }).getByRole('cell').nth(2)).toHaveText('定修')
-  await expect(page.getByRole('row', { name: /^伝送器 巡回点検/ }).getByRole('cell').nth(2)).toHaveText('巡回')
+  await expect(page.getByRole('row', { name: /^巡回点検/ }).getByRole('cell').nth(2)).toHaveText('巡回')
 })
 
 test('点検フォームのテンプレートの選択肢は機器の種類 × 周期の名前で、旧テンプレート（〜チェックリスト）は出ない', async ({ page }) => {
@@ -33,6 +33,9 @@ test('点検フォームのテンプレートの選択肢は機器の種類 × �
   await expect(page.getByRole('option', { name: '伝送器 年次点検' })).toBeVisible()
   await expect(page.getByRole('option', { name: '安全弁 定修点検' })).toBeVisible()
   await expect(page.getByRole('option', { name: /チェックリスト/ })).toHaveCount(0)
+  // 巡回は装置単位の「巡回点検」だけ。機器の種類ごとの巡回点検（単独の計器の巡回）はない
+  await expect(page.getByRole('option', { name: '巡回点検', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: /^(伝送器|調節弁|遮断弁・インターロック|安全弁) 巡回点検/ })).toHaveCount(0)
 })
 
 test('運転中の点検（伝送器の月次）には、制御を手動にしたら戻す確認と、インターロックのバイパス申請番号・解除の項目がある', async ({ page }) => {

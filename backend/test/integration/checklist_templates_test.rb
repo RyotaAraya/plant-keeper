@@ -7,13 +7,13 @@ class ChecklistTemplatesTest < ActionDispatch::IntegrationTest
     @manager = create_user(system_role: "manager", company: owner)
     @member = create_user(system_role: "member", company: owner)
     @department = create_department
-    @active = ChecklistTemplate.create!(name: "伝送器 巡回点検", department: @department, inspection_type: "routine")
+    @active = ChecklistTemplate.create!(name: "巡回点検", department: @department, inspection_type: "routine")
     @retired = ChecklistTemplate.create!(name: "旧 計器日常点検", department: @department, inspection_type: "routine", is_active: false)
   end
 
   test "一覧は、廃止したテンプレートを既定で含めず、include_inactive で含める" do
     get "/api/v1/checklist_templates", headers: auth_headers_for(@member)
-    assert_equal [ "伝送器 巡回点検" ], json["data"].map { |t| t["name"] }
+    assert_equal [ "巡回点検" ], json["data"].map { |t| t["name"] }
 
     get "/api/v1/checklist_templates", headers: auth_headers_for(@member), params: { include_inactive: "true" }
     assert_equal [ true, false ], json["data"].sort_by { |t| t["id"] }.map { |t| t["is_active"] }

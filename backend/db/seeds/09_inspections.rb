@@ -39,11 +39,12 @@ templates = ChecklistTemplateCatalog::TEMPLATES.to_h do |attrs|
   [ attrs[:name], template ]
 end
 
-# 以下の点検記録の項目は、当時のチェック内容をそのまま持つ（テンプレートを後から作り直しても、記録は変わらない）
-routine_inst = templates.fetch("伝送器 巡回点検")
+# 以下の点検記録の項目は、当時のチェック内容をそのまま持つ（テンプレートを後から作り直しても、記録は変わらない）。
+# 日常点検の記録は、巡回を装置単位のざっくりした巡回に変える前の、計器ごとの日常点検の内容（指示値の確認など）のまま
+routine_inst = templates.fetch("巡回点検")
 periodic_valve = templates.fetch("調節弁 年次点検")
-ng_routine = templates.fetch("根岸 伝送器 巡回点検")
-sk_routine = templates.fetch("堺 伝送器 巡回点検")
+ng_routine = templates.fetch("根岸 巡回点検")
+sk_routine = templates.fetch("堺 巡回点検")
 
 puts "点検記録を作成中..."
 

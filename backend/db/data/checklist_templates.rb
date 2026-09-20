@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-# チェックリストテンプレートの定義（「機器の種類 × 周期」）。シード（db/seeds/09_inspections.rb）と、
+# チェックリストテンプレートの定義（「機器の種類 × 周期」。巡回だけは機器の種類で分けず、装置単位）。シード（db/seeds/09_inspections.rb）と、
 # 既存環境への反映マイグレーション（RebuildChecklistTemplates）で共有する。
-# 周期は、巡回（日次・週次の目視）／月次（ゼロ点確認など）／年次（校正・作動確認）／定修（2〜4年の分解整備・全数）。
+# 周期は、巡回（装置を歩いて見て回る、ざっくりした目視）／月次（ゼロ点確認など）／年次（校正・作動確認）／定修（2〜4年の分解整備・全数）。
+# 巡回は、単独の計器の点検ではなく、異常があったときだけ記録する。指示値の異常はDCSで分かるため、巡回の項目には入れない。
 # 項目は [内容, 種別]。種別は check（確認）/ measurement（測定値の記録。単位は内容に書く）/ text（自由記述）/
 # calibration（5点校正。計器の校正範囲・許容差から期待値と合否を求める）。最後は「特記事項」で締める。
 # 実際の周期・内容は事業所の保全標準による。ここはデモ用の例
@@ -18,18 +19,19 @@ module ChecklistTemplateCatalog
   BYPASS_RELEASE = [ "インターロックに関わる計器の場合: バイパスを解除し、復帰後の動作を確認", "check" ].freeze
   NOTES = [ "特記事項", "text" ].freeze
 
-  TRANSMITTER_PATROL = [
-    [ "指示値に異常がないこと（現場指示・DCSとの乖離）", "check" ],
-    [ "導圧管・継手・ベント・ドレンからの漏れ", "check" ],
-    [ "ケーブル・端子箱・パッキン（防水・防爆）の損傷", "check" ],
-    [ "接地線の接続状態", "check" ],
-    [ "取付状態・異常振動・異音", "check" ],
+  # 巡回点検: 装置単位のざっくりした目視。「OK」を付けるのは異常がなかった項目で、異常があれば不具合として記録する
+  PATROL = [
+    [ "漏れ（継手・グランド・ベント・ドレン・導圧管・エア配管）", "check" ],
+    [ "異常な音・臭い・振動", "check" ],
+    [ "外観の損傷・腐食（ケーブル・端子箱・アクチュエータ・保温）", "check" ],
     NOTES
   ].freeze
 
   TEMPLATES = [
+    # --- 巡回（装置単位。機器の種類では分けない） ---
+    { name: "巡回点検", inspection_type: "routine", items: PATROL },
+
     # --- 伝送器類（圧力・差圧・流量・液面・温度） ---
-    { name: "伝送器 巡回点検", inspection_type: "routine", items: TRANSMITTER_PATROL },
     {
       name: "伝送器 月次点検", inspection_type: "periodic",
       items: [
@@ -65,17 +67,6 @@ module ChecklistTemplateCatalog
 
     # --- 調節弁 ---
     {
-      name: "調節弁 巡回点検", inspection_type: "routine",
-      items: [
-        [ "弁体・ステム・アクチュエータの外観（腐食・損傷）", "check" ],
-        [ "グランドパッキンからの漏れ", "check" ],
-        [ "ポジショナ・供給エア圧の指示値に異常がないこと", "check" ],
-        [ "エア配管・継手の漏れ", "check" ],
-        [ "異常振動・異音", "check" ],
-        NOTES
-      ]
-    },
-    {
       name: "調節弁 年次点検", inspection_type: "periodic",
       items: [
         [ "外観とグランドの漏れ", "check" ],
@@ -102,16 +93,6 @@ module ChecklistTemplateCatalog
     },
 
     # --- 遮断弁・インターロック ---
-    {
-      name: "遮断弁・インターロック 巡回点検", inspection_type: "routine",
-      items: [
-        [ "外観・アクチュエータ・電磁弁の損傷", "check" ],
-        [ "エア配管・継手の漏れ", "check" ],
-        [ "位置表示・リミットスイッチの状態", "check" ],
-        [ "異常振動・異音", "check" ],
-        NOTES
-      ]
-    },
     {
       name: "遮断弁・インターロック 年次点検", inspection_type: "periodic",
       items: [
@@ -140,16 +121,6 @@ module ChecklistTemplateCatalog
     },
 
     # --- 安全弁 ---
-    {
-      name: "安全弁 巡回点検", inspection_type: "routine",
-      items: [
-        [ "外観（変形・腐食）", "check" ],
-        [ "弁座からの漏れ（音・温度）", "check" ],
-        [ "元弁が全開で、封印されていること", "check" ],
-        [ "放出管・ドレン抜きの詰まり・腐食", "check" ],
-        NOTES
-      ]
-    },
     {
       name: "安全弁 年次点検", inspection_type: "periodic",
       items: [
@@ -194,8 +165,8 @@ module ChecklistTemplateCatalog
       ]
     },
 
-    # --- 拠点ごとの巡回点検（川崎の伝送器 巡回点検と同じ項目） ---
-    { name: "根岸 伝送器 巡回点検", inspection_type: "routine", site: "根岸製油所", items: TRANSMITTER_PATROL },
-    { name: "堺 伝送器 巡回点検", inspection_type: "routine", site: "堺製油所", items: TRANSMITTER_PATROL }
+    # --- 拠点ごとの巡回点検（川崎の巡回点検と同じ項目） ---
+    { name: "根岸 巡回点検", inspection_type: "routine", site: "根岸製油所", items: PATROL },
+    { name: "堺 巡回点検", inspection_type: "routine", site: "堺製油所", items: PATROL }
   ].map { |template| { site: SITE, cycle: CYCLES.find { |suffix, _| template[:name].end_with?(suffix) }&.last }.merge(template) }.freeze
 end
