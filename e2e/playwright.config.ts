@@ -3,6 +3,11 @@ import { defineConfig, devices } from '@playwright/test'
 // 既定はローカル（docker-compose）。stg で実行する場合は E2E_BASE_URL を指定する
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
 
+// テストを動かすマシンの時刻帯にかかわらず、アプリと同じ日本時間で「今日」を求める（todayForInput() などは、テストを動かすNodeのローカル時間を使う）。
+// CI（GitHub Actions）はUTCのため、日本時間の0〜9時（UTCの前日）に、アプリが記録する日付とずれて失敗していた。
+// use.timezoneId はブラウザの時刻帯だけを変えるので、テストのNode側は、ここで環境変数を設定する（ワーカーが引き継ぐ）
+process.env.TZ = 'Asia/Tokyo'
+
 // 点検などのデータを作成するテストを含むため、本番のデモ環境では実行させない
 if (/^https:\/\/plant-keeper-web\.onrender\.com/.test(baseURL)) {
   throw new Error('E2Eは本番環境では実行できません。ローカルまたはstgを指定してください。')

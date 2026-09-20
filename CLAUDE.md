@@ -98,6 +98,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - トラブル一覧の行クリックは初期表示の再描画で空振りすることがあるため、詳細画面へは `openFirstTrouble()` を使う（遷移までリトライし、到達も検証する）
 - 承認・点検計画のテストは、提出・承認まではせず画面の出し分けと遷移までを確認する（提出すると計画の期限が進み、シードの状態が変わって再実行できなくなるため）
 - ログアウトするテストは専用アカウント（`ACCOUNTS.logout`）を使う（ログアウトの副作用を他のテストから切り離すため。トークンは端末ごとに失効するので、共有しても巻き込みはしない）
+- テストの「今日」（`todayForInput()` など。テストを動かすNodeのローカル時間を使う）は、`playwright.config.ts` の `process.env.TZ = 'Asia/Tokyo'` でアプリと同じ日本時間にしている。CI（GitHub Actions）はUTCのため、これがないと日本時間の0〜9時（UTCでは前日）に、アプリが記録する日付とずれて失敗する（再現は `TZ=UTC npx playwright test`。`use.timezoneId` はブラウザだけで、Node側には効かない）
 - ローカルの `vite dev` は、再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがある（`retries: 1` で吸収）。CI は `vite preview` のため影響しない
 - Vuetify の `v-select` は入力要素が覆われているため、`selectFirstOption()` / `selectOption()`（`support.ts`。入力欄 `.v-field` を操作し、選んだあとに Escape でメニューを閉じる。複数選択のメニューは選んでも開いたままで、次の操作を邪魔するため。名前が他の選択肢に含まれるとき（「巡回点検」と「根岸 巡回点検」）は `{ exact: true }`）を使う
 - 自社/協力会社によるメニュー表示・ルートガードは、ログインAPIが返す `user.company` に依存する。`UserSerializer` から `company` を外すと全員が「協力会社扱い」になり在庫管理メニューなどが消える（過去に実際に発生。`navigation.spec.ts` の「自社所属のユーザには…」が検出する）
