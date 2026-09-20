@@ -26,6 +26,7 @@ const errors = ref<string[]>([])
 const headers = [
   { title: '設備名', key: 'name' },
   { title: '拠点', key: 'site.name' },
+  { title: '適用法規', key: 'regulations', sortable: false },
   { title: '説明', key: 'description' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
@@ -111,6 +112,9 @@ watch(selectedSiteIds, fetchEquipments)
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.regulations="{ item }">
+        <v-chip v-for="regulation in item.regulations" :key="regulation.id" size="x-small" label class="mr-1">{{ regulation.name }}</v-chip>
+      </template>
       <template #item.actions="{ item }">
         <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
       </template>

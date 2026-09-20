@@ -11,6 +11,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
+import { intervalLabel } from '@/utils/interval'
+import type { RegulationInspection } from '@/types/models'
 import { siteIdsFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
@@ -121,19 +123,39 @@ const form = ref({
   next_due_on: todayForInput(),
 })
 
+// 選んだ設備に適用される法規の、法定検査（周期の目安として表示する）
+const legalInspections = ref<(RegulationInspection & { regulation_name: string })[]>([])
+
 async function onEquipmentChange() {
   form.value.instrument_id = null
+  legalInspections.value = []
   if (!form.value.equipment_id) {
     instruments.value = []
     return
   }
-  const res = await api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } })
-  instruments.value = res.data.data
+  const [instrumentRes, equipmentRes] = await Promise.all([
+    api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } }),
+    api.get(`/equipments/${form.value.equipment_id}`),
+  ])
+  instruments.value = instrumentRes.data.data
+  legalInspections.value = (equipmentRes.data.data.regulations || []).flatMap((regulation: any) =>
+    (regulation.regulation_inspections || []).map((inspection: RegulationInspection) => ({ ...inspection, regulation_name: regulation.name })),
+  )
+}
+
+// 法定検査の周期を計画に反映する（計画名が空なら「設備名 検査名」を入れる）
+function applyLegalInspection(inspection: RegulationInspection) {
+  form.value.interval_days = inspection.interval_days
+  if (!form.value.name) {
+    const equipmentName = equipments.value.find((e) => e.id === form.value.equipment_id)?.name ?? ''
+    form.value.name = `${equipmentName} ${inspection.name}`.trim()
+  }
 }
 
 function openDialog() {
   errors.value = []
   instruments.value = []
+  legalInspections.value = []
   form.value = {
     name: '',
     equipment_id: null,
@@ -212,6 +234,19 @@ watch(filters, fetchPlans, { deep: true })
             class="mb-2"
             @update:model-value="onEquipmentChange"
           />
+          <div v-if="legalInspections.length" class="mb-3">
+            <div class="text-caption text-medium-emphasis mb-1">この設備に適用される法定検査（押すと周期を入れます）</div>
+            <v-chip
+              v-for="inspection in legalInspections"
+              :key="`${inspection.regulation_name}-${inspection.id}`"
+              size="small"
+              label
+              class="mr-1 mb-1"
+              @click="applyLegalInspection(inspection)"
+            >
+              {{ inspection.name }}（{{ intervalLabel(inspection.interval_days) }}）
+            </v-chip>
+          </div>
           <v-select
             v-model="form.instrument_id"
             :items="instruments"

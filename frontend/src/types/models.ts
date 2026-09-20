@@ -11,11 +11,31 @@ export interface Site {
   updated_at: string
 }
 
+export interface RegulationInspection {
+  id: number
+  name: string
+  interval_days: number
+  basis: 'statutory' | 'voluntary'
+  note: string | null
+}
+
+// 法規区分（高圧ガス・ボイラーなど）。target は法規が掛かる単位（設備 / 計器）
+export interface Regulation {
+  id: number
+  code: string
+  name: string
+  law_name: string
+  target: 'equipment' | 'instrument'
+  description?: string | null
+  regulation_inspections?: RegulationInspection[]
+}
+
 export interface Equipment {
   id: number
   site_id: number
   name: string
   description: string
+  regulations?: Regulation[]
   created_at: string
   updated_at: string
 }

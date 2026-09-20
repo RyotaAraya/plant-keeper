@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_20_110000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_20_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -95,6 +95,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_110000) do
     t.datetime "updated_at", null: false
     t.index ["equipment_id"], name: "index_equipment_assignments_on_equipment_id"
     t.index ["user_id"], name: "index_equipment_assignments_on_user_id"
+  end
+
+  create_table "equipment_regulations", force: :cascade do |t|
+    t.bigint "equipment_id", null: false
+    t.bigint "regulation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id", "regulation_id"], name: "index_equipment_regulations_on_equipment_id_and_regulation_id", unique: true
+    t.index ["equipment_id"], name: "index_equipment_regulations_on_equipment_id"
+    t.index ["regulation_id"], name: "index_equipment_regulations_on_regulation_id"
   end
 
   create_table "equipments", force: :cascade do |t|
@@ -268,6 +278,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_110000) do
     t.index ["status"], name: "index_orders_on_status"
     t.index ["user_id"], name: "index_orders_on_user_id"
     t.index ["warehouse_id"], name: "index_orders_on_warehouse_id"
+  end
+
+  create_table "regulation_inspections", force: :cascade do |t|
+    t.bigint "regulation_id", null: false
+    t.string "name", null: false
+    t.integer "interval_days", null: false
+    t.string "basis", default: "statutory", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["regulation_id"], name: "index_regulation_inspections_on_regulation_id"
+  end
+
+  create_table "regulations", force: :cascade do |t|
+    t.string "code", null: false
+    t.string "name", null: false
+    t.string "law_name", null: false
+    t.string "target", default: "equipment", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_regulations_on_code", unique: true
   end
 
   create_table "repairs", force: :cascade do |t|
@@ -447,6 +479,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_110000) do
   add_foreign_key "departments", "sites"
   add_foreign_key "equipment_assignments", "equipments"
   add_foreign_key "equipment_assignments", "users"
+  add_foreign_key "equipment_regulations", "equipments"
+  add_foreign_key "equipment_regulations", "regulations"
   add_foreign_key "equipments", "sites"
   add_foreign_key "inspection_items", "checklist_template_items"
   add_foreign_key "inspection_items", "inspections"
@@ -471,6 +505,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_110000) do
   add_foreign_key "orders", "materials"
   add_foreign_key "orders", "users"
   add_foreign_key "orders", "warehouses"
+  add_foreign_key "regulation_inspections", "regulations"
   add_foreign_key "repairs", "stocks"
   add_foreign_key "repairs", "troubles"
   add_foreign_key "repairs", "users", column: "requested_by_id"

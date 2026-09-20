@@ -13,6 +13,7 @@ Rails.application.routes.draw do
       resources :equipments, only: [ :index, :show, :create, :update ]
       resources :instruments, only: [ :index, :show, :create, :update ]
       resources :equipment_assignments, only: [ :index, :create, :update ]
+      resources :regulations, only: [ :index ]
       resources :services, only: [ :index, :create, :update ]
       resources :line_classes, only: [ :index, :create, :update ]
       resources :departments, only: [ :index, :show, :create, :update ]

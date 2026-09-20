@@ -3,7 +3,7 @@ require "test_helper"
 # 認可の網羅性と、ロールごとに返す情報の範囲
 class AccessControlTest < ActionDispatch::IntegrationTest
   INDEX_PATHS = %w[
-    sites equipments instruments equipment_assignments services line_classes departments companies
+    sites equipments instruments equipment_assignments services line_classes departments companies regulations
     checklist_templates inspection_plans inspections troubles scheduled_maintenances manufacturers materials warehouses
     stocks repairs orders users dashboard audit_logs
   ].freeze
