@@ -5,10 +5,11 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
+import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
-import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
 
 const route = useRoute()
@@ -21,10 +22,11 @@ const loading = ref(false)
 const totalCount = ref(0)
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
-// ダッシュボードから来たときは、その拠点・ステータスで絞り込んだ状態で開く
+// ダッシュボードから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
 const filters = ref({
   site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
   equipment_ids: [] as number[],
+  instrument_id: idFromQuery(route.query.instrument_id),
   department_id: null as number | null,
   inspection_types: [] as string[],
   statuses: listFromQuery(route.query.status),
@@ -77,6 +79,7 @@ async function fetchInspections() {
     const params: any = { per_page: 1000 }
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
+    if (filters.value.instrument_id) params.instrument_id = filters.value.instrument_id
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.inspection_types.length) params.inspection_types = filters.value.inspection_types
     if (filters.value.statuses.length) params.statuses = filters.value.statuses
@@ -138,6 +141,7 @@ watch(filters, fetchInspections, { deep: true })
       />
       <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
     <v-data-table

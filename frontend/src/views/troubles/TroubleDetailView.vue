@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
+import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
@@ -208,6 +209,14 @@ onMounted(() => {
   fetchTrouble()
   fetchAiStatus()
 })
+
+// 履歴の行から別のトラブルへ移ると、同じ画面のまま ID だけが変わる。読み込み直し、前のトラブルへのAIの結果は消す
+watch(() => route.params.id, (id, previous) => {
+  if (id && id !== previous) {
+    similar.clear()
+    fetchTrouble()
+  }
+})
 </script>
 
 <template>
@@ -258,7 +267,10 @@ onMounted(() => {
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">計器</div>
-              <div>{{ trouble.instrument?.tag_number || '—' }}</div>
+              <a v-if="trouble.instrument" class="text-primary" :href="router.resolve(`/instruments/${trouble.instrument.id}`).href" @click.prevent="router.push(`/instruments/${trouble.instrument.id}`)">
+                {{ trouble.instrument.tag_number }}
+              </a>
+              <div v-else>—</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">報告者</div>
@@ -291,6 +303,25 @@ onMounted(() => {
             <span class="text-caption text-medium-emphasis">作業: {{ task.title }}</span>
             <v-chip size="x-small" label variant="tonal">{{ taskStatusLabel[task.status] }}</v-chip>
           </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- この計器の過去のトラブルと点検。AIを使わずに、同じ計器の履歴を全件たどれる（各行から詳細へ、「すべて見る」から一覧へ） -->
+      <v-card v-if="trouble.instrument" class="mb-4" data-testid="instrument-history">
+        <v-card-title class="text-subtitle-1">
+          この計器（<a class="text-primary" :href="router.resolve(`/instruments/${trouble.instrument.id}`).href" @click.prevent="router.push(`/instruments/${trouble.instrument.id}`)">{{ trouble.instrument.tag_number }}</a>）の履歴
+        </v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="6">
+              <div class="text-caption text-medium-emphasis mb-1">過去のトラブル</div>
+              <InstrumentHistoryList kind="troubles" :instrument-id="trouble.instrument.id" :exclude-trouble-id="trouble.id" />
+            </v-col>
+            <v-col cols="12" md="6">
+              <div class="text-caption text-medium-emphasis mb-1">最近の点検</div>
+              <InstrumentHistoryList kind="inspections" :instrument-id="trouble.instrument.id" />
+            </v-col>
+          </v-row>
         </v-card-text>
       </v-card>
 

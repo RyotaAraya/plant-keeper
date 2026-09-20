@@ -65,9 +65,6 @@ module Api
               service: {},
               line_class: {}
             }
-          ).merge(
-            recent_troubles: @instrument.troubles.order(reported_at: :desc).limit(5).as_json(only: [ :id, :title, :status, :priority, :reported_at ]),
-            recent_inspections: @instrument.inspections.order(inspected_at: :desc).limit(5).as_json(only: [ :id, :inspection_type, :status, :inspected_at ])
           )
         }
       end
