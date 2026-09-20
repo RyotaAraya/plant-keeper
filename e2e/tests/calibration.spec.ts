@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, login, apiBaseUrl, ACCOUNTS, selectOption } from './support'
 import type { Page } from '@playwright/test'
 
 // FT-301（差圧式の流量計）: 差圧0〜100kPa・許容差±0.5%・伝送器は比例出力（4-20mA）・DCSは平方根（0〜500t/h）
@@ -14,11 +14,6 @@ async function apiGet(page: Page, path: string) {
 }
 
 // Vuetifyのv-selectは入力要素が覆われているため、入力欄（.v-field）を操作して名前で選ぶ
-async function selectOption(page: Page, label: string, optionName: string) {
-  await page.locator('.v-field', { has: page.getByLabel(label, { exact: true }) }).click()
-  await page.getByRole('option', { name: optionName }).click()
-}
-
 test('計器の詳細に校正の条件が表示され、編集ダイアログで校正範囲・許容差・DCS換算を設定できる', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '装置・計器', exact: true }).click()

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_060000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -139,6 +139,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_060000) do
     t.index ["site_id"], name: "index_equipments_on_site_id"
   end
 
+  create_table "inspection_equipments", force: :cascade do |t|
+    t.bigint "inspection_id", null: false
+    t.bigint "equipment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_inspection_equipments_on_equipment_id"
+    t.index ["inspection_id", "equipment_id"], name: "index_inspection_equipments_on_inspection_id_and_equipment_id", unique: true
+    t.index ["inspection_id"], name: "index_inspection_equipments_on_inspection_id"
+  end
+
   create_table "inspection_items", force: :cascade do |t|
     t.bigint "inspection_id", null: false
     t.bigint "checklist_template_item_id"
@@ -154,7 +164,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_060000) do
     t.datetime "updated_at", null: false
     t.jsonb "calibration_data"
     t.string "calibration_result"
+    t.bigint "equipment_id"
     t.index ["checklist_template_item_id"], name: "index_inspection_items_on_checklist_template_item_id"
+    t.index ["equipment_id"], name: "index_inspection_items_on_equipment_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
   end
@@ -642,7 +654,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_060000) do
   add_foreign_key "equipment_regulations", "equipments"
   add_foreign_key "equipment_regulations", "regulations"
   add_foreign_key "equipments", "sites"
+  add_foreign_key "inspection_equipments", "equipments"
+  add_foreign_key "inspection_equipments", "inspections"
   add_foreign_key "inspection_items", "checklist_template_items"
+  add_foreign_key "inspection_items", "equipments"
   add_foreign_key "inspection_items", "inspections"
   add_foreign_key "inspection_items", "instruments"
   add_foreign_key "inspection_plans", "checklist_templates"

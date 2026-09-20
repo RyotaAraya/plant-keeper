@@ -32,12 +32,18 @@ const filters = ref({
 const headers = [
   { title: '点検日時', key: 'inspected_at', width: '160px' },
   { title: '種別', key: 'inspection_type', width: '110px' },
-  { title: '設備', key: 'equipment.name' },
+  { title: '設備', key: 'equipments', sortable: false },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
   { title: '実施者', key: 'user.name', width: '120px' },
   { title: '部署', key: 'department.name', width: '140px' },
   { title: 'ステータス', key: 'status', width: '120px' },
 ]
+
+// 複数の設備をまとめて点検した記録は、設備が並ぶ（代表の設備が先頭）
+function equipmentNames(item: any): string {
+  const list: { id: number; name: string }[] = item.equipments?.length ? item.equipments : item.equipment ? [item.equipment] : []
+  return [...list].sort((a, b) => Number(b.id === item.equipment_id) - Number(a.id === item.equipment_id)).map((e) => e.name).join('、')
+}
 
 const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
@@ -149,6 +155,9 @@ watch(filters, fetchInspections, { deep: true })
     >
       <template #item.inspected_at="{ item }">
         {{ formatDate(item.inspected_at) }}
+      </template>
+      <template #item.equipments="{ item }">
+        {{ equipmentNames(item) }}
       </template>
       <template #item.inspection_type="{ item }">
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}

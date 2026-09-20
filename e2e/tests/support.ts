@@ -34,9 +34,19 @@ export async function login(page: Page, account: { email: string; password: stri
 }
 
 // Vuetifyのv-selectは入力要素が別要素に覆われていて直接クリックできないため、入力欄（.v-field）を操作して先頭の選択肢を選ぶ
+// 選択肢を選んだあと、Escapeでメニューを閉じる（複数選択のメニューは、選んでも開いたままで、次の操作を邪魔するため。
+// 単一選択では既に閉じていて、何も起きない）
 export async function selectFirstOption(page: Page, label: string) {
   await page.locator('.v-field', { has: page.getByLabel(label, { exact: true }) }).click()
   await page.getByRole('option').first().click()
+  await page.keyboard.press('Escape')
+}
+
+// exact: 選択肢の名前が、ほかの選択肢の名前に含まれるとき（「巡回点検」と「根岸 巡回点検」など）は true にする
+export async function selectOption(page: Page, label: string, optionName: string, { exact = false } = {}) {
+  await page.locator('.v-field', { has: page.getByLabel(label, { exact: true }) }).click()
+  await page.getByRole('option', { name: optionName, exact }).click()
+  await page.keyboard.press('Escape')
 }
 
 // トラブル管理の先頭行から詳細画面を開く。一覧は初期表示の再取得で行が差し替わることがあり、

@@ -1,10 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
-import type { Page } from '@playwright/test'
-
-async function selectOption(page: Page, label: string, optionName: string) {
-  await page.locator('.v-field', { has: page.getByLabel(label, { exact: true }) }).click()
-  await page.getByRole('option', { name: optionName }).click()
-}
+import { test, expect, login, ACCOUNTS, selectOption } from './support'
 
 // チェックリストは「機器の種類 × 周期」（月次・年次・定修）。巡回は機器で分けず、装置単位の「巡回点検」1つ。廃止した旧テンプレートは、点検の選択肢に出ない
 test('設定のチェックリストに、機器の種類 × 周期のテンプレートが並び、項目数が多すぎない', async ({ page }) => {

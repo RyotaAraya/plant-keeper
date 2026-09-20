@@ -257,6 +257,8 @@ export interface Inspection {
   notes: string | null
   created_at: string
   updated_at: string
+  // 点検で見た設備（代表の設備 equipment_id を含む。複数の設備をまとめた点検は2つ以上）
+  equipments?: { id: number; name: string }[]
 }
 
 export interface InspectionPlan {
@@ -291,6 +293,8 @@ export interface InspectionItem {
   measured_value: string | null
   text_value: string | null
   has_defect: boolean
+  // 複数の設備をまとめた点検で、項目の対象設備（空は代表の設備）
+  equipment_id: number | null
   instrument_id: number | null
   created_at: string
   updated_at: string

@@ -41,6 +41,14 @@ const itemTypeLabel: Record<string, string> = {
   check: 'チェック', measurement: '計測値', text: 'テキスト'
 }
 
+// 点検で見た設備。代表の設備が先頭（複数の設備をまとめて点検した記録は、2つ以上になる）
+const coveredEquipments = computed(() => {
+  const current = inspection.value
+  if (!current) return []
+  const list: { id: number; name: string }[] = current.equipments?.length ? current.equipments : current.equipment ? [current.equipment] : []
+  return [...list].sort((a, b) => Number(b.id === current.equipment_id) - Number(a.id === current.equipment_id))
+})
+
 const defectItems = computed(() => {
   if (!inspection.value?.inspection_items) return []
   return inspection.value.inspection_items.filter((i: any) => i.has_defect)
@@ -115,9 +123,9 @@ onMounted(fetchInspection)
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">設備</div>
-              <div>
-                <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${inspection.equipment?.id}`)">
-                  {{ inspection.equipment?.name }}
+              <div v-for="equipment in coveredEquipments" :key="equipment.id" data-testid="inspection-equipment">
+                <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${equipment.id}`)">
+                  {{ equipment.name }}
                 </a>
               </div>
             </v-col>
@@ -238,7 +246,10 @@ onMounted(fetchInspection)
                   <v-icon start size="x-small">mdi-alert</v-icon>あり
                 </v-chip>
               </td>
-              <td>{{ item.instrument?.tag_number || '' }}</td>
+              <td>
+                <div>{{ item.instrument?.tag_number || '' }}</div>
+                <div v-if="item.equipment" class="text-caption text-medium-emphasis">{{ item.equipment.name }}</div>
+              </td>
             </tr>
             <tr v-if="item.item_type === 'calibration' && item.calibration_data">
               <td />
@@ -257,7 +268,7 @@ onMounted(fetchInspection)
             v-for="item in defectItems"
             :key="item.id"
             :title="item.trouble?.title || `不具合（項目${item.position}）`"
-            :subtitle="item.content"
+            :subtitle="item.equipment ? `${item.equipment.name}: ${item.content}` : item.content"
             @click="item.trouble && router.push(`/troubles/${item.trouble.id}`)"
           >
             <template #prepend>

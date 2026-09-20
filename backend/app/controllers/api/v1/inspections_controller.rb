@@ -12,13 +12,14 @@ module Api
       # GET /api/v1/inspections
       def index
         authorize Inspection
-        inspections = Inspection.includes(:user, :equipment, :instrument, :department, :checklist_template).all
-        # 拠点は設備の拠点で絞る（点検の部署は入力時に選ぶ値で、拠点の決め手にならない）
+        inspections = Inspection.includes(:user, :equipment, :equipments, :instrument, :department, :checklist_template).all
+        # 拠点は代表の設備の拠点で絞る（まとめて点検した設備は同じ拠点。点検の部署は入力時に選ぶ値で、拠点の決め手にならない）
         if (site_ids = id_list_param(:site_ids, :site_id))
           inspections = inspections.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
         end
         if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
-          inspections = inspections.where(equipment_id: equipment_ids)
+          # まとめて点検した設備のどれかに当てはまればよい（代表の設備でなくても）
+          inspections = inspections.where(id: InspectionEquipment.where(equipment_id: equipment_ids).select(:inspection_id))
         end
         inspections = inspections.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
         inspections = inspections.where(department_id: params[:department_id]) if params[:department_id].present?
@@ -40,6 +41,7 @@ module Api
             include: {
               user: { only: [ :id, :name ] },
               equipment: { only: [ :id, :name ] },
+              equipments: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
               department: { only: [ :id, :name ] },
               checklist_template: { only: [ :id, :name ] }
@@ -57,6 +59,7 @@ module Api
             include: {
               user: { only: [ :id, :name ] },
               equipment: { only: [ :id, :name ] },
+              equipments: { only: [ :id, :name ] },
               department: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
               checklist_template: { only: [ :id, :name ] },
@@ -64,7 +67,8 @@ module Api
               inspection_items: {
                 include: {
                   trouble: { only: [ :id, :title, :status ] },
-                  instrument: { only: [ :id, :tag_number ] }
+                  instrument: { only: [ :id, :tag_number ] },
+                  equipment: { only: [ :id, :name ] }
                 }
               },
               inspection_reference_standards: REFERENCE_STANDARD_INCLUDE
@@ -78,6 +82,7 @@ module Api
         inspection = Inspection.new(inspection_params)
         authorize inspection
         inspection.user = current_user
+        apply_equipment_ids(inspection)
 
         # 承認フローを飛び越えた状態での新規作成は不可（下書き・提出済のみ）
         unless %w[draft submitted].include?(inspection.status)
@@ -86,7 +91,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           inspection.save!
-          record_audit_log("create", inspection)
+          record_audit_log("create", inspection, changes: inspection.saved_changes.except("updated_at", "created_at").merge(equipment_ids_changes(nil, inspection)))
 
           if params[:inspection][:items].present?
             params[:inspection][:items].each_with_index do |item, idx|
@@ -99,7 +104,7 @@ module Api
 
         inspection.reload
         render json: {
-          data: inspection.as_json(include: { inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
+          data: inspection.as_json(include: { equipments: { only: [ :id, :name ] }, inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
@@ -110,7 +115,9 @@ module Api
       # PATCH /api/v1/inspections/:id
       def update
         authorize @inspection
+        equipment_ids_before = @inspection.inspection_equipments.pluck(:equipment_id).sort
         @inspection.assign_attributes(inspection_params)
+        apply_equipment_ids(@inspection)
         # 承認と差し戻し（承認依頼中から出る操作）は承認者のみ。作成者本人でも自分で差し戻せない
         if @inspection.status_changed? && (@inspection.approved? || @inspection.status_was == "approval_requested")
           authorize @inspection, :approve?
@@ -125,7 +132,8 @@ module Api
           approval_requested = @inspection.status_changed?(to: "approval_requested")
           leaving_draft = @inspection.status_was == "draft" && !@inspection.draft?
           @inspection.save!
-          record_audit_log(approval_requested ? "approval_request" : "update", @inspection)
+          record_audit_log(approval_requested ? "approval_request" : "update", @inspection,
+                           changes: @inspection.saved_changes.except("updated_at", "created_at").merge(equipment_ids_changes(equipment_ids_before, @inspection)))
 
           if params[:inspection][:items].present?
             existing_ids = params[:inspection][:items].filter_map { |i| i[:id] }
@@ -146,6 +154,7 @@ module Api
                   text_value: item[:text_value],
                   has_defect: item[:has_defect],
                   instrument_id: item[:instrument_id],
+                  equipment_id: item[:equipment_id].presence,
                   calibration_input: calibration_input_for(item)
                 )
                 record_audit_log("update", ii) if ii.saved_changes.except("updated_at").any?
@@ -162,7 +171,7 @@ module Api
 
         @inspection.reload
         render json: {
-          data: @inspection.as_json(include: { inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
+          data: @inspection.as_json(include: { equipments: { only: [ :id, :name ] }, inspection_items: { include: { trouble: { only: [ :id, :title ] } } } })
         }
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
@@ -175,7 +184,35 @@ module Api
       # 承認依頼中は承認者が見ている内容が変わらないよう、内容の編集を止める（状態変更は可）
       def content_edit_while_approval_requested?
         @inspection.status_was == "approval_requested" &&
-          ((@inspection.changed - [ "status" ]).any? || params[:inspection].key?(:items) || params[:inspection].key?(:reference_standards))
+          ((@inspection.changed - [ "status" ]).any? || params[:inspection].key?(:items) || params[:inspection].key?(:reference_standards) ||
+           equipment_ids_changed?)
+      end
+
+      def equipment_ids_changed?
+        ids = equipment_ids_param
+        ids.present? && ids.sort != @inspection.inspection_equipments.pluck(:equipment_id).sort
+      end
+
+      # 点検で見た設備。equipment_ids が送られたら、先頭を代表の設備にする（送られなければ equipment_id のまま）
+      def equipment_ids_param
+        return unless params[:inspection].key?(:equipment_ids)
+
+        Array(params[:inspection][:equipment_ids]).map(&:to_i).select(&:positive?).uniq.presence
+      end
+
+      def apply_equipment_ids(inspection)
+        return unless (ids = equipment_ids_param)
+
+        inspection.equipment_id = ids.first
+        inspection.equipment_ids_input = ids
+      end
+
+      # 監査ログの変更内容。設備が2つ以上、または変わったときだけ、点検で見た設備のIDを [前, 後] で残す
+      def equipment_ids_changes(before, inspection)
+        after = inspection.inspection_equipments.reload.pluck(:equipment_id).sort
+        return {} if before.nil? ? after.size < 2 : before == after
+
+        { "equipment_ids" => [ before, after ] }
       end
 
       # 使った基準器と使用前の1点チェック。reference_standards が送られたときだけ、送られた内容に合わせる（無ければ変えない）
@@ -203,6 +240,7 @@ module Api
           text_value: item[:text_value],
           has_defect: item[:has_defect] || false,
           instrument_id: item[:instrument_id],
+          equipment_id: item[:equipment_id].presence,
           calibration_input: calibration_input_for(item)
         )
         record_audit_log("create", ii)
@@ -219,10 +257,13 @@ module Api
       def create_trouble_for_defect!(inspection, ii, item)
         return unless item[:has_defect] && item[:defect_title].present? && ii.trouble.nil?
 
+        # 複数の設備をまとめて点検したときは、不具合の項目の設備（なければ代表の設備）のトラブルにする。
+        # 点検の計器は代表の設備のものなので、別の設備のトラブルには引き継がない
+        equipment_id = ii.equipment_id || inspection.equipment_id
         trouble = Trouble.create!(
           inspection_item: ii,
-          equipment_id: inspection.equipment_id,
-          instrument_id: item[:instrument_id] || inspection.instrument_id,
+          equipment_id: equipment_id,
+          instrument_id: item[:instrument_id] || (inspection.instrument_id if equipment_id == inspection.equipment_id),
           reported_by: current_user,
           title: item[:defect_title],
           description: item[:defect_description],
