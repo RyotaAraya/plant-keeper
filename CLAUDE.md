@@ -185,7 +185,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### 部署の階層構造
 - departments テーブル: parent_id 自己参照で3階層（division→section→team）
 - 拠点（site）ごとに独立したツリー。各行が `site_id` を持つ（非正規化）
-- `Department#full_path` → "保全部 > 計器保全課 > 計器Aチーム"
+- `Department#full_path` → "保全部 > 計装保全課 > 計器Aチーム"
 - `Department#ancestor_chain` → 階層配列（UI用）
 - API: `GET /departments?tree=true` でネストされたツリー取得（Ruby側でin-memoryでツリーを構築）
 - モデルバリデーション: 自己参照禁止（`not_self_referential`）、階層整合性チェック（`valid_parent_level`）

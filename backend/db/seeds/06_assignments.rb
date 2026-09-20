@@ -65,14 +65,14 @@ end
 
 [
   { user: "sato@example.com",      dept: [ "川崎製油所", "製造部", "第1運転課", "直A" ], started: "2012-04-01", ended: "2015-03-31", note: "入社後3年間運転課で現場経験" },
-  { user: "sato@example.com",      dept: [ "川崎製油所", "保全部", "計器保全課", "計器Aチーム" ], started: "2015-04-01", note: "計器保全課Aチームへ異動。チームリーダ" },
-  { user: "suzuki@example.com",    dept: [ "川崎製油所", "保全部", "計器保全課" ], started: "2005-04-01", note: "入社から計器保全課。課長" },
+  { user: "sato@example.com",      dept: [ "川崎製油所", "保全部", "計装保全課", "計器Aチーム" ], started: "2015-04-01", note: "計装保全課Aチームへ異動。チームリーダ" },
+  { user: "suzuki@example.com",    dept: [ "川崎製油所", "保全部", "計装保全課" ], started: "2005-04-01", note: "入社から計装保全課。課長" },
   { user: "admin@example.com",     dept: [ "川崎製油所", "保全部" ], started: "2000-04-01", note: "管理者。保全部長" },
-  { user: "morita@example.com",    dept: [ "千葉製油所", "保全部", "計器保全課" ], started: "2006-04-01", ended: "2024-03-31", note: "千葉工場閉鎖に伴い退職" },
+  { user: "morita@example.com",    dept: [ "千葉製油所", "保全部", "計装保全課" ], started: "2006-04-01", ended: "2024-03-31", note: "千葉工場閉鎖に伴い退職" },
   { user: "yamamoto@example.com",  dept: [ "川崎製油所", "保全部", "電気保全課" ], started: "2006-04-01", note: "電気保全課長" },
-  { user: "takahashi@example.com", dept: [ "川崎製油所", "保全部", "計器保全課", "計器Aチーム" ], started: "2015-04-01", note: "計器保全課Aチーム。主任" },
-  { user: "fujita@example.com",    dept: [ "川崎製油所", "保全部", "計器保全課", "計器Bチーム" ], started: "2013-04-01", note: "計器保全課Bチーム。チームリーダ" },
-  { user: "kimura@example.com",    dept: [ "堺製油所", "保全部", "計器保全課" ], started: "2008-04-01", note: "堺計器保全課長" },
+  { user: "takahashi@example.com", dept: [ "川崎製油所", "保全部", "計装保全課", "計器Aチーム" ], started: "2015-04-01", note: "計装保全課Aチーム。主任" },
+  { user: "fujita@example.com",    dept: [ "川崎製油所", "保全部", "計装保全課", "計器Bチーム" ], started: "2013-04-01", note: "計装保全課Bチーム。チームリーダ" },
+  { user: "kimura@example.com",    dept: [ "堺製油所", "保全部", "計装保全課" ], started: "2008-04-01", note: "堺計装保全課長" },
   { user: "ito@example.com",       dept: [ "堺製油所", "保全部" ], started: "2002-04-01", note: "堺保全部長" },
   { user: "sasaki@example.com",    dept: [ "仙台製油所", "保全部" ], started: "2004-04-01", note: "仙台保全部長" }
 ].each do |data|

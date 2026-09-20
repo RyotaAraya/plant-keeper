@@ -5,13 +5,13 @@ class DepartmentTest < ActiveSupport::TestCase
   setup do
     @site = create_site
     @division = create_department(site: @site, name: "保全部", level: "division")
-    @section = create_department(site: @site, name: "計器保全課", level: "section", parent: @division)
+    @section = create_department(site: @site, name: "計装保全課", level: "section", parent: @division)
   end
 
   test "部・課・チームの階層を作れ、full_pathで辿れる" do
     team = create_department(site: @site, name: "計器Aチーム", level: "team", parent: @section)
 
-    assert_equal "保全部 > 計器保全課 > 計器Aチーム", team.full_path
+    assert_equal "保全部 > 計装保全課 > 計器Aチーム", team.full_path
     assert_equal %w[division section team], team.ancestor_chain.map { |d| d[:level] }
   end
 

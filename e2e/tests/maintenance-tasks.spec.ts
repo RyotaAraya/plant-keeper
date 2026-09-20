@@ -37,13 +37,13 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
   await test.step('計器を一括追加すると、伝送器の定修点検の作業が並ぶ（部署ごと）', async () => {
     await tasks.getByRole('button', { name: '計器を一括追加' }).click()
     const dialog = page.getByRole('dialog')
-    await pickOption(page, dialog, '担当する部署', /計器保全課$/)
+    await pickOption(page, dialog, '担当する部署', /計装保全課$/)
     await dialog.getByRole('button', { name: '追加' }).click()
     await expect(dialog.getByTestId('bulk-result')).toContainText(/\d+件を追加しました/)
     await dialog.getByRole('button', { name: '閉じる' }).click()
     await expect(tasks.getByTestId('tasks-progress')).toContainText(/完了 0 \/ \d+/)
     await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検')).toContainText('伝送器 定修点検')
-    await expect(tasks).toContainText('計器保全課')
+    await expect(tasks).toContainText('計装保全課')
   })
 
   await test.step('未完了の作業があるうちは、検収へ進めない', async () => {

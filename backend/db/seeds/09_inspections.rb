@@ -18,12 +18,12 @@ def equip(site_name, equip_name) = Equipment.find_by!(site: Site.find_by!(name: 
 def user_by(email) = User.find_by!(email: email)
 def inst(tag) = Instrument.find_by!(tag_number: tag)
 
-kw_inst_sec = dept("川崎製油所", "保全部", "計器保全課")
+kw_inst_sec = dept("川崎製油所", "保全部", "計装保全課")
 kw_elec_sec = dept("川崎製油所", "保全部", "電気保全課")
-ng_inst_sec = dept("根岸製油所", "保全部", "計器保全課")
-sk_inst_sec = dept("堺製油所", "保全部", "計器保全課")
-wk_inst_sec = dept("和歌山製油所", "保全部", "計器保全課")
-sd_inst_sec = dept("仙台製油所", "保全部", "計器保全課")
+ng_inst_sec = dept("根岸製油所", "保全部", "計装保全課")
+sk_inst_sec = dept("堺製油所", "保全部", "計装保全課")
+wk_inst_sec = dept("和歌山製油所", "保全部", "計装保全課")
+sd_inst_sec = dept("仙台製油所", "保全部", "計装保全課")
 
 # 定義は db/data/checklist_templates.rb（機器の種類 × 周期。既存環境へは RebuildChecklistTemplates マイグレーションで反映する）
 require Rails.root.join("db/data/checklist_templates")

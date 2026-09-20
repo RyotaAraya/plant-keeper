@@ -7,7 +7,7 @@ puts "定期整備の系列（A号ボイラー整備）を作成中..."
 kawasaki = Site.find_by!(name: "川崎製油所")
 boiler = Equipment.find_by!(site: kawasaki, name: "ボイラー設備")
 generator = Equipment.find_by!(site: kawasaki, name: "発電設備")
-instrument_section = Department.find_by!(name: "計器保全課", site: kawasaki)
+instrument_section = Department.find_by!(name: "計装保全課", site: kawasaki)
 electric_section = Department.find_by!(name: "電気保全課", site: kawasaki)
 suzuki = User.find_by!(email: "suzuki@example.com")
 fujita = User.find_by!(email: "fujita@example.com")

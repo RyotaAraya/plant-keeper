@@ -36,7 +36,7 @@ end
 # --- 川崎製油所 ---
 create_dept_tree(sites[:kawasaki], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課", teams: [
+    { name: "計装保全課", teams: [
       { name: "計器Aチーム" },
       { name: "計器Bチーム" }
     ] },
@@ -70,7 +70,7 @@ create_dept_tree(sites[:kawasaki], [
 # --- 根岸製油所 ---
 create_dept_tree(sites[:negishi], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課", teams: [
+    { name: "計装保全課", teams: [
       { name: "計器チーム" }
     ] },
     { name: "電気保全課", teams: [
@@ -91,7 +91,7 @@ create_dept_tree(sites[:negishi], [
 # --- 堺製油所 ---
 create_dept_tree(sites[:sakai], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課", teams: [
+    { name: "計装保全課", teams: [
       { name: "計器Aチーム" },
       { name: "計器Bチーム" }
     ] },
@@ -116,7 +116,7 @@ create_dept_tree(sites[:sakai], [
 # --- 和歌山製油所 ---
 create_dept_tree(sites[:wakayama], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課", teams: [
+    { name: "計装保全課", teams: [
       { name: "計器チーム" }
     ] },
     { name: "電気保全課", teams: [
@@ -134,7 +134,7 @@ create_dept_tree(sites[:wakayama], [
 # --- 仙台製油所 ---
 create_dept_tree(sites[:sendai], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課", teams: [
+    { name: "計装保全課", teams: [
       { name: "計器チーム" }
     ] },
     { name: "電気保全課", teams: [
@@ -151,7 +151,7 @@ create_dept_tree(sites[:sendai], [
 # --- 千葉製油所（閉鎖） ---
 create_dept_tree(sites[:chiba], [
   { name: "保全部", type: "maintenance", sections: [
-    { name: "計器保全課" }
+    { name: "計装保全課" }
   ] },
   { name: "製造部", type: "operation", sections: [
     { name: "運転課" }
