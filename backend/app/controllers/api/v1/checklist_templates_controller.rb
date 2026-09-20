@@ -13,7 +13,7 @@ module Api
         templates = templates.where(inspection_type: params[:inspection_type]) if params[:inspection_type].present?
 
         render json: {
-          data: templates.as_json(
+          data: ChecklistTemplate.in_display_order(templates).as_json(
             include: {
               department: { only: [ :id, :name ] },
               checklist_template_items: { only: [ :id, :position, :content, :item_type ] }

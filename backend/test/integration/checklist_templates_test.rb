@@ -11,6 +11,18 @@ class ChecklistTemplatesTest < ActionDispatch::IntegrationTest
     @retired = ChecklistTemplate.create!(name: "旧 計器日常点検", department: @department, inspection_type: "routine", is_active: false)
   end
 
+  test "一覧の並びは、作成順ではなく、カタログの順（巡回点検 → 伝送器の月次・年次 → …）。カタログにないものは、そのあとに作成順" do
+    ChecklistTemplate.delete_all
+    # わざとカタログと逆の順に作る（マイグレーションで巡回点検をあとから足した環境と同じ）
+    [ "独自B", "根岸 巡回点検", "調節弁 年次点検", "伝送器 年次点検", "伝送器 月次点検", "独自A", "巡回点検" ].each do |name|
+      ChecklistTemplate.create!(name: name, department: @department, inspection_type: "periodic")
+    end
+
+    get "/api/v1/checklist_templates", headers: auth_headers_for(@member)
+
+    assert_equal [ "巡回点検", "伝送器 月次点検", "伝送器 年次点検", "調節弁 年次点検", "根岸 巡回点検", "独自B", "独自A" ], json["data"].map { |t| t["name"] }
+  end
+
   test "一覧は、廃止したテンプレートを既定で含めず、include_inactive で含める" do
     get "/api/v1/checklist_templates", headers: auth_headers_for(@member)
     assert_equal [ "巡回点検" ], json["data"].map { |t| t["name"] }
