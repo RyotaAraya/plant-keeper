@@ -61,18 +61,29 @@ module Api
       end
 
       def generate_draft(suggestion, equipment, instrument, item_label, memo)
-        result = DefectDraftGenerator.new.call(equipment: equipment, instrument: instrument, item_label: item_label, memo: memo)
+        result = request_draft(suggestion, equipment, instrument, item_label, memo)
+        return unless result
 
-        suggestion.update!(status: "succeeded", output_json: result.draft, input_tokens: result.input_tokens, output_tokens: result.output_tokens)
-        record_audit_log("create", suggestion, changes: audit_changes_for(suggestion))
+        # 成功の記録は、状態と監査ログを1つにする（監査ログが書けなかったときは、成功の記録も戻して500にする。
+        # AIの失敗ではないので、失敗として記録しない。押し直せるよう、回数には数えたまま）
+        AiSuggestion.transaction do
+          suggestion.update!(status: "succeeded", output_json: result.draft, input_tokens: result.input_tokens, output_tokens: result.output_tokens)
+          record_audit_log("create", suggestion, changes: audit_changes_for(suggestion))
+        end
         render json: { data: result.draft.merge("suggestion_id" => suggestion.id, "remaining_today" => AiSuggestion.remaining_today_for(current_user)) }
+      end
+
+      # AIに下書きを作らせる。APIの障害・タイムアウト・使えない応答のどれでも、点検の入力を止めず、失敗として記録する
+      # （失敗も1回に数える）。失敗の応答を返したときは nil
+      def request_draft(suggestion, equipment, instrument, item_label, memo)
+        DefectDraftGenerator.new.call(equipment: equipment, instrument: instrument, item_label: item_label, memo: memo)
       rescue StandardError => e
-        # APIの障害・タイムアウト・使えない応答のどれでも、点検の入力を止めない（失敗も1回に数える）
         suggestion.update!(status: "failed", error_class: e.class.name)
         Rails.logger.error("[AI] defect_draft failed: #{e.class}: #{e.message}")
         timeout = e.is_a?(::Anthropic::Errors::APITimeoutError)
         render_error("AIから下書きを取得できませんでした（#{timeout ? "時間がかかりすぎました" : "しばらくしてからもう一度お試しください"}）。点検の入力はAIなしで続けられます",
                      timeout ? :gateway_timeout : :bad_gateway)
+        nil
       end
 
       # 監査ログの画面は値を文字列として並べるため、入出力（JSON）は主な項目を文字列に展開する（全文は ai_suggestions に残る）

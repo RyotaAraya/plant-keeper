@@ -103,6 +103,44 @@ class InspectionPlanEquipmentsTest < ActionDispatch::IntegrationTest
     assert_equal @today + 7, plan.reload.next_due_on
   end
 
+  test "計画に基づく点検は、計画の対象設備をすべて含まなければならない（一部だけでは期限が進まない）" do
+    post_plan(equipment_ids: [ @cdu.id, @hds.id, @fcc.id ], interval_days: 7, next_due_on: (@today - 2).to_s)
+    plan = InspectionPlan.last
+
+    assert_no_difference "Inspection.count" do
+      post_inspection_for(plan, [ @cdu.id, @hds.id ])
+    end
+    assert_response :unprocessable_entity
+    assert_includes json["errors"].first, "接触分解装置"
+    assert_equal @today - 2, plan.reload.next_due_on
+  end
+
+  test "計画の対象設備に加えて、ほかの設備も見た点検は、計画に基づく点検にできる" do
+    post_plan(equipment_ids: [ @cdu.id, @hds.id ], interval_days: 7, next_due_on: (@today - 2).to_s)
+    plan = InspectionPlan.last
+    extra = create_equipment(site: @site, name: "ボイラー設備")
+
+    post_inspection_for(plan, [ @cdu.id, @hds.id, extra.id ])
+
+    assert_response :created
+    assert_equal @today + 7, plan.reload.next_due_on
+  end
+
+  test "計画に設備があとから足されても、過去の点検の承認などの更新は止まらない。点検の設備を変えるときは確認する" do
+    post_plan(equipment_ids: [ @cdu.id ])
+    plan = InspectionPlan.last
+    post_inspection_for(plan, [ @cdu.id ], status: "draft")
+    inspection = Inspection.last
+    plan.update!(equipment_ids_input: [ @cdu.id, @hds.id ])
+
+    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { status: "submitted" } }, headers: @headers, as: :json
+    assert_response :ok
+
+    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { equipment_ids: [ @cdu.id ] } }, headers: @headers, as: :json
+    assert_response :unprocessable_entity
+    assert_includes json["errors"].first, "重油脱硫装置"
+  end
+
   test "基準器の校正計画は設備を持たず、設備の行も作られない" do
     standard = ReferenceStandard.create!(site: @site, management_number: "RS-1", name: "圧力校正器", category: "pressure")
 
@@ -112,6 +150,13 @@ class InspectionPlanEquipmentsTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def post_inspection_for(plan, equipment_ids, status: "submitted")
+    post "/api/v1/inspections", headers: @headers, as: :json, params: {
+      inspection: { equipment_ids: equipment_ids, department_id: @department.id, inspection_type: "routine",
+                    inspected_at: Time.current.iso8601, status: status, inspection_plan_id: plan.id }
+    }
+  end
 
   def post_plan(equipment_ids: nil, equipment_id: nil, interval_days: 7, next_due_on: (@today + 3).to_s, **extra)
     plan = { name: "巡回", inspection_type: "routine", interval_days: interval_days, next_due_on: next_due_on }.merge(extra)

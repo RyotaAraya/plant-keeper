@@ -35,7 +35,7 @@ class Inspection < ApplicationRecord
   enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
-  validate :plan_matches_equipment
+  validate :plan_matches_equipment, if: :plan_check_needed?
   validate :task_matches_equipment
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
@@ -104,9 +104,20 @@ class Inspection < ApplicationRecord
     errors.add(:maintenance_task, "は選択した設備の作業ではありません")
   end
 
-  def plan_matches_equipment
-    return if inspection_plan.nil? || covered_equipment_ids.include?(inspection_plan.equipment_id)
+  # 作成時と、計画・設備を変えるときだけ確認する（計画に設備があとから足されても、過去の点検の承認などの更新は止めない）
+  def plan_check_needed?
+    new_record? || will_save_change_to_inspection_plan_id? || will_save_change_to_equipment_id? || !@equipment_ids_input.nil?
+  end
 
-    errors.add(:inspection_plan, "は選択した設備の点検計画ではありません")
+  # 計画に基づく点検は、計画の対象設備をすべて含まなければならない。
+  # 一部の設備だけ見た点検で、計画の次回期限が進まないようにするため（点検にはほかの設備が加わっていてよい）
+  def plan_matches_equipment
+    return if inspection_plan.nil?
+
+    required = inspection_plan.covered_equipment_ids
+    missing = required - covered_equipment_ids
+    return if required.any? && missing.empty?
+
+    errors.add(:inspection_plan, required.empty? ? "は設備の点検計画ではありません" : "の対象設備が、この点検に含まれていません（#{Equipment.where(id: missing).pluck(:name).join("、")}）")
   end
 end

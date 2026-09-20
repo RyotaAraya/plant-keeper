@@ -147,6 +147,16 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     assert_equal "Anthropic::Errors::APITimeoutError", AiSuggestion.last.error_class
   end
 
+  test "成功したあとの監査ログが書けなかったときは、成功の記録も戻り、AIの失敗としては記録しない（500）" do
+    with_failing_audit_log do
+      assert_raises(ActiveRecord::StatementInvalid) { post_draft(memo: "不具合") }
+    end
+
+    suggestion = AiSuggestion.last
+    assert_equal [ "pending", nil ], [ suggestion.status, suggestion.error_class ] # 呼び出しは数えたまま（押し直せる）
+    assert_nil suggestion.output_json
+  end
+
   test "1日の回数の上限（本人）に達すると呼び出さずに429を返す。別のユーザは使える" do
     ENV["AI_DAILY_LIMIT_PER_USER"] = "2"
 
@@ -306,6 +316,14 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  # 監査ログの書き込みだけを失敗させる
+  def with_failing_audit_log
+    AuditLog.define_singleton_method(:create!) { |*| raise ActiveRecord::StatementInvalid, "boom" }
+    yield
+  ensure
+    AuditLog.singleton_class.remove_method(:create!)
+  end
 
   def use_client(client)
     @client = client
