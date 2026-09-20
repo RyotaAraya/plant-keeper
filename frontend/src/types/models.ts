@@ -331,11 +331,14 @@ export interface TroubleResponse {
 
 export interface ScheduledMaintenance {
   id: number
-  equipment_id: number
+  site_id: number
+  maintenance_series_id: number | null
   title: string
   description: string | null
-  scheduled_date: string
-  completed_date: string | null
+  planned_start_on: string
+  planned_end_on: string | null
+  actual_start_on: string | null
+  actual_end_on: string | null
   status: string
   used_materials: string | null
   created_at: string

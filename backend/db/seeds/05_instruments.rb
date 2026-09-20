@@ -151,6 +151,15 @@ instrument_data = [
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "TV-702", type: "temperature_transmitter", service: "冷却水",   lc: "E1A", loc: "ボイラー 給水温度",             notes: "ボイラー給水温度。脱酸素器出口。" },
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "FT-702", type: "flow_transmitter",       service: "冷却水",   lc: "E1A", loc: "ボイラー 給水流量",             notes: "ボイラー給水流量。渦流量計。" },
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "PT-702", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "ボイラー 中圧スチームヘッダー", notes: "中圧スチームヘッダー圧力。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "LV-701", type: "level_valve",            service: "冷却水",   lc: "E1A", loc: "ボイラー 給水ライン",           notes: "ドラム液位制御弁（給水）。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "XV-701", type: "shutoff_valve",          service: "燃料ガス", lc: "A2A", loc: "ボイラー バーナー燃料ガス元",   notes: "燃料ガス遮断弁。安全計装（BMS）連動。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "PSV-701", type: "safety_valve",          service: "スチーム", lc: "D1A", loc: "ボイラー スチームドラム",       notes: "ドラム安全弁。定期整備でメーカーに出して吹き出し試験。" },
+
+  # === 川崎 発電設備 ===
+  { equip: [ "川崎製油所", "発電設備" ], tag: "PT-751", type: "pressure_transmitter",   service: "スチーム", lc: "D1A", loc: "発電設備 タービン入口",         notes: "タービン入口蒸気圧力。" },
+  { equip: [ "川崎製油所", "発電設備" ], tag: "TV-751", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "発電設備 タービン入口",         notes: "タービン入口蒸気温度。" },
+  { equip: [ "川崎製油所", "発電設備" ], tag: "XV-751", type: "shutoff_valve",          service: "スチーム", lc: "D1A", loc: "発電設備 タービン入口",         notes: "タービン緊急遮断弁（トリップ弁）。インターロック連動。" },
+  { equip: [ "川崎製油所", "発電設備" ], tag: "PSV-751", type: "safety_valve",          service: "スチーム", lc: "D1A", loc: "発電設備 タービン排気",         notes: "排気側の安全弁。" },
 
   # === 川崎 CRF 追加 ===
   { equip: [ "川崎製油所", "接触改質装置" ], tag: "TV-802", type: "temperature_transmitter", service: "水素",   lc: "C1A", loc: "CRF 水素再循環ライン", notes: "水素再循環温度。" },

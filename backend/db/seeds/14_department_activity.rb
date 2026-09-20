@@ -132,11 +132,11 @@ leaf_departments.each_with_index do |dept, idx|
   maintenance_label = { instrument: "計器", maintenance_elec: "電気設備", maintenance_inspect: "配管" }[kind]
   2.times do |i|
     eq = equipments[i % equipments.length]
-    sm = ScheduledMaintenance.create!(
-      equipment: eq,
+    sm = create_maintenance!(
+      eq,
       title: "#{eq.name} #{maintenance_label}定期整備",
       description: "#{dept.full_path}による定期整備。",
-      scheduled_date: (10 + idx + i * 20).days.from_now,
+      scheduled_date: (10 + idx + i * 20).days.from_now.to_date,
       status: "planned"
     )
     MaintenanceAssignment.create!(scheduled_maintenance: sm, user: user, role: "lead")

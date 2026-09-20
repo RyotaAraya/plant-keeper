@@ -5,7 +5,8 @@ class Equipment < ApplicationRecord
   has_many :equipment_assignments, dependent: :destroy
   has_many :inspections, dependent: :restrict_with_error
   has_many :troubles, dependent: :restrict_with_error
-  has_many :scheduled_maintenances, dependent: :restrict_with_error
+  has_many :scheduled_maintenance_equipments, dependent: :restrict_with_error
+  has_many :scheduled_maintenances, through: :scheduled_maintenance_equipments
 
   has_many :users, through: :equipment_assignments
   has_many :equipment_regulations, dependent: :destroy

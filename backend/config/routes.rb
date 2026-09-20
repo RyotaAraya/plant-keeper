@@ -31,9 +31,20 @@ Rails.application.routes.draw do
       end
       resources :inspection_plans, only: [ :index, :create, :update ]
       resources :inspections, only: [ :index, :show, :create, :update ]
-      resources :troubles, only: [ :index, :show, :create, :update ]
+      resources :troubles, only: [ :index, :show, :create, :update ] do
+        member { post :defer_to_maintenance }
+      end
       resources :trouble_responses, only: [ :create, :update ]
-      resources :scheduled_maintenances, only: [ :index, :show, :create, :update ]
+      resources :scheduled_maintenances, only: [ :index, :show, :create, :update ] do
+        member do
+          get :next_suggestion
+          post :duplicate
+        end
+        resources :tasks, controller: "maintenance_tasks", only: [ :create, :update, :destroy ] do
+          collection { post :bulk }
+        end
+      end
+      resources :maintenance_series, only: [ :index, :show, :create, :update ]
       resources :maintenance_assignments, only: [ :create, :destroy ]
 
       # Phase 3: 資材管理

@@ -31,6 +31,7 @@ Equipment.create!(site: kawasaki, name: "ボイラー設備", description: "プ�
 Equipment.create!(site: kawasaki, name: "接触改質装置", description: "CRF。ナフサからオクタン価の高いガソリン基材を製造する装置。")
 Equipment.create!(site: kawasaki, name: "減圧蒸留装置", description: "VDU（Vacuum Distillation Unit）。常圧残渣油を減圧下で蒸留する装置。")
 Equipment.create!(site: kawasaki, name: "タンク設備", description: "原油・製品貯蔵タンク群。浮屋根式・固定屋根式。")
+Equipment.create!(site: kawasaki, name: "発電設備", description: "自家発電設備。ボイラーの蒸気で回す蒸気タービン発電機。4年ごとにタービンを開放して点検する。")
 # 根岸
 Equipment.create!(site: negishi, name: "常圧蒸留装置", description: "根岸CDU。原油処理能力27万バレル/日。")
 Equipment.create!(site: negishi, name: "軽油脱硫装置", description: "HDS。軽油中の硫黄分を除去する装置。")

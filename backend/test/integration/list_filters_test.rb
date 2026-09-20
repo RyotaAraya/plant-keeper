@@ -133,6 +133,8 @@ class ListFiltersTest < ActionDispatch::IntegrationTest
   end
 
   def create_maintenance(equipment, status:)
-    ScheduledMaintenance.create!(equipment: equipment, title: "定期整備", scheduled_date: Date.current, status: status)
+    attrs = { site: equipment.site, equipments: [ equipment ], title: "定期整備", planned_start_on: Date.current, status: status }
+    attrs.merge!(accepted_on: Date.current, accepted_by: create_user, acceptance_result: "passed") if status == "completed"
+    ScheduledMaintenance.create!(**attrs)
   end
 end

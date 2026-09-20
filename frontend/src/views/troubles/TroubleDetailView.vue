@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
@@ -9,7 +10,7 @@ import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
-const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers } = usePermissions()
+const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers, canManageMaintenance } = usePermissions()
 const trouble = ref<any>(null)
 const loading = ref(true)
 const users = ref<any[]>([])
@@ -30,10 +31,10 @@ const responseForm = ref({
 const responseErrors = ref<string[]>([])
 
 const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', resolved: '解決済', closed: '完了'
+  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
 }
 const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', resolved: 'info', closed: 'success'
+  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
 }
 const priorityLabel: Record<string, string> = {
   low: '低', medium: '中', high: '高', critical: '緊急'
@@ -48,21 +49,34 @@ const responseTypeLabel: Record<string, string> = {
 const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
+  { title: '定修待ち', value: 'deferred' },
   { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]
 // バックエンド（Trouble::STATUS_TRANSITIONS）と同じ。現在のステータスと、そこから進められるものだけを選択肢にする
 const allowedNext: Record<string, string[]> = {
-  open: ['in_progress', 'resolved', 'closed'],
-  in_progress: ['open', 'resolved', 'closed'],
-  resolved: ['in_progress', 'closed'],
+  open: ['in_progress', 'resolved', 'closed', 'deferred'],
+  in_progress: ['open', 'resolved', 'closed', 'deferred'],
+  resolved: ['in_progress', 'closed', 'deferred'],
+  deferred: ['open', 'in_progress', 'resolved', 'closed'],
   closed: [],
 }
+// 定修待ちは、「定期整備に回す」で作業に回したときだけ設定できるため、手動の選択肢には出さない（今が定修待ちのときの表示だけ）
 const selectableStatusOptions = computed(() =>
   statusOptions.filter(
-    (o) => o.value === trouble.value?.status || (allowedNext[trouble.value?.status] ?? []).includes(o.value)
+    (o) => o.value === trouble.value?.status || (o.value !== 'deferred' && (allowedNext[trouble.value?.status] ?? []).includes(o.value))
   )
 )
+
+// 定期整備に回せるのは、未対応・対応中で、回した作業（見送りを除く）がないトラブル。操作は定期整備を管理する人
+const canDefer = computed(
+  () => canManageMaintenance.value && ['open', 'in_progress'].includes(trouble.value?.status) && !(trouble.value?.maintenance_tasks ?? []).some((t: any) => t.status !== 'cancelled'),
+)
+const deferDialog = ref(false)
+async function onDeferred(maintenanceId: number) {
+  await router.push(`/maintenances/${maintenanceId}`)
+}
+const taskStatusLabel: Record<string, string> = { not_started: '未着手', in_progress: '実施中', completed: '完了', cancelled: '見送り' }
 const priorityOptions = [
   { title: '低', value: 'low' },
   { title: '中', value: 'medium' },
@@ -159,6 +173,7 @@ onMounted(fetchTrouble)
         <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/troubles')" />
         <h1 class="text-h5 ml-2">{{ trouble.title }}</h1>
         <v-spacer />
+        <v-btn v-if="canDefer" class="mr-2" color="deep-purple" variant="tonal" prepend-icon="mdi-wrench-clock" @click="deferDialog = true">定期整備に回す</v-btn>
         <v-btn v-if="canUpdateTrouble" class="mr-2" variant="outlined" @click="openEdit">
           <v-icon start>mdi-pencil</v-icon>編集
         </v-btn>
@@ -219,6 +234,17 @@ onMounted(fetchTrouble)
               {{ trouble.inspection_item.inspection?.inspection_type }} — {{ formatDate(trouble.inspection_item.inspection?.inspected_at) }}
             </v-chip>
             <span>項目: {{ trouble.inspection_item.content }}</span>
+          </div>
+        </v-card-text>
+      </v-card>
+
+      <v-card v-if="trouble.maintenance_tasks?.length" class="mb-4" data-testid="deferred-card">
+        <v-card-title class="text-subtitle-1">定期整備</v-card-title>
+        <v-card-text>
+          <div v-for="task in trouble.maintenance_tasks" :key="task.id" class="d-flex align-center ga-2 mb-1">
+            <a class="text-primary" style="cursor: pointer" @click="router.push(`/maintenances/${task.scheduled_maintenance_id}`)">{{ task.scheduled_maintenance?.title }}</a>
+            <span class="text-caption text-medium-emphasis">作業: {{ task.title }}</span>
+            <v-chip size="x-small" label variant="tonal">{{ taskStatusLabel[task.status] }}</v-chip>
           </div>
         </v-card-text>
       </v-card>
@@ -306,5 +332,6 @@ onMounted(fetchTrouble)
         </v-card>
       </v-dialog>
     </template>
+    <DeferTroubleDialog v-if="trouble" v-model="deferDialog" :trouble="trouble" @done="onDeferred" />
   </MainLayout>
 </template>

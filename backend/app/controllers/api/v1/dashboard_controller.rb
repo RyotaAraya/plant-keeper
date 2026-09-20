@@ -13,8 +13,8 @@ module Api
         inspections_scope = Inspection.joins(:equipment)
         inspections_scope = inspections_scope.where(equipments: { site_id: site_ids }) if site_ids
 
-        maintenances_scope = ScheduledMaintenance.joins(:equipment)
-        maintenances_scope = maintenances_scope.where(equipments: { site_id: site_ids }) if site_ids
+        maintenances_scope = ScheduledMaintenance.all
+        maintenances_scope = maintenances_scope.where(site_id: site_ids) if site_ids
 
         plans_scope = InspectionPlan.active
         plans_scope = plans_scope.for_sites(site_ids) if site_ids
@@ -58,13 +58,15 @@ module Api
             },
             # 定期整備
             maintenances: {
-              planned: maintenances_scope.planned.count,
-              in_progress: maintenances_scope.in_progress.count,
-              upcoming: maintenances_scope.planned
-                .where(scheduled_date: Date.current..30.days.from_now)
-                .order(:scheduled_date)
+              # 計画中・準備中（これから）と、実施中・検収（進行中）
+              planned: maintenances_scope.where(status: %w[planned preparing]).count,
+              in_progress: maintenances_scope.where(status: %w[in_progress acceptance]).count,
+              upcoming: maintenances_scope.where(status: %w[planned preparing])
+                .where(planned_start_on: Date.current..30.days.from_now)
+                .includes(:equipments)
+                .order(:planned_start_on)
                 .limit(5)
-                .as_json(include: { equipment: { only: [ :id, :name ] } })
+                .as_json(include: { equipments: { only: [ :id, :name ] } })
             }
           }
 

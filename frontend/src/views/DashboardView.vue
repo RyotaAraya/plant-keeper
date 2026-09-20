@@ -158,7 +158,7 @@ onMounted(fetchDashboard)
                 v-for="m in dashboard.maintenances.upcoming"
                 :key="m.id"
                 :title="m.title"
-                :subtitle="`${m.equipment?.name} — ${formatDate(m.scheduled_date)}`"
+                :subtitle="`${(m.equipments || []).map((e: any) => e.name).join('・')} — ${formatDate(m.planned_start_on)}`"
                 @click="router.push(`/maintenances/${m.id}`)"
               >
                 <template #prepend>

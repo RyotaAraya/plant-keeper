@@ -53,6 +53,7 @@ const typeLabel: Record<string, string> = {
   Site: '拠点', Department: '部署', DepartmentHistory: '部署の所属', User: 'ユーザ',
   Equipment: '設備', EquipmentAssignment: '設備担当', Instrument: '計器',
   ReferenceStandard: '基準器', ReferenceStandardCalibration: '基準器の校正',
+  MaintenanceSeries: '定期整備の系列', MaintenanceTask: '定期整備の作業',
   InspectionPlan: '点検計画', Inspection: '点検', InspectionItem: '点検項目', ChecklistTemplate: 'チェックリスト',
   Trouble: 'トラブル', TroubleResponse: 'トラブル対応',
   ScheduledMaintenance: '定期整備', MaintenanceAssignment: '整備担当',

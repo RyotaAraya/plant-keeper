@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '@/api/axios'
+import { TEMPLATE_CYCLE_LABEL } from '@/constants/maintenanceStatus'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 
@@ -124,7 +125,7 @@ const hazardOptions = [
 const templates = ref<any[]>([])
 const templateDialog = ref(false)
 const templateEditingId = ref<number | null>(null)
-const templateForm = ref({ name: '', department_id: null as number | null, inspection_type: 'routine', is_active: true, items: [] as any[] })
+const templateForm = ref({ name: '', department_id: null as number | null, inspection_type: 'routine', cycle: null as string | null, is_active: true, items: [] as any[] })
 const templateErrors = ref<string[]>([])
 const inspectionTypeOptions = [
   { title: '日常点検', value: 'routine' },
@@ -135,6 +136,7 @@ const inspectionTypeOptions = [
 const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
 }
+const cycleOptions = Object.entries(TEMPLATE_CYCLE_LABEL).map(([value, title]) => ({ title, value }))
 const itemTypeOptions = [
   { title: 'チェック', value: 'check' },
   { title: '計測値', value: 'measurement' },
@@ -155,12 +157,13 @@ function openTemplateDialog(item?: any) {
       name: item.name,
       department_id: item.department_id,
       inspection_type: item.inspection_type,
+      cycle: item.cycle ?? null,
       is_active: item.is_active,
       items: (item.checklist_template_items || []).map((i: any) => ({ id: i.id, content: i.content, item_type: i.item_type }))
     }
   } else {
     templateEditingId.value = null
-    templateForm.value = { name: '', department_id: null, inspection_type: 'routine', is_active: true, items: [] }
+    templateForm.value = { name: '', department_id: null, inspection_type: 'routine', cycle: null, is_active: true, items: [] }
   }
   templateErrors.value = []
   templateDialog.value = true
@@ -430,6 +433,7 @@ onMounted(() => {
           :headers="[
             { title: 'テンプレート名', key: 'name' },
             { title: '種別', key: 'inspection_type', width: '120px' },
+            { title: '周期', key: 'cycle', width: '80px' },
             { title: '部署', key: 'department.name' },
             { title: '項目数', key: 'itemCount', width: '80px' },
             { title: '', key: 'actions', width: '150px', sortable: false },
@@ -441,6 +445,7 @@ onMounted(() => {
             <span :class="{ 'text-medium-emphasis': !item.is_active }">{{ item.name }}</span>
             <v-chip v-if="!item.is_active" size="x-small" label class="ml-2">廃止</v-chip>
           </template>
+          <template #item.cycle="{ item }">{{ item.cycle ? TEMPLATE_CYCLE_LABEL[item.cycle] : '—' }}</template>
           <template #item.inspection_type="{ item }">
             {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
           </template>
@@ -461,6 +466,17 @@ onMounted(() => {
               <v-text-field v-model="templateForm.name" label="テンプレート名" class="mb-2" />
               <v-select v-model="templateForm.department_id" :items="departments" item-title="name" item-value="id" label="部署" class="mb-2" />
               <v-select v-model="templateForm.inspection_type" :items="inspectionTypeOptions" item-title="title" item-value="value" label="点検種別" class="mb-2" />
+              <v-select
+                v-model="templateForm.cycle"
+                :items="cycleOptions"
+                item-title="title"
+                item-value="value"
+                label="周期"
+                clearable
+                hint="定修のチェックリストは、点検計画には使えず、定期整備の作業で使います"
+                persistent-hint
+                class="mb-2"
+              />
               <v-switch
                 v-model="templateForm.is_active"
                 label="使用する"

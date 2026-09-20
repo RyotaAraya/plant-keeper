@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL } from '@/constants/maintenanceStatus'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
 import RegulationChip from '@/components/RegulationChip.vue'
@@ -247,12 +248,10 @@ onMounted(fetchEquipment)
               v-for="m in equipment.scheduled_maintenances"
               :key="m.id"
               :title="m.title"
-              :subtitle="`予定日: ${m.scheduled_date}`"
+              :subtitle="`予定日: ${m.planned_start_on}`"
             >
               <template #append>
-                <v-chip :color="m.status === 'completed' ? 'success' : m.status === 'in_progress' ? 'warning' : 'info'" size="small">
-                  {{ { planned: '計画中', in_progress: '実施中', completed: '完了' }[m.status as string] || m.status }}
-                </v-chip>
+                <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="small">{{ MAINTENANCE_STATUS_LABEL[m.status] || m.status }}</v-chip>
               </template>
             </v-list-item>
           </v-list>

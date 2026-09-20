@@ -31,6 +31,7 @@ const form = ref({
   department_id: null as number | null,
   checklist_template_id: null as number | null,
   inspection_plan_id: null as number | null,
+  maintenance_task_id: null as number | null,
   inspection_type: 'routine',
   inspected_at: nowForInput(),
   notes: '',
@@ -194,6 +195,7 @@ async function loadExisting() {
     department_id: data.department_id,
     checklist_template_id: data.checklist_template_id,
     inspection_plan_id: data.inspection_plan_id ?? null,
+    maintenance_task_id: data.maintenance_task_id ?? null,
     inspection_type: data.inspection_type,
     inspected_at: data.inspected_at?.slice(0, 16) || '',
     notes: data.notes || '',
@@ -222,11 +224,12 @@ async function loadExisting() {
   await fetchInstruments()
 }
 
-// 点検計画の一覧から「点検を実施」で来たとき、計画の設備・計器・テンプレートを引き継ぐ
+// 点検計画の一覧（または定期整備の作業）から「点検を実施」で来たとき、設備・計器・テンプレートを引き継ぐ
 async function prefillFromPlan() {
-  if (isEdit.value || !route.query.inspection_plan_id) return
+  if (isEdit.value || (!route.query.inspection_plan_id && !route.query.maintenance_task_id)) return
   const q = route.query
-  form.value.inspection_plan_id = Number(q.inspection_plan_id)
+  if (q.inspection_plan_id) form.value.inspection_plan_id = Number(q.inspection_plan_id)
+  if (q.maintenance_task_id) form.value.maintenance_task_id = Number(q.maintenance_task_id)
   form.value.equipment_id = q.equipment_id ? Number(q.equipment_id) : null
   form.value.instrument_id = q.instrument_id ? Number(q.instrument_id) : null
   form.value.checklist_template_id = q.checklist_template_id ? Number(q.checklist_template_id) : null
@@ -252,6 +255,10 @@ onMounted(async () => {
       <v-btn icon="mdi-arrow-left" variant="text" @click="router.back()" />
       <h1 class="text-h5 ml-2">{{ isEdit ? '点検記録編集' : '新規点検記録' }}</h1>
     </div>
+
+    <v-alert v-if="form.maintenance_task_id" type="info" variant="tonal" density="compact" class="mb-4" data-testid="from-maintenance-task">
+      定期整備の作業として実施する点検です。提出すると、その作業が完了になります。
+    </v-alert>
 
     <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
       <div v-for="err in errors" :key="err">{{ err }}</div>
