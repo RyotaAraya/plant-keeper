@@ -58,6 +58,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/reference-standards',
+      name: 'ReferenceStandards',
+      component: () => import('@/views/standards/ReferenceStandardListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/reference-standards/:id',
+      name: 'ReferenceStandardDetail',
+      component: () => import('@/views/standards/ReferenceStandardDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/inspection-plans',
       name: 'InspectionPlans',
       component: () => import('@/views/inspections/InspectionPlanListView.vue'),

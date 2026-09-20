@@ -41,7 +41,7 @@ export const MATRIX_GROUPS: MatrixGroup[] = [
       { label: '点検を承認・差し戻す', allowed: (p) => p.canApproveInspection },
       { label: 'トラブルを報告する', allowed: (p) => p.canCreateTrouble },
       { label: 'トラブルの状態・担当を更新する', allowed: (p) => p.canUpdateTrouble },
-      { label: '設備・計器・点検計画・定期整備を登録する', allowed: (p) => p.canManageEquipment },
+      { label: '設備・計器・基準器・点検計画・定期整備を登録する', allowed: (p) => p.canManageEquipment },
     ],
   },
   {

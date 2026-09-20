@@ -124,7 +124,7 @@ const hazardOptions = [
 const templates = ref<any[]>([])
 const templateDialog = ref(false)
 const templateEditingId = ref<number | null>(null)
-const templateForm = ref({ name: '', department_id: null as number | null, inspection_type: 'routine', items: [] as any[] })
+const templateForm = ref({ name: '', department_id: null as number | null, inspection_type: 'routine', is_active: true, items: [] as any[] })
 const templateErrors = ref<string[]>([])
 const inspectionTypeOptions = [
   { title: '日常点検', value: 'routine' },
@@ -139,10 +139,12 @@ const itemTypeOptions = [
   { title: 'チェック', value: 'check' },
   { title: '計測値', value: 'measurement' },
   { title: 'テキスト', value: 'text' },
+  { title: '5点校正', value: 'calibration' },
 ]
 
+// 廃止したテンプレート（点検の選択肢から外したもの）も、ここでは一覧に出す（後ろに並べる）
 async function fetchTemplates() {
-  const res = await api.get('/checklist_templates')
+  const res = await api.get('/checklist_templates', { params: { include_inactive: true } })
   templates.value = res.data.data
 }
 
@@ -153,11 +155,12 @@ function openTemplateDialog(item?: any) {
       name: item.name,
       department_id: item.department_id,
       inspection_type: item.inspection_type,
+      is_active: item.is_active,
       items: (item.checklist_template_items || []).map((i: any) => ({ id: i.id, content: i.content, item_type: i.item_type }))
     }
   } else {
     templateEditingId.value = null
-    templateForm.value = { name: '', department_id: null, inspection_type: 'routine', items: [] }
+    templateForm.value = { name: '', department_id: null, inspection_type: 'routine', is_active: true, items: [] }
   }
   templateErrors.value = []
   templateDialog.value = true
@@ -431,9 +434,13 @@ onMounted(() => {
             { title: '項目数', key: 'itemCount', width: '80px' },
             { title: '', key: 'actions', width: '150px', sortable: false },
           ]"
-          :items="templates.map(t => ({ ...t, itemCount: (t.checklist_template_items || []).length }))"
+          :items="templates.map(t => ({ ...t, itemCount: (t.checklist_template_items || []).length })).sort((a, b) => Number(b.is_active) - Number(a.is_active))"
           density="compact"
         >
+          <template #item.name="{ item }">
+            <span :class="{ 'text-medium-emphasis': !item.is_active }">{{ item.name }}</span>
+            <v-chip v-if="!item.is_active" size="x-small" label class="ml-2">廃止</v-chip>
+          </template>
           <template #item.inspection_type="{ item }">
             {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
           </template>
@@ -444,7 +451,7 @@ onMounted(() => {
           </template>
         </v-data-table>
 
-        <v-dialog v-model="templateDialog" max-width="700">
+        <v-dialog v-model="templateDialog" max-width="700" scrollable>
           <v-card>
             <v-card-title>{{ templateEditingId ? 'テンプレート編集' : 'テンプレート作成' }}</v-card-title>
             <v-card-text>
@@ -453,7 +460,16 @@ onMounted(() => {
               </v-alert>
               <v-text-field v-model="templateForm.name" label="テンプレート名" class="mb-2" />
               <v-select v-model="templateForm.department_id" :items="departments" item-title="name" item-value="id" label="部署" class="mb-2" />
-              <v-select v-model="templateForm.inspection_type" :items="inspectionTypeOptions" item-title="title" item-value="value" label="点検種別" class="mb-4" />
+              <v-select v-model="templateForm.inspection_type" :items="inspectionTypeOptions" item-title="title" item-value="value" label="点検種別" class="mb-2" />
+              <v-switch
+                v-model="templateForm.is_active"
+                label="使用する"
+                hint="オフにすると点検の選択肢から外れます。過去の点検記録は変わりません"
+                persistent-hint
+                color="primary"
+                density="compact"
+                class="mb-4"
+              />
 
               <div class="d-flex align-center mb-2">
                 <span class="text-subtitle-2">チェック項目</span>

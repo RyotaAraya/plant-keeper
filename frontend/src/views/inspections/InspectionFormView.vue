@@ -2,9 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import CalibrationTable from '@/components/CalibrationTable.vue'
+import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
+import type { InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
+import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
@@ -17,6 +21,7 @@ const isEdit = computed(() => !!editId.value && route.name === 'InspectionEdit')
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const instruments = ref<any[]>([])
 const templates = ref<any[]>([])
+const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
 
@@ -30,6 +35,16 @@ const form = ref({
   inspected_at: nowForInput(),
   notes: '',
   items: [] as any[],
+  reference_standards: [] as InspectionReferenceStandardUse[],
+})
+
+// 選択肢は有効なテンプレートだけ（廃止したものは、この点検が参照している場合だけ残す）
+const templateOptions = computed(() => templates.value.filter((t: any) => t.is_active || t.id === form.value.checklist_template_id))
+
+// 取引用の計器（点検の計器、または項目の計器）の点検には、トレーサビリティのある校正の基準器が必要
+const requireTraceable = computed(() => {
+  const ids = [form.value.instrument_id, ...form.value.items.map((item) => item.instrument_id)]
+  return ids.some((id) => id && instruments.value.find((i: any) => i.id === id)?.custody_transfer)
 })
 
 const inspectionTypeOptions = [
@@ -43,14 +58,31 @@ const itemTypeOptions = [
   { title: 'チェック', value: 'check' },
   { title: '計測値', value: 'measurement' },
   { title: 'テキスト', value: 'text' },
+  { title: '5点校正', value: 'calibration' },
 ]
 
+// 5点校正の項目の入力欄。項目の種別を5点校正にしたときに用意する
+function ensureCalibration(item: any) {
+  if (item.item_type === 'calibration' && !item.calibration) item.calibration = emptyCalibrationInput()
+}
+
+// 校正の条件: 記録済みなら凍結された条件、なければ計器（項目の計器、なければ点検の計器）の現在の設定
+function snapshotFor(item: any) {
+  if (item.calibration_snapshot) return item.calibration_snapshot
+  const id = item.instrument_id ?? form.value.instrument_id
+  return snapshotFromInstrument(instruments.value.find((i: any) => i.id === id))
+}
+
 async function fetchMasters() {
-  const [, tmplRes] = await Promise.all([
+  const [, tmplRes, standardRes] = await Promise.all([
     loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
-    api.get('/checklist_templates'),
+    api.get('/checklist_templates', { params: { include_inactive: true } }),
+    api.get('/reference_standards', { params: { per_page: 1000 } }),
   ])
   templates.value = tmplRes.data.data
+  // 自分の所属拠点の基準器を先頭に並べる（基準器は拠点間で持ち運ぶこともあるため、他拠点のものも選べる）
+  const own = authStore.user?.site_id
+  referenceStandards.value = [...standardRes.data.data].sort((a: ReferenceStandard, b: ReferenceStandard) => Number(b.site_id === own) - Number(a.site_id === own))
 }
 
 // 別拠点の設備の点検（編集や、点検計画からの実施）を開いたときは、その設備の拠点の選択肢に切り替える
@@ -103,6 +135,8 @@ function loadTemplate() {
     defect_description: '',
     defect_priority: 'medium',
     instrument_id: null,
+    calibration: item.item_type === 'calibration' ? emptyCalibrationInput() : null,
+    calibration_snapshot: null,
   }))
 }
 
@@ -118,6 +152,8 @@ function addItem() {
     defect_description: '',
     defect_priority: 'medium',
     instrument_id: null,
+    calibration: null,
+    calibration_snapshot: null,
   })
 }
 
@@ -161,6 +197,11 @@ async function loadExisting() {
     inspection_type: data.inspection_type,
     inspected_at: data.inspected_at?.slice(0, 16) || '',
     notes: data.notes || '',
+    reference_standards: (data.inspection_reference_standards || []).map((link: any) => ({
+      reference_standard_id: link.reference_standard_id,
+      pre_check_passed: link.pre_check_passed,
+      pre_check_note: link.pre_check_note || '',
+    })),
     items: (data.inspection_items || []).map((item: any) => ({
       id: item.id,
       checklist_template_item_id: item.checklist_template_item_id,
@@ -174,6 +215,8 @@ async function loadExisting() {
       defect_description: '',
       defect_priority: 'medium',
       instrument_id: item.instrument_id,
+      calibration: item.item_type === 'calibration' ? calibrationInputFrom(item.calibration_data) : null,
+      calibration_snapshot: item.calibration_data?.snapshot ?? null,
     })),
   }
   await fetchInstruments()
@@ -257,7 +300,7 @@ onMounted(async () => {
             <div class="d-flex ga-2 align-center">
               <v-select
                 v-model="form.checklist_template_id"
-                :items="templates"
+                :items="templateOptions"
                 item-title="name"
                 item-value="id"
                 label="テンプレート（任意）"
@@ -291,6 +334,13 @@ onMounted(async () => {
       </v-card-text>
     </v-card>
 
+    <InspectionReferenceStandards
+      v-model="form.reference_standards"
+      :standards="referenceStandards"
+      :inspection-date="form.inspected_at.slice(0, 10)"
+      :require-traceable="requireTraceable"
+    />
+
     <div class="d-flex align-center mb-3">
       <h2 class="text-h6">点検項目</h2>
       <v-spacer />
@@ -309,7 +359,7 @@ onMounted(async () => {
             <v-text-field v-model="item.content" label="内容" density="compact" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" />
+            <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
           </v-col>
           <v-col cols="6" md="3">
             <v-select v-model="item.instrument_id" :items="instruments" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
@@ -327,6 +377,11 @@ onMounted(async () => {
           </v-col>
           <v-col cols="6" md="3">
             <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" />
+          </v-col>
+        </v-row>
+        <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
+          <v-col cols="12">
+            <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
           </v-col>
         </v-row>
         <v-expand-transition>

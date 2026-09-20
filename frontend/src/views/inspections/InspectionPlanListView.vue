@@ -11,12 +11,15 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
+import { intervalLabel } from '@/utils/interval'
+import { regulationColor } from '@/utils/regulation'
+import type { RegulationInspection } from '@/types/models'
 import { siteIdsFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
-const { canManageInspectionPlan } = usePermissions()
+const { canManageInspectionPlan, canManageReferenceStandard } = usePermissions()
 const authStore = useAuthStore()
 
 const plans = ref<InspectionPlan[]>([])
@@ -35,7 +38,7 @@ const filters = ref({
 const headers = [
   { title: '期限', key: 'next_due_on', width: '190px' },
   { title: '点検計画', key: 'name' },
-  { title: '設備', key: 'equipment.name', width: '160px' },
+  { title: '設備・基準器', key: 'equipment.name', width: '180px' },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
   { title: '周期', key: 'interval_days', width: '110px' },
   { title: '前回実施', key: 'last_inspected_on', width: '120px' },
@@ -96,10 +99,15 @@ function changeSite(siteIds: number[]) {
   loadSiteOptions(siteIds)
 }
 
+// 基準器の校正計画は、点検ではなく基準器の画面で校正を記録する（記録できるのは管理者・マネージャー）
+function openReferenceStandard(plan: InspectionPlan) {
+  router.push({ path: `/reference-standards/${plan.reference_standard_id}`, query: canManageReferenceStandard.value ? { record: '1' } : {} })
+}
+
 function startInspection(plan: InspectionPlan) {
   const query: Record<string, string> = {
     inspection_plan_id: String(plan.id),
-    equipment_id: String(plan.equipment_id),
+    equipment_id: String(plan.equipment_id ?? ''),
     inspection_type: plan.inspection_type,
   }
   if (plan.instrument_id) query.instrument_id = String(plan.instrument_id)
@@ -121,19 +129,43 @@ const form = ref({
   next_due_on: todayForInput(),
 })
 
+// 選んだ設備に適用される法規の、法定検査（周期の目安として表示する）
+const legalInspections = ref<(RegulationInspection & { regulation_code: string; regulation_name: string })[]>([])
+
+const equipmentChangeGuard = latestGuard()
+
 async function onEquipmentChange() {
+  const isLatest = equipmentChangeGuard()
   form.value.instrument_id = null
+  legalInspections.value = []
   if (!form.value.equipment_id) {
     instruments.value = []
     return
   }
-  const res = await api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } })
-  instruments.value = res.data.data
+  const [instrumentRes, equipmentRes] = await Promise.all([
+    api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } }),
+    api.get(`/equipments/${form.value.equipment_id}`),
+  ])
+  if (!isLatest()) return
+  instruments.value = instrumentRes.data.data
+  legalInspections.value = (equipmentRes.data.data.regulations || []).flatMap((regulation: any) =>
+    (regulation.regulation_inspections || []).map((inspection: RegulationInspection) => ({ ...inspection, regulation_code: regulation.code, regulation_name: regulation.name })),
+  )
+}
+
+// 法定検査の周期を計画に反映する（計画名が空なら「設備名 検査名」を入れる）
+function applyLegalInspection(inspection: RegulationInspection) {
+  form.value.interval_days = inspection.interval_days
+  if (!form.value.name) {
+    const equipmentName = equipments.value.find((e) => e.id === form.value.equipment_id)?.name ?? ''
+    form.value.name = `${equipmentName} ${inspection.name}`.trim()
+  }
 }
 
 function openDialog() {
   errors.value = []
   instruments.value = []
+  legalInspections.value = []
   form.value = {
     name: '',
     equipment_id: null,
@@ -169,7 +201,7 @@ watch(filters, fetchPlans, { deep: true })
 
 <template>
   <MainLayout>
-    <PageHeader title="点検計画" description="設備・計器ごとの点検の周期と次回期限を管理し、期限が来たものから点検を始めます。">
+    <PageHeader title="点検計画" description="設備・計器の点検と、基準器の年次校正について、周期と次回期限を管理します。期限が来たものから点検・校正を始めます。">
       <v-btn v-if="canManageInspectionPlan" color="primary" prepend-icon="mdi-plus" @click="openDialog">計画を追加</v-btn>
     </PageHeader>
 
@@ -190,10 +222,20 @@ watch(filters, fetchPlans, { deep: true })
       <template #item.next_due_on="{ item }">
         <v-chip :color="dueColor(item)" size="small">{{ dueLabel(item) }}</v-chip>
       </template>
+      <template #item.equipment.name="{ item }">
+        <template v-if="item.reference_standard">
+          {{ item.reference_standard.name }}
+          <v-chip size="x-small" label variant="tonal" color="brown" class="ml-1">基準器</v-chip>
+        </template>
+        <template v-else>{{ item.equipment?.name }}</template>
+      </template>
       <template #item.interval_days="{ item }"><span class="text-no-wrap">{{ item.interval_days }}日ごと</span></template>
       <template #item.last_inspected_on="{ item }">{{ item.last_inspected_on ?? '未実施' }}</template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="outlined" @click="startInspection(item)">点検を実施</v-btn>
+        <v-btn v-if="item.reference_standard" size="small" variant="outlined" @click="openReferenceStandard(item)">
+          {{ canManageReferenceStandard ? '校正を記録' : '基準器を見る' }}
+        </v-btn>
+        <v-btn v-else size="small" variant="outlined" @click="startInspection(item)">点検を実施</v-btn>
       </template>
     </v-data-table>
 
@@ -212,6 +254,21 @@ watch(filters, fetchPlans, { deep: true })
             class="mb-2"
             @update:model-value="onEquipmentChange"
           />
+          <div v-if="legalInspections.length" class="mb-3">
+            <div class="text-caption text-medium-emphasis mb-1">この設備に適用される法定検査（押すと周期を入れます）</div>
+            <v-chip
+              v-for="inspection in legalInspections"
+              :key="`${inspection.regulation_name}-${inspection.id}`"
+              size="small"
+              label
+              variant="tonal"
+              :color="regulationColor(inspection.regulation_code)"
+              class="mr-1 mb-1"
+              @click="applyLegalInspection(inspection)"
+            >
+              {{ inspection.name }}（{{ intervalLabel(inspection.interval_days) }}）
+            </v-chip>
+          </div>
           <v-select
             v-model="form.instrument_id"
             :items="instruments"

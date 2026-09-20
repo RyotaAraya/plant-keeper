@@ -4,9 +4,11 @@ module Api
       before_action :set_template, only: [ :show, :update, :destroy, :duplicate ]
 
       # GET /api/v1/checklist_templates
+      # 廃止したテンプレート（点検の選択肢から外したもの）は、include_inactive=true のときだけ含める
       def index
         authorize ChecklistTemplate
         templates = ChecklistTemplate.includes(:department, :checklist_template_items).all
+        templates = templates.where(is_active: true) unless params[:include_inactive] == "true"
         templates = templates.where(department_id: params[:department_id]) if params[:department_id].present?
         templates = templates.where(inspection_type: params[:inspection_type]) if params[:inspection_type].present?
 
@@ -107,6 +109,7 @@ module Api
         authorize @template, :duplicate?
         new_template = @template.dup
         new_template.name = "#{@template.name}（コピー）"
+        new_template.is_active = true
 
         ActiveRecord::Base.transaction do
           new_template.save!
@@ -133,7 +136,7 @@ module Api
       end
 
       def template_params
-        params.require(:checklist_template).permit(:name, :department_id, :inspection_type)
+        params.require(:checklist_template).permit(:name, :department_id, :inspection_type, :is_active)
       end
     end
   end

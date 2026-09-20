@@ -11,11 +11,31 @@ export interface Site {
   updated_at: string
 }
 
+export interface RegulationInspection {
+  id: number
+  name: string
+  interval_days: number
+  basis: 'statutory' | 'voluntary'
+  note: string | null
+}
+
+// 法規区分（高圧ガス・ボイラーなど）。target は法規が掛かる単位（設備 / 計器）
+export interface Regulation {
+  id: number
+  code: string
+  name: string
+  law_name: string
+  target: 'equipment' | 'instrument'
+  description?: string | null
+  regulation_inspections?: RegulationInspection[]
+}
+
 export interface Equipment {
   id: number
   site_id: number
   name: string
   description: string
+  regulations?: Regulation[]
   created_at: string
   updated_at: string
 }
@@ -29,8 +49,83 @@ export interface Instrument {
   line_class_id: number | null
   location: string
   notes: string | null
+  // 校正の条件（数値はAPIから文字列で返る）。5点校正できるのは、範囲と許容差が設定済みの計器
+  range_lower?: string | number | null
+  range_upper?: string | number | null
+  range_unit?: string | null
+  output_characteristic?: 'linear' | 'square_root'
+  dcs_characteristic?: 'linear' | 'square_root'
+  dcs_range_lower?: string | number | null
+  dcs_range_upper?: string | number | null
+  dcs_range_unit?: string | null
+  tolerance_percent?: string | number | null
+  tolerance_basis?: 'legal' | 'manufacturer' | 'internal' | null
+  telemetry?: boolean
+  custody_transfer?: boolean
+  calibration_kind?: 'transmitter' | 'positioner' | null
+  calibratable?: boolean
   created_at: string
   updated_at: string
+}
+
+// 5点校正。校正の条件（snapshot）は点検時に計器の設定から凍結して保存したもの
+export interface CalibrationSnapshot {
+  kind: 'transmitter' | 'positioner'
+  range_lower: number
+  range_upper: number
+  range_unit: string | null
+  output_characteristic: 'linear' | 'square_root'
+  dcs_characteristic: 'linear' | 'square_root'
+  dcs_range_lower: number | null
+  dcs_range_upper: number | null
+  dcs_range_unit: string | null
+  tolerance_percent: number
+  tolerance_basis: 'legal' | 'manufacturer' | 'internal' | null
+}
+
+// 入力欄の値（入力中は文字列のことがある）
+export interface CalibrationReading {
+  output: number | string | null
+  dcs: number | string | null
+}
+
+export interface CalibrationPointInput {
+  percent: number
+  up: CalibrationReading
+  down: CalibrationReading
+}
+
+export interface CalibrationInput {
+  adjusted: boolean
+  stages: {
+    as_found: { points: CalibrationPointInput[] }
+    as_left: { points: CalibrationPointInput[] }
+  }
+}
+
+export type CalibrationResult = 'pass' | 'fail' | 'incomplete' | 'empty'
+
+export interface CalibrationReadingEvaluation {
+  output: number | null
+  dcs: number | null
+  output_error: number | null
+  dcs_error: number | null
+  ok: boolean | null
+}
+
+export interface CalibrationPointEvaluation {
+  percent: number
+  expected: { percent: number; input: number; output: number; dcs: number }
+  up: CalibrationReadingEvaluation
+  down: CalibrationReadingEvaluation
+  hysteresis: number | null
+  hysteresis_ok: boolean | null
+}
+
+export interface CalibrationEvaluation {
+  stages: Record<'as_found' | 'as_left', { points: CalibrationPointEvaluation[]; result: CalibrationResult }>
+  final_stage: 'as_found' | 'as_left'
+  result: CalibrationResult
 }
 
 export interface Service {
@@ -167,7 +262,9 @@ export interface Inspection {
 export interface InspectionPlan {
   id: number
   name: string
-  equipment_id: number
+  // 点検の対象は、設備か基準器（年次の校正）のどちらか一方
+  equipment_id: number | null
+  reference_standard_id?: number | null
   instrument_id: number | null
   checklist_template_id: number | null
   inspection_type: string
@@ -177,7 +274,8 @@ export interface InspectionPlan {
   is_active: boolean
   overdue: boolean
   days_until_due: number
-  equipment?: { id: number; name: string; site_id: number }
+  equipment?: { id: number; name: string; site_id: number } | null
+  reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
 }
@@ -381,4 +479,46 @@ export interface AuditLog {
   ip_address: string | null
   performed_at: string
   created_at: string
+}
+
+// 基準器（校正に使う圧力校正器・マルチテスタ・温度校正器など）。校正はメーカーが行い、その履歴から点検日に使えるかを判定する
+export interface ReferenceStandardCalibration {
+  id: number
+  performed_on: string
+  performed_by: string
+  certificate_number: string | null
+  result: 'pass' | 'fail'
+  traceable: boolean
+  valid_until: string
+  notes?: string | null
+}
+
+// never=校正の記録なし / failed=最新の校正が不合格 / expired=有効期限切れ / expiring=期限間近 / valid=有効
+export type CalibrationState = 'never' | 'failed' | 'expired' | 'expiring' | 'valid'
+
+export interface ReferenceStandard {
+  id: number
+  site_id: number
+  management_number: string
+  name: string
+  category: 'pressure' | 'electrical' | 'temperature' | 'other'
+  model_number: string | null
+  serial_number: string | null
+  measuring_range: string | null
+  accuracy: string | null
+  location: string | null
+  status: 'usable' | 'in_calibration' | 'retired'
+  notes: string | null
+  site?: { id: number; name: string }
+  calibration_state: CalibrationState
+  next_due_on: string | null
+  // 新しい順
+  calibrations: ReferenceStandardCalibration[]
+}
+
+// 点検で使った基準器と、使用前の1点チェック（pre_check_passed: null=未確認）
+export interface InspectionReferenceStandardUse {
+  reference_standard_id: number
+  pre_check_passed: boolean | null
+  pre_check_note: string
 }

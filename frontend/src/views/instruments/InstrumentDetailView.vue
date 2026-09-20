@@ -4,7 +4,16 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import {
+  CHARACTERISTIC_LABEL,
+  TOLERANCE_BASIS_LABEL,
+  calibrationFieldsFrom,
+  calibrationFieldsPayload,
+  emptyCalibrationFields,
+  type CalibrationFields,
+} from '@/utils/calibration'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +35,7 @@ const editForm = ref({
   location: '',
   notes: '',
 })
+const calibrationForm = ref<CalibrationFields>(emptyCalibrationFields())
 const equipments = ref<any[]>([])
 const services = ref<any[]>([])
 const lineClasses = ref<any[]>([])
@@ -50,6 +60,7 @@ async function openEditInstrument() {
     location: instrument.value.location || '',
     notes: instrument.value.notes || '',
   }
+  calibrationForm.value = calibrationFieldsFrom(instrument.value)
   editErrors.value = []
   editDialog.value = true
 }
@@ -57,7 +68,7 @@ async function openEditInstrument() {
 async function saveInstrument() {
   editErrors.value = []
   try {
-    await api.patch(`/instruments/${route.params.id}`, { instrument: editForm.value })
+    await api.patch(`/instruments/${route.params.id}`, { instrument: { ...editForm.value, ...calibrationFieldsPayload(calibrationForm.value) } })
     editDialog.value = false
     await fetchInstrument()
   } catch (e: any) {
@@ -127,6 +138,18 @@ onMounted(fetchInstrument)
             </v-col>
           </v-row>
           <p v-if="instrument.notes" class="mt-3"><strong>備考:</strong> {{ instrument.notes }}</p>
+          <div class="mt-3" data-testid="calibration-conditions">
+            <strong>校正の条件:</strong>
+            <template v-if="instrument.calibratable">
+              {{ Number(instrument.range_lower) }}〜{{ Number(instrument.range_upper) }} {{ instrument.range_unit }}、許容差 ±{{ Number(instrument.tolerance_percent) }}%スパン（{{ TOLERANCE_BASIS_LABEL[instrument.tolerance_basis] ?? '出所未設定' }}）
+              <template v-if="instrument.calibration_kind === 'transmitter'">
+                、出力 {{ CHARACTERISTIC_LABEL[instrument.output_characteristic] }}・DCS {{ CHARACTERISTIC_LABEL[instrument.dcs_characteristic] }}
+              </template>
+            </template>
+            <span v-else class="text-medium-emphasis">未設定（編集で校正範囲と許容差を設定すると、点検で5点校正を記録できます）</span>
+            <v-chip v-if="instrument.telemetry" size="small" label color="indigo" variant="tonal" class="ml-2">テレメータ計器</v-chip>
+            <v-chip v-if="instrument.custody_transfer" size="small" label color="brown" variant="tonal" class="ml-2">取引用</v-chip>
+          </div>
         </v-card-text>
       </v-card>
 
@@ -179,7 +202,7 @@ onMounted(fetchInstrument)
     </template>
 
     <!-- 計器編集ダイアログ -->
-    <v-dialog v-model="editDialog" max-width="600">
+    <v-dialog v-model="editDialog" max-width="720" scrollable>
       <v-card>
         <v-card-title>計器編集</v-card-title>
         <v-card-text>
@@ -193,6 +216,7 @@ onMounted(fetchInstrument)
           <v-select v-model="editForm.line_class_id" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" clearable class="mb-2" />
           <v-text-field v-model="editForm.location" label="設置場所" class="mb-2" />
           <v-textarea v-model="editForm.notes" label="備考" rows="2" />
+          <InstrumentCalibrationFields v-model="calibrationForm" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />

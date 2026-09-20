@@ -8,6 +8,16 @@ class Equipment < ApplicationRecord
   has_many :scheduled_maintenances, dependent: :restrict_with_error
 
   has_many :users, through: :equipment_assignments
+  has_many :equipment_regulations, dependent: :destroy
+  has_many :regulations, through: :equipment_regulations
 
   validates :name, presence: true
+  validate :regulations_target_equipment
+
+  private
+
+  # 計器単位の法規（取引メータなど）は、設備には付けられない
+  def regulations_target_equipment
+    errors.add(:regulations, "に設備には適用できないものが含まれています") if regulations.any? { |regulation| !regulation.target_equipment? }
+  end
 end

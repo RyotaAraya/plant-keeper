@@ -47,6 +47,7 @@ export function permissionsFor({ role, companyType }: RoleContext) {
     // 各ビュー内ボタン制御用
     canManageSite: isAdmin,
     canManageEquipment: canManageCore,
+    canManageReferenceStandard: canManageCore,
     canManageInspectionPlan: canManageCore,
     // バックエンドの InspectionPolicy#approve? に対応（承認・差し戻しは管理者/マネージャー）
     canApproveInspection: isAdmin || isManager,

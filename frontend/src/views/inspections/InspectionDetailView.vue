@@ -2,9 +2,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import CalibrationTable from '@/components/CalibrationTable.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
+import { RESULT_COLOR, RESULT_LABEL, calibrationInputFrom } from '@/utils/calibration'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,6 +37,7 @@ const statusColor: Record<string, string> = {
 }
 
 const itemTypeLabel: Record<string, string> = {
+  calibration: '5点校正',
   check: 'チェック', measurement: '計測値', text: 'テキスト'
 }
 
@@ -138,6 +141,42 @@ onMounted(fetchInspection)
         </v-card-text>
       </v-card>
 
+      <template v-if="inspection.inspection_reference_standards?.length">
+        <h2 class="text-h6 mb-3">使用した基準器</h2>
+        <v-table density="compact" class="mb-6" data-testid="reference-standards-used">
+          <thead>
+            <tr>
+              <th>基準器</th>
+              <th>点検日時点の校正</th>
+              <th>使用前の1点チェック</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="link in inspection.inspection_reference_standards" :key="link.id">
+              <td>
+                <a class="text-primary" style="cursor: pointer" @click="router.push(`/reference-standards/${link.reference_standard_id}`)">
+                  {{ link.reference_standard?.management_number }} {{ link.reference_standard?.name }}
+                </a>
+              </td>
+              <td class="text-caption">
+                <template v-if="link.calibration_at_inspection">
+                  {{ link.calibration_at_inspection.performed_on }} 実施・{{ link.calibration_at_inspection.performed_by }}・
+                  {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ link.calibration_at_inspection.valid_until }}まで有効・
+                  トレーサビリティ{{ link.calibration_at_inspection.traceable ? 'あり' : 'なし' }}
+                </template>
+                <template v-else>—</template>
+              </td>
+              <td>
+                <v-chip :color="link.pre_check_passed === null ? 'grey' : link.pre_check_passed ? 'success' : 'error'" size="x-small" label variant="tonal">
+                  {{ link.pre_check_passed === null ? '未確認' : link.pre_check_passed ? 'OK' : 'NG' }}
+                </v-chip>
+                <span v-if="link.pre_check_note" class="ml-2 text-caption">{{ link.pre_check_note }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </template>
+
       <h2 class="text-h6 mb-3">点検項目</h2>
       <v-table density="compact">
         <thead>
@@ -166,28 +205,42 @@ onMounted(fetchInspection)
           </tr>
         </tbody>
         <tbody v-else>
-          <tr v-for="item in inspection.inspection_items" :key="item.id" :class="{ 'bg-red-lighten-5': item.has_defect }">
-            <td>{{ item.position }}</td>
-            <td>{{ item.content }}</td>
-            <td>{{ itemTypeLabel[item.item_type] }}</td>
-            <td>
-              <template v-if="item.item_type === 'check'">
-                <v-icon :color="item.checked ? 'success' : 'grey'">{{ item.checked ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
-              </template>
-              <template v-else-if="item.item_type === 'measurement'">
-                {{ item.measured_value || '—' }}
-              </template>
-              <template v-else>
-                {{ item.text_value || '—' }}
-              </template>
-            </td>
-            <td>
-              <v-chip v-if="item.has_defect" color="error" size="x-small">
-                <v-icon start size="x-small">mdi-alert</v-icon>あり
-              </v-chip>
-            </td>
-            <td>{{ item.instrument?.tag_number || '' }}</td>
-          </tr>
+          <template v-for="item in inspection.inspection_items" :key="item.id">
+            <tr :class="{ 'bg-red-lighten-5': item.has_defect }">
+              <td>{{ item.position }}</td>
+              <td>{{ item.content }}</td>
+              <td>{{ itemTypeLabel[item.item_type] }}</td>
+              <td>
+                <template v-if="item.item_type === 'check'">
+                  <v-icon :color="item.checked ? 'success' : 'grey'">{{ item.checked ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
+                </template>
+                <template v-else-if="item.item_type === 'measurement'">
+                  {{ item.measured_value || '—' }}
+                </template>
+                <template v-else-if="item.item_type === 'calibration'">
+                  <v-chip v-if="item.calibration_result" :color="RESULT_COLOR[item.calibration_result as keyof typeof RESULT_COLOR]" size="x-small" label>
+                    {{ RESULT_LABEL[item.calibration_result as keyof typeof RESULT_LABEL] }}
+                  </v-chip>
+                  <template v-else>—</template>
+                </template>
+                <template v-else>
+                  {{ item.text_value || '—' }}
+                </template>
+              </td>
+              <td>
+                <v-chip v-if="item.has_defect" color="error" size="x-small">
+                  <v-icon start size="x-small">mdi-alert</v-icon>あり
+                </v-chip>
+              </td>
+              <td>{{ item.instrument?.tag_number || '' }}</td>
+            </tr>
+            <tr v-if="item.item_type === 'calibration' && item.calibration_data">
+              <td />
+              <td colspan="5" class="py-2" style="overflow-x: auto">
+                <CalibrationTable readonly :model-value="calibrationInputFrom(item.calibration_data)" :snapshot="item.calibration_data.snapshot" />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </v-table>
 

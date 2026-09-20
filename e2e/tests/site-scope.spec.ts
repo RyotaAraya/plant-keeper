@@ -159,8 +159,10 @@ test('別の拠点の点検計画から「点検を実施」を開いても、�
   await page.getByRole('menuitemcheckbox', { name: /川崎製油所/ }).click()
   await page.keyboard.press('Escape')
   await expect(tag).toContainText('根岸製油所')
-  // 一覧が根岸の計画（シードでは1件）に切り替わるのを待つ。待たないと、切り替え前の川崎の計画を開いてしまう
-  await expect(page.locator('tbody tr')).toHaveCount(1)
+  // 一覧が根岸の計画（シードでは、設備の点検計画1件と、基準器の年次校正の計画1件）に切り替わるのを待つ。
+  // 待たないと、切り替え前の川崎の計画を開いてしまう
+  await expect(page.locator('tbody tr')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: '点検を実施' })).toHaveCount(1)
 
   await page.getByRole('button', { name: '点検を実施' }).first().click()
   await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()

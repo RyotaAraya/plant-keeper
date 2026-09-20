@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
       { title: '拠点管理', icon: 'mdi-domain', to: '/sites', permission: canViewSites },
       { title: '設備台帳', icon: 'mdi-factory', to: '/equipments' },
       { title: '装置・計器', icon: 'mdi-gauge', to: '/instruments' },
+      { title: '基準器', icon: 'mdi-ruler-square', to: '/reference-standards' },
     ],
   },
   {

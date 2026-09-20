@@ -3,11 +3,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
+import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
+import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
 import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
@@ -47,6 +49,7 @@ const form = ref({
   location: '',
   notes: '',
 })
+const calibrationForm = ref<CalibrationFields>(emptyCalibrationFields())
 const errors = ref<string[]>([])
 
 const headers = [
@@ -56,6 +59,7 @@ const headers = [
   { title: 'サービス', key: 'service.name' },
   { title: 'ラインクラス', key: 'line_class.code' },
   { title: '設置場所', key: 'location' },
+  { title: '区分', key: 'flags', sortable: false },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
@@ -100,6 +104,7 @@ function openCreate() {
     line_class_id: selectedLineClassIds.value.length === 1 ? (selectedLineClassIds.value[0] ?? null) : null,
     location: '', notes: '',
   }
+  calibrationForm.value = emptyCalibrationFields()
   errors.value = []
   dialog.value = true
 }
@@ -115,17 +120,19 @@ function openEdit(item: any) {
     location: item.location || '',
     notes: item.notes || '',
   }
+  calibrationForm.value = calibrationFieldsFrom(item)
   errors.value = []
   dialog.value = true
 }
 
 async function save() {
   errors.value = []
+  const payload = { ...form.value, ...calibrationFieldsPayload(calibrationForm.value) }
   try {
     if (editingId.value) {
-      await api.patch(`/instruments/${editingId.value}`, { instrument: form.value })
+      await api.patch(`/instruments/${editingId.value}`, { instrument: payload })
     } else {
-      await api.post('/instruments', { instrument: form.value })
+      await api.post('/instruments', { instrument: payload })
     }
     dialog.value = false
     await fetchInstruments()
@@ -199,6 +206,10 @@ onMounted(() => {
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.flags="{ item }">
+        <v-chip v-if="item.telemetry" size="x-small" label color="indigo" variant="tonal" class="mr-1">テレメータ</v-chip>
+        <v-chip v-if="item.custody_transfer" size="x-small" label color="brown" variant="tonal" class="mr-1">取引用</v-chip>
+      </template>
       <template #item.actions="{ item }">
         <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
       </template>
@@ -207,7 +218,7 @@ onMounted(() => {
     <!-- ページネーション -->
 
     <!-- 作成・編集ダイアログ -->
-    <v-dialog v-model="dialog" max-width="600">
+    <v-dialog v-model="dialog" max-width="720" scrollable>
       <v-card>
         <v-card-title>{{ editingId ? '計器編集' : '計器作成' }}</v-card-title>
         <v-card-text>
@@ -221,6 +232,7 @@ onMounted(() => {
           <v-select v-model="form.line_class_id" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" clearable class="mb-2" />
           <v-text-field v-model="form.location" label="設置場所" class="mb-2" />
           <v-textarea v-model="form.notes" label="備考" rows="2" />
+          <InstrumentCalibrationFields v-model="calibrationForm" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />

@@ -6,7 +6,7 @@ module Api
       # GET /api/v1/equipments
       def index
         authorize Equipment
-        equipments = Equipment.includes(:site).all
+        equipments = Equipment.includes(:site, :regulations).all
         if (site_ids = id_list_param(:site_ids, :site_id))
           equipments = equipments.where(site_id: site_ids)
         end
@@ -18,7 +18,7 @@ module Api
         equipments = equipments.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
-          data: equipments.as_json(include: { site: { only: [ :id, :name ] } }),
+          data: equipments.as_json(include: { site: { only: [ :id, :name ] }, regulations: { only: [ :id, :code, :name ] } }),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end
@@ -30,6 +30,10 @@ module Api
           data: @equipment.as_json(
             include: {
               site: { only: [ :id, :name ] },
+              regulations: {
+                only: [ :id, :code, :name, :law_name, :target ],
+                include: { regulation_inspections: { only: [ :id, :name, :interval_days, :basis, :note ] } }
+              },
               instruments: { only: [ :id, :tag_number, :instrument_type, :location ] },
               equipment_assignments: {
                 include: { user: { only: [ :id, :name, :email, :employment_type, :system_role ] } },
@@ -59,12 +63,16 @@ module Api
       # PATCH/PUT /api/v1/equipments/:id
       def update
         authorize @equipment
+        regulation_ids_before = @equipment.regulation_ids.sort
         if @equipment.update(equipment_params)
-          record_audit_log("update", @equipment)
+          record_audit_log("update", @equipment, changes: equipment_changes(regulation_ids_before))
           render json: { data: @equipment.as_json }
         else
           render json: { errors: @equipment.errors.full_messages }, status: :unprocessable_entity
         end
+      rescue ActiveRecord::RecordInvalid => e
+        # 適用法規（regulation_ids）は保存済みの設備では代入した時点で書き込まれるため、不正な区分はここで検知される
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
       end
 
       private
@@ -74,12 +82,21 @@ module Api
           :site,
           :instruments,
           :scheduled_maintenances,
+          regulations: :regulation_inspections,
           equipment_assignments: :user
         ).find(params[:id])
       end
 
       def equipment_params
-        params.require(:equipment).permit(:name, :description, :site_id)
+        params.require(:equipment).permit(:name, :description, :site_id, regulation_ids: [])
+      end
+
+      # 適用法規の付け外しは saved_changes に出ないため、変更前後のIDを加えて監査ログに残す
+      def equipment_changes(regulation_ids_before)
+        changes = @equipment.saved_changes.except("updated_at", "created_at")
+        regulation_ids_after = @equipment.regulation_ids.sort
+        changes["regulation_ids"] = [ regulation_ids_before, regulation_ids_after ] if regulation_ids_before != regulation_ids_after
+        changes
       end
     end
   end

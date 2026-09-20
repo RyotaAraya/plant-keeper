@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_20_150100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -47,6 +47,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.string "inspection_type", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "is_active", default: true, null: false
     t.index ["department_id"], name: "index_checklist_templates_on_department_id"
   end
 
@@ -97,6 +98,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.index ["user_id"], name: "index_equipment_assignments_on_user_id"
   end
 
+  create_table "equipment_regulations", force: :cascade do |t|
+    t.bigint "equipment_id", null: false
+    t.bigint "regulation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id", "regulation_id"], name: "index_equipment_regulations_on_equipment_id_and_regulation_id", unique: true
+    t.index ["equipment_id"], name: "index_equipment_regulations_on_equipment_id"
+    t.index ["regulation_id"], name: "index_equipment_regulations_on_regulation_id"
+  end
+
   create_table "equipments", force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
@@ -119,6 +130,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.bigint "instrument_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "calibration_data"
+    t.string "calibration_result"
     t.index ["checklist_template_item_id"], name: "index_inspection_items_on_checklist_template_item_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
@@ -126,7 +139,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
 
   create_table "inspection_plans", force: :cascade do |t|
     t.string "name", null: false
-    t.bigint "equipment_id", null: false
+    t.bigint "equipment_id"
     t.bigint "instrument_id"
     t.bigint "checklist_template_id"
     t.string "inspection_type", null: false
@@ -136,11 +149,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.boolean "is_active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "reference_standard_id"
     t.index ["checklist_template_id"], name: "index_inspection_plans_on_checklist_template_id"
     t.index ["equipment_id"], name: "index_inspection_plans_on_equipment_id"
     t.index ["instrument_id"], name: "index_inspection_plans_on_instrument_id"
     t.index ["next_due_on"], name: "index_inspection_plans_on_next_due_on"
+    t.index ["reference_standard_id"], name: "index_inspection_plans_on_reference_standard_id"
+    t.check_constraint "(equipment_id IS NOT NULL) <> (reference_standard_id IS NOT NULL)", name: "inspection_plans_one_target"
     t.check_constraint "interval_days > 0", name: "inspection_plans_interval_positive"
+  end
+
+  create_table "inspection_reference_standards", force: :cascade do |t|
+    t.bigint "inspection_id", null: false
+    t.bigint "reference_standard_id", null: false
+    t.boolean "pre_check_passed"
+    t.string "pre_check_note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["inspection_id", "reference_standard_id"], name: "index_inspection_reference_standards_unique", unique: true
+    t.index ["inspection_id"], name: "index_inspection_reference_standards_on_inspection_id"
+    t.index ["reference_standard_id"], name: "index_inspection_reference_standards_on_reference_standard_id"
   end
 
   create_table "inspections", force: :cascade do |t|
@@ -176,6 +204,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "range_lower", precision: 14, scale: 4
+    t.decimal "range_upper", precision: 14, scale: 4
+    t.string "range_unit"
+    t.string "output_characteristic", default: "linear", null: false
+    t.string "dcs_characteristic", default: "linear", null: false
+    t.decimal "dcs_range_lower", precision: 14, scale: 4
+    t.decimal "dcs_range_upper", precision: 14, scale: 4
+    t.string "dcs_range_unit"
+    t.decimal "tolerance_percent", precision: 6, scale: 3
+    t.string "tolerance_basis"
+    t.boolean "telemetry", default: false, null: false
+    t.boolean "custody_transfer", default: false, null: false
     t.index ["equipment_id", "tag_number"], name: "index_instruments_on_equipment_id_and_tag_number", unique: true
     t.index ["equipment_id"], name: "index_instruments_on_equipment_id"
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"
@@ -268,6 +308,61 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
     t.index ["status"], name: "index_orders_on_status"
     t.index ["user_id"], name: "index_orders_on_user_id"
     t.index ["warehouse_id"], name: "index_orders_on_warehouse_id"
+  end
+
+  create_table "reference_standard_calibrations", force: :cascade do |t|
+    t.bigint "reference_standard_id", null: false
+    t.date "performed_on", null: false
+    t.string "performed_by", null: false
+    t.string "certificate_number"
+    t.string "result", default: "pass", null: false
+    t.boolean "traceable", default: false, null: false
+    t.date "valid_until", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reference_standard_id", "performed_on"], name: "index_rs_calibrations_on_standard_and_performed_on"
+    t.index ["reference_standard_id"], name: "index_reference_standard_calibrations_on_reference_standard_id"
+  end
+
+  create_table "reference_standards", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "management_number", null: false
+    t.string "name", null: false
+    t.string "category", default: "other", null: false
+    t.string "model_number"
+    t.string "serial_number"
+    t.string "measuring_range"
+    t.string "accuracy"
+    t.string "location"
+    t.string "status", default: "usable", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["management_number"], name: "index_reference_standards_on_management_number", unique: true
+    t.index ["site_id"], name: "index_reference_standards_on_site_id"
+  end
+
+  create_table "regulation_inspections", force: :cascade do |t|
+    t.bigint "regulation_id", null: false
+    t.string "name", null: false
+    t.integer "interval_days", null: false
+    t.string "basis", default: "statutory", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["regulation_id"], name: "index_regulation_inspections_on_regulation_id"
+  end
+
+  create_table "regulations", force: :cascade do |t|
+    t.string "code", null: false
+    t.string "name", null: false
+    t.string "law_name", null: false
+    t.string "target", default: "equipment", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_regulations_on_code", unique: true
   end
 
   create_table "repairs", force: :cascade do |t|
@@ -447,6 +542,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
   add_foreign_key "departments", "sites"
   add_foreign_key "equipment_assignments", "equipments"
   add_foreign_key "equipment_assignments", "users"
+  add_foreign_key "equipment_regulations", "equipments"
+  add_foreign_key "equipment_regulations", "regulations"
   add_foreign_key "equipments", "sites"
   add_foreign_key "inspection_items", "checklist_template_items"
   add_foreign_key "inspection_items", "inspections"
@@ -454,6 +551,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
   add_foreign_key "inspection_plans", "checklist_templates"
   add_foreign_key "inspection_plans", "equipments"
   add_foreign_key "inspection_plans", "instruments"
+  add_foreign_key "inspection_plans", "reference_standards"
+  add_foreign_key "inspection_reference_standards", "inspections"
+  add_foreign_key "inspection_reference_standards", "reference_standards"
   add_foreign_key "inspections", "checklist_templates"
   add_foreign_key "inspections", "departments"
   add_foreign_key "inspections", "equipments"
@@ -471,6 +571,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_100000) do
   add_foreign_key "orders", "materials"
   add_foreign_key "orders", "users"
   add_foreign_key "orders", "warehouses"
+  add_foreign_key "reference_standard_calibrations", "reference_standards"
+  add_foreign_key "reference_standards", "sites"
+  add_foreign_key "regulation_inspections", "regulations"
   add_foreign_key "repairs", "stocks"
   add_foreign_key "repairs", "troubles"
   add_foreign_key "repairs", "users", column: "requested_by_id"

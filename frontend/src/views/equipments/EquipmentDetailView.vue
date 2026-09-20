@@ -6,6 +6,10 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import { todayForInput } from '@/utils/datetime'
+import { intervalLabel } from '@/utils/interval'
+import RegulationChip from '@/components/RegulationChip.vue'
+import RegulationSelect from '@/components/RegulationSelect.vue'
+import type { Regulation } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,7 +21,7 @@ const tab = ref('instruments')
 
 // --- 設備編集 ---
 const editDialog = ref(false)
-const editForm = ref({ name: '', description: '', site_id: null as number | null })
+const editForm = ref({ name: '', description: '', site_id: null as number | null, regulation_ids: [] as number[] })
 const editErrors = ref<string[]>([])
 const sites = ref<any[]>([])
 
@@ -30,6 +34,7 @@ async function openEditEquipment() {
     name: equipment.value.name,
     description: equipment.value.description || '',
     site_id: equipment.value.site_id,
+    regulation_ids: (equipment.value.regulations || []).map((r: Regulation) => r.id),
   }
   editErrors.value = []
   editDialog.value = true
@@ -90,6 +95,8 @@ async function fetchEquipment() {
   }
 }
 
+const basisLabel: Record<string, string> = { statutory: '法定', voluntary: '自主' }
+
 function currentAssignments() {
   return (equipment.value?.equipment_assignments || []).filter((a: any) => !a.ended_on)
 }
@@ -126,6 +133,9 @@ onMounted(fetchEquipment)
         <v-card-subtitle v-if="equipment.site">{{ equipment.site?.name }}</v-card-subtitle>
         <v-card-text>
           <p v-if="equipment.description">{{ equipment.description }}</p>
+          <div v-if="equipment.regulations?.length" class="mt-2">
+            <RegulationChip v-for="regulation in equipment.regulations" :key="regulation.id" :regulation="regulation" class="mr-1" />
+          </div>
           <v-row class="mt-2">
             <v-col cols="6" md="3">
               <v-card variant="tonal" class="text-center pa-3">
@@ -145,6 +155,7 @@ onMounted(fetchEquipment)
 
       <v-tabs v-model="tab" class="mb-4">
         <v-tab value="instruments">装置・計器</v-tab>
+        <v-tab value="regulations">適用法規</v-tab>
         <v-tab value="assignments">設備担当</v-tab>
         <v-tab value="maintenances">定期整備</v-tab>
         <v-tab value="history">変更履歴</v-tab>
@@ -163,6 +174,35 @@ onMounted(fetchEquipment)
             class="cursor-pointer"
             @click:row="(_e: any, { item }: any) => router.push(`/instruments/${item.id}`)"
           />
+        </v-window-item>
+
+        <v-window-item value="regulations">
+          <v-alert type="info" variant="tonal" density="compact" class="mb-3">
+            設備が対象になる法規から、法定検査の周期が決まります。付属機器（安全弁・伝送器など）の点検周期は、この区分をもとに決めます。周期はデモ用の想定で、実際は事業所の認定や保安規程によって変わります。
+          </v-alert>
+          <p v-if="!(equipment.regulations || []).length" class="text-body-2 text-grey ml-4">適用される法規区分はありません</p>
+          <v-card v-for="regulation in equipment.regulations" :key="regulation.id" variant="outlined" class="mb-3">
+            <v-card-title class="text-subtitle-1"><RegulationChip :regulation="regulation" size="default" /></v-card-title>
+            <v-card-subtitle>{{ regulation.law_name }}</v-card-subtitle>
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th>法定検査</th>
+                  <th>周期</th>
+                  <th>区分</th>
+                  <th>備考</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="inspection in regulation.regulation_inspections" :key="inspection.id">
+                  <td>{{ inspection.name }}</td>
+                  <td class="text-no-wrap">{{ intervalLabel(inspection.interval_days) }}ごと</td>
+                  <td><v-chip size="x-small" label>{{ basisLabel[inspection.basis] }}</v-chip></td>
+                  <td>{{ inspection.note }}</td>
+                </tr>
+              </tbody>
+            </v-table>
+          </v-card>
         </v-window-item>
 
         <v-window-item value="assignments">
@@ -235,6 +275,7 @@ onMounted(fetchEquipment)
           </v-alert>
           <v-select v-model="editForm.site_id" :items="sites" item-title="name" item-value="id" label="拠点" class="mb-2" />
           <v-text-field v-model="editForm.name" label="設備名" class="mb-2" />
+          <RegulationSelect v-model="editForm.regulation_ids" class="mb-4" />
           <v-textarea v-model="editForm.description" label="説明" rows="3" />
         </v-card-text>
         <v-card-actions>
