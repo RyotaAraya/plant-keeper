@@ -88,6 +88,7 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     sent = @client.calls.first[:user]
     assert_includes sent, "設備: #{@equipment.name}"
     assert_includes sent, "PT-101"
+    assert_includes sent, "種類 圧力伝送器"
     assert_includes sent, "ボイラー給水（温度 150℃、圧力 2MPa、危険性 高）"
     assert_includes sent, "高温高圧水"
     assert_includes sent, "点検項目: 指示値の確認"
