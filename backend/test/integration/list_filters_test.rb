@@ -22,6 +22,18 @@ class ListFiltersTest < ActionDispatch::IntegrationTest
     assert_ids [ @equipment_c ], "/api/v1/equipments", site_id: @site_c.id
   end
 
+  test "ユーザは所属拠点を複数指定して絞り込める。拠点の名前も返す" do
+    user_a = create_user(company: @user.company, site: @site_a)
+    user_b = create_user(company: @user.company, site: @site_b)
+    user_c = create_user(company: @user.company, site: @site_c)
+
+    assert_ids [ user_a, user_b ], "/api/v1/users", site_ids: [ @site_a.id, @site_b.id ]
+    assert_ids [ user_c ], "/api/v1/users", site_id: @site_c.id
+
+    get "/api/v1/users", params: { site_ids: [ @site_a.id ] }, headers: @headers
+    assert_equal "A製油所", json["data"].first["site"]["name"]
+  end
+
   test "拠点の指定が空や数値でなければ絞り込まない" do
     all = [ @equipment_a, @equipment_b, @equipment_c ]
     assert_ids all, "/api/v1/equipments"

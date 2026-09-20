@@ -1,32 +1,42 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { useAuthStore } from '@/stores/auth'
+import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const users = ref<any[]>([])
-const departmentTree = ref<any[]>([])
+const { departments, load: loadSiteOptions } = useSiteScopeOptions({ withEquipments: false })
 const loading = ref(false)
 const showInactive = ref(false)
 
+// 通常業務では自拠点のユーザだけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）
 const filters = ref({
+  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
   q: '',
   employment_type: null as string | null,
   system_role: null as string | null,
   department_id: null as number | null,
 })
 
-const headers = [
+// 1行に収まる列だけにする。入社年は詳細画面で見られる。
+// 拠点は、1拠点だけ表示しているときは絞り込み欄で分かるので出さない。状態は、退職者を表示するときだけ出す（通常は全員「在籍」）
+const headers = computed(() => [
   { title: '名前', key: 'name' },
   { title: 'メール', key: 'email' },
-  { title: '在籍区分', key: 'employment_type', width: '100px' },
-  { title: '権限', key: 'system_role', width: '80px' },
-  { title: '所属会社', key: 'company', width: '140px' },
-  { title: '部署', key: 'department_path', width: '280px' },
-  { title: '入社年', key: 'join_year', width: '80px' },
-  { title: '状態', key: 'is_active', width: '80px' },
-]
+  { title: '権限', key: 'system_role' },
+  { title: '在籍区分', key: 'employment_type' },
+  { title: '所属会社', key: 'company' },
+  ...(filters.value.site_ids.length === 1 ? [] : [{ title: '拠点', key: 'site.name' }]),
+  { title: '部署', key: 'department_path' },
+  ...(showInactive.value ? [{ title: '状態', key: 'is_active' }] : []),
+])
 
 const employmentTypeLabel: Record<string, string> = {
   employee: '正社員', dispatch: '派遣社員', contractor: '協力会社員',
@@ -47,50 +57,38 @@ const systemRoleOptions = [
   { title: '技能員', value: 'worker' },
 ]
 
-const levelLabel: Record<string, string> = {
-  division: '部', section: '課', team: 'チーム',
-}
-
-// ツリーをフラットリストに変換（インデント付き）
-function flattenTree(nodes: any[], depth = 0): any[] {
-  const result: any[] = []
-  for (const node of nodes) {
-    const indent = '\u00A0\u00A0'.repeat(depth)
-    result.push({
-      id: node.id,
-      name: node.name,
-      title: `${indent}${node.name}（${levelLabel[node.level] || node.level}）`,
-      level: node.level,
-      depth,
-    })
-    if (node.children?.length) {
-      result.push(...flattenTree(node.children, depth + 1))
-    }
+// 拠点を変えたら、表示する拠点にない部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
+async function changeSite(siteIds: number[]) {
+  filters.value = { ...filters.value, site_ids: siteIds }
+  await loadSiteOptions(siteIds)
+  if (filters.value.department_id && !departments.value.some((d) => d.id === filters.value.department_id)) {
+    filters.value = { ...filters.value, department_id: null }
   }
-  return result
 }
 
-const flatDepartments = computed(() => flattenTree(departmentTree.value))
+const fetchUsersGuard = latestGuard()
 
 async function fetchUsers() {
+  const isLatest = fetchUsersGuard()
   loading.value = true
   try {
     const params: any = {}
+    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.q) params.q = filters.value.q
     if (filters.value.employment_type) params.employment_type = filters.value.employment_type
     if (filters.value.system_role) params.system_role = filters.value.system_role
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (!showInactive.value) params.is_active = true
     const res = await api.get('/users', { params })
+    if (!isLatest()) return
     users.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
-async function fetchDepartments() {
-  const res = await api.get('/departments', { params: { tree: 'true' } })
-  departmentTree.value = res.data.data
+function departmentPath(user: any): string {
+  return user.company?.company_type === 'owner' ? (user.department?.full_path || '—') : '—'
 }
 
 function goToDetail(row: any) {
@@ -109,7 +107,7 @@ function nameInitial(name: string) {
 }
 
 onMounted(() => {
-  fetchDepartments()
+  loadSiteOptions(filters.value.site_ids)
   fetchUsers()
 })
 watch([filters, showInactive], fetchUsers, { deep: true })
@@ -117,11 +115,11 @@ watch([filters, showInactive], fetchUsers, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">ユーザ管理</h1>
-    </div>
+    <PageHeader title="ユーザ管理" description="ユーザの所属会社・雇用区分・権限を管理します。退職・復帰の対応もここで行います。" />
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
       <v-text-field
         v-model="filters.q"
         label="名前・メール検索"
@@ -155,14 +153,14 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       />
       <v-select
         v-model="filters.department_id"
-        :items="flatDepartments"
-        item-title="title"
+        :items="departments"
+        item-title="display_name"
         item-value="id"
         label="部署"
         clearable
         density="compact"
         hide-details
-        style="max-width: 260px"
+        style="max-width: 320px"
       />
       <v-switch v-model="showInactive" label="退職者表示" density="compact" hide-details />
     </div>
@@ -172,7 +170,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
       :items="users"
       :loading="loading"
       hover
-      class="cursor-pointer"
+      class="cursor-pointer pk-users"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.name="{ item }">
@@ -180,8 +178,11 @@ watch([filters, showInactive], fetchUsers, { deep: true })
           <v-avatar :color="avatarColor(item.id)" size="32">
             <span class="text-white text-body-2 font-weight-bold">{{ nameInitial(item.name) }}</span>
           </v-avatar>
-          <span>{{ item.name }}</span>
+          <span class="pk-users__name">{{ item.name }}</span>
         </div>
+      </template>
+      <template #item.email="{ item }">
+        <span class="pk-users__ellipsis text-medium-emphasis" :title="item.email">{{ item.email }}</span>
       </template>
       <template #item.employment_type="{ item }">
         {{ employmentTypeLabel[item.employment_type] || item.employment_type }}
@@ -190,7 +191,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         {{ systemRoleLabel[item.system_role] || item.system_role }}
       </template>
       <template #item.company="{ item }">
-        <span class="mr-1">{{ item.company?.name || '—' }}</span>
+        <span class="mr-2">{{ item.company?.name || '—' }}</span>
         <v-chip
           v-if="item.company"
           :color="item.company.company_type === 'owner' ? 'primary' : 'orange'"
@@ -202,7 +203,7 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         </v-chip>
       </template>
       <template #item.department_path="{ item }">
-        {{ item.company?.company_type === 'owner' ? (item.department?.full_path || '—') : '—' }}
+        <span class="pk-users__ellipsis" :title="departmentPath(item)">{{ departmentPath(item) }}</span>
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'success' : 'grey'" size="x-small">
@@ -216,5 +217,23 @@ watch([filters, showInactive], fetchUsers, { deep: true })
 <style scoped>
 .cursor-pointer :deep(tbody tr) {
   cursor: pointer;
+}
+
+/* 各セルは折り返さず1行にする。長いメールと部署だけは、省略して全体を（title で）読めるようにする */
+.pk-users :deep(td),
+.pk-users :deep(th) {
+  padding: 0 12px !important;
+  white-space: nowrap;
+}
+
+.pk-users__name {
+  font-weight: 500;
+}
+
+.pk-users__ellipsis {
+  display: block;
+  max-width: 17rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

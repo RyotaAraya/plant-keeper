@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
 
 const router = useRouter()
@@ -75,9 +76,7 @@ watch(showInactive, fetchSites)
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">拠点管理</h1>
-      <v-spacer />
+    <PageHeader title="拠点管理" description="製油所などの拠点の一覧です。設備・部署・倉庫は拠点ごとに管理します。">
       <v-switch
         v-model="showInactive"
         label="閉鎖拠点を表示"
@@ -86,7 +85,7 @@ watch(showInactive, fetchSites)
         class="mr-4"
       />
       <v-btn v-if="canManageSite" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
-    </div>
+    </PageHeader>
 
     <v-data-table
       :headers="headers"

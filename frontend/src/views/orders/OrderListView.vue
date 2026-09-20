@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { todayForInput } from '@/utils/datetime'
 
 const orders = ref<any[]>([])
@@ -29,11 +30,11 @@ const form = ref({
 
 const headers = [
   { title: '発注日', key: 'ordered_on', width: '110px' },
-  { title: '資材', key: 'material.name' },
+  { title: '資材', key: 'material.name', minWidth: '250px' },
   { title: '型番', key: 'material.part_number', width: '130px' },
   { title: '数量', key: 'quantity', width: '70px' },
   { title: '単価', key: 'unit_price', width: '100px' },
-  { title: '仕入先', key: 'supplier_name', width: '130px' },
+  { title: '仕入先', key: 'supplier_name', minWidth: '240px' },
   { title: '発注者', key: 'user.name', width: '100px' },
   { title: 'ステータス', key: 'status', width: '100px' },
 ]
@@ -142,9 +143,10 @@ async function saveReceive() {
   }
 }
 
-function formatPrice(val: number | null) {
-  if (val == null) return '—'
-  return `¥${val.toLocaleString()}`
+// APIは金額を文字列（"380000.0"）で返すため、数値にしてから桁区切りにする
+function formatPrice(val: number | string | null) {
+  if (val == null || val === '') return '—'
+  return `¥${Math.round(Number(val)).toLocaleString('ja-JP')}`
 }
 
 onMounted(() => {
@@ -157,13 +159,11 @@ watch(filters, fetchOrders, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">発注管理</h1>
-      <v-spacer />
+    <PageHeader title="発注管理" description="資材の発注と受領を管理します。受領すると、入庫先の倉庫の在庫に加わります。">
       <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog()">新規発注</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <v-select
         v-model="filters.status"
         :items="statusOptions"

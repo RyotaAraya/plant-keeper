@@ -205,7 +205,9 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - users の一覧は、メールアドレスは管理者と自社ユーザのみ、出身県・前職・入社年・退職日は管理者のみに返す（`UserPolicy#view_email?` / `view_profile_details?`）
   - ダッシュボードは `DashboardPolicy` で、在庫アラート・発注・修理のセクションを、それぞれの一覧を見られる人にだけ返す（権限のない人にはキー自体を含めない。フロントは存在チェックで出し分ける）
   - 資材の拠点別の在庫も同じ扱い。資材一覧の `stock_by_site`（拠点ごとの使える在庫。自拠点が先頭）と、詳細の `stock_summary` / `total_stock` / `usable_stock`（倉庫ごと・拠点付き）は、在庫を見られる人（自社）にだけ返し、協力会社にはキー自体を含めない。「使える在庫」は利用可（`available`）で数量1以上のもの（使用中・修理中・廃棄済みは数えない）。一覧の `stock_availability=own|others_only|none`（自拠点にあり／他拠点にだけあり／どこにもなし）も在庫を見られる人にだけ効く。資材マスタ自体は全拠点共通で、拠点で絞らない（自拠点になければ他拠点にあるかを、同じ行で探せるのが目的）
-- 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
+- 監査ログ: `BaseController#record_audit_log(action, resource, changes: nil)` ヘルパーで統一記録（既定は `resource.saved_changes` を `changes_json` に保存。削除のように `saved_changes` が空になる操作では `changes:` で削除時点の属性を渡す）。ログイン（`login`）・ログアウト（`logout`。トークンで認証できたときだけ記録）、承認依頼（`approval_request`）、点検項目の追加・変更・削除も記録する
+  - 監査ログには変更されたデータの拠点（`audit_logs.site_id`）を持たせる。記録時に `AuditLog.site_id_for(resource)` が対象から求める（設備・点検・トラブルは設備の拠点、在庫・発注・修理は倉庫の拠点、ユーザ・ログインは所属拠点。資材・メーカー・流体などの全社共通マスタは NULL）。**拠点を指定した絞り込みでは NULL のログは出ない**（全拠点＝指定なしのときだけ出る）。対象の種類を増やすときは `site_id_for` にも足す
+  - 一覧APIの絞り込み: `site_ids`（複数可）、`from` / `to`（日本時間の日付 `YYYY-MM-DD`。開始日の0時〜終了日の終わり。不正な値は422）、`log_action`、`auditable_type`。画面の初期値は自拠点・直近1か月。並びは新しい順（同時刻は id 降順）
 - レスポンス: `{ data: ... }` 形式
 
 **シリアライズの使い分け:**
@@ -267,10 +269,9 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - **修理**: 修理に出せるのは在庫あり・使用中で数量1以上の在庫のみ。修理は1個ずつで、数量2以上のロットからは1個を別行に切り出して修理の対象にする（残りは使える状態のまま）。修理の状態変更と在庫の状態変更は同一トランザクション（修理の行を `lock!`）。修理は依頼中でしか新規作成できず、更新で修理対象の在庫（`stock_id`）は変えられない
 
 ### 簡易実装方針
-- 承認フロー: UIのみ（ボタンでステータス変更、ロジックなし）
 - 価格履歴: orders テーブルで兼用
 - 使用資材記録: テキストカラム（trouble_responses.used_materials 等）
-- 監査ログ出力: CSV のみ
+- 監査ログ出力: CSV のみ（画面の「CSV出力」ボタン。APIは追加せず、フロントが条件に合う全件をページごとに取得して `utils/csv.ts` で組み立てる。BOM付きUTF-8、数式として解釈される先頭文字は「'」でエスケープ）
 - 発注アラート: ダッシュボードにリスト表示のみ（メール通知なし）
 - ダッシュボードの在庫アラート: `Material#select` ブロック内で `stocks.sum(:quantity)` を呼ぶため、対象資材数によってN+1が発生（現状のデータ規模では許容）
 
@@ -283,7 +284,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
 - 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
-- シードファイル: `db/seeds/` 配下に 01〜13 の番号付きファイルで分割
+- シードファイル: `db/seeds/` 配下に 01〜15 の番号付きファイルで分割
 - 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 
 ### フロントエンドの規約
@@ -291,7 +292,9 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 一覧の取得は、拠点や絞り込みを続けて変えると応答の順序が入れ替わるため、`utils/latestGuard.ts` で古い応答を破棄する（新しい一覧を作るときも使う）
 - 型定義: `src/types/models.ts` に全インターフェースを集約
 - 認証ストア: `stores/auth.ts` で singleton promise パターンによる初期化（レースコンディション防止）
-- レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成
+- レイアウト: `MainLayout.vue` → `AppBar.vue` + `SideNav.vue` のスロット構成。サイドバーは業務のグループ（日々の保全・設備・資材・管理）で分け、見える項目のないグループは出さない（項目名はE2Eがリンク名で辿るため変えない）
+- 画面の見出し: `components/layout/PageHeader.vue`。画面名はサイドバーで分かるため画面上には出さず（h1 は読み上げ用に残す）、その画面の役割を1行で示す。右端は操作ボタン（スロット）
+- 絞り込み行: `class="pk-filters"`（`assets/main.css`）。入力欄は白地・薄い枠で、条件を入れた項目だけ枠が濃くなる
 - Pinia は router より先に登録（router の `beforeEach` で `useAuthStore()` を使用するため）
 
 ## API認証の動作確認（curl）

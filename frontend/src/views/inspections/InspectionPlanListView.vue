@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
@@ -36,7 +37,7 @@ const headers = [
   { title: '点検計画', key: 'name' },
   { title: '設備', key: 'equipment.name', width: '160px' },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
-  { title: '周期', key: 'interval_days', width: '90px' },
+  { title: '周期', key: 'interval_days', width: '110px' },
   { title: '前回実施', key: 'last_inspected_on', width: '120px' },
   { title: '', key: 'actions', sortable: false, width: '130px' },
 ]
@@ -168,13 +169,11 @@ watch(filters, fetchPlans, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">点検計画</h1>
-      <v-spacer />
+    <PageHeader title="点検計画" description="設備・計器ごとの点検の周期と次回期限を管理し、期限が来たものから点検を始めます。">
       <v-btn v-if="canManageInspectionPlan" color="primary" prepend-icon="mdi-plus" @click="openDialog">計画を追加</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
@@ -191,7 +190,7 @@ watch(filters, fetchPlans, { deep: true })
       <template #item.next_due_on="{ item }">
         <v-chip :color="dueColor(item)" size="small">{{ dueLabel(item) }}</v-chip>
       </template>
-      <template #item.interval_days="{ item }">{{ item.interval_days }}日ごと</template>
+      <template #item.interval_days="{ item }"><span class="text-no-wrap">{{ item.interval_days }}日ごと</span></template>
       <template #item.last_inspected_on="{ item }">{{ item.last_inspected_on ?? '未実施' }}</template>
       <template #item.actions="{ item }">
         <v-btn size="small" variant="outlined" @click="startInspection(item)">点検を実施</v-btn>

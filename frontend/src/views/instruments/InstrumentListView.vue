@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
@@ -164,14 +165,12 @@ onMounted(() => {
 <template>
   <MainLayout>
     <!-- ヘッダー -->
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">装置・計器</h1>
-      <v-spacer />
+    <PageHeader title="装置・計器" description="設備に付いている計器をタグ番号で探します。サービス（流体）やラインクラスなどの仕様を確認できます。">
       <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
-    </div>
+    </PageHeader>
 
     <!-- フィルタパネル -->
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
       <v-divider vertical class="pk-scope-divider" />
       <v-text-field

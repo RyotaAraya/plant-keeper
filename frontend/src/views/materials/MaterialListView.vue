@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
@@ -44,16 +45,16 @@ const form = ref({
 // 在庫の列は、在庫を見られる人（自社）だけ。資材マスタは全拠点共通なので、自拠点になければ他拠点の在庫が同じ行で分かる
 const headers = computed(() => [
   { title: '型番', key: 'part_number', width: '150px' },
-  { title: '資材名', key: 'name' },
-  { title: 'カテゴリ', key: 'category', width: '100px' },
-  { title: 'メーカー', key: 'manufacturer.name', width: '140px' },
+  { title: '資材名', key: 'name', minWidth: '260px' },
+  { title: 'カテゴリ', key: 'category', width: '90px' },
+  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
   ...(canViewStocks.value
     ? [
-        { title: '自拠点の在庫', key: 'own_stock', width: '120px', align: 'end' as const },
-        { title: '他拠点の在庫', key: 'other_stock', width: '260px' },
+        { title: '自拠点の在庫', key: 'own_stock', width: '110px', align: 'end' as const },
+        { title: '他拠点の在庫', key: 'other_stock', width: '230px' },
       ]
     : []),
-  { title: '入手性', key: 'availability', width: '90px' },
+  { title: '入手性', key: 'availability', width: '80px' },
   { title: '危険物', key: 'is_hazardous', width: '70px' },
 ])
 
@@ -187,13 +188,11 @@ watch(filters, fetchMaterials, { deep: true })
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <h1 class="text-h5">資材管理</h1>
-      <v-spacer />
+    <PageHeader title="資材管理" description="部品や消耗品の資材マスタです。型番の表記ゆれを吸収して探せ、他拠点の在庫も同じ行で分かります。">
       <v-btn v-if="canManageMaterial" color="primary" prepend-icon="mdi-plus" @click="openDialog()">新規登録</v-btn>
-    </div>
+    </PageHeader>
 
-    <div class="d-flex ga-4 mb-4 flex-wrap align-center">
+    <div class="pk-filters">
       <v-text-field
         v-model="filters.q"
         label="資材名・型番検索"
@@ -247,6 +246,9 @@ watch(filters, fetchMaterials, { deep: true })
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.part_number="{ item }">
+        <span class="text-no-wrap">{{ item.part_number }}</span>
+      </template>
       <template #item.category="{ item }">
         {{ categoryLabel[item.category] || item.category }}
       </template>
