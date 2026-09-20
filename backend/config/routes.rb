@@ -38,6 +38,9 @@ Rails.application.routes.draw do
           get :next_suggestion
           post :duplicate
         end
+        resources :tasks, controller: "maintenance_tasks", only: [ :create, :update, :destroy ] do
+          collection { post :bulk }
+        end
       end
       resources :maintenance_series, only: [ :index, :show, :create, :update ]
       resources :maintenance_assignments, only: [ :create, :destroy ]

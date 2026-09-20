@@ -45,6 +45,7 @@ const headers = [
   { title: '名称', key: 'title' },
   { title: '対象設備', key: 'equipments', sortable: false },
   { title: '系列', key: 'maintenance_series.name', width: '150px' },
+  { title: '作業', key: 'tasks_summary', sortable: false, width: '90px' },
   { title: '担当者', key: 'assignees', sortable: false, width: '170px' },
   { title: '状態', key: 'status', width: '100px' },
 ]
@@ -137,6 +138,10 @@ watch(filters, fetchMaintenances, { deep: true })
       <template #item.planned_start_on="{ item }"><span class="text-no-wrap">{{ periodLabel(item.planned_start_on, item.planned_end_on) }}</span></template>
       <template #item.equipments="{ item }">
         <v-chip v-for="equipment in item.equipments" :key="equipment.id" size="x-small" label variant="tonal" class="mr-1 my-1">{{ equipment.name }}</v-chip>
+      </template>
+      <template #item.tasks_summary="{ item }">
+        <span v-if="item.tasks_summary?.total" class="text-no-wrap">{{ item.tasks_summary.completed }} / {{ item.tasks_summary.total }}</span>
+        <span v-else class="text-medium-emphasis">—</span>
       </template>
       <template #item.assignees="{ item }">{{ assignees(item) || '未割当' }}</template>
       <template #item.status="{ item }">

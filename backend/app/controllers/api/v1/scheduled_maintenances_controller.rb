@@ -35,8 +35,10 @@ module Api
         page, per_page = pagination_params
         maintenances = maintenances.limit(per_page).offset((page - 1) * per_page)
 
+        rows = maintenances.as_json(include: MAINTENANCE_INCLUDE)
+        summaries = tasks_summaries(rows.map { |row| row["id"] })
         render json: {
-          data: maintenances.as_json(include: MAINTENANCE_INCLUDE),
+          data: rows.map { |row| row.merge("tasks_summary" => summaries[row["id"]] || { "total" => 0, "completed" => 0 }) },
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end
@@ -44,7 +46,13 @@ module Api
       # GET /api/v1/scheduled_maintenances/:id
       def show
         authorize @maintenance
-        render json: { data: @maintenance.as_json(include: MAINTENANCE_INCLUDE) }
+        tasks = @maintenance.maintenance_tasks.includes(*MaintenanceTasksController::TASK_INCLUDE.keys, :inspections).order(:id)
+        render json: {
+          data: @maintenance.as_json(include: MAINTENANCE_INCLUDE).merge(
+            "maintenance_tasks" => tasks.map { |task| MaintenanceTasksController.task_json(task) },
+            "tasks_summary" => tasks_summaries([ @maintenance.id ])[@maintenance.id] || { "total" => 0, "completed" => 0 }
+          )
+        }
       end
 
       # GET /api/v1/scheduled_maintenances/:id/next_suggestion
@@ -67,6 +75,7 @@ module Api
           copy.save!
           record_audit_log("create", copy)
           @maintenance.maintenance_assignments.each { |assignment| copy.maintenance_assignments.create!(user_id: assignment.user_id, role: assignment.role) }
+          copy_tasks!(copy)
         end
 
         render json: { data: copy.reload.as_json(include: MAINTENANCE_INCLUDE) }, status: :created
@@ -117,6 +126,26 @@ module Api
 
       def set_maintenance
         @maintenance = ScheduledMaintenance.includes(:site, :equipments, :accepted_by, maintenance_assignments: :user).find(params[:id])
+      end
+
+      # 作業の進捗（見送りを除く作業の数と、完了した数）。{ 定期整備ID => { total:, completed: } }
+      def tasks_summaries(ids)
+        counts = MaintenanceTask.where(scheduled_maintenance_id: ids).group(:scheduled_maintenance_id, :status).count
+        counts.each_with_object({}) do |((maintenance_id, status), count), result|
+          summary = (result[maintenance_id] ||= { "total" => 0, "completed" => 0 })
+          summary["total"] += count unless status == "cancelled"
+          summary["completed"] += count if status == "completed"
+        end
+      end
+
+      # 複製の作業: 次回の対象設備に残る設備の作業を引き継ぐ（状態は未着手に戻し、完了日は引き継がない）
+      def copy_tasks!(copy)
+        @maintenance.maintenance_tasks.where(equipment_id: copy.equipment_ids).find_each do |task|
+          copy.maintenance_tasks.create!(
+            department_id: task.department_id, equipment_id: task.equipment_id, instrument_id: task.instrument_id, kind: task.kind,
+            title: task.title, checklist_template_id: task.checklist_template_id, assigned_to_id: task.assigned_to_id, notes: task.notes
+          )
+        end
       end
 
       # assignments が送られたときだけ、担当者を送られた内容に置き換える

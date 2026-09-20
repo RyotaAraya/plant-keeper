@@ -16,10 +16,13 @@ test('設定のチェックリストに、機器の種類 × 周期のテンプ�
   for (const name of ['伝送器 巡回点検', '伝送器 月次点検', '伝送器 年次点検', '伝送器 定修点検', '調節弁 年次点検', '遮断弁・インターロック 年次点検', '安全弁 定修点検', 'タンク液面計 年次点検']) {
     const row = page.getByRole('row', { name: new RegExp(`^${name}`) })
     await expect(row, name).toBeVisible()
-    const count = Number(await row.getByRole('cell').nth(3).innerText())
+    const count = Number(await row.getByRole('cell').nth(4).innerText()) // 名前・種別・周期・部署・項目数
     expect(count, name).toBeGreaterThanOrEqual(4)
     expect(count, name).toBeLessThanOrEqual(12)
   }
+  // 周期（巡回・月次・年次・定修）も一覧に出る
+  await expect(page.getByRole('row', { name: /^伝送器 定修点検/ }).getByRole('cell').nth(2)).toHaveText('定修')
+  await expect(page.getByRole('row', { name: /^伝送器 巡回点検/ }).getByRole('cell').nth(2)).toHaveText('巡回')
 })
 
 test('点検フォームのテンプレートの選択肢は機器の種類 × 周期の名前で、旧テンプレート（〜チェックリスト）は出ない', async ({ page }) => {

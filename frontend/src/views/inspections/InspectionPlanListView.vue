@@ -88,7 +88,8 @@ async function fetchMasters() {
     loadSiteOptions(filters.value.site_ids),
     api.get('/checklist_templates'),
   ])
-  templates.value = tmplRes.data.data
+  // 定修のチェックリストは、点検計画ではなく、定期整備の作業で使う
+  templates.value = tmplRes.data.data.filter((t: any) => t.cycle !== 'turnaround')
 }
 
 // 拠点を変えたら、表示する拠点にない設備の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）

@@ -60,6 +60,7 @@ module Api
               department: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
               checklist_template: { only: [ :id, :name ] },
+              maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ] },
               inspection_items: {
                 include: {
                   trouble: { only: [ :id, :title, :status ] },
@@ -233,7 +234,7 @@ module Api
 
       def set_inspection
         @inspection = Inspection.includes(
-          :user, :equipment, :department, :instrument, :checklist_template,
+          :user, :equipment, :department, :instrument, :checklist_template, :maintenance_task,
           inspection_items: [ :trouble, :instrument ],
           inspection_reference_standards: :reference_standard
         ).find(params[:id])
@@ -241,7 +242,7 @@ module Api
 
       def inspection_params
         params.require(:inspection).permit(
-          :checklist_template_id, :inspection_plan_id, :equipment_id, :instrument_id,
+          :checklist_template_id, :inspection_plan_id, :maintenance_task_id, :equipment_id, :instrument_id,
           :department_id, :inspection_type, :status, :inspected_at, :notes
         )
       end

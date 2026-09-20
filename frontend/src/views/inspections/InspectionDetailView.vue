@@ -133,6 +133,12 @@ onMounted(fetchInspection)
               <div class="text-caption text-grey">テンプレート</div>
               <div>{{ inspection.checklist_template?.name || '—' }}</div>
             </v-col>
+            <v-col v-if="inspection.maintenance_task" cols="6" md="3">
+              <div class="text-caption text-grey">定期整備の作業</div>
+              <a class="text-primary" style="cursor: pointer" data-testid="maintenance-task-link" @click="router.push(`/maintenances/${inspection.maintenance_task.scheduled_maintenance_id}`)">
+                {{ inspection.maintenance_task.title }}
+              </a>
+            </v-col>
           </v-row>
           <div v-if="inspection.notes" class="mt-3">
             <div class="text-caption text-grey">備考</div>

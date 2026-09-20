@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import MaintenanceSeriesDialog from '@/components/MaintenanceSeriesDialog.vue'
+import MaintenanceTaskBulkDialog from '@/components/MaintenanceTaskBulkDialog.vue'
+import MaintenanceTaskDialog from '@/components/MaintenanceTaskDialog.vue'
 import NextMaintenanceDialog from '@/components/NextMaintenanceDialog.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import SiteEquipmentSelect from '@/components/SiteEquipmentSelect.vue'
@@ -14,6 +16,9 @@ import {
   MAINTENANCE_STATUS_FLOW,
   MAINTENANCE_STATUS_LABEL,
   MAINTENANCE_TRANSITIONS,
+  TASK_KIND_LABEL,
+  TASK_STATUS_COLOR,
+  TASK_STATUS_LABEL,
   periodLabel,
   transitionLabel,
 } from '@/constants/maintenanceStatus'
@@ -37,6 +42,61 @@ const canComplete = computed(() => {
   return !!m?.accepted_on && !!m?.accepted_by && !!m?.acceptance_result && m.acceptance_result !== 'rework_required'
 })
 const showAcceptance = computed(() => ['acceptance', 'completed'].includes(maintenance.value?.status) || !!maintenance.value?.acceptance_result)
+
+// --- 作業（部署ごと） ---
+const taskDialog = ref(false)
+const bulkDialog = ref(false)
+const editingTask = ref<any>(null)
+const taskStatusItems = Object.entries(TASK_STATUS_LABEL).map(([value, title]) => ({ title, value }))
+const tasks = computed<any[]>(() => maintenance.value?.maintenance_tasks ?? [])
+const taskProgress = computed(() => maintenance.value?.tasks_summary ?? { total: 0, completed: 0 })
+// 部署ごとにまとめる（部署が未設定の作業は「部署未定」）
+const taskGroups = computed(() => {
+  const groups = new Map<string, any[]>()
+  for (const task of tasks.value) {
+    const name = task.department?.name ?? '部署未定'
+    groups.set(name, [...(groups.get(name) ?? []), task])
+  }
+  return [...groups.entries()].map(([name, list]) => ({ name, tasks: list }))
+})
+
+function openTaskDialog(task: any = null) {
+  editingTask.value = task
+  taskDialog.value = true
+}
+
+async function changeTaskStatus(task: any, status: string) {
+  actionError.value = ''
+  try {
+    await api.patch(`/scheduled_maintenances/${route.params.id}/tasks/${task.id}`, { maintenance_task: { status } })
+  } catch (e: any) {
+    actionError.value = (e.response?.data?.errors || ['状態を変更できませんでした']).join('、')
+  }
+  await fetchMaintenance()
+}
+
+async function deleteTask(task: any) {
+  if (!confirm(`「${task.title}」を削除しますか？`)) return
+  actionError.value = ''
+  try {
+    await api.delete(`/scheduled_maintenances/${route.params.id}/tasks/${task.id}`)
+  } catch (e: any) {
+    actionError.value = (e.response?.data?.errors || ['削除できませんでした']).join('、')
+  }
+  await fetchMaintenance()
+}
+
+// 作業から点検を実施する（設備・計器・チェックリストを引き継ぐ。点検が下書きを出ると、作業が完了になる）
+function startInspection(task: any) {
+  const query: Record<string, string> = {
+    maintenance_task_id: String(task.id),
+    equipment_id: String(task.equipment?.id ?? ''),
+    inspection_type: 'periodic',
+  }
+  if (task.instrument) query.instrument_id = String(task.instrument.id)
+  if (task.checklist_template) query.checklist_template_id = String(task.checklist_template.id)
+  router.push({ path: '/inspections/new', query })
+}
 
 // 系列（繰り返しのまとまり）: 設備ごとの周期と、各回の履歴
 const series = ref<any>(null)
@@ -261,6 +321,80 @@ onMounted(fetchMaintenance)
         </v-card-text>
       </v-card>
 
+      <!-- 作業（部署ごと） -->
+      <v-card class="mb-4" data-testid="tasks-card">
+        <v-card-title class="d-flex align-center text-subtitle-1">
+          作業
+          <span class="ml-2 text-body-2 text-medium-emphasis" data-testid="tasks-progress">完了 {{ taskProgress.completed }} / {{ taskProgress.total }}</span>
+          <v-spacer />
+          <v-btn v-if="canManageMaintenance" size="small" variant="outlined" class="mr-2" prepend-icon="mdi-playlist-plus" @click="bulkDialog = true">計器を一括追加</v-btn>
+          <v-btn v-if="canManageMaintenance" size="small" color="primary" prepend-icon="mdi-plus" @click="openTaskDialog()">作業を追加</v-btn>
+        </v-card-title>
+        <v-card-text>
+          <v-progress-linear v-if="taskProgress.total" :model-value="(taskProgress.completed / taskProgress.total) * 100" color="success" height="6" rounded class="mb-3" />
+          <p v-if="!tasks.length" class="text-body-2 text-medium-emphasis">
+            作業はまだありません。部署ごとに、この整備で点検・整備する設備や計器を追加します（「計器を一括追加」で、設備の計器を種類ごとの定修点検つきでまとめて追加できます）。
+          </p>
+          <div v-for="group in taskGroups" :key="group.name" class="mb-4">
+            <div class="text-subtitle-2 mb-1">{{ group.name }}（{{ group.tasks.length }}）</div>
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th>対象</th>
+                  <th>種類</th>
+                  <th>内容</th>
+                  <th>担当者</th>
+                  <th>状態</th>
+                  <th>完了日</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="task in group.tasks" :key="task.id" :data-testid="`task-${task.title}`">
+                  <td class="text-no-wrap">{{ task.equipment?.name }}<span v-if="task.instrument"> / {{ task.instrument.tag_number }}</span></td>
+                  <td>{{ TASK_KIND_LABEL[task.kind] }}</td>
+                  <td>
+                    {{ task.title }}
+                    <div v-if="task.checklist_template && !task.title.includes(task.checklist_template.name)" class="text-caption text-medium-emphasis">{{ task.checklist_template.name }}</div>
+                    <div v-if="task.notes" class="text-caption text-medium-emphasis">{{ task.notes }}</div>
+                  </td>
+                  <td class="text-no-wrap">{{ task.assigned_to?.name || '—' }}</td>
+                  <td style="min-width: 130px">
+                    <v-select
+                      :model-value="task.status"
+                      :items="taskStatusItems"
+                      item-title="title"
+                      item-value="value"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      :aria-label="`${task.title}の状態`"
+                      :base-color="TASK_STATUS_COLOR[task.status]"
+                      @update:model-value="changeTaskStatus(task, $event)"
+                    />
+                  </td>
+                  <td class="text-no-wrap">{{ task.completed_on || '—' }}</td>
+                  <td class="text-no-wrap text-right">
+                    <v-btn
+                      v-if="task.kind === 'inspection' && !['completed', 'cancelled'].includes(task.status)"
+                      size="x-small"
+                      variant="outlined"
+                      color="primary"
+                      @click="startInspection(task)"
+                    >
+                      点検を実施
+                    </v-btn>
+                    <v-btn v-else-if="task.latest_inspection" size="x-small" variant="text" @click="router.push(`/inspections/${task.latest_inspection.id}`)">点検記録</v-btn>
+                    <v-btn v-if="canManageMaintenance" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${task.title}を編集`" @click="openTaskDialog(task)" />
+                    <v-btn v-if="canManageMaintenance" icon="mdi-delete" size="x-small" variant="text" color="error" :aria-label="`${task.title}を削除`" @click="deleteTask(task)" />
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
+        </v-card-text>
+      </v-card>
+
       <!-- 系列（繰り返し） -->
       <v-card class="mb-4" data-testid="series-card">
         <v-card-title class="d-flex align-center text-subtitle-1">
@@ -356,6 +490,8 @@ onMounted(fetchMaintenance)
       <h2 class="text-h6 mb-3">変更履歴</h2>
       <ResourceHistory auditable-type="ScheduledMaintenance" :auditable-id="maintenance.id" />
 
+      <MaintenanceTaskDialog v-model="taskDialog" :maintenance="maintenance" :task="editingTask" @saved="fetchMaintenance" />
+      <MaintenanceTaskBulkDialog v-model="bulkDialog" :maintenance="maintenance" @saved="fetchMaintenance" />
       <MaintenanceSeriesDialog v-model="seriesDialog" :series="series" :maintenance="maintenance" @saved="fetchMaintenance" />
       <NextMaintenanceDialog v-model="nextDialog" :maintenance-id="maintenance.id" @created="goToCreated" />
 

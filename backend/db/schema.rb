@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_020100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -48,6 +48,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "is_active", default: true, null: false
+    t.string "cycle"
     t.index ["department_id"], name: "index_checklist_templates_on_department_id"
   end
 
@@ -184,12 +185,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "inspection_plan_id"
+    t.bigint "maintenance_task_id"
     t.index ["checklist_template_id"], name: "index_inspections_on_checklist_template_id"
     t.index ["department_id"], name: "index_inspections_on_department_id"
     t.index ["equipment_id"], name: "index_inspections_on_equipment_id"
     t.index ["inspection_plan_id"], name: "index_inspections_on_inspection_plan_id"
     t.index ["inspection_type"], name: "index_inspections_on_inspection_type"
     t.index ["instrument_id"], name: "index_inspections_on_instrument_id"
+    t.index ["maintenance_task_id"], name: "index_inspections_on_maintenance_task_id"
     t.index ["status"], name: "index_inspections_on_status"
     t.index ["user_id"], name: "index_inspections_on_user_id"
   end
@@ -267,6 +270,29 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
     t.index ["maintenance_series_id", "equipment_id"], name: "index_ms_equipments_on_series_and_equipment", unique: true
     t.index ["maintenance_series_id"], name: "index_maintenance_series_equipments_on_maintenance_series_id"
     t.check_constraint "interval_months > 0", name: "maintenance_series_equipments_interval_positive"
+  end
+
+  create_table "maintenance_tasks", force: :cascade do |t|
+    t.bigint "scheduled_maintenance_id", null: false
+    t.bigint "department_id"
+    t.bigint "equipment_id", null: false
+    t.bigint "instrument_id"
+    t.bigint "checklist_template_id"
+    t.bigint "assigned_to_id"
+    t.string "kind", default: "inspection", null: false
+    t.string "title", null: false
+    t.string "status", default: "not_started", null: false
+    t.date "completed_on"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assigned_to_id"], name: "index_maintenance_tasks_on_assigned_to_id"
+    t.index ["checklist_template_id"], name: "index_maintenance_tasks_on_checklist_template_id"
+    t.index ["department_id"], name: "index_maintenance_tasks_on_department_id"
+    t.index ["equipment_id"], name: "index_maintenance_tasks_on_equipment_id"
+    t.index ["instrument_id"], name: "index_maintenance_tasks_on_instrument_id"
+    t.index ["scheduled_maintenance_id", "status"], name: "index_maintenance_tasks_on_scheduled_maintenance_id_and_status"
+    t.index ["scheduled_maintenance_id"], name: "index_maintenance_tasks_on_scheduled_maintenance_id"
   end
 
   create_table "manufacturers", force: :cascade do |t|
@@ -604,6 +630,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
   add_foreign_key "inspections", "equipments"
   add_foreign_key "inspections", "inspection_plans"
   add_foreign_key "inspections", "instruments"
+  add_foreign_key "inspections", "maintenance_tasks"
   add_foreign_key "inspections", "users"
   add_foreign_key "instruments", "equipments"
   add_foreign_key "instruments", "line_classes"
@@ -613,6 +640,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
   add_foreign_key "maintenance_series", "sites"
   add_foreign_key "maintenance_series_equipments", "equipments"
   add_foreign_key "maintenance_series_equipments", "maintenance_series"
+  add_foreign_key "maintenance_tasks", "checklist_templates"
+  add_foreign_key "maintenance_tasks", "departments"
+  add_foreign_key "maintenance_tasks", "equipments"
+  add_foreign_key "maintenance_tasks", "instruments"
+  add_foreign_key "maintenance_tasks", "scheduled_maintenances"
+  add_foreign_key "maintenance_tasks", "users", column: "assigned_to_id"
   add_foreign_key "material_alternatives", "materials"
   add_foreign_key "material_alternatives", "materials", column: "alternative_material_id"
   add_foreign_key "materials", "manufacturers"

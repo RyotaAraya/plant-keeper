@@ -26,6 +26,13 @@ export function transitionLabel(from: string, to: string): string {
   return `${MAINTENANCE_STATUS_LABEL[to]}${back ? 'に戻す' : 'にする'}`
 }
 
+// 定期整備の作業（部署ごとの、設備・計器の点検や整備）
+export const TASK_STATUS_LABEL: Record<string, string> = { not_started: '未着手', in_progress: '実施中', completed: '完了', cancelled: '見送り' }
+export const TASK_STATUS_COLOR: Record<string, string> = { not_started: 'blue-grey', in_progress: 'warning', completed: 'success', cancelled: 'grey' }
+export const TASK_KIND_LABEL: Record<string, string> = { inspection: '点検', overhaul: '整備', replacement: '交換', work: '工事' }
+// チェックリストの周期
+export const TEMPLATE_CYCLE_LABEL: Record<string, string> = { patrol: '巡回', monthly: '月次', annual: '年次', turnaround: '定修' }
+
 export const ACCEPTANCE_RESULT_LABEL: Record<string, string> = {
   passed: '合格', passed_with_remarks: '指摘つき合格', rework_required: '手直しあり',
 }

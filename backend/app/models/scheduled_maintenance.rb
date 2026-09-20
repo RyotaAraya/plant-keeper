@@ -10,6 +10,7 @@ class ScheduledMaintenance < ApplicationRecord
   has_many :scheduled_maintenance_equipments, dependent: :destroy
   has_many :equipments, through: :scheduled_maintenance_equipments
   has_many :maintenance_assignments, dependent: :destroy
+  has_many :maintenance_tasks, dependent: :destroy
   has_many :users, through: :maintenance_assignments
 
   enum :status, { planned: "planned", preparing: "preparing", in_progress: "in_progress", acceptance: "acceptance", completed: "completed" }
@@ -30,6 +31,8 @@ class ScheduledMaintenance < ApplicationRecord
   validate :planned_period_is_valid
   validate :equipments_are_present_and_in_site
   validate :series_is_in_site
+  validate :task_equipments_remain, on: :update
+  validate :tasks_are_finished_for_acceptance
   validate :acceptance_is_recorded_to_complete
 
   before_save :stamp_actual_dates, if: :status_changed?
@@ -49,6 +52,20 @@ class ScheduledMaintenance < ApplicationRecord
     elsif equipments.any? { |equipment| equipment.site_id != site_id }
       errors.add(:base, "対象設備は、定期整備と同じ拠点の設備にしてください")
     end
+  end
+
+  # 作業のある設備は、対象設備から外せない
+  def task_equipments_remain
+    orphaned = maintenance_tasks.where.not(equipment_id: equipment_ids).includes(:equipment).map { |task| task.equipment.name }.uniq
+    errors.add(:base, "作業のある設備は外せません（#{orphaned.join('・')}）。先に作業を削除してください") if orphaned.any?
+  end
+
+  # 検収へ進めるのは、未完了（未着手・実施中）の作業がないとき（完了か見送り）。作業のない定期整備は制限しない
+  def tasks_are_finished_for_acceptance
+    return unless status_changed?(to: "acceptance")
+
+    unfinished = maintenance_tasks.where(status: %w[not_started in_progress]).count
+    errors.add(:base, "未完了の作業が#{unfinished}件あります（完了か見送りにしてから、検収へ進んでください）") if unfinished.positive?
   end
 
   def series_is_in_site

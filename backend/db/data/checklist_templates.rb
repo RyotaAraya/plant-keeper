@@ -9,6 +9,8 @@
 module ChecklistTemplateCatalog
   SITE = "川崎製油所"
   SECTION = "計器保全課"
+  # 名前の末尾 => 周期（巡回・月次・年次・定修）
+  CYCLES = { "巡回点検" => "patrol", "月次点検" => "monthly", "年次点検" => "annual", "定修点検" => "turnaround" }.freeze
 
   # 運転中の点検の共通項目: 制御を手動にしたら戻す、インターロックに関わる計器はバイパス申請が必要（申請番号の記録と、解除・復帰後の確認）
   MANUAL_RETURN = [ "制御を手動にして点検した場合、自動に戻したことを確認", "check" ].freeze
@@ -195,5 +197,5 @@ module ChecklistTemplateCatalog
     # --- 拠点ごとの巡回点検（川崎の伝送器 巡回点検と同じ項目） ---
     { name: "根岸 伝送器 巡回点検", inspection_type: "routine", site: "根岸製油所", items: TRANSMITTER_PATROL },
     { name: "堺 伝送器 巡回点検", inspection_type: "routine", site: "堺製油所", items: TRANSMITTER_PATROL }
-  ].map { |template| { site: SITE }.merge(template) }.freeze
+  ].map { |template| { site: SITE, cycle: CYCLES.find { |suffix, _| template[:name].end_with?(suffix) }&.last }.merge(template) }.freeze
 end

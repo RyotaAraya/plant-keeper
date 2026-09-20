@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // 「次回を作る」: 系列の周期から提案された名称・日付・対象設備を確認して直し、次回の定期整備を複製で作る。
 // 対象設備は、周期が来ているものが最初から選ばれている（理由が付く）。系列に属さない整備は、日付を入力する
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import api from '@/api/axios'
 
 const props = defineProps<{ maintenanceId: number }>()
 const open = defineModel<boolean>({ default: false })
 const emit = defineEmits<{ created: [id: number] }>()
 
-type Candidate = { id: number; name: string; included: boolean; reason: string }
+type Candidate = { id: number; name: string; included: boolean; reason: string; tasks_count: number }
 const form = ref({ title: '', planned_start_on: '', planned_end_on: '' })
 const candidates = ref<Candidate[]>([])
 const assignmentsCount = ref(0)
@@ -29,6 +29,8 @@ watch(open, async (isOpen) => {
     loading.value = false
   }
 })
+
+const carriedTasks = computed(() => candidates.value.filter((c) => c.included).reduce((sum, c) => sum + c.tasks_count, 0))
 
 async function create() {
   errors.value = []
@@ -52,7 +54,7 @@ async function create() {
         <v-progress-linear v-if="loading" indeterminate />
         <template v-else>
           <div class="text-caption text-medium-emphasis mb-3">
-            系列の周期から、次回の名称・日付・対象設備を提案しました。確認して、必要なら直してください。担当者（{{ assignmentsCount }}人）と説明は引き継ぎ、状態は計画中で作ります。
+            系列の周期から、次回の名称・日付・対象設備を提案しました。確認して、必要なら直してください。担当者（{{ assignmentsCount }}人）・説明・作業は引き継ぎ、状態は計画中で作ります。
           </div>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -65,8 +67,9 @@ async function create() {
           <div class="text-subtitle-2 mt-2 mb-1">対象設備</div>
           <div v-for="candidate in candidates" :key="candidate.id" class="d-flex align-center" :data-testid="`candidate-${candidate.name}`">
             <v-checkbox v-model="candidate.included" :label="candidate.name" density="compact" hide-details />
-            <span class="text-caption text-medium-emphasis ml-2">{{ candidate.reason }}</span>
+            <span class="text-caption text-medium-emphasis ml-2">{{ candidate.reason }}<template v-if="candidate.tasks_count">・作業 {{ candidate.tasks_count }}件</template></span>
           </div>
+          <div class="text-caption mt-2" data-testid="carried-tasks">作業 {{ carriedTasks }}件を、未着手に戻して引き継ぎます。</div>
         </template>
       </v-card-text>
       <v-card-actions>

@@ -17,6 +17,7 @@ class InspectionPlan < ApplicationRecord
   validates :interval_days, numericality: { only_integer: true, greater_than: 0 }
   validates :next_due_on, presence: true
   validate :exactly_one_target
+  validate :template_is_not_turnaround
 
   scope :active, -> { where(is_active: true) }
   scope :overdue, -> { active.where(next_due_on: ...today) }
@@ -48,6 +49,13 @@ class InspectionPlan < ApplicationRecord
   end
 
   private
+
+  # 定修のチェックリストは、点検計画ではなく、定期整備の作業で使う（変更したときだけ確認する）
+  def template_is_not_turnaround
+    return unless checklist_template&.cycle_turnaround? && (new_record? || checklist_template_id_changed?)
+
+    errors.add(:checklist_template, "は定修のチェックリストのため、点検計画には使えません（定期整備の作業で使います）")
+  end
 
   def exactly_one_target
     errors.add(:base, "点検の対象は、設備か基準器のどちらか一方を指定してください") if equipment_id.present? == reference_standard_id.present?

@@ -136,7 +136,7 @@ module Api
       end
 
       def template_params
-        params.require(:checklist_template).permit(:name, :department_id, :inspection_type, :is_active)
+        params.require(:checklist_template).permit(:name, :department_id, :inspection_type, :cycle, :is_active)
       end
     end
   end

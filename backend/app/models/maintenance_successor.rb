@@ -66,7 +66,13 @@ class MaintenanceSuccessor
       else
         [ false, "#{interval}か月周期・前回 #{last_on}（まだ周期が来ていない）" ]
       end
-    { "id" => equipment.id, "name" => equipment.name, "interval_months" => interval, "last_included_on" => last_on, "included" => included, "reason" => reason }
+    { "id" => equipment.id, "name" => equipment.name, "interval_months" => interval, "last_included_on" => last_on, "included" => included,
+      "reason" => reason, "tasks_count" => tasks_counts.fetch(equipment.id, 0) }
+  end
+
+  # 今回の作業の設備ごとの件数（次回に引き継ぐ作業の数）
+  def tasks_counts
+    @tasks_counts ||= @maintenance.maintenance_tasks.group(:equipment_id).count
   end
 
   def intervals
