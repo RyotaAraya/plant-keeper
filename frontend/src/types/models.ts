@@ -535,6 +535,8 @@ export interface InspectionReferenceStandardUse {
 // AI支援（不具合報告の下書き）
 export interface AiStatus {
   enabled: boolean
+  // どのAIか。fake=APIを呼ばないダミー / claude=本物 / null=無効
+  provider: 'fake' | 'claude' | null
   daily_limit: number
   remaining_today: number
   max_memo_length: number

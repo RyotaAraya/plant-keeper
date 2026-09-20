@@ -10,6 +10,8 @@ module Api
         render json: {
           data: {
             enabled: enabled,
+            # どのAIか（fake=APIを呼ばないダミー / claude=本物）。無効なときは nil。E2Eが、本物のAPIを呼ばないために使う
+            provider: (AiConfig.fake? ? "fake" : "claude" if enabled),
             daily_limit: AiConfig.daily_limit_per_user,
             remaining_today: enabled ? AiSuggestion.remaining_today_for(current_user) : 0,
             max_memo_length: AiConfig::MAX_MEMO_LENGTH

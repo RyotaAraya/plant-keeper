@@ -260,7 +260,15 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     get "/api/v1/ai/status", headers: @headers
 
     assert_response :ok
-    assert_equal({ "enabled" => true, "daily_limit" => 5, "remaining_today" => 4, "max_memo_length" => 1000 }, json["data"])
+    assert_equal({ "enabled" => true, "provider" => "claude", "daily_limit" => 5, "remaining_today" => 4, "max_memo_length" => 1000 }, json["data"])
+
+    ENV["AI_PROVIDER"] = "fake"
+    get "/api/v1/ai/status", headers: @headers
+    assert_equal "fake", json["data"]["provider"]
+
+    ENV["AI_ENABLED"] = "false"
+    get "/api/v1/ai/status", headers: @headers
+    assert_nil json["data"]["provider"]
   end
 
   test "点検を作れる人全員が使える（協力会社の技能員を含む）。ログインしていなければ401" do

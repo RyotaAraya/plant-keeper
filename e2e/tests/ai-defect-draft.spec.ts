@@ -1,10 +1,18 @@
 import { test, expect, login, selectFirstOption, ACCOUNTS } from './support'
 
-// 不具合報告のAI支援（要求仕様書 2.5）。ローカル・CIはバックエンドを AI_PROVIDER=fake（APIを呼ばないダミー）で動かす。
-// stg（APIキーあり）で実行すると本物のAIを呼ぶため、下書きの中身は決まらない（画面に出た下書きと入力欄が一致することだけを確かめる）
+// 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**: バックエンドが AI_PROVIDER=fake（APIを呼ばないダミー）のときだけ
+// 実行し、本物のAI（キーあり）や無効（キーなし）のバックエンドではスキップする（判定はバックエンドの /ai/status の provider）。
+// CI は fake で起動するため実行する（fake でなければ、黙ってスキップされないよう失敗にする）
 test('現場メモからAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   await login(page, ACCOUNTS.member)
+  const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
   await page.goto('/inspections/new')
+  const provider = (await (await statusResponse).json()).data.provider
+  if (provider !== 'fake') {
+    // CIで黙ってスキップされて、AIの画面が検証されないままになるのを防ぐ
+    expect(process.env.CI, 'CIでは、バックエンドを AI_PROVIDER=fake で起動する').toBeFalsy()
+    test.skip(true, `本物のAIは呼ばない（バックエンドが AI_PROVIDER=fake のときだけ実行する。いまは ${provider ?? '無効'}）`)
+  }
   await selectFirstOption(page, '設備 *')
   await selectFirstOption(page, '部署 *')
   await page.getByRole('button', { name: '項目追加' }).click()
@@ -14,13 +22,7 @@ test('現場メモからAIの下書きを作り、反映すると入力欄に入
   await expect(page.getByTestId('ai-assist')).toHaveCount(0)
   await page.getByRole('checkbox', { name: '不具合あり' }).check()
 
-  const assist = page.getByTestId('ai-assist')
-  const visible = await assist.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false)
-  if (!visible) {
-    // CIで黙ってスキップされて、AIの画面が検証されないままになるのを防ぐ
-    expect(process.env.CI, 'CIでは、バックエンドを AI_PROVIDER=fake で起動する').toBeFalsy()
-    test.skip(true, 'AI機能が使えない環境（ANTHROPIC_API_KEY・AI_PROVIDER が未設定）')
-  }
+  await expect(page.getByTestId('ai-assist')).toBeVisible()
 
   // メモが空のうちは押せない
   const button = page.getByTestId('ai-draft-button')
