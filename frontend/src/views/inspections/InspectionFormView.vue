@@ -266,11 +266,18 @@ async function prefillFromPlan() {
   if (form.value.checklist_template_id) loadTemplate()
 }
 
+// 新規の点検記録の部署は、自分の所属部署を初期値にする（編集は記録の部署のまま。所属のない協力会社は未選択）
+function defaultDepartment() {
+  if (isEdit.value || form.value.department_id) return
+  form.value.department_id = authStore.user?.department_id ?? null
+}
+
 onMounted(async () => {
   void fetchAiStatus()
   await fetchMasters()
   await loadExisting()
   await prefillFromPlan()
+  defaultDepartment()
   await ensureOptionsCoverEquipment()
   await ensureDepartmentInOptions()
 })
