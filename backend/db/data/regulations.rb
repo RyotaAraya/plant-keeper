@@ -69,6 +69,7 @@ module RegulationCatalog
     "流動接触分解装置" => %w[high_pressure_gas boiler_pressure_vessel],
     "潤滑油製造装置" => %w[high_pressure_gas boiler_pressure_vessel],
     "ボイラー設備" => %w[boiler_pressure_vessel electricity],
+    "発電設備" => %w[electricity],
     "タンク設備" => %w[fire_service]
   }.freeze
 end

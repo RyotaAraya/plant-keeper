@@ -28,7 +28,7 @@ puts "法規区分: #{Regulation.count}件（設備への適用: #{EquipmentRegu
 puts "点検計画: #{InspectionPlan.count}件（期限超過: #{InspectionPlan.overdue.count}件）"
 puts "点検記録: #{Inspection.count}件"
 puts "トラブル: #{Trouble.count}件"
-puts "定期整備: #{ScheduledMaintenance.count}件"
+puts "定期整備: #{ScheduledMaintenance.count}件（系列: #{MaintenanceSeries.count}件 / 作業: #{MaintenanceTask.count}件 / 定修待ちのトラブル: #{Trouble.deferred.count}件）"
 puts "発注: #{Order.count}件"
 puts "修理: #{Repair.count}件"
 puts "監査ログ: #{AuditLog.count}件"

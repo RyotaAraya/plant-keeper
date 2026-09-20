@@ -340,19 +340,19 @@ onMounted(fetchMaintenance)
             <v-table density="compact">
               <thead>
                 <tr>
-                  <th>対象</th>
-                  <th>種類</th>
+                  <th class="text-no-wrap">対象</th>
+                  <th class="text-no-wrap">種類</th>
                   <th>内容</th>
-                  <th>担当者</th>
-                  <th>状態</th>
-                  <th>完了日</th>
+                  <th class="text-no-wrap">担当者</th>
+                  <th class="text-no-wrap">状態</th>
+                  <th class="text-no-wrap">完了日</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="task in group.tasks" :key="task.id" :data-testid="`task-${task.title}`">
                   <td class="text-no-wrap">{{ task.equipment?.name }}<span v-if="task.instrument"> / {{ task.instrument.tag_number }}</span></td>
-                  <td>{{ TASK_KIND_LABEL[task.kind] }}</td>
+                  <td class="text-no-wrap">{{ TASK_KIND_LABEL[task.kind] }}</td>
                   <td>
                     {{ task.title }}
                     <div v-if="task.checklist_template && !task.title.includes(task.checklist_template.name)" class="text-caption text-medium-emphasis">{{ task.checklist_template.name }}</div>
@@ -362,7 +362,7 @@ onMounted(fetchMaintenance)
                     </v-chip>
                   </td>
                   <td class="text-no-wrap">{{ task.assigned_to?.name || '—' }}</td>
-                  <td style="min-width: 130px">
+                  <td style="min-width: 150px">
                     <v-select
                       :model-value="task.status"
                       :items="taskStatusItems"

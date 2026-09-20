@@ -71,8 +71,8 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
 test('系列に属さない定期整備も、次回を作れる（日付は入力する）', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '定期整備', exact: true }).click()
-  // シードの定期整備（系列なし）。E2Eが作った系列つきの整備は除く
-  const row = page.locator('tbody tr', { has: page.locator('.v-chip'), hasNotText: 'E2E' }).first()
+  // シードの定期整備（系列なし）。E2Eが作った系列つきの整備と、デモの系列（A号ボイラー整備）は除く
+  const row = page.locator('tbody tr', { has: page.locator('.v-chip'), hasNotText: /E2E|A号ボイラー整備/ }).first()
   await expect(row).toBeVisible()
   await row.click()
 
