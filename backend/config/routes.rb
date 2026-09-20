@@ -35,6 +35,9 @@ Rails.application.routes.draw do
         member { post :defer_to_maintenance }
       end
       resources :trouble_responses, only: [ :create, :update ]
+      # AI支援（不具合報告の下書き）
+      get "ai/status", to: "ai#status"
+      post "ai/defect_drafts", to: "ai#defect_draft"
       resources :scheduled_maintenances, only: [ :index, :show, :create, :update ] do
         member do
           get :next_suggestion

@@ -525,3 +525,23 @@ export interface InspectionReferenceStandardUse {
   pre_check_passed: boolean | null
   pre_check_note: string
 }
+
+// AI支援（不具合報告の下書き）
+export interface AiStatus {
+  enabled: boolean
+  daily_limit: number
+  remaining_today: number
+  max_memo_length: number
+}
+
+export interface AiDefectDraft {
+  suggestion_id: number
+  title: string
+  description: string
+  // AIが提案しない（使えない値だった）ときは null
+  priority: 'low' | 'medium' | 'high' | 'critical' | null
+  priority_reason: string
+  possible_causes: string[]
+  check_points: string[]
+  remaining_today: number
+}

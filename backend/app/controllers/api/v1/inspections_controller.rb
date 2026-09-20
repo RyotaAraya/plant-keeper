@@ -219,7 +219,7 @@ module Api
       def create_trouble_for_defect!(inspection, ii, item)
         return unless item[:has_defect] && item[:defect_title].present? && ii.trouble.nil?
 
-        Trouble.create!(
+        trouble = Trouble.create!(
           inspection_item: ii,
           equipment_id: inspection.equipment_id,
           instrument_id: item[:instrument_id] || inspection.instrument_id,
@@ -230,6 +230,23 @@ module Api
           priority: item[:defect_priority] || "medium",
           reported_at: Time.current
         )
+        # AIの下書きをもとにしたときは、その提案のIDを残す（AIの案と、人が確定した内容を突き合わせられるように）
+        changes = trouble.saved_changes.except("updated_at", "created_at")
+        suggestion_id = ai_suggestion_id_for(trouble, item[:ai_suggestion_id])
+        changes = changes.merge("ai_suggestion_id" => suggestion_id) if suggestion_id
+        record_audit_log("create", trouble, changes: changes)
+      end
+
+      # 画面から送られた提案のIDのうち、本人が今回の設備・計器について作った成功済みの提案だけを認める。
+      # 一致しないものは黙って無視する（設備を変えたあとに送られても、点検の保存を止めない）
+      def ai_suggestion_id_for(trouble, id)
+        return if id.blank?
+
+        suggestion = AiSuggestion.find_by(id: id, user_id: current_user.id, kind: "defect_draft", status: "succeeded", equipment_id: trouble.equipment_id)
+        return unless suggestion
+        return if suggestion.instrument_id && suggestion.instrument_id != trouble.instrument_id
+
+        suggestion.id
       end
 
       def set_inspection

@@ -24,6 +24,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://plant-keeper-web.onrender.com
+      # AI支援（不具合報告の下書き）。Anthropic の APIキーをダッシュボードで設定すると、点検フォームにAIのボタンが出る（未設定なら出ない）
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: plant-keeper-db
@@ -64,6 +67,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://plant-keeper-web-stg.onrender.com
+      # AI支援（不具合報告の下書き）。Anthropic の APIキーをダッシュボードで設定すると、点検フォームにAIのボタンが出る（未設定なら出ない）
+      - key: ANTHROPIC_API_KEY
+        sync: false
       # 管理者による「デモデータの再投入」(admin/reseed) を許可する。本番には設定しない（既定は無効）
       - key: ALLOW_DEMO_RESEED
         value: "true"

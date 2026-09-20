@@ -55,7 +55,7 @@ const typeLabel: Record<string, string> = {
   ReferenceStandard: '基準器', ReferenceStandardCalibration: '基準器の校正',
   MaintenanceSeries: '定期整備の系列', MaintenanceTask: '定期整備の作業',
   InspectionPlan: '点検計画', Inspection: '点検', InspectionItem: '点検項目', ChecklistTemplate: 'チェックリスト',
-  Trouble: 'トラブル', TroubleResponse: 'トラブル対応',
+  Trouble: 'トラブル', TroubleResponse: 'トラブル対応', AiSuggestion: 'AI提案',
   ScheduledMaintenance: '定期整備', MaintenanceAssignment: '整備担当',
   Material: '資材', Manufacturer: 'メーカー', Warehouse: '倉庫', Stock: '在庫', StockTransaction: '在庫操作',
   Order: '発注', Repair: '修理', Service: '流体', LineClass: 'ラインクラス',

@@ -3,11 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationTable from '@/components/CalibrationTable.vue'
+import DefectAiAssist from '@/components/DefectAiAssist.vue'
 import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
-import type { InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
+import type { AiDefectDraft, AiStatus, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
@@ -24,6 +25,8 @@ const templates = ref<any[]>([])
 const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
+// AI支援の状況。AIが使えない環境（null・無効）では、AIのボタンを出さない
+const aiStatus = ref<AiStatus | null>(null)
 
 const form = ref({
   equipment_id: null as number | null,
@@ -114,8 +117,28 @@ async function fetchInstruments() {
   instruments.value = res.data.data
 }
 
+async function fetchAiStatus() {
+  try {
+    aiStatus.value = (await api.get('/ai/status')).data.data
+  } catch {
+    // AIの状況が取れなくても、点検の入力には影響しない（AIのボタンを出さないだけ）
+    aiStatus.value = null
+  }
+}
+
+// AIの下書きを、項目の不具合の入力欄に入れる（タイトル・説明・優先度だけ。保存は点検を保存したとき）。
+// どの提案をもとにしたかを、保存時に送る（監査ログに残り、AIの案と人が確定した内容を突き合わせられる）
+function applyAiDraft(item: any, draft: AiDefectDraft) {
+  item.defect_title = draft.title
+  item.defect_description = draft.description
+  if (draft.priority) item.defect_priority = draft.priority
+  item.ai_suggestion_id = draft.suggestion_id
+}
+
 async function onEquipmentChange() {
   form.value.instrument_id = null
+  // 別の設備についての提案は、この点検のトラブルには結びつけない
+  form.value.items.forEach((item) => { item.ai_suggestion_id = null })
   await fetchInstruments()
 }
 
@@ -135,6 +158,7 @@ function loadTemplate() {
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
+    ai_suggestion_id: null,
     instrument_id: null,
     calibration: item.item_type === 'calibration' ? emptyCalibrationInput() : null,
     calibration_snapshot: null,
@@ -152,6 +176,7 @@ function addItem() {
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
+    ai_suggestion_id: null,
     instrument_id: null,
     calibration: null,
     calibration_snapshot: null,
@@ -216,6 +241,7 @@ async function loadExisting() {
       defect_title: '',
       defect_description: '',
       defect_priority: 'medium',
+      ai_suggestion_id: null,
       instrument_id: item.instrument_id,
       calibration: item.item_type === 'calibration' ? calibrationInputFrom(item.calibration_data) : null,
       calibration_snapshot: item.calibration_data?.snapshot ?? null,
@@ -241,6 +267,7 @@ async function prefillFromPlan() {
 }
 
 onMounted(async () => {
+  void fetchAiStatus()
   await fetchMasters()
   await loadExisting()
   await prefillFromPlan()
@@ -392,24 +419,36 @@ onMounted(async () => {
           </v-col>
         </v-row>
         <v-expand-transition>
-          <v-row v-if="item.has_defect" dense class="mt-1">
-            <v-col cols="12" md="5">
-              <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field v-model="item.defect_description" label="説明" density="compact" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-select
-                v-model="item.defect_priority"
-                :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
-                item-title="title"
-                item-value="value"
-                label="優先度"
-                density="compact"
-              />
-            </v-col>
-          </v-row>
+          <div v-if="item.has_defect" class="mt-1">
+            <DefectAiAssist
+              v-if="aiStatus?.enabled"
+              :status="aiStatus"
+              :equipment-id="form.equipment_id"
+              :instrument-id="item.instrument_id ?? form.instrument_id"
+              :item-label="item.content"
+              :has-existing="!!item.defect_title"
+              @apply="applyAiDraft(item, $event)"
+              @remaining="aiStatus.remaining_today = $event"
+            />
+            <v-row dense>
+              <v-col cols="12" md="5">
+                <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="item.defect_description" label="説明" density="compact" />
+              </v-col>
+              <v-col cols="6" md="3">
+                <v-select
+                  v-model="item.defect_priority"
+                  :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
+                  item-title="title"
+                  item-value="value"
+                  label="優先度"
+                  density="compact"
+                />
+              </v-col>
+            </v-row>
+          </div>
         </v-expand-transition>
       </v-card-text>
     </v-card>

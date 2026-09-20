@@ -24,11 +24,12 @@ test('監査ログは自拠点・直近1か月が初期値で、対象の選択�
   await expect(page.getByLabel('開始日')).toHaveValue(params.get('from')!)
   await expect(page.getByLabel('終了日')).toHaveValue(params.get('to')!)
 
-  // 「対象モデル」ではなく「対象」。選択肢は日本語の呼び名だけ
+  // 「対象モデル」ではなく「対象」。選択肢は日本語の呼び名だけ（略語の「AI」は許す。英語のクラス名が出ていないことの確認）
   await page.locator('.v-field', { has: page.getByLabel('対象', { exact: true }) }).click()
   const options = await page.getByRole('option').allTextContents()
   expect(options.length).toBeGreaterThan(5)
-  expect(options.every((text) => !/[A-Za-z(]/.test(text))).toBe(true)
+  expect(options.every((text) => !/[A-Za-z(]/.test(text.replaceAll('AI', '')))).toBe(true)
+  expect(options).toContain('AI提案')
 })
 
 test('監査ログは、条件に合う記録をCSVで出力できる', async ({ page }) => {
