@@ -117,6 +117,7 @@ class AiResponseDraftsTest < ActionDispatch::IntegrationTest
     assert_response :bad_gateway
     assert_includes json["errors"].first, "対応記録の入力はAIなしで続けられます"
     assert_equal [ "failed", "ResponseDraftGenerator::InvalidOutput" ], [ AiSuggestion.last.status, AiSuggestion.last.error_class ]
+    assert_equal 19, json["remaining_today"]
   end
 
   test "APIの障害は502、タイムアウトは504" do
@@ -139,6 +140,7 @@ class AiResponseDraftsTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :too_many_requests
+    assert_equal 0, json["remaining_today"]
     assert_includes json["errors"].first, "対応記録の入力はAIなしで続けられます"
     assert_empty @client.calls
   end

@@ -55,4 +55,8 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
   await expect(result).toContainText('過去のトラブル')
   // 探しただけで、入力欄は変わらない
   await expect(page.getByLabel('トラブルタイトル')).toHaveValue('')
+
+  // メモを変えたら、前のメモに対する結果は消える（今の入力への結果に見えないように）
+  await page.getByLabel('現場メモ（AIで整える）').fill('指示値が急に振り切れた')
+  await expect(result).toHaveCount(0)
 })

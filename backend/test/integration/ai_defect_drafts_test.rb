@@ -111,6 +111,7 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     assert_includes json["errors"].first, "点検の入力はAIなしで続けられます"
     assert_equal "failed", AiSuggestion.last.status
     assert_equal "DefectDraftGenerator::InvalidOutput", AiSuggestion.last.error_class
+    assert_equal 19, json["remaining_today"] # 失敗も数えるため、画面の残り回数を合わせられるよう返す
   end
 
   test "APIの障害は502、タイムアウトは504で、どちらも失敗として記録する" do
@@ -150,6 +151,7 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
       end
     end
     assert_response :too_many_requests
+    assert_equal 0, json["remaining_today"]
     assert_includes json["errors"].first, "2回"
 
     other = create_user

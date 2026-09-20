@@ -18,9 +18,6 @@ class ResponseDraftGenerator
   HISTORY_ITEM_MAX = 200
   # メモから種類を決められないとき、AIが返す値（画面では提案なしとして扱う）
   UNKNOWN_TYPE = "unknown".freeze
-  RESPONSE_TYPE_LABELS = { "investigation" => "調査", "repair" => "修理", "replacement" => "交換", "observation" => "経過観察" }.freeze
-  STATUS_LABELS = { "open" => "未対応", "in_progress" => "対応中", "deferred" => "定修待ち", "resolved" => "解決済", "closed" => "完了" }.freeze
-  PRIORITY_LABELS = { "low" => "低", "medium" => "中", "high" => "高", "critical" => "緊急" }.freeze
 
   SYSTEM_PROMPT = <<~PROMPT
     あなたは、石油プラントの計装保全の現場で、トラブルへの対応の記録を整える助手です。

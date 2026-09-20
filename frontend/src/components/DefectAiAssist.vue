@@ -3,7 +3,7 @@
 // AIは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は点検を保存したとき）。
 // 同じメモで、過去の類似トラブルも探せる（要求仕様書 2.5.1。こちらも表示するだけで、何も変えない）。
 // AIが使えない・失敗したときも、下の入力欄はそのまま使える
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import api from '@/api/axios'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
@@ -31,6 +31,9 @@ const loading = ref(false)
 const draft = ref<AiDefectDraft | null>(null)
 const error = ref('')
 
+// メモ・設備・計器が変わったら、前の入力に対する類似トラブルの結果は消す（今の入力への結果に見えないように）
+watch([memo, () => props.equipmentId, () => props.instrumentId], () => similar.clear())
+
 function searchSimilar() {
   return similar.search({ equipmentId: props.equipmentId, instrumentId: props.instrumentId, memo: memo.value })
 }
@@ -54,8 +57,9 @@ async function generate() {
     emit('remaining', res.data.data.remaining_today)
   } catch (e: any) {
     error.value = e.response?.data?.errors?.[0] || 'AIから下書きを取得できませんでした。点検の入力はAIなしで続けられます'
-    // 上限に達した場合などに、画面の残り回数を実際に合わせる
-    if (e.response?.status === 429) emit('remaining', 0)
+    // 失敗・上限も回数に数えるため、画面の残り回数を実際に合わせる
+    const left = e.response?.data?.remaining_today
+    if (typeof left === 'number') emit('remaining', left)
   } finally {
     loading.value = false
   }

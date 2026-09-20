@@ -20,9 +20,6 @@ class SimilarTroubleFinder
   MATERIALS_MAX = 80
   RESPONSES_PER_CANDIDATE = 3
   NO_RESPONSES = "対応記録なし".freeze
-  STATUS_LABELS = { "open" => "未対応", "in_progress" => "対応中", "deferred" => "定修待ち", "resolved" => "解決済", "closed" => "完了" }.freeze
-  PRIORITY_LABELS = { "low" => "低", "medium" => "中", "high" => "高", "critical" => "緊急" }.freeze
-  RESPONSE_TYPE_LABELS = { "investigation" => "調査", "repair" => "修理", "replacement" => "交換", "observation" => "経過観察" }.freeze
 
   SYSTEM_PROMPT = <<~PROMPT
     あなたは、石油プラントの計装保全の現場で、過去のトラブルの記録から、今回の不具合に似た事例を探す助手です。

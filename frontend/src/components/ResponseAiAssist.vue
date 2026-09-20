@@ -34,8 +34,9 @@ async function generate() {
     emit('remaining', res.data.data.remaining_today)
   } catch (e: any) {
     error.value = e.response?.data?.errors?.[0] || 'AIから下書きを取得できませんでした。対応記録の入力はAIなしで続けられます'
-    // 上限に達した場合などに、画面の残り回数を実際に合わせる
-    if (e.response?.status === 429) emit('remaining', 0)
+    // 失敗・上限も回数に数えるため、画面の残り回数を実際に合わせる
+    const left = e.response?.data?.remaining_today
+    if (typeof left === 'number') emit('remaining', left)
   } finally {
     loading.value = false
   }

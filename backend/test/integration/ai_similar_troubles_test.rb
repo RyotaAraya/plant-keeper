@@ -111,6 +111,25 @@ class AiSimilarTroublesTest < ActionDispatch::IntegrationTest
     assert_equal current.id, AiSuggestion.last.input_json["exclude_trouble_id"]
   end
 
+  test "exclude_trouble_id が数値・文字列でない（配列など）ときは、500にせず422。AIを呼ばず、回数にも数えない" do
+    assert_no_difference "AiSuggestion.count" do
+      post "/api/v1/ai/similar_troubles",
+           params: { equipment_id: @equipment.id, instrument_id: @instrument.id, memo: "不具合", exclude_trouble_id: [ @same_instrument.id ] },
+           headers: @headers, as: :json
+      assert_response :unprocessable_entity
+
+      post "/api/v1/ai/similar_troubles",
+           params: { equipment_id: @equipment.id, instrument_id: @instrument.id, memo: "不具合", exclude_trouble_id: { "x" => "1" } },
+           headers: @headers, as: :json
+      assert_response :unprocessable_entity
+    end
+    assert_empty @client.calls
+
+    # 数値・文字列（クエリ文字列の形）は受け付ける
+    post_similar(memo: "不具合", exclude_trouble_id: @same_instrument.id.to_s)
+    assert_response :ok
+  end
+
   test "候補にないID・重複・似ている点のないもの・多すぎるものは捨てる。DBの値を返す（AIの文章で上書きされない）" do
     extra = 4.times.map { |i| create_trouble(@equipment, @instrument, "PT-101 追加#{i}") }
     outsider = create_trouble(@other_equipment, nil, "無関係な装置のトラブル") # 実在するが、候補ではない
@@ -201,6 +220,7 @@ class AiSimilarTroublesTest < ActionDispatch::IntegrationTest
     assert_includes json["errors"].first, "AIから類似トラブルを取得できませんでした"
     assert_includes json["errors"].first, "トラブル一覧からは、AIなしで探せます"
     assert_equal [ "failed", "SimilarTroubleFinder::InvalidOutput" ], [ AiSuggestion.last.status, AiSuggestion.last.error_class ]
+    assert_equal 19, json["remaining_today"]
   end
 
   test "タイムアウトは504" do
@@ -221,6 +241,7 @@ class AiSimilarTroublesTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :too_many_requests
+    assert_equal 0, json["remaining_today"]
     assert_includes json["errors"].first, "1回"
     assert_includes json["errors"].first, "トラブル一覧からは、AIなしで探せます"
     assert_empty @client.calls

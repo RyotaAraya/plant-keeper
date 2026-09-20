@@ -54,7 +54,11 @@ module Api
         equipment, instrument = read_target
         return unless equipment
 
-        exclude_id = params[:exclude_trouble_id].presence&.to_i
+        raw_exclude = params[:exclude_trouble_id]
+        # 詳細画面から探すときの、そのトラブル自身（任意）。配列などが送られたときは、500にせず422にする
+        return render_error("exclude_trouble_id が不正です", :unprocessable_entity) unless raw_exclude.blank? || raw_exclude.is_a?(String) || raw_exclude.is_a?(Integer)
+
+        exclude_id = raw_exclude.presence&.to_i
         finder = SimilarTroubleFinder.new
         candidates = finder.candidates(equipment: equipment, instrument: instrument, exclude_trouble_id: exclude_id)
         # 比べる過去のトラブルがなければ、AIを呼ばない（回数にも数えない）
@@ -142,7 +146,7 @@ module Api
         else
           "デモ全体の今日のAI利用回数の上限に達しました。#{fallback}"
         end
-        render_error(message, :too_many_requests)
+        render_error(message, :too_many_requests, remaining_today: AiSuggestion.remaining_today_for(current_user))
       end
 
       # AIを呼ぶ。APIの障害・タイムアウト・使えない応答のどれでも、画面の入力を止めず、失敗として記録する
@@ -154,8 +158,9 @@ module Api
         Rails.logger.error("[AI] #{suggestion.kind} failed: #{e.class}: #{e.message}")
         timeout = e.is_a?(::Anthropic::Errors::APITimeoutError)
         text = KIND_TEXT.fetch(suggestion.kind)
+        # 失敗も回数に数えるため、画面の残り回数を実際に合わせられるよう、残りを返す
         render_error("AIから#{text[:noun]}を取得できませんでした（#{timeout ? "時間がかかりすぎました" : "しばらくしてからもう一度お試しください"}）。#{text[:fallback]}",
-                     timeout ? :gateway_timeout : :bad_gateway)
+                     timeout ? :gateway_timeout : :bad_gateway, remaining_today: AiSuggestion.remaining_today_for(current_user))
       end
 
       # 監査ログの画面は値を文字列として並べるため、入出力（JSON）は主な項目を文字列に展開する（全文は ai_suggestions に残る）
@@ -174,8 +179,8 @@ module Api
       end
 
       # 応答を返して nil（呼び出し側が、そのまま nil を返して中断できるように）
-      def render_error(message, status)
-        render json: { errors: [ message ] }, status: status
+      def render_error(message, status, **extra)
+        render json: { errors: [ message ] }.merge(extra), status: status
         nil
       end
     end
