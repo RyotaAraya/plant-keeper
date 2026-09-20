@@ -33,7 +33,13 @@ Rails.application.routes.draw do
       resources :inspections, only: [ :index, :show, :create, :update ]
       resources :troubles, only: [ :index, :show, :create, :update ]
       resources :trouble_responses, only: [ :create, :update ]
-      resources :scheduled_maintenances, only: [ :index, :show, :create, :update ]
+      resources :scheduled_maintenances, only: [ :index, :show, :create, :update ] do
+        member do
+          get :next_suggestion
+          post :duplicate
+        end
+      end
+      resources :maintenance_series, only: [ :index, :show, :create, :update ]
       resources :maintenance_assignments, only: [ :create, :destroy ]
 
       # Phase 3: 資材管理

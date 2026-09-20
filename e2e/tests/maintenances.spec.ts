@@ -78,5 +78,7 @@ for (const [label, account] of [['一般ユーザ', ACCOUNTS.member], ['協力�
     await expect(page.getByTestId('maintenance-status')).toBeVisible()
     await expect(page.getByRole('button', { name: '編集' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /にする|に戻す|検収へ進む/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '次回を作る' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /系列に登録|系列を編集/ })).toHaveCount(0)
   })
 }

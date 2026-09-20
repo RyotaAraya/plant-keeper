@@ -1,10 +1,11 @@
 module Api
   module V1
     class ScheduledMaintenancesController < BaseController
-      before_action :set_maintenance, only: [ :show, :update ]
+      before_action :set_maintenance, only: [ :show, :update, :next_suggestion, :duplicate ]
 
       MAINTENANCE_INCLUDE = {
         site: { only: [ :id, :name ] },
+        maintenance_series: { only: [ :id, :name ] },
         equipments: { only: [ :id, :name, :site_id ] },
         accepted_by: { only: [ :id, :name ] },
         maintenance_assignments: {
@@ -44,6 +45,33 @@ module Api
       def show
         authorize @maintenance
         render json: { data: @maintenance.as_json(include: MAINTENANCE_INCLUDE) }
+      end
+
+      # GET /api/v1/scheduled_maintenances/:id/next_suggestion
+      # 「次回を作る」の提案（名称・日付・対象設備とその理由）。作成はしない
+      def next_suggestion
+        authorize @maintenance, :next_suggestion?
+        render json: { data: MaintenanceSuccessor.new(@maintenance).suggestion }
+      end
+
+      # POST /api/v1/scheduled_maintenances/:id/duplicate
+      # 次回の定期整備を、複製で作る（系列・説明・担当者を引き継ぎ、状態は計画中。検収・実績・使用資材は引き継がない）。
+      # 名称・日付・対象設備は、提案を確認して直したものを受け取る
+      def duplicate
+        authorize @maintenance, :duplicate?
+        copy = ScheduledMaintenance.new(duplicate_params.merge(
+          site_id: @maintenance.site_id, maintenance_series_id: @maintenance.maintenance_series_id, description: @maintenance.description
+        ))
+
+        ActiveRecord::Base.transaction do
+          copy.save!
+          record_audit_log("create", copy)
+          @maintenance.maintenance_assignments.each { |assignment| copy.maintenance_assignments.create!(user_id: assignment.user_id, role: assignment.role) }
+        end
+
+        render json: { data: copy.reload.as_json(include: MAINTENANCE_INCLUDE) }, status: :created
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
       end
 
       # POST /api/v1/scheduled_maintenances
@@ -110,6 +138,10 @@ module Api
         changes
       end
 
+      def duplicate_params
+        params.require(:scheduled_maintenance).permit(:title, :planned_start_on, :planned_end_on, equipment_ids: [])
+      end
+
       def create_params
         params.require(:scheduled_maintenance).permit(
           :site_id, :title, :description, :planned_start_on, :planned_end_on, :used_materials, equipment_ids: []
@@ -119,7 +151,7 @@ module Api
       def update_params
         params.require(:scheduled_maintenance).permit(
           :title, :description, :planned_start_on, :planned_end_on, :actual_start_on, :actual_end_on, :used_materials, :status,
-          :accepted_on, :accepted_by_id, :acceptance_result, :acceptance_notes, equipment_ids: []
+          :accepted_on, :accepted_by_id, :acceptance_result, :acceptance_notes, :maintenance_series_id, equipment_ids: []
         )
       end
     end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -248,6 +248,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
     t.index ["user_id"], name: "index_maintenance_assignments_on_user_id"
   end
 
+  create_table "maintenance_series", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_maintenance_series_on_site_id"
+  end
+
+  create_table "maintenance_series_equipments", force: :cascade do |t|
+    t.bigint "maintenance_series_id", null: false
+    t.bigint "equipment_id", null: false
+    t.integer "interval_months", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_maintenance_series_equipments_on_equipment_id"
+    t.index ["maintenance_series_id", "equipment_id"], name: "index_ms_equipments_on_series_and_equipment", unique: true
+    t.index ["maintenance_series_id"], name: "index_maintenance_series_equipments_on_maintenance_series_id"
+    t.check_constraint "interval_months > 0", name: "maintenance_series_equipments_interval_positive"
+  end
+
   create_table "manufacturers", force: :cascade do |t|
     t.string "name", null: false
     t.text "former_names"
@@ -415,8 +436,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
     t.bigint "accepted_by_id"
     t.string "acceptance_result"
     t.text "acceptance_notes"
+    t.bigint "maintenance_series_id"
     t.index ["accepted_by_id"], name: "index_scheduled_maintenances_on_accepted_by_id"
     t.index ["equipment_id"], name: "index_scheduled_maintenances_on_equipment_id"
+    t.index ["maintenance_series_id"], name: "index_scheduled_maintenances_on_maintenance_series_id"
     t.index ["planned_start_on"], name: "index_scheduled_maintenances_on_planned_start_on"
     t.index ["scheduled_date"], name: "index_scheduled_maintenances_on_scheduled_date"
     t.index ["site_id"], name: "index_scheduled_maintenances_on_site_id"
@@ -587,6 +610,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
   add_foreign_key "instruments", "services"
   add_foreign_key "maintenance_assignments", "scheduled_maintenances"
   add_foreign_key "maintenance_assignments", "users"
+  add_foreign_key "maintenance_series", "sites"
+  add_foreign_key "maintenance_series_equipments", "equipments"
+  add_foreign_key "maintenance_series_equipments", "maintenance_series"
   add_foreign_key "material_alternatives", "materials"
   add_foreign_key "material_alternatives", "materials", column: "alternative_material_id"
   add_foreign_key "materials", "manufacturers"
@@ -602,6 +628,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
   add_foreign_key "scheduled_maintenance_equipments", "equipments"
   add_foreign_key "scheduled_maintenance_equipments", "scheduled_maintenances"
   add_foreign_key "scheduled_maintenances", "equipments"
+  add_foreign_key "scheduled_maintenances", "maintenance_series"
   add_foreign_key "scheduled_maintenances", "sites"
   add_foreign_key "scheduled_maintenances", "users", column: "accepted_by_id"
   add_foreign_key "stock_transactions", "stocks"

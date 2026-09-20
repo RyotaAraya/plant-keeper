@@ -19,7 +19,7 @@ class AuditLog < ApplicationRecord
     when ReferenceStandard then resource.site_id
     when ReferenceStandardCalibration then resource.reference_standard&.site_id
     when InspectionPlan then resource.equipment&.site_id || resource.reference_standard&.site_id
-    when ScheduledMaintenance then resource.site_id
+    when ScheduledMaintenance, MaintenanceSeries then resource.site_id
     when EquipmentAssignment, Instrument, Inspection, Trouble then resource.equipment&.site_id
     when InspectionItem then resource.inspection&.equipment&.site_id
     when TroubleResponse then resource.trouble&.equipment&.site_id

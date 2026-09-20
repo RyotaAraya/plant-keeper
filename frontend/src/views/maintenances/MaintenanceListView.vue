@@ -44,6 +44,7 @@ const headers = [
   { title: '予定期間', key: 'planned_start_on', width: '190px' },
   { title: '名称', key: 'title' },
   { title: '対象設備', key: 'equipments', sortable: false },
+  { title: '系列', key: 'maintenance_series.name', width: '150px' },
   { title: '担当者', key: 'assignees', sortable: false, width: '170px' },
   { title: '状態', key: 'status', width: '100px' },
 ]

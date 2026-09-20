@@ -4,6 +4,7 @@ class ScheduledMaintenance < ApplicationRecord
   include StatusTransitions
 
   belongs_to :site
+  belongs_to :maintenance_series, optional: true
   belongs_to :accepted_by, class_name: "User", optional: true
 
   has_many :scheduled_maintenance_equipments, dependent: :destroy
@@ -28,6 +29,7 @@ class ScheduledMaintenance < ApplicationRecord
   validates :planned_start_on, presence: true
   validate :planned_period_is_valid
   validate :equipments_are_present_and_in_site
+  validate :series_is_in_site
   validate :acceptance_is_recorded_to_complete
 
   before_save :stamp_actual_dates, if: :status_changed?
@@ -47,6 +49,12 @@ class ScheduledMaintenance < ApplicationRecord
     elsif equipments.any? { |equipment| equipment.site_id != site_id }
       errors.add(:base, "対象設備は、定期整備と同じ拠点の設備にしてください")
     end
+  end
+
+  def series_is_in_site
+    return if maintenance_series.nil?
+
+    errors.add(:maintenance_series, "は、定期整備と同じ拠点の系列にしてください") if maintenance_series.site_id != site_id
   end
 
   # 完了にするには、検収の記録（検収日・検収者・結果）が必要で、結果が「手直しあり」ではないこと。

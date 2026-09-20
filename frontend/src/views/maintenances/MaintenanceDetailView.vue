@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import MaintenanceSeriesDialog from '@/components/MaintenanceSeriesDialog.vue'
+import NextMaintenanceDialog from '@/components/NextMaintenanceDialog.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import SiteEquipmentSelect from '@/components/SiteEquipmentSelect.vue'
 import {
@@ -36,14 +38,29 @@ const canComplete = computed(() => {
 })
 const showAcceptance = computed(() => ['acceptance', 'completed'].includes(maintenance.value?.status) || !!maintenance.value?.acceptance_result)
 
+// 系列（繰り返しのまとまり）: 設備ごとの周期と、各回の履歴
+const series = ref<any>(null)
+const seriesDialog = ref(false)
+const nextDialog = ref(false)
+
 async function fetchMaintenance() {
   loading.value = true
   try {
     const res = await api.get(`/scheduled_maintenances/${route.params.id}`)
+    // 系列の取得が終わるまで、系列つきの整備に「系列に属していません」と出ないよう、そろってから反映する
+    const seriesId = res.data.data.maintenance_series?.id
+    const seriesData = seriesId ? (await api.get(`/maintenance_series/${seriesId}`)).data.data : null
     maintenance.value = res.data.data
+    series.value = seriesData
   } finally {
     loading.value = false
   }
+}
+
+// 次回を作ったら、その定期整備の画面へ移る（同じ画面コンポーネントのまま、対象を切り替える）
+async function goToCreated(id: number) {
+  await router.push(`/maintenances/${id}`)
+  await fetchMaintenance()
 }
 
 // 状態を進める・戻す
@@ -244,6 +261,44 @@ onMounted(fetchMaintenance)
         </v-card-text>
       </v-card>
 
+      <!-- 系列（繰り返し） -->
+      <v-card class="mb-4" data-testid="series-card">
+        <v-card-title class="d-flex align-center text-subtitle-1">
+          系列（繰り返し）<span v-if="series" class="ml-2 text-body-1">{{ series.name }}</span>
+          <v-spacer />
+          <v-btn v-if="canManageMaintenance" size="small" color="primary" prepend-icon="mdi-content-copy" class="mr-2" @click="nextDialog = true">次回を作る</v-btn>
+          <v-btn v-if="canManageMaintenance && series" size="small" variant="outlined" @click="seriesDialog = true">系列を編集</v-btn>
+          <v-btn v-else-if="canManageMaintenance" size="small" variant="outlined" @click="seriesDialog = true">系列に登録</v-btn>
+        </v-card-title>
+        <v-card-text>
+          <p v-if="!series" class="text-body-2 text-medium-emphasis">
+            系列に属していません。繰り返し行う整備は、系列に登録すると、設備ごとの周期から「次回を作る」で対象設備を自動で選べます。
+          </p>
+          <template v-else>
+            <div class="text-caption text-grey mb-1">設備ごとの周期</div>
+            <v-chip v-for="m in series.maintenance_series_equipments" :key="m.id" size="small" label variant="tonal" class="mr-1 mb-2">
+              {{ m.equipment?.name }}（{{ m.interval_months }}か月ごと）
+            </v-chip>
+            <div class="text-caption text-grey mt-2 mb-1">各回</div>
+            <v-list density="compact">
+              <v-list-item
+                v-for="m in series.maintenances"
+                :key="m.id"
+                :active="m.id === maintenance.id"
+                :title="m.title"
+                :subtitle="`${periodLabel(m.planned_start_on, m.planned_end_on)} ／ ${(m.equipments || []).map((e: any) => e.name).join('・')}`"
+                :data-testid="`series-history-${m.id}`"
+                @click="m.id !== maintenance.id && router.push(`/maintenances/${m.id}`).then(fetchMaintenance)"
+              >
+                <template #append>
+                  <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="x-small">{{ MAINTENANCE_STATUS_LABEL[m.status] }}</v-chip>
+                </template>
+              </v-list-item>
+            </v-list>
+          </template>
+        </v-card-text>
+      </v-card>
+
       <!-- 検収 -->
       <v-card v-if="showAcceptance" class="mb-4" data-testid="acceptance-card">
         <v-card-title class="d-flex align-center text-subtitle-1">
@@ -300,6 +355,9 @@ onMounted(fetchMaintenance)
       <v-divider class="my-4" />
       <h2 class="text-h6 mb-3">変更履歴</h2>
       <ResourceHistory auditable-type="ScheduledMaintenance" :auditable-id="maintenance.id" />
+
+      <MaintenanceSeriesDialog v-model="seriesDialog" :series="series" :maintenance="maintenance" @saved="fetchMaintenance" />
+      <NextMaintenanceDialog v-model="nextDialog" :maintenance-id="maintenance.id" @created="goToCreated" />
 
       <!-- 編集 -->
       <v-dialog v-model="editDialog" max-width="640" scrollable>
