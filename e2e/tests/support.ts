@@ -70,7 +70,9 @@ export async function openListRow(page: Page, title: string) {
 export async function openFirstTrouble(page: Page) {
   await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
   await expect(async () => {
-    await page.locator('tbody tr').first().click()
+    // 行の中の計器へのリンクを押して別の画面に移ってしまうことがあるため、行の端を押し、移ってしまったら一覧に戻る
+    if (!/\/troubles(\/|$)/.test(page.url())) await page.goto('/troubles')
+    await page.locator('tbody tr').first().click({ position: { x: 8, y: 8 } })
     await expect(page).toHaveURL(/\/troubles\/\d+/, { timeout: 2_000 })
   }).toPass({ timeout: 15_000 })
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('トラブル管理')

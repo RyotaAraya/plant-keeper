@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test'
 
 // デモデータの再投入は、実際に実行すると全データが消えるため、APIを差し替えて画面の流れだけを確認する
 // （サーバ側の実行・状態・二重実行の拒否は、バックエンドのテスト demo_reseed_test.rb で確認している）。
+// 再投入の画面は /settings/reseed（設定画面・メニューには出さない。管理者だけ）。
 // 状態の確認（GET）は、最初は未実行、始めたあとは「実行中」を1回返し、その後 `final` を返す
 async function mockReseed(page: Page, final: { status: string; error?: string }) {
   let started = false
@@ -26,8 +27,9 @@ async function mockReseed(page: Page, final: { status: string; error?: string })
   })
 }
 
+// 再投入は、設定画面には出さず、URLを直接開く
 async function openReseedDialog(page: Page) {
-  await page.getByRole('link', { name: '設定', exact: true }).click()
+  await page.goto('/settings/reseed')
   await page.getByRole('button', { name: '再投入する' }).click()
 }
 
@@ -67,4 +69,31 @@ test('再投入が失敗したら、その旨を表示する', async ({ page }) 
   await page.getByRole('dialog').getByRole('button', { name: '閉じる' }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
   await expect(page.getByRole('alert').filter({ hasText: '再投入に失敗しました（詳細はサーバログを参照）' })).toBeVisible()
+})
+
+test('再投入は、設定画面には出ない', async ({ page }) => {
+  await login(page, ACCOUNTS.admin)
+  await page.getByRole('link', { name: '設定', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible()
+  await expect(page.getByText('デモデータの再投入')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '再投入する' })).toHaveCount(0)
+})
+
+test('管理者以外は、再投入のURLを開いても、ダッシュボードに戻される', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.goto('/settings/reseed')
+  await expect(page).toHaveURL(/\/dashboard/)
+})
+
+test('再投入が無効なサーバ（本番など）では、実行の操作を出さず、無効である旨を案内する', async ({ page }) => {
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'GET, POST, OPTIONS' }
+  await page.route(`${apiBaseUrl()}/admin/reseed`, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: cors })
+      : route.fulfill({ headers: cors, json: { data: { status: 'idle', enabled: false } } }),
+  )
+  await login(page, ACCOUNTS.admin)
+  await page.goto('/settings/reseed')
+  await expect(page.getByTestId('reseed-disabled')).toContainText('このサーバでは、デモデータの再投入は無効です')
+  await expect(page.getByRole('button', { name: '再投入する' })).toHaveCount(0)
 })
