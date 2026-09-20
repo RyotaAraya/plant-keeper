@@ -28,26 +28,34 @@ stage = lambda do |up_errors, down_errors|
   { "points" => CalibrationSheet::POINTS.each_with_index.map { |percent, i| { "percent" => percent, "up" => reading.call(percent, up_errors[i]), "down" => reading.call(percent, down_errors[i]) } } }
 end
 
+template = ChecklistTemplate.find_by!(name: "伝送器 年次点検")
 calibration = Inspection.create!(
-  checklist_template: ChecklistTemplate.find_by!(name: "伝送器 年次校正チェックリスト"), user: User.find_by!(email: "sato@example.com"),
+  checklist_template: template, user: User.find_by!(email: "sato@example.com"),
   equipment: ft301.equipment, instrument: ft301, department: kw_inst_sec, inspection_type: "periodic", status: "approved",
   inspected_at: 20.days.ago, notes: "高流量側で調整前に許容差を超えていたため、スパンを調整した。調整後は全点が許容内。"
 )
-[
-  { content: "外観（腐食・損傷・取付状態）を確認", item_type: "check", checked: true },
-  { content: "導圧管・ドレン・ベントの詰まりや漏れを確認", item_type: "check", checked: true },
-  {
-    content: "5点校正（0/25/50/75/100%・上昇/下降）", item_type: "calibration", instrument: ft301,
-    calibration_input: {
-      "adjusted" => true,
-      "stages" => {
-        "as_found" => stage.call([ 0.05, 0.1, 0.3, 0.55, 0.7 ], [ 0.1, 0.2, 0.4, 0.6, 0.72 ]),
-        "as_left" => stage.call([ 0.02, 0.05, 0.05, 0.08, 0.1 ], [ 0.03, 0.06, 0.08, 0.1, 0.12 ])
-      }
-    }
-  },
-  { content: "零点・スパンを調整した場合は、その内容", item_type: "text", text_value: "スパンを調整（100%点で+0.7%の偏差を補正）。" },
-  { content: "特記事項", item_type: "text", text_value: "" }
-].each_with_index do |attrs, index|
-  InspectionItem.create!(inspection: calibration, position: index + 1, has_defect: false, **attrs)
+calibration_input = {
+  "adjusted" => true,
+  "stages" => {
+    "as_found" => stage.call([ 0.05, 0.1, 0.3, 0.55, 0.7 ], [ 0.1, 0.2, 0.4, 0.6, 0.72 ]),
+    "as_left" => stage.call([ 0.02, 0.05, 0.05, 0.08, 0.1 ], [ 0.03, 0.06, 0.08, 0.1, 0.12 ])
+  }
+}
+# テンプレートの項目どおりに、確認済み・記入済みの記録を作る
+text_for = lambda do |content|
+  case content
+  when /調整/ then "スパンを調整（100%点で+0.7%の偏差を補正）。"
+  when /バイパス申請番号/ then "該当なし（インターロックに関わらない計器）"
+  else ""
+  end
+end
+template.checklist_template_items.each do |item|
+  values =
+    case item.item_type
+    when "calibration" then { instrument: ft301, calibration_input: calibration_input }
+    when "check" then { checked: true }
+    else { text_value: text_for.call(item.content) }
+    end
+  InspectionItem.create!(inspection: calibration, checklist_template_item: item, position: item.position, content: item.content,
+                         item_type: item.item_type, has_defect: false, **values)
 end

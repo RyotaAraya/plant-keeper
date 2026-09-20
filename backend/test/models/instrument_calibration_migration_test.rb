@@ -1,12 +1,10 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20260920130100_seed_instrument_calibration")
 
-# 既存の計器への校正条件（デモ用の既定値）・フラグ・テンプレートの反映マイグレーション
+# 既存の計器への校正条件（デモ用の既定値）・フラグの反映マイグレーション
 class InstrumentCalibrationMigrationTest < ActiveSupport::TestCase
   setup do
     @site = Site.create!(name: "川崎製油所")
-    division = create_department(site: @site, name: "保全部")
-    @section = create_department(site: @site, name: "計器保全課", level: "section", parent: division)
     @equipment = create_equipment(site: @site)
   end
 
@@ -46,22 +44,5 @@ class InstrumentCalibrationMigrationTest < ActiveSupport::TestCase
     assert_not other_site.reload.telemetry
     assert custody.reload.custody_transfer
     assert_not custody.telemetry
-  end
-
-  test "伝送器 年次校正チェックリストを、5点校正の項目つきで、無ければ作る（あれば触れない）" do
-    2.times { run_migration }
-
-    template = ChecklistTemplate.find_by!(name: SeedInstrumentCalibration::TEMPLATE_NAME)
-    assert_equal @section, template.department
-    assert_includes template.checklist_template_items.map(&:item_type), "calibration"
-    assert_equal 1, ChecklistTemplate.where(name: SeedInstrumentCalibration::TEMPLATE_NAME).count
-  end
-
-  test "計器保全課が無い環境（空のDBなど）ではテンプレートを作らない" do
-    @section.destroy!
-
-    run_migration
-
-    assert_nil ChecklistTemplate.find_by(name: SeedInstrumentCalibration::TEMPLATE_NAME)
   end
 end

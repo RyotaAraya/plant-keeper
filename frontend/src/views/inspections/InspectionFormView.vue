@@ -38,6 +38,9 @@ const form = ref({
   reference_standards: [] as InspectionReferenceStandardUse[],
 })
 
+// 選択肢は有効なテンプレートだけ（廃止したものは、この点検が参照している場合だけ残す）
+const templateOptions = computed(() => templates.value.filter((t: any) => t.is_active || t.id === form.value.checklist_template_id))
+
 // 取引用の計器（点検の計器、または項目の計器）の点検には、トレーサビリティのある校正の基準器が必要
 const requireTraceable = computed(() => {
   const ids = [form.value.instrument_id, ...form.value.items.map((item) => item.instrument_id)]
@@ -73,7 +76,7 @@ function snapshotFor(item: any) {
 async function fetchMasters() {
   const [, tmplRes, standardRes] = await Promise.all([
     loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
-    api.get('/checklist_templates'),
+    api.get('/checklist_templates', { params: { include_inactive: true } }),
     api.get('/reference_standards', { params: { per_page: 1000 } }),
   ])
   templates.value = tmplRes.data.data
@@ -297,7 +300,7 @@ onMounted(async () => {
             <div class="d-flex ga-2 align-center">
               <v-select
                 v-model="form.checklist_template_id"
-                :items="templates"
+                :items="templateOptions"
                 item-title="name"
                 item-value="id"
                 label="テンプレート（任意）"

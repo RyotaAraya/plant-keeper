@@ -57,7 +57,7 @@ test('点検で5点校正を入力すると、期待値どおりなら合格、�
 
   await selectOption(page, '設備 *', '常圧蒸留装置')
   await selectOption(page, '計器（任意）', 'FT-301')
-  await selectOption(page, 'テンプレート（任意）', '伝送器 年次校正チェックリスト')
+  await selectOption(page, 'テンプレート（任意）', '伝送器 年次点検')
 
   await expect(page.getByText('許容差 ±0.5%スパン')).toBeVisible()
   await expect(page.getByTestId('calibration-result')).toContainText('未入力')
@@ -96,7 +96,7 @@ test('承認済みの5点校正の記録に、調整前（不合格）と調整�
   await login(page, ACCOUNTS.member)
   const instruments = (await apiGet(page, '/instruments?q=FT-301')).filter((i: any) => i.tag_number === 'FT-301')
   const inspections = instruments.length ? await apiGet(page, `/inspections?instrument_id=${instruments[0].id}&per_page=100`) : []
-  const calibration = inspections.find((i: any) => i.checklist_template?.name === '伝送器 年次校正チェックリスト')
+  const calibration = inspections.find((i: any) => i.checklist_template?.name === '伝送器 年次点検')
   test.skip(!calibration, 'シードの5点校正の記録がない環境')
 
   await page.goto(`/inspections/${calibration.id}`)
