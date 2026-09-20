@@ -22,6 +22,12 @@ class RegulationsTest < ActionDispatch::IntegrationTest
     assert_equal [ [ "性能検査", 365, "statutory" ] ], boiler["regulation_inspections"].map { |i| [ i["name"], i["interval_days"], i["basis"] ] }
   end
 
+  test "法規区分は、法規が掛かる単位（設備・計器）で絞り込める" do
+    get "/api/v1/regulations", headers: auth_headers_for(@member), params: { target: "instrument" }
+
+    assert_equal [ "trade" ], json["data"].map { |r| r["code"] }
+  end
+
   test "設備に適用する法規区分は、管理者・マネージャーが付け外しでき、詳細に周期つきで返る" do
     patch "/api/v1/equipments/#{@equipment.id}", headers: auth_headers_for(@manager), as: :json,
                                                  params: { equipment: { regulation_ids: [ @boiler.id, @gas.id ] } }
@@ -104,5 +110,15 @@ class RegulationsTest < ActionDispatch::IntegrationTest
     assert_empty other.reload.regulations
     boiler = Regulation.find_by!(code: "boiler_pressure_vessel")
     assert_equal [ 30, 365 ], boiler.regulation_inspections.map(&:interval_days).sort
+  end
+
+  test "反映マイグレーションは、既にある区分の法定検査（編集・削除済みかもしれない）には触れない" do
+    Regulation.destroy_all
+    existing = Regulation.create!(code: "boiler_pressure_vessel", name: "編集済みの名前", law_name: "ボイラー則", target: "equipment")
+
+    ActiveRecord::Migration.suppress_messages { SeedRegulations.new.up }
+
+    assert_equal "編集済みの名前", existing.reload.name
+    assert_empty existing.regulation_inspections
   end
 end

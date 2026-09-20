@@ -78,7 +78,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示、設備の適用法規（法規区分の表示・色・選択欄・法定検査の周期）の表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -285,7 +285,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
 - 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
-- シードファイル: `db/seeds/` 配下に 01〜15 の番号付きファイルで分割
+- シードファイル: `db/seeds/` 配下に 01〜16 の番号付きファイルで分割
 - チェックリストテンプレートの点検項目は `db/data/checklist_template_items.rb`（テンプレート名 → 項目）が定義元。シードと、既存環境（stg・本番）へ補充するマイグレーション `BackfillChecklistTemplateItems`（名前が一致し項目が空のテンプレートだけが対象）が共有する。テンプレートを増やすときはカタログにも足す（シードは `fetch` で失敗する）。項目を変えても既存環境の項目は更新されない（デプロイのたびに流れるのは新しいマイグレーションだけ）
 - 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 

@@ -7,7 +7,9 @@ require Rails.root.join("db/data/regulations")
 class SeedRegulations < ActiveRecord::Migration[8.0]
   def up
     RegulationCatalog::REGULATIONS.each do |attrs|
-      regulation_id = regulation_id_for(attrs)
+      regulation_id, created = find_or_create_regulation(attrs)
+      next unless created # 既にある区分は、編集済みかもしれないので検査には触れない
+
       attrs[:inspections].each { |inspection| insert_inspection(regulation_id, inspection) }
     end
 
@@ -29,21 +31,20 @@ class SeedRegulations < ActiveRecord::Migration[8.0]
 
   private
 
-  def regulation_id_for(attrs)
+  # [区分のID, 今回作ったか] を返す
+  def find_or_create_regulation(attrs)
     existing = select_value("SELECT id FROM regulations WHERE code = #{connection.quote(attrs[:code])}")
-    return existing if existing
+    return [ existing, false ] if existing
 
-    select_value(<<~SQL.squish)
+    id = select_value(<<~SQL.squish)
       INSERT INTO regulations (code, name, law_name, target, description, created_at, updated_at)
       VALUES (#{[ attrs[:code], attrs[:name], attrs[:law_name], attrs[:target], attrs[:description] ].map { |v| connection.quote(v) }.join(', ')}, NOW(), NOW())
       RETURNING id
     SQL
+    [ id, true ]
   end
 
-  # 法規区分を今回作ったときだけ検査を入れる（既にあるなら、編集済みかもしれないので触れない）
   def insert_inspection(regulation_id, inspection)
-    return if select_value("SELECT 1 FROM regulation_inspections WHERE regulation_id = #{regulation_id.to_i} AND name = #{connection.quote(inspection[:name])}")
-
     execute <<~SQL.squish
       INSERT INTO regulation_inspections (regulation_id, name, interval_days, basis, note, created_at, updated_at)
       VALUES (#{regulation_id.to_i}, #{connection.quote(inspection[:name])}, #{inspection[:interval_days].to_i},

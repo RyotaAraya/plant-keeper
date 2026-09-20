@@ -127,7 +127,10 @@ const form = ref({
 // 選んだ設備に適用される法規の、法定検査（周期の目安として表示する）
 const legalInspections = ref<(RegulationInspection & { regulation_code: string; regulation_name: string })[]>([])
 
+const equipmentChangeGuard = latestGuard()
+
 async function onEquipmentChange() {
+  const isLatest = equipmentChangeGuard()
   form.value.instrument_id = null
   legalInspections.value = []
   if (!form.value.equipment_id) {
@@ -138,6 +141,7 @@ async function onEquipmentChange() {
     api.get('/instruments', { params: { equipment_id: form.value.equipment_id, per_page: 100 } }),
     api.get(`/equipments/${form.value.equipment_id}`),
   ])
+  if (!isLatest()) return
   instruments.value = instrumentRes.data.data
   legalInspections.value = (equipmentRes.data.data.regulations || []).flatMap((regulation: any) =>
     (regulation.regulation_inspections || []).map((inspection: RegulationInspection) => ({ ...inspection, regulation_code: regulation.code, regulation_name: regulation.name })),
