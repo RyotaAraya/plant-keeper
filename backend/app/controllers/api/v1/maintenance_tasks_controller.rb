@@ -4,6 +4,7 @@ module Api
     class MaintenanceTasksController < BaseController
       before_action :set_maintenance
       before_action :set_task, only: [ :update, :destroy ]
+      before_action :ensure_maintenance_open, only: [ :create, :update, :destroy, :bulk ]
 
       TASK_INCLUDE = {
         department: { only: [ :id, :name ] },
@@ -96,6 +97,13 @@ module Api
 
       def set_task
         @task = @maintenance.maintenance_tasks.find(params[:id])
+      end
+
+      # 完了（検収済み）の定期整備の作業は、追加・変更・削除できない（未完了の作業が後から出て、検収の記録と食い違うため）
+      def ensure_maintenance_open
+        return unless @maintenance.completed?
+
+        render json: { errors: [ "完了した定期整備の作業は変更できません" ] }, status: :unprocessable_entity
       end
 
       def create_params

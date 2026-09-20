@@ -1,6 +1,9 @@
 module Api
   module V1
     class TroublesController < BaseController
+      # 「定期整備に回す」の、回し先の指定の誤り（422で返す）
+      class DeferTargetError < StandardError; end
+
       before_action :set_trouble, only: [ :show, :update, :defer_to_maintenance ]
 
       # GET /api/v1/troubles
@@ -110,7 +113,7 @@ module Api
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
-      rescue ArgumentError => e
+      rescue DeferTargetError => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
@@ -154,8 +157,8 @@ module Api
         site_id = @trouble.equipment.site_id
         if params[:scheduled_maintenance_id].present?
           maintenance = ScheduledMaintenance.find(params[:scheduled_maintenance_id])
-          raise ArgumentError, "計画中・準備中の定期整備にだけ回せます" unless %w[planned preparing].include?(maintenance.status)
-          raise ArgumentError, "トラブルの設備と同じ拠点の定期整備を選んでください" unless maintenance.site_id == site_id
+          raise DeferTargetError, "計画中・準備中の定期整備にだけ回せます" unless %w[planned preparing].include?(maintenance.status)
+          raise DeferTargetError, "トラブルの設備と同じ拠点の定期整備を選んでください" unless maintenance.site_id == site_id
 
           maintenance
         elsif params[:new_maintenance].present?
@@ -164,7 +167,7 @@ module Api
           record_audit_log("create", maintenance)
           maintenance
         else
-          raise ArgumentError, "回し先の定期整備を選ぶか、新しい定期整備を指定してください"
+          raise DeferTargetError, "回し先の定期整備を選ぶか、新しい定期整備を指定してください"
         end
       end
 

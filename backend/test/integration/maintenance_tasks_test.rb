@@ -294,4 +294,22 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
     assert_equal "completed", done.reload.status
     assert generator_task.persisted?
   end
+
+  test "完了した定期整備の作業は、追加・状態の変更・削除・一括追加ができない" do
+    task = @maintenance.maintenance_tasks.create!(equipment: @boiler, kind: "work", title: "ボイラーの整備", status: "completed", completed_on: @today)
+    @maintenance.update_columns(status: "completed", accepted_on: @today, accepted_by_id: @manager.id, acceptance_result: "passed")
+    base = "/api/v1/scheduled_maintenances/#{@maintenance.id}/tasks"
+
+    post base, headers: auth_headers_for(@manager), as: :json, params: { maintenance_task: { equipment_id: @boiler.id, kind: "work", title: "追加" } }
+    assert_response :unprocessable_entity
+    assert_includes json["errors"], "完了した定期整備の作業は変更できません"
+    patch "#{base}/#{task.id}", headers: auth_headers_for(@member), as: :json, params: { maintenance_task: { status: "not_started" } }
+    assert_response :unprocessable_entity
+    delete "#{base}/#{task.id}", headers: auth_headers_for(@manager), as: :json
+    assert_response :unprocessable_entity
+    post "#{base}/bulk", headers: auth_headers_for(@manager), as: :json, params: { equipment_id: @boiler.id }
+    assert_response :unprocessable_entity
+
+    assert_equal [ "completed", 1 ], [ task.reload.status, @maintenance.maintenance_tasks.count ]
+  end
 end

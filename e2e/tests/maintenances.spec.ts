@@ -61,6 +61,7 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
     await page.getByRole('button', { name: '完了にする' }).click()
     await expect(status).toHaveText('完了')
     await expect(page.getByRole('button', { name: /にする|に戻す|検収へ進む|手直しに戻す/ })).toHaveCount(0) // 完了からは進めも戻せもしない
+    await expect(page.getByRole('button', { name: /作業を追加|計器を一括追加/ })).toHaveCount(0) // 完了した整備の作業は変えられない
   })
 })
 

@@ -49,6 +49,8 @@ const bulkDialog = ref(false)
 const editingTask = ref<any>(null)
 const taskStatusItems = Object.entries(TASK_STATUS_LABEL).map(([value, title]) => ({ title, value }))
 const tasks = computed<any[]>(() => maintenance.value?.maintenance_tasks ?? [])
+// 完了（検収済み）の整備の作業は変更できない
+const tasksEditable = computed(() => maintenance.value?.status !== 'completed')
 const taskProgress = computed(() => maintenance.value?.tasks_summary ?? { total: 0, completed: 0 })
 // 部署ごとにまとめる（部署が未設定の作業は「部署未定」）
 const taskGroups = computed(() => {
@@ -327,8 +329,8 @@ onMounted(fetchMaintenance)
           作業
           <span class="ml-2 text-body-2 text-medium-emphasis" data-testid="tasks-progress">完了 {{ taskProgress.completed }} / {{ taskProgress.total }}</span>
           <v-spacer />
-          <v-btn v-if="canManageMaintenance" size="small" variant="outlined" class="mr-2" prepend-icon="mdi-playlist-plus" @click="bulkDialog = true">計器を一括追加</v-btn>
-          <v-btn v-if="canManageMaintenance" size="small" color="primary" prepend-icon="mdi-plus" @click="openTaskDialog()">作業を追加</v-btn>
+          <v-btn v-if="canManageMaintenance && tasksEditable" size="small" variant="outlined" class="mr-2" prepend-icon="mdi-playlist-plus" @click="bulkDialog = true">計器を一括追加</v-btn>
+          <v-btn v-if="canManageMaintenance && tasksEditable" size="small" color="primary" prepend-icon="mdi-plus" @click="openTaskDialog()">作業を追加</v-btn>
         </v-card-title>
         <v-card-text>
           <v-progress-linear v-if="taskProgress.total" :model-value="(taskProgress.completed / taskProgress.total) * 100" color="success" height="6" rounded class="mb-3" />
@@ -371,6 +373,7 @@ onMounted(fetchMaintenance)
                       density="compact"
                       variant="outlined"
                       hide-details
+                      :disabled="!tasksEditable"
                       :aria-label="`${task.title}の状態`"
                       :base-color="TASK_STATUS_COLOR[task.status]"
                       @update:model-value="changeTaskStatus(task, $event)"
@@ -379,7 +382,7 @@ onMounted(fetchMaintenance)
                   <td class="text-no-wrap">{{ task.completed_on || '—' }}</td>
                   <td class="text-no-wrap text-right">
                     <v-btn
-                      v-if="task.kind === 'inspection' && !['completed', 'cancelled'].includes(task.status)"
+                      v-if="tasksEditable && task.kind === 'inspection' && !['completed', 'cancelled'].includes(task.status)"
                       size="x-small"
                       variant="outlined"
                       color="primary"
@@ -388,8 +391,8 @@ onMounted(fetchMaintenance)
                       点検を実施
                     </v-btn>
                     <v-btn v-else-if="task.latest_inspection" size="x-small" variant="text" @click="router.push(`/inspections/${task.latest_inspection.id}`)">点検記録</v-btn>
-                    <v-btn v-if="canManageMaintenance" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${task.title}を編集`" @click="openTaskDialog(task)" />
-                    <v-btn v-if="canManageMaintenance" icon="mdi-delete" size="x-small" variant="text" color="error" :aria-label="`${task.title}を削除`" @click="deleteTask(task)" />
+                    <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${task.title}を編集`" @click="openTaskDialog(task)" />
+                    <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-delete" size="x-small" variant="text" color="error" :aria-label="`${task.title}を削除`" @click="deleteTask(task)" />
                   </td>
                 </tr>
               </tbody>
