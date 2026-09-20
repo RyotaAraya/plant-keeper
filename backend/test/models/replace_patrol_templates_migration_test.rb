@@ -7,6 +7,7 @@ class ReplacePatrolTemplatesMigrationTest < ActiveSupport::TestCase
     @site = Site.create!(name: "川崎製油所")
     division = create_department(site: @site, name: "保全部")
     @section = create_department(site: @site, name: "計装保全課", level: "section", parent: division)
+    @operations = create_department(site: @site, name: "製造部")
     @equipment = create_equipment(site: @site)
     @today = InspectionPlan.today
   end
@@ -30,7 +31,7 @@ class ReplacePatrolTemplatesMigrationTest < ActiveSupport::TestCase
     patrol = ChecklistTemplate.where(name: "巡回点検")
     assert_equal 1, patrol.count
     template = patrol.first
-    assert_equal [ @section, "routine", "patrol", true ], [ template.department, template.inspection_type, template.cycle, template.is_active ]
+    assert_equal [ @operations, "routine", "patrol", true ], [ template.department, template.inspection_type, template.cycle, template.is_active ] # 巡回は運転部門のテンプレート
     assert_equal ChecklistTemplateCatalog::PATROL, template.checklist_template_items.map { |i| [ i.content, i.item_type ] }
     assert_equal (1..template.checklist_template_items.size).to_a, template.checklist_template_items.map(&:position)
     assert_nil ChecklistTemplate.find_by(name: "根岸 巡回点検") # 根岸には計装保全課が無い

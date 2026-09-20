@@ -3,13 +3,17 @@
 # チェックリストテンプレートの定義（「機器の種類 × 周期」。巡回だけは機器の種類で分けず、装置単位）。シード（db/seeds/09_inspections.rb）と、
 # 既存環境への反映マイグレーション（RebuildChecklistTemplates）で共有する。
 # 周期は、巡回（装置を歩いて見て回る、ざっくりした目視）／月次（ゼロ点確認など）／年次（校正・作動確認）／定修（2〜4年の分解整備・全数）。
-# 巡回は、単独の計器の点検ではなく、異常があったときだけ記録する。指示値の異常はDCSで分かるため、巡回の項目には入れない。
+# 巡回は、単独の計器の点検ではなく、運転部門が装置をざっくり見て回り、異常があったときだけ記録する（テンプレートも運転部門のもの）。
+# 指示値の異常はDCSで分かるため、巡回の項目には入れない。
 # 項目は [内容, 種別]。種別は check（確認）/ measurement（測定値の記録。単位は内容に書く）/ text（自由記述）/
 # calibration（5点校正。計器の校正範囲・許容差から期待値と合否を求める）。最後は「特記事項」で締める。
 # 実際の周期・内容は事業所の保全標準による。ここはデモ用の例
 module ChecklistTemplateCatalog
   SITE = "川崎製油所"
   SECTION = "計装保全課"
+  # テンプレートを持つ部署（部→課の順）。点検・校正は計装保全課、巡回は運転部門（製造部。川崎は運転課が2つあるため、部にする）
+  MAINTENANCE_PATH = [ "保全部", SECTION ].freeze
+  OPERATION_PATH = [ "製造部" ].freeze
   # 名前の末尾 => 周期（巡回・月次・年次・定修）
   CYCLES = { "巡回点検" => "patrol", "月次点検" => "monthly", "年次点検" => "annual", "定修点検" => "turnaround" }.freeze
 
@@ -29,7 +33,7 @@ module ChecklistTemplateCatalog
 
   TEMPLATES = [
     # --- 巡回（装置単位。機器の種類では分けない） ---
-    { name: "巡回点検", inspection_type: "routine", items: PATROL },
+    { name: "巡回点検", inspection_type: "routine", dept_path: OPERATION_PATH, items: PATROL },
 
     # --- 伝送器類（圧力・差圧・流量・液面・温度） ---
     {
@@ -166,7 +170,7 @@ module ChecklistTemplateCatalog
     },
 
     # --- 拠点ごとの巡回点検（川崎の巡回点検と同じ項目） ---
-    { name: "根岸 巡回点検", inspection_type: "routine", site: "根岸製油所", items: PATROL },
-    { name: "堺 巡回点検", inspection_type: "routine", site: "堺製油所", items: PATROL }
-  ].map { |template| { site: SITE, cycle: CYCLES.find { |suffix, _| template[:name].end_with?(suffix) }&.last }.merge(template) }.freeze
+    { name: "根岸 巡回点検", inspection_type: "routine", site: "根岸製油所", dept_path: OPERATION_PATH, items: PATROL },
+    { name: "堺 巡回点検", inspection_type: "routine", site: "堺製油所", dept_path: OPERATION_PATH, items: PATROL }
+  ].map { |template| { site: SITE, dept_path: MAINTENANCE_PATH, cycle: CYCLES.find { |suffix, _| template[:name].end_with?(suffix) }&.last }.merge(template) }.freeze
 end

@@ -48,6 +48,13 @@ class ChecklistTemplateCatalogTest < ActiveSupport::TestCase
     end
   end
 
+  test "巡回点検は運転部門（製造部）のテンプレート、それ以外は計装保全課のテンプレート" do
+    TEMPLATES.each do |template|
+      expected = template[:cycle] == "patrol" ? [ "製造部" ] : [ "保全部", "計装保全課" ]
+      assert_equal expected, template[:dept_path], template[:name]
+    end
+  end
+
   test "5点校正の項目は、校正をする周期（伝送器の年次・定修、調節弁の年次・定修、タンク液面計の年次）にだけある" do
     assert_equal [ "伝送器 年次点検", "伝送器 定修点検", "調節弁 年次点検", "調節弁 定修点検", "タンク液面計 年次点検" ].sort, names_with_item(type: "calibration").sort
   end

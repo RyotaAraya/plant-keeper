@@ -31,7 +31,7 @@ require Rails.root.join("db/data/checklist_templates")
 templates = ChecklistTemplateCatalog::TEMPLATES.to_h do |attrs|
   template = ChecklistTemplate.create!(
     name: attrs[:name], inspection_type: attrs[:inspection_type], cycle: attrs[:cycle],
-    department: dept(attrs[:site], "保全部", ChecklistTemplateCatalog::SECTION)
+    department: dept(attrs[:site], *attrs[:dept_path])
   )
   attrs[:items].each_with_index do |(content, item_type), index|
     ChecklistTemplateItem.create!(checklist_template: template, position: index + 1, content: content, item_type: item_type)

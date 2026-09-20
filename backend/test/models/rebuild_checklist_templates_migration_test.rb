@@ -7,6 +7,7 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
     @site = Site.create!(name: "川崎製油所")
     division = create_department(site: @site, name: "保全部")
     @section = create_department(site: @site, name: "計装保全課", level: "section", parent: division)
+    @operations = create_department(site: @site, name: "製造部")
     @equipment = create_equipment(site: @site)
     @today = InspectionPlan.today
   end

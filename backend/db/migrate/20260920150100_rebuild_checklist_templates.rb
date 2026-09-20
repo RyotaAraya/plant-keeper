@@ -44,7 +44,7 @@ class RebuildChecklistTemplates < ActiveRecord::Migration[8.0]
 
     department_id = select_value(<<~SQL.squish)
       SELECT d.id FROM departments d JOIN sites s ON s.id = d.site_id
-      WHERE s.name = #{connection.quote(attrs[:site])} AND d.name = #{connection.quote(ChecklistTemplateCatalog::SECTION)}
+      WHERE s.name = #{connection.quote(attrs[:site])} AND d.name = #{connection.quote(attrs[:dept_path].last)}
       LIMIT 1
     SQL
     return unless department_id # 部署が無い環境（空のDBなど）には作らない

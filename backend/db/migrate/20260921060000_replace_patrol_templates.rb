@@ -1,6 +1,6 @@
 # 巡回点検を、機器の種類ごと（伝送器・調節弁・遮断弁・インターロック・安全弁）から、装置単位のざっくりした巡回（「巡回点検」）に置き換える。
 # 単独の計器の巡回点検はなく、巡回は装置を見て回り、異常があったときだけ記録するため（指示値の異常はDCSで分かる）。
-# - 新しい巡回点検（定義は db/data/checklist_templates.rb）を、無ければ作る（部署が無い環境には作らない）
+# - 新しい巡回点検（定義は db/data/checklist_templates.rb。運転部門＝製造部のテンプレート）を、無ければ作る（部署が無い環境には作らない）
 # - 旧の巡回のテンプレートを使っていた点検計画を、同じ拠点の新しい巡回点検に付け替える。デモの計画は名前も「巡回点検」に直す
 # - 旧の巡回のテンプレートは廃止（is_active=false）にする。過去の点検記録が参照しているため消さない
 # 何度実行しても同じ結果になる。利用者が作ったテンプレートには触れない。モデルのコードには依存しない（生SQL）
@@ -39,7 +39,7 @@ class ReplacePatrolTemplates < ActiveRecord::Migration[8.0]
 
     department_id = select_value(<<~SQL.squish)
       SELECT d.id FROM departments d JOIN sites s ON s.id = d.site_id
-      WHERE s.name = #{connection.quote(attrs[:site])} AND d.name = #{connection.quote(ChecklistTemplateCatalog::SECTION)}
+      WHERE s.name = #{connection.quote(attrs[:site])} AND d.name = #{connection.quote(attrs[:dept_path].last)}
       LIMIT 1
     SQL
     return unless department_id # 部署が無い環境（空のDBなど）には作らない
