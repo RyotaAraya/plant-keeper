@@ -27,7 +27,7 @@ test('デモの系列: 2026年の整備に、部署ごとの作業と、定修�
 
   await test.step('作業: 計装課の点検、電気課の整備、定修待ちのトラブルから回した作業', async () => {
     const tasks = page.getByTestId('tasks-card')
-    await expect(tasks).toContainText('計器保全課')
+    await expect(tasks).toContainText('計装保全課')
     await expect(tasks).toContainText('電気保全課')
     await expect(tasks).toContainText('蒸気タービン開放点検')
     await expect(tasks).toContainText('PSV-701') // 安全弁の定修点検

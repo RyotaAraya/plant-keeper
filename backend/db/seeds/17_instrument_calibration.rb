@@ -19,7 +19,7 @@ end
 # 調整前は高流量側でドリフトして不合格、零点・スパンを調整して調整後は合格（承認済み）
 ft301 = Instrument.find_by!(tag_number: "FT-301")
 sheet = CalibrationSheet.new(CalibrationSheet.snapshot_for(ft301))
-kw_inst_sec = Department.find_by!(name: "計器保全課", site: ft301.equipment.site)
+kw_inst_sec = Department.find_by!(name: "計装保全課", site: ft301.equipment.site)
 reading = lambda do |percent, error_percent|
   expected = sheet.expected(percent)
   { "output" => (expected["output"] + 16 * error_percent / 100).round(3), "dcs" => (expected["dcs"] + 500 * error_percent / 100).round(2) }
