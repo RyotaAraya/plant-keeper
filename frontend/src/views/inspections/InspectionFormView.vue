@@ -3,9 +3,11 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationTable from '@/components/CalibrationTable.vue'
+import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
+import type { InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
@@ -19,6 +21,7 @@ const isEdit = computed(() => !!editId.value && route.name === 'InspectionEdit')
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const instruments = ref<any[]>([])
 const templates = ref<any[]>([])
+const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
 
@@ -32,6 +35,13 @@ const form = ref({
   inspected_at: nowForInput(),
   notes: '',
   items: [] as any[],
+  reference_standards: [] as InspectionReferenceStandardUse[],
+})
+
+// 取引用の計器（点検の計器、または項目の計器）の点検には、トレーサビリティのある校正の基準器が必要
+const requireTraceable = computed(() => {
+  const ids = [form.value.instrument_id, ...form.value.items.map((item) => item.instrument_id)]
+  return ids.some((id) => id && instruments.value.find((i: any) => i.id === id)?.custody_transfer)
 })
 
 const inspectionTypeOptions = [
@@ -61,11 +71,15 @@ function snapshotFor(item: any) {
 }
 
 async function fetchMasters() {
-  const [, tmplRes] = await Promise.all([
+  const [, tmplRes, standardRes] = await Promise.all([
     loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
     api.get('/checklist_templates'),
+    api.get('/reference_standards', { params: { per_page: 1000 } }),
   ])
   templates.value = tmplRes.data.data
+  // 自分の所属拠点の基準器を先頭に並べる（基準器は拠点間で持ち運ぶこともあるため、他拠点のものも選べる）
+  const own = authStore.user?.site_id
+  referenceStandards.value = [...standardRes.data.data].sort((a: ReferenceStandard, b: ReferenceStandard) => Number(b.site_id === own) - Number(a.site_id === own))
 }
 
 // 別拠点の設備の点検（編集や、点検計画からの実施）を開いたときは、その設備の拠点の選択肢に切り替える
@@ -180,6 +194,11 @@ async function loadExisting() {
     inspection_type: data.inspection_type,
     inspected_at: data.inspected_at?.slice(0, 16) || '',
     notes: data.notes || '',
+    reference_standards: (data.inspection_reference_standards || []).map((link: any) => ({
+      reference_standard_id: link.reference_standard_id,
+      pre_check_passed: link.pre_check_passed,
+      pre_check_note: link.pre_check_note || '',
+    })),
     items: (data.inspection_items || []).map((item: any) => ({
       id: item.id,
       checklist_template_item_id: item.checklist_template_item_id,
@@ -311,6 +330,13 @@ onMounted(async () => {
         </v-row>
       </v-card-text>
     </v-card>
+
+    <InspectionReferenceStandards
+      v-model="form.reference_standards"
+      :standards="referenceStandards"
+      :inspection-date="form.inspected_at.slice(0, 10)"
+      :require-traceable="requireTraceable"
+    />
 
     <div class="d-flex align-center mb-3">
       <h2 class="text-h6">点検項目</h2>

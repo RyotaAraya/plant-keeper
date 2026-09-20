@@ -7,10 +7,10 @@ module Api
       # overdue=true で期限超過のみ、due_within=N で N日以内に期限が来るもの。既定は有効な計画のみ（is_active=false で無効も）
       def index
         authorize InspectionPlan
-        plans = InspectionPlan.includes(:equipment, :instrument, :checklist_template)
+        plans = InspectionPlan.includes(:equipment, :reference_standard, :instrument, :checklist_template)
         plans = plans.where(is_active: params[:is_active] == "false" ? false : true)
         if (site_ids = id_list_param(:site_ids, :site_id))
-          plans = plans.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
+          plans = plans.for_sites(site_ids)
         end
         if (equipment_ids = id_list_param(:equipment_ids, :equipment_id))
           plans = plans.where(equipment_id: equipment_ids)
@@ -61,6 +61,7 @@ module Api
           methods: [ :overdue, :days_until_due ],
           include: {
             equipment: { only: [ :id, :name, :site_id ] },
+            reference_standard: { only: [ :id, :name, :management_number, :site_id ] },
             instrument: { only: [ :id, :tag_number ] },
             checklist_template: { only: [ :id, :name ] }
           }
@@ -69,7 +70,7 @@ module Api
 
       def plan_params
         params.require(:inspection_plan).permit(
-          :name, :equipment_id, :instrument_id, :checklist_template_id, :inspection_type,
+          :name, :equipment_id, :reference_standard_id, :instrument_id, :checklist_template_id, :inspection_type,
           :interval_days, :next_due_on, :is_active
         )
       end

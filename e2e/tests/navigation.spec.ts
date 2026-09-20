@@ -4,6 +4,7 @@ import { test, expect, login, ACCOUNTS } from './support'
 const screens = [
   { menu: '設備台帳', heading: '設備台帳', hasRows: true },
   { menu: '装置・計器', heading: '装置・計器', hasRows: true },
+  { menu: '基準器', heading: '基準器', hasRows: true },
   { menu: '点検・作業記録', heading: '点検・作業記録', hasRows: true },
   { menu: 'トラブル管理', heading: 'トラブル管理', hasRows: true },
   { menu: '定期整備', heading: '定期整備', hasRows: true },

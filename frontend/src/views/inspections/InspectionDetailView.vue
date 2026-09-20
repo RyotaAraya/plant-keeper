@@ -141,6 +141,42 @@ onMounted(fetchInspection)
         </v-card-text>
       </v-card>
 
+      <template v-if="inspection.inspection_reference_standards?.length">
+        <h2 class="text-h6 mb-3">使用した基準器</h2>
+        <v-table density="compact" class="mb-6" data-testid="reference-standards-used">
+          <thead>
+            <tr>
+              <th>基準器</th>
+              <th>点検日時点の校正</th>
+              <th>使用前の1点チェック</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="link in inspection.inspection_reference_standards" :key="link.id">
+              <td>
+                <a class="text-primary" style="cursor: pointer" @click="router.push(`/reference-standards/${link.reference_standard_id}`)">
+                  {{ link.reference_standard?.management_number }} {{ link.reference_standard?.name }}
+                </a>
+              </td>
+              <td class="text-caption">
+                <template v-if="link.calibration_at_inspection">
+                  {{ link.calibration_at_inspection.performed_on }} 実施・{{ link.calibration_at_inspection.performed_by }}・
+                  {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ link.calibration_at_inspection.valid_until }}まで有効・
+                  トレーサビリティ{{ link.calibration_at_inspection.traceable ? 'あり' : 'なし' }}
+                </template>
+                <template v-else>—</template>
+              </td>
+              <td>
+                <v-chip :color="link.pre_check_passed === null ? 'grey' : link.pre_check_passed ? 'success' : 'error'" size="x-small" label variant="tonal">
+                  {{ link.pre_check_passed === null ? '未確認' : link.pre_check_passed ? 'OK' : 'NG' }}
+                </v-chip>
+                <span v-if="link.pre_check_note" class="ml-2 text-caption">{{ link.pre_check_note }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </template>
+
       <h2 class="text-h6 mb-3">点検項目</h2>
       <v-table density="compact">
         <thead>

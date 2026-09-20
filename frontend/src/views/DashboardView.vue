@@ -128,7 +128,7 @@ onMounted(fetchDashboard)
                 v-for="p in dashboard.inspection_plans.overdue_list"
                 :key="p.id"
                 :title="p.name"
-                :subtitle="`${p.equipment?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
+                :subtitle="`${p.equipment?.name ?? p.reference_standard?.name}${p.instrument ? ' / ' + p.instrument.tag_number : ''} — ${-p.days_until_due}日超過`"
                 @click="goList('/inspection-plans', { overdue: 'true' })"
               >
                 <template #prepend>

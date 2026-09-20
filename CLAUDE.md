@@ -78,7 +78,7 @@ docker-compose exec -e DATABASE_URL=$T backend bin/rails test
 
 ## E2Eテスト（Playwright）
 
-`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示、設備の適用法規（法規区分の表示・色・選択欄・法定検査の周期）の表示、計器の校正条件と5点校正の入力・合否の表示）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
+`e2e/` に、ブラウザ経由のスモークテストがある（認証、主要画面の遷移と権限、ロール別（自社/協力会社 × マネージャー/作業員）のメニューと操作ボタンの出し分け、一覧の拠点スコープ（自拠点が初期値・複数選択・協力会社は切替不可）と複数選択の絞り込み、点検で不具合報告 → トラブル自動登録、点検の承認ボタンの出し分け、点検計画の期限超過表示、設備の適用法規（法規区分の表示・色・選択欄・法定検査の周期）の表示、計器の校正条件と5点校正の入力・合否の表示、基準器の台帳・校正の状態・点検での基準器の選択と提出時の拒否）。テスト中に未捕捉のJS例外・API 5xxが出ていないことも全テストで検証する（`e2e/tests/support.ts`）。CI（`e2e` ジョブ）では、ビルド済みフロント（`vite preview`）+ APIサーバー + シード済みDBに対して実行する。
 
 ```bash
 # 初回のみ（ホストのNodeで実行。docker-compose up 済みが前提）
@@ -261,6 +261,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - **在庫**: 数量は入出庫・移動（`POST /stock_transactions`）でのみ変更する。在庫行を `lock`（`SELECT ... FOR UPDATE`）してから更新し、DBの CHECK 制約（`quantity >= 0`）でも守る。`PATCH /stocks` は数量・倉庫・資材を変更できず、ステータスは「在庫あり」⇔「使用中」の間だけ直接変えられる（修理中・廃棄済は修理管理・廃棄の入出庫を通す）。新規登録できるのも「在庫あり」「使用中」のみ。在庫を初期数量つきで登録すると、入庫として台帳にも残る。移動先に同じロット（資材・購入日・状態が同じでシリアルなし）があれば数量を足す
 - **法規区分**: 設備に適用する法規（`regulations`。高圧ガス・ボイラー・電気事業法・消防法・計量法）は、法定検査の周期（`regulation_inspections`。日数）と共に、付属機器の点検周期を決める起点。`target=instrument`（計量法）の区分は設備には付けられない（`Equipment` のバリデーション）。適用法規の付け外しは設備の更新（`regulation_ids`）で行い、変更前後のIDを監査ログ（`changes_json.regulation_ids`）に残す。マスタの定義は `db/data/regulations.rb`（シードと `SeedRegulations` マイグレーションが共有。周期はデモ用の想定）
 - **5点校正**: 計器に校正条件（範囲・許容差・出力特性・DCS換算。`instruments`）を持たせ、点検項目の種別 `calibration` で0/25/50/75/100%の上昇・下降の出力（mA）とDCS表示を記録する。期待値・誤差・合否・ヒステリシスは `CalibrationSheet`（PORO。誤差は出力=16mA（ポジショナは範囲の幅）、DCS=DCS範囲の幅に対する%を、許容差と比べる）が計算し、画面の `utils/calibration.ts` は同じ規則をミラーしている（**規則を変えるときは両方と、両方のテスト（`calibration_sheet_test.rb`・E2E `calibration.spec.ts`）を直す**）。記録は `inspection_items.calibration_data`（校正時の条件 `snapshot` を凍結して保存。送られた `snapshot` は無視し、サーバーが計器から作る）と `calibration_result`。測定値を記録するには計器に範囲と許容差が必要（未設定は422）。調整した場合は調整後が最終の判定。範囲・許容差の既定値はデモ用の想定で、`db/data/instrument_calibration.rb`（シードと `SeedInstrumentCalibration` マイグレーションが共有）
+- **基準器**: 校正に使う基準器の台帳（`reference_standards`）、メーカー校正の履歴（`reference_standard_calibrations`。実施日・校正した機関・証明書番号・結果・トレーサビリティ・有効期限）、点検で使った基準器と使用前の1点チェック（`inspection_reference_standards`）。点検日 D に効いていた校正＝D 以前で最新のもの（`ReferenceStandard#calibration_on`）で、合格かつ有効期限 ≧ D なら使える（`unusable_reasons`。画面の `utils/referenceStandard.ts` は同じ規則のミラー。変えるときは両方を直す）。**提出（下書きを出る）時に `Inspection#check_reference_standards!` が、使った基準器の状態・校正・使用前チェック（未確認もNG扱い）・取引用の計器のトレーサビリティを確認し、使えなければ422（理由は基準器ごとに配列で返る）。5点校正の測定値を提出するには基準器の指定が必要**。下書きの間は確認しない。承認依頼中は使った基準器を変更できない（`reference_standards` を送ると内容の編集扱い）。基準器の作成時に年次校正の点検計画（周期365日）を自動で作り、校正を記録すると（最新の校正のときだけ）計画の次回期限が校正の有効期限に進む。点検計画の対象は設備か基準器のどちらか一方（DBのCHECKとモデルで検証）。合格の校正の記録で、校正中の基準器は使用可に戻る。最新の校正が不合格のとき、基準器の詳細で、前回の合格した校正以降に使った点検（影響範囲）を返す。デモ用のデータは `db/data/reference_standards.rb`（シードと `SeedReferenceStandards` マイグレーションが共有。校正した機関・証明書番号は架空）
 - **タグ番号**: `instruments.tag_number` は拠点内で一意（別拠点なら同じ番号があり得る）。モデルで拠点内の一意を検証し、DBの一意制約は設備内のみ
 
 - **タイムゾーン**: アプリは日本時間（`config.time_zone = "Tokyo"`。DBへの保存はUTC）。日時の入力は日本時間として解釈され、返す日時は「+09:00」付き。「今日」「今月」はコード上 `Date.current` / `Time.current`（`Date.today` は使わない）。フロントのフォーム初期値は `utils/datetime.ts`（`nowForInput` / `todayForInput`）を使う（`toISOString()` はUTCなので、日本時間の朝に前日になる）
@@ -286,7 +287,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - `AuditLog` の enum は `prefix: true` 付き → `action_create?` / `action_update?` 等（`create?` ではない）
 - 論理削除リソースには `destroy` ルートなし
 - JSON シリアライズ: `as_json(include: ...)` インライン。ActiveModel::Serializers 不使用（UserSerializer のみ PORO）
-- シードファイル: `db/seeds/` 配下に 01〜17 の番号付きファイルで分割
+- シードファイル: `db/seeds/` 配下に 01〜18 の番号付きファイルで分割
 - チェックリストテンプレートの点検項目は `db/data/checklist_template_items.rb`（テンプレート名 → 項目）が定義元。シードと、既存環境（stg・本番）へ補充するマイグレーション `BackfillChecklistTemplateItems`（名前が一致し項目が空のテンプレートだけが対象）が共有する。テンプレートを増やすときはカタログにも足す（シードは `fetch` で失敗する）。項目を変えても既存環境の項目は更新されない（デプロイのたびに流れるのは新しいマイグレーションだけ）
 - 点検で不具合検出時、InspectionsController 内でトラブルを自動作成（モデルコールバックではなくコントローラロジック）。`has_defect && defect_title.present? && trouble.nil?` の条件で重複作成を防止
 

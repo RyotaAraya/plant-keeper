@@ -3,6 +3,12 @@ module Api
     class InspectionsController < BaseController
       before_action :set_inspection, only: [ :show, :update ]
 
+      # 使った基準器（点検日に効いていた校正つき）
+      REFERENCE_STANDARD_INCLUDE = {
+        methods: [ :calibration_at_inspection ],
+        include: { reference_standard: { only: [ :id, :management_number, :name, :category, :status ] } }
+      }.freeze
+
       # GET /api/v1/inspections
       def index
         authorize Inspection
@@ -59,7 +65,8 @@ module Api
                   trouble: { only: [ :id, :title, :status ] },
                   instrument: { only: [ :id, :tag_number ] }
                 }
-              }
+              },
+              inspection_reference_standards: REFERENCE_STANDARD_INCLUDE
             }
           )
         }
@@ -85,6 +92,8 @@ module Api
               create_item!(inspection, item, idx)
             end
           end
+          sync_reference_standards!(inspection)
+          inspection.check_reference_standards! unless inspection.draft?
         end
 
         inspection.reload
@@ -93,6 +102,8 @@ module Api
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
+      rescue Inspection::UnusableReferenceStandards => e
+        render json: { errors: e.problems }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/inspections/:id
@@ -111,6 +122,7 @@ module Api
 
         ActiveRecord::Base.transaction do
           approval_requested = @inspection.status_changed?(to: "approval_requested")
+          leaving_draft = @inspection.status_was == "draft" && !@inspection.draft?
           @inspection.save!
           record_audit_log(approval_requested ? "approval_request" : "update", @inspection)
 
@@ -142,6 +154,9 @@ module Api
               end
             end
           end
+          sync_reference_standards!(@inspection)
+          # 下書きを出るとき、または提出後に基準器を変えたときに、使った基準器が点検日に使えるかを確認する
+          @inspection.check_reference_standards! if !@inspection.draft? && (leaving_draft || params[:inspection].key?(:reference_standards))
         end
 
         @inspection.reload
@@ -150,6 +165,8 @@ module Api
         }
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
+      rescue Inspection::UnusableReferenceStandards => e
+        render json: { errors: e.problems }, status: :unprocessable_entity
       end
 
       private
@@ -157,7 +174,21 @@ module Api
       # 承認依頼中は承認者が見ている内容が変わらないよう、内容の編集を止める（状態変更は可）
       def content_edit_while_approval_requested?
         @inspection.status_was == "approval_requested" &&
-          ((@inspection.changed - [ "status" ]).any? || params[:inspection].key?(:items))
+          ((@inspection.changed - [ "status" ]).any? || params[:inspection].key?(:items) || params[:inspection].key?(:reference_standards))
+      end
+
+      # 使った基準器と使用前の1点チェック。reference_standards が送られたときだけ、送られた内容に合わせる（無ければ変えない）
+      def sync_reference_standards!(inspection)
+        return unless params[:inspection].key?(:reference_standards)
+
+        uses = Array(params[:inspection][:reference_standards]).select { |use| use.respond_to?(:key?) }
+        ids = uses.filter_map { |use| use[:reference_standard_id].presence&.to_i }
+        inspection.inspection_reference_standards.where.not(reference_standard_id: ids).destroy_all
+        uses.each do |use|
+          link = inspection.inspection_reference_standards.find_or_initialize_by(reference_standard_id: use[:reference_standard_id])
+          link.update!(pre_check_passed: ActiveModel::Type::Boolean.new.cast(use[:pre_check_passed]), pre_check_note: use[:pre_check_note])
+        end
+        inspection.inspection_reference_standards.reset
       end
 
       def create_item!(inspection, item, idx)
@@ -203,7 +234,8 @@ module Api
       def set_inspection
         @inspection = Inspection.includes(
           :user, :equipment, :department, :instrument, :checklist_template,
-          inspection_items: [ :trouble, :instrument ]
+          inspection_items: [ :trouble, :instrument ],
+          inspection_reference_standards: :reference_standard
         ).find(params[:id])
       end
 

@@ -16,8 +16,8 @@ module Api
         maintenances_scope = ScheduledMaintenance.joins(:equipment)
         maintenances_scope = maintenances_scope.where(equipments: { site_id: site_ids }) if site_ids
 
-        plans_scope = InspectionPlan.active.joins(:equipment)
-        plans_scope = plans_scope.where(equipments: { site_id: site_ids }) if site_ids
+        plans_scope = InspectionPlan.active
+        plans_scope = plans_scope.for_sites(site_ids) if site_ids
 
         repairs_scope = Repair.joins(stock: :warehouse)
         repairs_scope = repairs_scope.where(warehouses: { site_id: site_ids }) if site_ids
@@ -52,8 +52,9 @@ module Api
             inspection_plans: {
               overdue: plans_scope.merge(InspectionPlan.overdue).count,
               due_soon: plans_scope.merge(InspectionPlan.due_within(7)).count,
-              overdue_list: plans_scope.merge(InspectionPlan.overdue).includes(:instrument).order(:next_due_on).limit(5)
-                .as_json(methods: [ :days_until_due ], include: { equipment: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] } })
+              overdue_list: plans_scope.merge(InspectionPlan.overdue).includes(:equipment, :instrument, :reference_standard).order(:next_due_on).limit(5)
+                .as_json(methods: [ :days_until_due ], include: { equipment: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] },
+                                                                   reference_standard: { only: [ :id, :name ] } })
             },
             # 定期整備
             maintenances: {

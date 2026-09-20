@@ -262,7 +262,9 @@ export interface Inspection {
 export interface InspectionPlan {
   id: number
   name: string
-  equipment_id: number
+  // 点検の対象は、設備か基準器（年次の校正）のどちらか一方
+  equipment_id: number | null
+  reference_standard_id?: number | null
   instrument_id: number | null
   checklist_template_id: number | null
   inspection_type: string
@@ -272,7 +274,8 @@ export interface InspectionPlan {
   is_active: boolean
   overdue: boolean
   days_until_due: number
-  equipment?: { id: number; name: string; site_id: number }
+  equipment?: { id: number; name: string; site_id: number } | null
+  reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
 }
@@ -476,4 +479,46 @@ export interface AuditLog {
   ip_address: string | null
   performed_at: string
   created_at: string
+}
+
+// 基準器（校正に使う圧力校正器・マルチテスタ・温度校正器など）。校正はメーカーが行い、その履歴から点検日に使えるかを判定する
+export interface ReferenceStandardCalibration {
+  id: number
+  performed_on: string
+  performed_by: string
+  certificate_number: string | null
+  result: 'pass' | 'fail'
+  traceable: boolean
+  valid_until: string
+  notes?: string | null
+}
+
+// never=校正の記録なし / failed=最新の校正が不合格 / expired=有効期限切れ / expiring=期限間近 / valid=有効
+export type CalibrationState = 'never' | 'failed' | 'expired' | 'expiring' | 'valid'
+
+export interface ReferenceStandard {
+  id: number
+  site_id: number
+  management_number: string
+  name: string
+  category: 'pressure' | 'electrical' | 'temperature' | 'other'
+  model_number: string | null
+  serial_number: string | null
+  measuring_range: string | null
+  accuracy: string | null
+  location: string | null
+  status: 'usable' | 'in_calibration' | 'retired'
+  notes: string | null
+  site?: { id: number; name: string }
+  calibration_state: CalibrationState
+  next_due_on: string | null
+  // 新しい順
+  calibrations: ReferenceStandardCalibration[]
+}
+
+// 点検で使った基準器と、使用前の1点チェック（pre_check_passed: null=未確認）
+export interface InspectionReferenceStandardUse {
+  reference_standard_id: number
+  pre_check_passed: boolean | null
+  pre_check_note: string
 }
