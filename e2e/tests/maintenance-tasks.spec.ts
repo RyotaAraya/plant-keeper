@@ -1,4 +1,4 @@
-import { test, expect, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, openListRow, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
 import type { Page } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
@@ -28,7 +28,7 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await page.keyboard.press('Escape')
     await dialog.getByRole('button', { name: '作成' }).click()
     await expect(dialog).toBeHidden()
-    await page.getByRole('row', { name: new RegExp(title) }).click()
+    await openListRow(page, title)
   })
 
   const tasks = page.getByTestId('tasks-card')
@@ -65,7 +65,7 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await page.goBack()
     await page.goBack()
     await page.getByRole('link', { name: '定期整備', exact: true }).click()
-    await page.getByRole('row', { name: new RegExp(title) }).click()
+    await openListRow(page, title)
     await expect(tasks.getByTestId('tasks-progress')).toContainText(/完了 1 \/ \d+/)
     await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検')).toContainText(todayForInput())
     await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検').getByRole('button', { name: '点検記録' })).toBeVisible()

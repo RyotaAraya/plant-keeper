@@ -10,7 +10,8 @@ module Api
         equipment: { only: [ :id, :name ] },
         instrument: { only: [ :id, :tag_number ] },
         checklist_template: { only: [ :id, :name ] },
-        assigned_to: { only: [ :id, :name ] }
+        assigned_to: { only: [ :id, :name ] },
+        trouble: { only: [ :id, :title, :status ] }
       }.freeze
 
       # 定期整備の詳細から使う。作業ごとの、最後の点検（記録した点検のうち新しいもの）を付ける

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_020100) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -286,6 +286,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_020100) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "trouble_id"
     t.index ["assigned_to_id"], name: "index_maintenance_tasks_on_assigned_to_id"
     t.index ["checklist_template_id"], name: "index_maintenance_tasks_on_checklist_template_id"
     t.index ["department_id"], name: "index_maintenance_tasks_on_department_id"
@@ -293,6 +294,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_020100) do
     t.index ["instrument_id"], name: "index_maintenance_tasks_on_instrument_id"
     t.index ["scheduled_maintenance_id", "status"], name: "index_maintenance_tasks_on_scheduled_maintenance_id_and_status"
     t.index ["scheduled_maintenance_id"], name: "index_maintenance_tasks_on_scheduled_maintenance_id"
+    t.index ["trouble_id"], name: "index_maintenance_tasks_on_trouble_id"
   end
 
   create_table "manufacturers", force: :cascade do |t|
@@ -645,6 +647,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_020100) do
   add_foreign_key "maintenance_tasks", "equipments"
   add_foreign_key "maintenance_tasks", "instruments"
   add_foreign_key "maintenance_tasks", "scheduled_maintenances"
+  add_foreign_key "maintenance_tasks", "troubles"
   add_foreign_key "maintenance_tasks", "users", column: "assigned_to_id"
   add_foreign_key "material_alternatives", "materials"
   add_foreign_key "material_alternatives", "materials", column: "alternative_material_id"

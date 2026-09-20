@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, openListRow, login, ACCOUNTS } from './support'
 
 // 定期整備の系列: 設備ごとの周期を登録し、「次回を作る」で周期が来た設備を自動で対象にする（ボイラー2年・もう一方は4年）。
 // このテストは定期整備を3件作る（名前が「E2E 」で始まる。繰り返し実行すると一覧に溜まる）
@@ -20,7 +20,7 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
     await page.keyboard.press('Escape')
     await dialog.getByRole('button', { name: '作成' }).click()
     await expect(dialog).toBeHidden()
-    await page.getByRole('row', { name: new RegExp(title) }).click()
+    await openListRow(page, title)
   })
 
   await test.step('系列に登録する（ボイラー設備は24か月、常圧蒸留装置は48か月ごと）', async () => {

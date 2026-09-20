@@ -45,7 +45,9 @@ class ScheduledMaintenanceParentsMigrationTest < ActiveSupport::TestCase
 
     run_migration
 
-    assert_not ScheduledMaintenance.columns_hash["site_id"].null
-    assert_not ScheduledMaintenance.columns_hash["planned_start_on"].null
+    # モデルの列情報のキャッシュを介さず、DBから直接読む（実行順で、キャッシュが移行前の状態のまま残ることがあるため）
+    columns = @connection.columns(:scheduled_maintenances).index_by(&:name)
+    assert_not columns["site_id"].null
+    assert_not columns["planned_start_on"].null
   end
 end

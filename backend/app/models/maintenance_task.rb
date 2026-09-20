@@ -10,6 +10,7 @@ class MaintenanceTask < ApplicationRecord
   belongs_to :instrument, optional: true
   belongs_to :checklist_template, optional: true
   belongs_to :assigned_to, class_name: "User", optional: true
+  belongs_to :trouble, optional: true
 
   has_many :inspections, dependent: :nullify
 
@@ -33,11 +34,16 @@ class MaintenanceTask < ApplicationRecord
 
   before_validation :fill_title
   before_save :stamp_completed_on, if: :status_changed?
+  # 回されたトラブルの状態を、作業の状態に合わせる（完了→解決済、見送り・削除→未対応、再開→定修待ち）
+  # （作成時は、トラブルを定修待ちにする側が状態を変えるので、連動しない）
+  after_save :sync_trouble_status, if: -> { saved_change_to_status? && !previously_new_record? }
+  after_destroy :release_trouble
 
   validates :title, presence: true
   validate :equipment_is_in_maintenance
   validate :department_is_in_site
   validate :checklist_template_is_for_inspection
+  validate :trouble_is_on_equipment
 
   # 計器の種類から、使う定修点検のチェックリストの種類。テンプレートのない計器（手動弁など）は nil
   def self.template_key_for(instrument)
@@ -89,6 +95,29 @@ class MaintenanceTask < ApplicationRecord
     return if department.nil? || scheduled_maintenance.nil?
 
     errors.add(:department, "は、定期整備と同じ拠点の部署にしてください") if department.site_id != scheduled_maintenance.site_id
+  end
+
+  def trouble_is_on_equipment
+    errors.add(:trouble, "は、作業の対象設備のトラブルにしてください") if trouble && trouble.equipment_id != equipment_id
+  end
+
+  # 作業が完了したら、定修待ちのトラブルを解決済に。見送りにしたら未対応に戻す。
+  # 見送りや完了から再開したら（未着手・実施中）、未対応・解決済に戻っているトラブルを定修待ちに戻す。完了（closed）のトラブルは変えない
+  def sync_trouble_status
+    return if trouble.nil?
+
+    case status
+    when "completed" then trouble.update!(status: "resolved") if trouble.deferred?
+    when "cancelled" then trouble.update!(status: "open") if trouble.deferred?
+    else trouble.update!(status: "deferred") if trouble.open? || trouble.resolved?
+    end
+  end
+
+  # 作業を削除したら、ほかに作業がなければ、定修待ちのトラブルを未対応に戻す
+  def release_trouble
+    return if trouble.nil? || !trouble.deferred?
+
+    trouble.update!(status: "open") unless trouble.active_maintenance_task
   end
 
   def checklist_template_is_for_inspection

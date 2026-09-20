@@ -42,6 +42,14 @@ export async function selectFirstOption(page: Page, label: string) {
 // トラブル管理の先頭行から詳細画面を開く。一覧は初期表示の再取得で行が差し替わることがあり、
 // クリックが空振りしうるため、詳細画面に遷移するまでクリックをリトライする。
 // 「詳細画面に到達していないのに、ボタンがないことの確認だけ通る」状態を防ぐため、到達も検証する
+// 一覧（ページ分けされた表）から、名前に title を含む行を探して開く。繰り返し実行して「E2E 」の行が溜まっても、後ろのページまで探す
+export async function openListRow(page: Page, title: string) {
+  const row = page.getByRole('row', { name: new RegExp(title) })
+  const next = page.getByRole('button', { name: '次のページ' })
+  for (let i = 0; i < 100 && !(await row.isVisible()) && (await next.isEnabled()); i++) await next.click()
+  await row.click()
+}
+
 export async function openFirstTrouble(page: Page) {
   await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
   await expect(async () => {

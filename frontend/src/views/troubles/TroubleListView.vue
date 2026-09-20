@@ -59,10 +59,10 @@ const headers = [
 ]
 
 const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', resolved: '解決済', closed: '完了'
+  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
 }
 const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', resolved: 'info', closed: 'success'
+  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
 }
 const priorityLabel: Record<string, string> = {
   low: '低', medium: '中', high: '高', critical: '緊急'
@@ -74,6 +74,7 @@ const priorityColor: Record<string, string> = {
 const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
+  { title: '定修待ち', value: 'deferred' },
   { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]

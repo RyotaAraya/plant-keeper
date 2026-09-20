@@ -357,6 +357,9 @@ onMounted(fetchMaintenance)
                     {{ task.title }}
                     <div v-if="task.checklist_template && !task.title.includes(task.checklist_template.name)" class="text-caption text-medium-emphasis">{{ task.checklist_template.name }}</div>
                     <div v-if="task.notes" class="text-caption text-medium-emphasis">{{ task.notes }}</div>
+                    <v-chip v-if="task.trouble" size="x-small" label color="deep-purple" variant="tonal" class="mt-1" style="cursor: pointer" :data-testid="`task-trouble-${task.trouble.id}`" @click="router.push(`/troubles/${task.trouble.id}`)">
+                      トラブル #{{ task.trouble.id }}
+                    </v-chip>
                   </td>
                   <td class="text-no-wrap">{{ task.assigned_to?.name || '—' }}</td>
                   <td style="min-width: 130px">

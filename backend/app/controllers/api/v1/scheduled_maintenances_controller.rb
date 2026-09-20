@@ -140,7 +140,8 @@ module Api
 
       # 複製の作業: 次回の対象設備に残る設備の作業を引き継ぐ（状態は未着手に戻し、完了日は引き継がない）
       def copy_tasks!(copy)
-        @maintenance.maintenance_tasks.where(equipment_id: copy.equipment_ids).find_each do |task|
+        # トラブルから回した作業は、その回限りのものなので引き継がない
+        @maintenance.maintenance_tasks.where(trouble_id: nil, equipment_id: copy.equipment_ids).find_each do |task|
           copy.maintenance_tasks.create!(
             department_id: task.department_id, equipment_id: task.equipment_id, instrument_id: task.instrument_id, kind: task.kind,
             title: task.title, checklist_template_id: task.checklist_template_id, assigned_to_id: task.assigned_to_id, notes: task.notes
