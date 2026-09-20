@@ -11,6 +11,7 @@ import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
+import { latestGuard } from '@/utils/latestGuard'
 import type { AiResponseDraft, AiStatus } from '@/types/models'
 
 const route = useRoute()
@@ -103,13 +104,19 @@ const responseTypeOptions = [
   { title: '経過観察', value: 'observation' },
 ]
 
-async function fetchTrouble() {
-  loading.value = true
+// 履歴の行や戻る操作で、続けて別のトラブルへ移ることがある。古い取得の応答が、あとから新しい表示を上書きしないようにする
+const fetchGuard = latestGuard()
+
+// keepContent: 保存のあとの読み込み直しは、画面を作り直さずに（進捗表示に切り替えずに）、今の表示のまま更新する
+async function fetchTrouble({ keepContent = false } = {}) {
+  const isLatest = fetchGuard()
+  if (!keepContent) loading.value = true
   try {
     const res = await api.get(`/troubles/${route.params.id}`)
+    if (!isLatest()) return
     trouble.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -137,7 +144,7 @@ async function saveEdit() {
     const payload: any = { trouble: { ...editForm.value } }
     await api.patch(`/troubles/${route.params.id}`, payload)
     editDialog.value = false
-    await fetchTrouble()
+    await fetchTrouble({ keepContent: true })
   } catch (e: any) {
     editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
@@ -194,7 +201,7 @@ async function saveResponse() {
       }
     })
     responseDialog.value = false
-    await fetchTrouble()
+    await fetchTrouble({ keepContent: true })
   } catch (e: any) {
     responseErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
@@ -267,9 +274,7 @@ watch(() => route.params.id, (id, previous) => {
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">計器</div>
-              <a v-if="trouble.instrument" class="text-primary" :href="router.resolve(`/instruments/${trouble.instrument.id}`).href" @click.prevent="router.push(`/instruments/${trouble.instrument.id}`)">
-                {{ trouble.instrument.tag_number }}
-              </a>
+              <router-link v-if="trouble.instrument" class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>
               <div v-else>—</div>
             </v-col>
             <v-col cols="6" md="3">
@@ -309,7 +314,7 @@ watch(() => route.params.id, (id, previous) => {
       <!-- この計器の過去のトラブルと点検。AIを使わずに、同じ計器の履歴を全件たどれる（各行から詳細へ、「すべて見る」から一覧へ） -->
       <v-card v-if="trouble.instrument" class="mb-4" data-testid="instrument-history">
         <v-card-title class="text-subtitle-1">
-          この計器（<a class="text-primary" :href="router.resolve(`/instruments/${trouble.instrument.id}`).href" @click.prevent="router.push(`/instruments/${trouble.instrument.id}`)">{{ trouble.instrument.tag_number }}</a>）の履歴
+          この計器（<router-link class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>）の履歴
         </v-card-title>
         <v-card-text>
           <v-row>

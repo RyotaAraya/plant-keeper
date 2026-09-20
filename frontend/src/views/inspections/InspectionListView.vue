@@ -23,13 +23,19 @@ const totalCount = ref(0)
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ダッシュボードから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
+function filtersFromQuery() {
+  return {
+    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    statuses: listFromQuery(route.query.status),
+    instrument_id: idFromQuery(route.query.instrument_id),
+  }
+}
+
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  ...filtersFromQuery(),
   equipment_ids: [] as number[],
-  instrument_id: idFromQuery(route.query.instrument_id),
   department_id: null as number | null,
   inspection_types: [] as string[],
-  statuses: listFromQuery(route.query.status),
 })
 
 const headers = [
@@ -116,6 +122,15 @@ onMounted(() => {
   fetchInspections()
 })
 watch(filters, fetchInspections, { deep: true })
+
+// 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
+watch(() => route.query, () => {
+  if (route.path !== '/inspections') return
+  const q = filtersFromQuery()
+  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null, inspection_types: [] }
+  loadSiteOptions(q.site_ids)
+})
 </script>
 
 <template>

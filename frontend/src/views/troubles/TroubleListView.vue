@@ -28,12 +28,18 @@ const errors = ref<string[]>([])
 
 // 通常業務では自拠点のトラブルだけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ダッシュボードから来たときは、その拠点・ステータス・優先度で、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
+function filtersFromQuery() {
+  return {
+    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    statuses: listFromQuery(route.query.status),
+    priorities: listFromQuery(route.query.priority),
+    instrument_id: idFromQuery(route.query.instrument_id),
+  }
+}
+
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
-  statuses: listFromQuery(route.query.status),
-  priorities: listFromQuery(route.query.priority),
+  ...filtersFromQuery(),
   equipment_ids: [] as number[],
-  instrument_id: idFromQuery(route.query.instrument_id),
   department_id: null as number | null,
   q: '',
 })
@@ -163,6 +169,15 @@ onMounted(() => {
   fetchTroubles()
 })
 watch(filters, fetchTroubles, { deep: true })
+
+// 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
+watch(() => route.query, () => {
+  if (route.path !== '/troubles') return
+  const q = filtersFromQuery()
+  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null }
+  loadSiteOptions(q.site_ids)
+})
 </script>
 
 <template>
@@ -223,12 +238,7 @@ watch(filters, fetchTroubles, { deep: true })
       </template>
       <template #item.instrument.tag_number="{ item }">
         <!-- 計器の詳細（過去のトラブル・点検の履歴）へ。行のクリック（トラブルの詳細）とは別に動かす -->
-        <a
-          v-if="item.instrument"
-          class="text-primary"
-          :href="router.resolve(`/instruments/${item.instrument.id}`).href"
-          @click.stop.prevent="router.push(`/instruments/${item.instrument.id}`)"
-        >{{ item.instrument.tag_number }}</a>
+        <router-link v-if="item.instrument" class="text-primary" :to="`/instruments/${item.instrument.id}`" @click.stop>{{ item.instrument.tag_number }}</router-link>
         <template v-else>—</template>
       </template>
       <template #item.assigned_to.name="{ item }">

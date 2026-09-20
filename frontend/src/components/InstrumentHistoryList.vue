@@ -4,6 +4,9 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import {
+  inspectionStatusColor, inspectionStatusLabel, inspectionTypeLabel, priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel,
+} from '@/constants/recordLabels'
 import { latestGuard } from '@/utils/latestGuard'
 import { siteIdsToQuery } from '@/utils/listQuery'
 
@@ -19,14 +22,6 @@ const props = withDefaults(
 )
 
 const router = useRouter()
-
-const troubleStatusLabel: Record<string, string> = { open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了' }
-const troubleStatusColor: Record<string, string> = { open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success' }
-const priorityLabel: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
-const priorityColor: Record<string, string> = { low: 'success', medium: 'info', high: 'warning', critical: 'error' }
-const inspectionTypeLabel: Record<string, string> = { routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック' }
-const inspectionStatusLabel: Record<string, string> = { draft: '下書き', submitted: '提出済', approval_requested: '承認待ち', approved: '承認済' }
-const inspectionStatusColor: Record<string, string> = { draft: 'grey', submitted: 'info', approval_requested: 'warning', approved: 'success' }
 
 const items = ref<any[]>([])
 const total = ref(0)
