@@ -2,9 +2,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import CalibrationTable from '@/components/CalibrationTable.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
+import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
@@ -43,7 +45,20 @@ const itemTypeOptions = [
   { title: 'チェック', value: 'check' },
   { title: '計測値', value: 'measurement' },
   { title: 'テキスト', value: 'text' },
+  { title: '5点校正', value: 'calibration' },
 ]
+
+// 5点校正の項目の入力欄。項目の種別を5点校正にしたときに用意する
+function ensureCalibration(item: any) {
+  if (item.item_type === 'calibration' && !item.calibration) item.calibration = emptyCalibrationInput()
+}
+
+// 校正の条件: 記録済みなら凍結された条件、なければ計器（項目の計器、なければ点検の計器）の現在の設定
+function snapshotFor(item: any) {
+  if (item.calibration_snapshot) return item.calibration_snapshot
+  const id = item.instrument_id ?? form.value.instrument_id
+  return snapshotFromInstrument(instruments.value.find((i: any) => i.id === id))
+}
 
 async function fetchMasters() {
   const [, tmplRes] = await Promise.all([
@@ -103,6 +118,8 @@ function loadTemplate() {
     defect_description: '',
     defect_priority: 'medium',
     instrument_id: null,
+    calibration: item.item_type === 'calibration' ? emptyCalibrationInput() : null,
+    calibration_snapshot: null,
   }))
 }
 
@@ -118,6 +135,8 @@ function addItem() {
     defect_description: '',
     defect_priority: 'medium',
     instrument_id: null,
+    calibration: null,
+    calibration_snapshot: null,
   })
 }
 
@@ -174,6 +193,8 @@ async function loadExisting() {
       defect_description: '',
       defect_priority: 'medium',
       instrument_id: item.instrument_id,
+      calibration: item.item_type === 'calibration' ? calibrationInputFrom(item.calibration_data) : null,
+      calibration_snapshot: item.calibration_data?.snapshot ?? null,
     })),
   }
   await fetchInstruments()
@@ -309,7 +330,7 @@ onMounted(async () => {
             <v-text-field v-model="item.content" label="内容" density="compact" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" />
+            <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
           </v-col>
           <v-col cols="6" md="3">
             <v-select v-model="item.instrument_id" :items="instruments" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
@@ -327,6 +348,11 @@ onMounted(async () => {
           </v-col>
           <v-col cols="6" md="3">
             <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" />
+          </v-col>
+        </v-row>
+        <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
+          <v-col cols="12">
+            <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
           </v-col>
         </v-row>
         <v-expand-transition>

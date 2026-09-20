@@ -32,6 +32,7 @@ templates[:telemetry] = ChecklistTemplate.create!(name: "テレメータ点検�
 templates[:elec_daily] = ChecklistTemplate.create!(name: "電気設備日常点検チェックリスト", department: kw_elec_sec, inspection_type: "routine")
 templates[:tank_inspect] = ChecklistTemplate.create!(name: "タンク計器点検チェックリスト", department: kw_inst_sec, inspection_type: "periodic")
 templates[:boiler_safety] = ChecklistTemplate.create!(name: "ボイラー安全弁点検チェックリスト", department: kw_inst_sec, inspection_type: "periodic")
+templates[:transmitter_calibration] = ChecklistTemplate.create!(name: "伝送器 年次校正チェックリスト", department: kw_inst_sec, inspection_type: "periodic")
 templates[:ng_routine] = ChecklistTemplate.create!(name: "根岸 計器日常点検チェックリスト", department: ng_inst_sec, inspection_type: "routine")
 templates[:sk_routine] = ChecklistTemplate.create!(name: "堺 計器日常点検チェックリスト", department: sk_inst_sec, inspection_type: "routine")
 

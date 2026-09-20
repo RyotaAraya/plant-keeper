@@ -132,7 +132,8 @@ module Api
                   measured_value: item[:measured_value],
                   text_value: item[:text_value],
                   has_defect: item[:has_defect],
-                  instrument_id: item[:instrument_id]
+                  instrument_id: item[:instrument_id],
+                  calibration_input: calibration_input_for(item)
                 )
                 record_audit_log("update", ii) if ii.saved_changes.except("updated_at").any?
                 create_trouble_for_defect!(@inspection, ii, item)
@@ -169,11 +170,17 @@ module Api
           measured_value: item[:measured_value],
           text_value: item[:text_value],
           has_defect: item[:has_defect] || false,
-          instrument_id: item[:instrument_id]
+          instrument_id: item[:instrument_id],
+          calibration_input: calibration_input_for(item)
         )
         record_audit_log("create", ii)
         create_trouble_for_defect!(inspection, ii, item)
         ii
+      end
+
+      # 5点校正の項目の入力（送られていなければ nil で、記録は変えない）
+      def calibration_input_for(item)
+        item[:calibration] if item[:item_type] == "calibration"
       end
 
       # 不具合→トラブル自動作成（不具合タイトルがあり、まだトラブルが無い項目のみ）

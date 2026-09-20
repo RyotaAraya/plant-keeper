@@ -2,7 +2,8 @@
 
 # チェックリストテンプレートの点検項目（テンプレート名 => [[内容, 種別], ...]）。
 # シード（db/seeds/09_inspections.rb）と、既存環境への補充マイグレーション（BackfillChecklistTemplateItems）で共有する。
-# 種別は check（確認）/ measurement（測定値の記録。計測値は文字列で単位を持たないため、単位は内容に書く）/ text（自由記述）。
+# 種別は check（確認）/ measurement（測定値の記録。計測値は文字列で単位を持たないため、単位は内容に書く）/ text（自由記述）/
+# calibration（5点校正。計器の校正範囲・許容差から期待値と合否を求める）。
 # 並び順は配列の順（position は1始まり）。最後は「特記事項」で締める
 module ChecklistTemplateItemCatalog
   ROUTINE_INSTRUMENT = [
@@ -79,6 +80,14 @@ module ChecklistTemplateItemCatalog
       [ "放出管・ドレン抜きの詰まりや腐食を確認", "check" ],
       [ "調整ボルト・ロックナットの封印を確認", "check" ],
       [ "ボイラー圧力計の指示値を記録（MPa）", "measurement" ],
+      [ "特記事項", "text" ]
+    ].freeze,
+
+    "伝送器 年次校正チェックリスト" => [
+      [ "外観（腐食・損傷・取付状態）を確認", "check" ],
+      [ "導圧管・ドレン・ベントの詰まりや漏れを確認", "check" ],
+      [ "5点校正（0/25/50/75/100%・上昇/下降）", "calibration" ],
+      [ "零点・スパンを調整した場合は、その内容", "text" ],
       [ "特記事項", "text" ]
     ].freeze,
 

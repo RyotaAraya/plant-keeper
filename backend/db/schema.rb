@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_20_120100) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_20_130100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -129,6 +129,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_120100) do
     t.bigint "instrument_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "calibration_data"
+    t.string "calibration_result"
     t.index ["checklist_template_item_id"], name: "index_inspection_items_on_checklist_template_item_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"
     t.index ["instrument_id"], name: "index_inspection_items_on_instrument_id"
@@ -186,6 +188,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_120100) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "range_lower", precision: 14, scale: 4
+    t.decimal "range_upper", precision: 14, scale: 4
+    t.string "range_unit"
+    t.string "output_characteristic", default: "linear", null: false
+    t.string "dcs_characteristic", default: "linear", null: false
+    t.decimal "dcs_range_lower", precision: 14, scale: 4
+    t.decimal "dcs_range_upper", precision: 14, scale: 4
+    t.string "dcs_range_unit"
+    t.decimal "tolerance_percent", precision: 6, scale: 3
+    t.string "tolerance_basis"
+    t.boolean "telemetry", default: false, null: false
+    t.boolean "custody_transfer", default: false, null: false
     t.index ["equipment_id", "tag_number"], name: "index_instruments_on_equipment_id_and_tag_number", unique: true
     t.index ["equipment_id"], name: "index_instruments_on_equipment_id"
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"

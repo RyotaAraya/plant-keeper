@@ -139,6 +139,7 @@ const itemTypeOptions = [
   { title: 'チェック', value: 'check' },
   { title: '計測値', value: 'measurement' },
   { title: 'テキスト', value: 'text' },
+  { title: '5点校正', value: 'calibration' },
 ]
 
 async function fetchTemplates() {

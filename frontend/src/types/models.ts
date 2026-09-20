@@ -49,8 +49,83 @@ export interface Instrument {
   line_class_id: number | null
   location: string
   notes: string | null
+  // 校正の条件（数値はAPIから文字列で返る）。5点校正できるのは、範囲と許容差が設定済みの計器
+  range_lower?: string | number | null
+  range_upper?: string | number | null
+  range_unit?: string | null
+  output_characteristic?: 'linear' | 'square_root'
+  dcs_characteristic?: 'linear' | 'square_root'
+  dcs_range_lower?: string | number | null
+  dcs_range_upper?: string | number | null
+  dcs_range_unit?: string | null
+  tolerance_percent?: string | number | null
+  tolerance_basis?: 'legal' | 'manufacturer' | 'internal' | null
+  telemetry?: boolean
+  custody_transfer?: boolean
+  calibration_kind?: 'transmitter' | 'positioner' | null
+  calibratable?: boolean
   created_at: string
   updated_at: string
+}
+
+// 5点校正。校正の条件（snapshot）は点検時に計器の設定から凍結して保存したもの
+export interface CalibrationSnapshot {
+  kind: 'transmitter' | 'positioner'
+  range_lower: number
+  range_upper: number
+  range_unit: string | null
+  output_characteristic: 'linear' | 'square_root'
+  dcs_characteristic: 'linear' | 'square_root'
+  dcs_range_lower: number | null
+  dcs_range_upper: number | null
+  dcs_range_unit: string | null
+  tolerance_percent: number
+  tolerance_basis: 'legal' | 'manufacturer' | 'internal' | null
+}
+
+// 入力欄の値（入力中は文字列のことがある）
+export interface CalibrationReading {
+  output: number | string | null
+  dcs: number | string | null
+}
+
+export interface CalibrationPointInput {
+  percent: number
+  up: CalibrationReading
+  down: CalibrationReading
+}
+
+export interface CalibrationInput {
+  adjusted: boolean
+  stages: {
+    as_found: { points: CalibrationPointInput[] }
+    as_left: { points: CalibrationPointInput[] }
+  }
+}
+
+export type CalibrationResult = 'pass' | 'fail' | 'incomplete' | 'empty'
+
+export interface CalibrationReadingEvaluation {
+  output: number | null
+  dcs: number | null
+  output_error: number | null
+  dcs_error: number | null
+  ok: boolean | null
+}
+
+export interface CalibrationPointEvaluation {
+  percent: number
+  expected: { percent: number; input: number; output: number; dcs: number }
+  up: CalibrationReadingEvaluation
+  down: CalibrationReadingEvaluation
+  hysteresis: number | null
+  hysteresis_ok: boolean | null
+}
+
+export interface CalibrationEvaluation {
+  stages: Record<'as_found' | 'as_left', { points: CalibrationPointEvaluation[]; result: CalibrationResult }>
+  final_stage: 'as_found' | 'as_left'
+  result: CalibrationResult
 }
 
 export interface Service {

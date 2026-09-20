@@ -43,11 +43,14 @@ module Api
         instruments = instruments.limit(per_page).offset((page - 1) * per_page)
 
         render json: {
-          data: instruments.as_json(include: {
-            equipment: { only: [ :id, :name ] },
-            service: { only: [ :id, :name ] },
-            line_class: { only: [ :id, :code ] }
-          }),
+          data: instruments.as_json(
+            methods: [ :calibration_kind, :calibratable ],
+            include: {
+              equipment: { only: [ :id, :name ] },
+              service: { only: [ :id, :name ] },
+              line_class: { only: [ :id, :code ] }
+            }
+          ),
           meta: { total_count: total_count, page: page, per_page: per_page }
         }
       end
@@ -55,11 +58,14 @@ module Api
       def show
         authorize @instrument
         render json: {
-          data: @instrument.as_json(include: {
-            equipment: { only: [ :id, :name ], include: { site: { only: [ :id, :name ] } } },
-            service: {},
-            line_class: {}
-          }).merge(
+          data: @instrument.as_json(
+            methods: [ :calibration_kind, :calibratable ],
+            include: {
+              equipment: { only: [ :id, :name ], include: { site: { only: [ :id, :name ] } } },
+              service: {},
+              line_class: {}
+            }
+          ).merge(
             recent_troubles: @instrument.troubles.order(reported_at: :desc).limit(5).as_json(only: [ :id, :title, :status, :priority, :reported_at ]),
             recent_inspections: @instrument.inspections.order(inspected_at: :desc).limit(5).as_json(only: [ :id, :inspection_type, :status, :inspected_at ])
           )
@@ -94,7 +100,12 @@ module Api
       end
 
       def instrument_params
-        params.require(:instrument).permit(:equipment_id, :tag_number, :instrument_type, :service_id, :line_class_id, :location, :notes)
+        params.require(:instrument).permit(
+          :equipment_id, :tag_number, :instrument_type, :service_id, :line_class_id, :location, :notes,
+          :range_lower, :range_upper, :range_unit, :output_characteristic, :dcs_characteristic,
+          :dcs_range_lower, :dcs_range_upper, :dcs_range_unit, :tolerance_percent, :tolerance_basis,
+          :telemetry, :custody_transfer
+        )
       end
     end
   end
