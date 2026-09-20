@@ -1,0 +1,61 @@
+# AIに渡す入力の組み立てと、返ってきたJSONの検証で、各ジェネレータ（DefectDraftGenerator など）が共有する部品。
+# 設備・計器の情報はDBから作り、個人に関する情報（ユーザ名など）は含めない
+module AiPromptSupport
+  HAZARD_LABELS = { "low" => "低", "medium" => "中", "high" => "高" }.freeze
+  # 計器の種類は英語名で持っているため、AIには現場の呼び方で渡す（英語名のままだと「トランスミッタ」などと訳される）
+  INSTRUMENT_TYPE_LABELS = {
+    "temperature_transmitter" => "温度伝送器", "pressure_transmitter" => "圧力伝送器",
+    "flow_transmitter" => "流量伝送器", "level_transmitter" => "液面伝送器",
+    "pressure_valve" => "調節弁（圧力）", "level_valve" => "調節弁（液面）",
+    "shutoff_valve" => "遮断弁", "hand_valve" => "手動弁"
+  }.freeze
+
+  # トラブル・対応記録の状態などの、現場の呼び方（AIには英語の値でなくこちらを渡す）
+  STATUS_LABELS = { "open" => "未対応", "in_progress" => "対応中", "deferred" => "定修待ち", "resolved" => "解決済", "closed" => "完了" }.freeze
+  PRIORITY_LABELS = { "low" => "低", "medium" => "中", "high" => "高", "critical" => "緊急" }.freeze
+  RESPONSE_TYPE_LABELS = { "investigation" => "調査", "repair" => "修理", "replacement" => "交換", "observation" => "経過観察" }.freeze
+
+  private
+
+  # 設備と計器（とそのサービス＝流体）の説明の行
+  def equipment_lines(equipment, instrument)
+    lines = [ "設備: #{equipment.name}" ]
+    if instrument
+      lines << "計器: #{instrument_label(instrument)}"
+      lines.concat(service_lines(instrument.service))
+    end
+    lines
+  end
+
+  # 「タグ番号 PT-101、種類 圧力伝送器」
+  def instrument_label(instrument)
+    kind = ("、種類 #{INSTRUMENT_TYPE_LABELS.fetch(instrument.instrument_type, instrument.instrument_type)}" if instrument.instrument_type.present?)
+    "タグ番号 #{instrument.tag_number}#{kind}"
+  end
+
+  def service_lines(service)
+    return [] unless service
+
+    detail = [ ("温度 #{service.temperature}" if service.temperature.present?),
+               ("圧力 #{service.pressure}" if service.pressure.present?),
+               ("危険性 #{HAZARD_LABELS.fetch(service.hazard_level, service.hazard_level)}" if service.hazard_level.present?) ].compact
+    lines = [ "サービス（流体）: #{service.name}#{"（#{detail.join("、")}）" if detail.any?}" ]
+    lines << "危険性の説明: #{service.hazard_description}" if service.hazard_description.present?
+    lines
+  end
+
+  # 入力の中の < > で、<memo> などの区切りを偽装されないようにする
+  def escape(text)
+    text.to_s.tr("<>", "＜＞")
+  end
+
+  def clean(value, max)
+    value.strip.truncate(max) if value.is_a?(String)
+  end
+
+  def clean_list(value, max_items:, item_max:)
+    return [] unless value.is_a?(Array)
+
+    value.filter_map { |item| clean(item, item_max).presence }.first(max_items)
+  end
+end

@@ -532,7 +532,7 @@ export interface InspectionReferenceStandardUse {
   pre_check_note: string
 }
 
-// AI支援（不具合報告の下書き）
+// AI支援（不具合報告の下書き・類似トラブル・対応記録の下書き）
 export interface AiStatus {
   enabled: boolean
   // どのAIか。fake=APIを呼ばないダミー / claude=本物 / null=無効
@@ -550,6 +550,36 @@ export interface AiDefectDraft {
   priority: 'low' | 'medium' | 'high' | 'critical' | null
   priority_reason: string
   possible_causes: string[]
+  check_points: string[]
+  remaining_today: number
+}
+
+// 類似トラブル。タイトル・状態などはDBの値で、似ている点と対応の要約がAIの文章
+export interface AiSimilarCase {
+  trouble_id: number
+  title: string
+  status: string
+  priority: string
+  equipment_name: string
+  instrument_tag: string | null
+  reported_at: string
+  similarity: string
+  how_handled: string
+}
+
+export interface AiSimilarTroubles {
+  cases: AiSimilarCase[]
+  // 比べた過去のトラブルの件数（0のときはAIを呼んでいない）
+  candidates_count: number
+  remaining_today: number
+}
+
+export interface AiResponseDraft {
+  suggestion_id: number
+  // AIが提案しない（メモから決められない・使えない値だった）ときは null
+  response_type: 'investigation' | 'repair' | 'replacement' | 'observation' | null
+  description: string
+  used_materials: string
   check_points: string[]
   remaining_today: number
 }

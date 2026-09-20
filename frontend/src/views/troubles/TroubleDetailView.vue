@@ -5,8 +5,12 @@ import api from '@/api/axios'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
+import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
+import type { AiResponseDraft, AiStatus } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +33,14 @@ const responseForm = ref({
   responded_at: nowForInput(),
 })
 const responseErrors = ref<string[]>([])
+// AIの下書きを反映したときの提案のID（保存のときに送り、AIの案と確定した内容を突き合わせられるようにする）
+const responseAiSuggestionId = ref<number | null>(null)
+
+// AI支援（対応記録の下書き・類似トラブル）。状況が取れない・無効なときは、AIのボタンを出さない
+const aiStatus = ref<AiStatus | null>(null)
+const similar = useSimilarTroubles((count) => {
+  if (aiStatus.value) aiStatus.value.remaining_today = count
+})
 
 const statusLabel: Record<string, string> = {
   open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
@@ -137,8 +149,37 @@ function openResponse() {
     used_materials: '',
     responded_at: nowForInput(),
   }
+  responseAiSuggestionId.value = null
   responseErrors.value = []
   responseDialog.value = true
+}
+
+async function fetchAiStatus() {
+  try {
+    aiStatus.value = (await api.get('/ai/status')).data.data
+  } catch {
+    // AIの状況が取れなくても、トラブルの表示・対応記録には影響しない（AIのボタンを出さないだけ）
+    aiStatus.value = null
+  }
+}
+
+// AIの下書きを入力欄に入れる（保存はしない。対応日時は入れない）。対応種別は、AIが決められなかったときは今の値のまま
+function applyAiResponseDraft(draft: AiResponseDraft) {
+  if (draft.response_type) responseForm.value.response_type = draft.response_type
+  responseForm.value.description = draft.description
+  if (draft.used_materials) responseForm.value.used_materials = draft.used_materials
+  responseAiSuggestionId.value = draft.suggestion_id
+}
+
+// このトラブルのタイトルと詳細を現場メモとして、過去の類似トラブルを探す（このトラブル自身は候補から外す）
+function searchSimilar() {
+  const memo = [trouble.value.title, trouble.value.description].filter(Boolean).join('\n').slice(0, aiStatus.value?.max_memo_length)
+  return similar.search({
+    equipmentId: trouble.value.equipment_id,
+    instrumentId: trouble.value.instrument_id,
+    memo,
+    excludeTroubleId: trouble.value.id,
+  })
 }
 
 async function saveResponse() {
@@ -148,6 +189,7 @@ async function saveResponse() {
       trouble_response: {
         trouble_id: trouble.value.id,
         ...responseForm.value,
+        ai_suggestion_id: responseAiSuggestionId.value,
       }
     })
     responseDialog.value = false
@@ -162,7 +204,10 @@ function formatDate(dt: string) {
   return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(fetchTrouble)
+onMounted(() => {
+  fetchTrouble()
+  fetchAiStatus()
+})
 </script>
 
 <template>
@@ -249,6 +294,26 @@ onMounted(fetchTrouble)
         </v-card-text>
       </v-card>
 
+      <div v-if="aiStatus?.enabled" class="mb-4" data-testid="similar-section">
+        <div class="d-flex align-center ga-3">
+          <v-btn
+            size="small"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-history"
+            :loading="similar.loading.value"
+            :disabled="aiStatus.remaining_today <= 0"
+            data-testid="ai-similar-button"
+            @click="searchSimilar"
+          >
+            過去の類似トラブルを探す
+          </v-btn>
+          <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>
+        </div>
+        <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
+        <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="similar.clear()" />
+      </div>
+
       <h2 class="text-h6 mb-3">対応履歴</h2>
       <v-timeline density="compact" side="end">
         <v-timeline-item
@@ -319,6 +384,14 @@ onMounted(fetchTrouble)
             <v-alert v-if="responseErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in responseErrors" :key="err">{{ err }}</div>
             </v-alert>
+            <ResponseAiAssist
+              v-if="aiStatus?.enabled"
+              :status="aiStatus"
+              :trouble-id="trouble.id"
+              :has-existing="!!responseForm.description.trim()"
+              @apply="applyAiResponseDraft"
+              @remaining="aiStatus.remaining_today = $event"
+            />
             <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />
             <v-textarea v-model="responseForm.description" label="対応内容 *" rows="4" class="mb-2" />
             <v-text-field v-model="responseForm.used_materials" label="使用資材" class="mb-2" />
