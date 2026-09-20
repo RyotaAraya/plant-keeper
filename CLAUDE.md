@@ -120,7 +120,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 - 設定ファイル: `render.yaml`（Blueprint）。本番・stg の両サービスをこの1ファイルで定義
 - 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
 - `admin/reseed`（管理者によるデモデータの全削除→再投入）は環境変数 `ALLOW_DEMO_RESEED=true` のサーバでだけ動く。`render.yaml` で stg のAPIにだけ設定しており、**本番は既定で無効**（デモ管理者のパスワードが公開されているため、誰でも本番の全データを消せる状態にしない）。本番で必要なときだけRenderダッシュボードで一時的に設定する
-- stg（Neon）の reseed は完了まで**約4分**かかり、リクエスト自体はタイムアウトするがサーバ側の処理は続く。**リトライしない**（二重実行になる）。API（例: `inspection_plans` の件数）でデータが揃うのを待つ
+- 再投入は数分（stgのNeonで約4分）かかるため、**非同期**: `POST /admin/reseed` はバックグラウンドのスレッドで始めて202ですぐ返し（`DemoReseed`。実行中の再実行は409）、状態（idle/running/succeeded/failed）は `GET /admin/reseed` で返す。**状態の確認はログイン不要**（再投入中は users も空になり、認証が通らないため。返すのは状態だけ）。状態はプロセス内に持つので、実行中にサーバが再起動すると失われる（画面は失敗として扱う）。**stgへデプロイ（developへのpush）すると、実行中の再投入は止まる**。設定画面は、実行中は進捗を出して閉じても続き、完了・失敗をページに表示する。再実行を押してしまう心配はない
 
 ### ブランチ運用
 - `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
@@ -185,7 +185,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ### 部署の階層構造
 - departments テーブル: parent_id 自己参照で3階層（division→section→team）
 - 拠点（site）ごとに独立したツリー。各行が `site_id` を持つ（非正規化）
-- `Department#full_path` → "保全部 > 計器保全課 > 計器Aチーム"
+- `Department#full_path` → "保全部 > 計装保全課 > 計器Aチーム"
 - `Department#ancestor_chain` → 階層配列（UI用）
 - API: `GET /departments?tree=true` でネストされたツリー取得（Ruby側でin-memoryでツリーを構築）
 - モデルバリデーション: 自己参照禁止（`not_self_referential`）、階層整合性チェック（`valid_parent_level`）

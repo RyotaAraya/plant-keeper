@@ -36,9 +36,9 @@ kawasaki = find_site("川崎製油所")
 
 # 保全部
 kawasaki_hozen    = find_dept("川崎製油所", "保全部")
-kawasaki_keiki    = find_dept("川崎製油所", "保全部", "計器保全課")
-kawasaki_keiki_a  = find_dept("川崎製油所", "保全部", "計器保全課", "計器Aチーム")
-kawasaki_keiki_b  = find_dept("川崎製油所", "保全部", "計器保全課", "計器Bチーム")
+kawasaki_keiki    = find_dept("川崎製油所", "保全部", "計装保全課")
+kawasaki_keiki_a  = find_dept("川崎製油所", "保全部", "計装保全課", "計器Aチーム")
+kawasaki_keiki_b  = find_dept("川崎製油所", "保全部", "計装保全課", "計器Bチーム")
 kawasaki_denki    = find_dept("川崎製油所", "保全部", "電気保全課")
 kawasaki_denki_t  = find_dept("川崎製油所", "保全部", "電気保全課", "電気チーム")
 kawasaki_kensa    = find_dept("川崎製油所", "保全部", "検査課")
@@ -58,8 +58,8 @@ kawasaki_anzen_anzen  = find_dept("川崎製油所", "安全環境部", "安全�
 # --- 根岸製油所 ---
 negishi = find_site("根岸製油所")
 
-negishi_keiki   = find_dept("根岸製油所", "保全部", "計器保全課")
-negishi_keiki_t = find_dept("根岸製油所", "保全部", "計器保全課", "計器チーム")
+negishi_keiki   = find_dept("根岸製油所", "保全部", "計装保全課")
+negishi_keiki_t = find_dept("根岸製油所", "保全部", "計装保全課", "計器チーム")
 negishi_denki   = find_dept("根岸製油所", "保全部", "電気保全課")
 negishi_denki_t = find_dept("根岸製油所", "保全部", "電気保全課", "電気チーム")
 negishi_seizo   = find_dept("根岸製油所", "製造部")
@@ -70,9 +70,9 @@ negishi_un_b    = find_dept("根岸製油所", "製造部", "運転課", "直B")
 # --- 堺製油所 ---
 sakai = find_site("堺製油所")
 
-sakai_keiki   = find_dept("堺製油所", "保全部", "計器保全課")
-sakai_keiki_a = find_dept("堺製油所", "保全部", "計器保全課", "計器Aチーム")
-sakai_keiki_b = find_dept("堺製油所", "保全部", "計器保全課", "計器Bチーム")
+sakai_keiki   = find_dept("堺製油所", "保全部", "計装保全課")
+sakai_keiki_a = find_dept("堺製油所", "保全部", "計装保全課", "計器Aチーム")
+sakai_keiki_b = find_dept("堺製油所", "保全部", "計装保全課", "計器Bチーム")
 sakai_denki   = find_dept("堺製油所", "保全部", "電気保全課")
 sakai_denki_t = find_dept("堺製油所", "保全部", "電気保全課", "電気チーム")
 sakai_kensa   = find_dept("堺製油所", "保全部", "検査課")
@@ -85,8 +85,8 @@ sakai_un1_b   = find_dept("堺製油所", "製造部", "第1運転課", "直B")
 # --- 和歌山製油所 ---
 wakayama = find_site("和歌山製油所")
 
-wakayama_keiki   = find_dept("和歌山製油所", "保全部", "計器保全課")
-wakayama_keiki_t = find_dept("和歌山製油所", "保全部", "計器保全課", "計器チーム")
+wakayama_keiki   = find_dept("和歌山製油所", "保全部", "計装保全課")
+wakayama_keiki_t = find_dept("和歌山製油所", "保全部", "計装保全課", "計器チーム")
 wakayama_denki   = find_dept("和歌山製油所", "保全部", "電気保全課")
 wakayama_denki_t = find_dept("和歌山製油所", "保全部", "電気保全課", "電気チーム")
 wakayama_seizo   = find_dept("和歌山製油所", "製造部")
@@ -97,8 +97,8 @@ wakayama_un_b    = find_dept("和歌山製油所", "製造部", "運転課", "�
 # --- 仙台製油所 ---
 sendai = find_site("仙台製油所")
 
-sendai_keiki   = find_dept("仙台製油所", "保全部", "計器保全課")
-sendai_keiki_t = find_dept("仙台製油所", "保全部", "計器保全課", "計器チーム")
+sendai_keiki   = find_dept("仙台製油所", "保全部", "計装保全課")
+sendai_keiki_t = find_dept("仙台製油所", "保全部", "計装保全課", "計器チーム")
 sendai_denki   = find_dept("仙台製油所", "保全部", "電気保全課")
 sendai_denki_t = find_dept("仙台製油所", "保全部", "電気保全課", "電気チーム")
 sendai_seizo   = find_dept("仙台製油所", "製造部")
@@ -107,7 +107,7 @@ sendai_un_a    = find_dept("仙台製油所", "製造部", "運転課", "直A")
 
 # --- 千葉（閉鎖）退職者用 ---
 chiba = find_site("千葉製油所")
-chiba_keiki = find_dept("千葉製油所", "保全部", "計器保全課")
+chiba_keiki = find_dept("千葉製油所", "保全部", "計装保全課")
 chiba_un    = find_dept("千葉製油所", "製造部", "運転課")
 
 # ====================
@@ -119,7 +119,7 @@ chiba_un    = find_dept("千葉製油所", "製造部", "運転課")
   # ============================================================
   # 保全部長（システム管理者）
   { email: "admin@example.com",     name: "田中 太郎",   employment_type: "employee", system_role: "admin",    position: "general_manager", dept: kawasaki_hozen,   site: kawasaki, join_year: 2000, pref: "神奈川県" },
-  # 計器保全課長（業務管理者）
+  # 計装保全課長（業務管理者）
   { email: "suzuki@example.com",    name: "鈴木 一郎",   employment_type: "employee", system_role: "manager",  position: "section_manager", dept: kawasaki_keiki,   site: kawasaki, join_year: 2005, pref: "東京都" },
   # 計器Aチーム
   { email: "sato@example.com",      name: "佐藤 健太",   employment_type: "employee", system_role: "member",   position: "team_leader",     dept: kawasaki_keiki_a, site: kawasaki, join_year: 2012, pref: "千葉県" },
@@ -251,7 +251,7 @@ chiba_un    = find_dept("千葉製油所", "製造部", "運転課")
   { email: "mikami_kw@example.com",     name: "三上 沙織",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_un1_b,   site: kawasaki, join_year: 2023, pref: "千葉県" },
   # 川崎 第2運転課
   { email: "aoyama@example.com",        name: "青山 隼人",   employment_type: "employee", system_role: "member",  position: "staff",           dept: kawasaki_un2_a,   site: kawasaki, join_year: 2022, pref: "東京都" },
-  # 根岸 計器保全課
+  # 根岸 計装保全課
   { email: "nakajima@example.com",      name: "中島 崇",     employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_keiki_t,  site: negishi,  join_year: 2020, pref: "神奈川県" },
   { email: "aoki@example.com",          name: "青木 由紀",   employment_type: "employee", system_role: "member",  position: "staff",           dept: negishi_keiki_t,  site: negishi,  join_year: 2022, pref: "神奈川県" },
   # 根岸 電気保全課

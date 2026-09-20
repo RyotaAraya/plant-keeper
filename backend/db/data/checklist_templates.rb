@@ -8,7 +8,7 @@
 # 実際の周期・内容は事業所の保全標準による。ここはデモ用の例
 module ChecklistTemplateCatalog
   SITE = "川崎製油所"
-  SECTION = "計器保全課"
+  SECTION = "計装保全課"
   # 名前の末尾 => 周期（巡回・月次・年次・定修）
   CYCLES = { "巡回点検" => "patrol", "月次点検" => "monthly", "年次点検" => "annual", "定修点検" => "turnaround" }.freeze
 

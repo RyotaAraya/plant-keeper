@@ -6,7 +6,7 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
   setup do
     @site = Site.create!(name: "川崎製油所")
     division = create_department(site: @site, name: "保全部")
-    @section = create_department(site: @site, name: "計器保全課", level: "section", parent: division)
+    @section = create_department(site: @site, name: "計装保全課", level: "section", parent: division)
     @equipment = create_equipment(site: @site)
     @today = InspectionPlan.today
   end
@@ -85,6 +85,6 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
     run_migration
 
     assert_equal "電気設備日常点検チェックリスト", electric.reload.checklist_template.name
-    assert_equal "根岸 計器日常点検チェックリスト", negishi.reload.checklist_template.name # 根岸には計器保全課が無く、新しいテンプレートを作れない
+    assert_equal "根岸 計器日常点検チェックリスト", negishi.reload.checklist_template.name # 根岸には計装保全課が無く、新しいテンプレートを作れない
   end
 end
