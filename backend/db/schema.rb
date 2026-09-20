@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_20_150100) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_21_000100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -386,18 +386,40 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_150100) do
     t.index ["trouble_id"], name: "index_repairs_on_trouble_id"
   end
 
-  create_table "scheduled_maintenances", force: :cascade do |t|
+  create_table "scheduled_maintenance_equipments", force: :cascade do |t|
+    t.bigint "scheduled_maintenance_id", null: false
     t.bigint "equipment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id"], name: "index_scheduled_maintenance_equipments_on_equipment_id"
+    t.index ["scheduled_maintenance_id", "equipment_id"], name: "index_sm_equipments_on_maintenance_and_equipment", unique: true
+    t.index ["scheduled_maintenance_id"], name: "idx_on_scheduled_maintenance_id_442d9fc3a6"
+  end
+
+  create_table "scheduled_maintenances", force: :cascade do |t|
+    t.bigint "equipment_id"
     t.string "title", null: false
     t.text "description"
-    t.date "scheduled_date", null: false
+    t.date "scheduled_date"
     t.date "completed_date"
     t.string "status", default: "planned", null: false
     t.text "used_materials"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "site_id", null: false
+    t.date "planned_start_on", null: false
+    t.date "planned_end_on"
+    t.date "actual_start_on"
+    t.date "actual_end_on"
+    t.date "accepted_on"
+    t.bigint "accepted_by_id"
+    t.string "acceptance_result"
+    t.text "acceptance_notes"
+    t.index ["accepted_by_id"], name: "index_scheduled_maintenances_on_accepted_by_id"
     t.index ["equipment_id"], name: "index_scheduled_maintenances_on_equipment_id"
+    t.index ["planned_start_on"], name: "index_scheduled_maintenances_on_planned_start_on"
     t.index ["scheduled_date"], name: "index_scheduled_maintenances_on_scheduled_date"
+    t.index ["site_id"], name: "index_scheduled_maintenances_on_site_id"
     t.index ["status"], name: "index_scheduled_maintenances_on_status"
   end
 
@@ -577,7 +599,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_150100) do
   add_foreign_key "repairs", "stocks"
   add_foreign_key "repairs", "troubles"
   add_foreign_key "repairs", "users", column: "requested_by_id"
+  add_foreign_key "scheduled_maintenance_equipments", "equipments"
+  add_foreign_key "scheduled_maintenance_equipments", "scheduled_maintenances"
   add_foreign_key "scheduled_maintenances", "equipments"
+  add_foreign_key "scheduled_maintenances", "sites"
+  add_foreign_key "scheduled_maintenances", "users", column: "accepted_by_id"
   add_foreign_key "stock_transactions", "stocks"
   add_foreign_key "stock_transactions", "users"
   add_foreign_key "stock_transactions", "warehouses", column: "from_warehouse_id"

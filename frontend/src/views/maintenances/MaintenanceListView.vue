@@ -5,20 +5,22 @@ import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import SiteEquipmentSelect from '@/components/SiteEquipmentSelect.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
 
 const router = useRouter()
-const { canManageMaintenance } = usePermissions()
+const { canManageMaintenance, canViewSites } = usePermissions()
 const authStore = useAuthStore()
 
 const maintenances = ref<any[]>([])
 const { equipments, load: loadSiteOptions } = useSiteScopeOptions({ withDepartments: false })
+const sites = ref<any[]>([])
 const loading = ref(false)
-const totalCount = ref(0)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
@@ -30,38 +32,28 @@ const filters = ref({
 })
 
 const form = ref({
-  equipment_id: null as number | null,
   title: '',
+  site_id: null as number | null,
+  planned_start_on: '',
+  planned_end_on: '',
+  equipment_ids: [] as number[],
   description: '',
-  scheduled_date: '',
-  status: 'planned',
 })
 
 const headers = [
-  { title: '予定日', key: 'scheduled_date', width: '120px' },
-  { title: 'タイトル', key: 'title' },
-  { title: '設備', key: 'equipment.name', width: '180px' },
-  { title: '担当者', key: 'assignees', width: '180px' },
-  { title: 'ステータス', key: 'status', width: '110px' },
+  { title: '予定期間', key: 'planned_start_on', width: '190px' },
+  { title: '名称', key: 'title' },
+  { title: '対象設備', key: 'equipments', sortable: false },
+  { title: '担当者', key: 'assignees', sortable: false, width: '170px' },
+  { title: '状態', key: 'status', width: '100px' },
 ]
 
-const statusLabel: Record<string, string> = {
-  planned: '計画中', in_progress: '実施中', completed: '完了'
-}
-const statusColor: Record<string, string> = {
-  planned: 'info', in_progress: 'warning', completed: 'success'
-}
+const statusOptions = Object.entries(MAINTENANCE_STATUS_LABEL).map(([value, title]) => ({ title, value }))
 
-const statusOptions = [
-  { title: '計画中', value: 'planned' },
-  { title: '実施中', value: 'in_progress' },
-  { title: '完了', value: 'completed' },
-]
-
-const fetchMaintenancesGuard = latestGuard()
+const fetchGuard = latestGuard()
 
 async function fetchMaintenances() {
-  const isLatest = fetchMaintenancesGuard()
+  const isLatest = fetchGuard()
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -71,7 +63,6 @@ async function fetchMaintenances() {
     const res = await api.get('/scheduled_maintenances', { params })
     if (!isLatest()) return
     maintenances.value = res.data.data
-    totalCount.value = res.data.meta.total_count
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -85,19 +76,18 @@ function changeSite(siteIds: number[]) {
   loadSiteOptions(siteIds)
 }
 
-function getAssignees(item: any) {
-  return (item.maintenance_assignments || [])
-    .map((a: any) => `${a.user?.name || ''}${a.role === 'lead' ? '(主)' : ''}`)
-    .join(', ')
-}
+const assignees = (item: any) =>
+  (item.maintenance_assignments || []).map((a: any) => `${a.user?.name || ''}${a.role === 'lead' ? '(主)' : ''}`).join(', ')
 
-function openCreate() {
+async function openCreate() {
+  if (canViewSites.value && !sites.value.length) {
+    const res = await api.get('/sites', { params: { per_page: 100 } })
+    sites.value = res.data.data
+  }
   form.value = {
-    equipment_id: null,
     title: '',
-    description: '',
-    scheduled_date: '',
-    status: 'planned',
+    site_id: (filters.value.site_ids.length === 1 ? filters.value.site_ids[0] : authStore.user?.site_id) ?? null,
+    planned_start_on: '', planned_end_on: '', equipment_ids: [], description: '',
   }
   errors.value = []
   dialog.value = true
@@ -114,15 +104,6 @@ async function save() {
   }
 }
 
-function formatDate(dt: string) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleDateString('ja-JP')
-}
-
-function goToDetail(row: any) {
-  router.push(`/maintenances/${row.id}`)
-}
-
 onMounted(() => {
   loadSiteOptions(filters.value.site_ids)
   fetchMaintenances()
@@ -132,7 +113,7 @@ watch(filters, fetchMaintenances, { deep: true })
 
 <template>
   <MainLayout>
-    <PageHeader title="定期整備" description="年次点検整備・触媒交換・法定検査など、まとまった整備の予定と実績です。日々の点検は「点検計画」へ。">
+    <PageHeader title="定期整備" description="関連設備を停止して行う整備の予定と実績です。複数の設備をまとめて整備し、終わったら検収します。運転中に周期で回す点検は「点検計画」へ。">
       <v-btn v-if="canManageMaintenance" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </PageHeader>
 
@@ -140,48 +121,43 @@ watch(filters, fetchMaintenances, { deep: true })
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
-      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="状態" style="max-width: 200px" />
     </div>
 
     <v-data-table
       :headers="headers"
       :items="maintenances"
       :loading="loading"
+      :sort-by="[{ key: 'planned_start_on', order: 'desc' }]"
       hover
       class="cursor-pointer"
-      @click:row="(_e: any, { item }: any) => goToDetail(item)"
+      @click:row="(_e: any, { item }: any) => router.push(`/maintenances/${item.id}`)"
     >
-      <template #item.scheduled_date="{ item }">
-        {{ formatDate(item.scheduled_date) }}
+      <template #item.planned_start_on="{ item }"><span class="text-no-wrap">{{ periodLabel(item.planned_start_on, item.planned_end_on) }}</span></template>
+      <template #item.equipments="{ item }">
+        <v-chip v-for="equipment in item.equipments" :key="equipment.id" size="x-small" label variant="tonal" class="mr-1 my-1">{{ equipment.name }}</v-chip>
       </template>
-      <template #item.assignees="{ item }">
-        {{ getAssignees(item) || '未割当' }}
-      </template>
+      <template #item.assignees="{ item }">{{ assignees(item) || '未割当' }}</template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
-        </v-chip>
+        <v-chip :color="MAINTENANCE_STATUS_COLOR[item.status]" size="small">{{ MAINTENANCE_STATUS_LABEL[item.status] }}</v-chip>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="600">
+    <v-dialog v-model="dialog" max-width="640" scrollable>
       <v-card>
-        <v-card-title>定期整備作成</v-card-title>
+        <v-card-title>定期整備の作成</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
           </v-alert>
-          <v-text-field v-model="form.title" label="タイトル *" class="mb-2" />
-          <v-select
-            v-model="form.equipment_id"
-            :items="equipments"
-            item-title="name"
-            item-value="id"
-            label="設備 *"
-            class="mb-2"
-          />
-          <v-text-field v-model="form.scheduled_date" label="予定日 *" type="date" class="mb-2" />
-          <v-textarea v-model="form.description" label="説明" rows="3" />
+          <v-text-field v-model="form.title" label="名称 *（例: 2026年 A号ボイラー整備）" class="mb-2" />
+          <v-select v-if="canViewSites" v-model="form.site_id" :items="sites" item-title="name" item-value="id" label="拠点 *" class="mb-2" />
+          <v-row dense>
+            <v-col cols="6"><v-text-field v-model="form.planned_start_on" label="予定 開始日 *" type="date" /></v-col>
+            <v-col cols="6"><v-text-field v-model="form.planned_end_on" label="予定 終了日" type="date" /></v-col>
+          </v-row>
+          <SiteEquipmentSelect v-model="form.equipment_ids" :site-id="form.site_id" class="mb-2" />
+          <v-textarea v-model="form.description" label="説明" rows="3" class="mt-2" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
