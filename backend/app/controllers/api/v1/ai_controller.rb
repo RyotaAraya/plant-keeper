@@ -10,6 +10,12 @@ module Api
         "response_draft" => { noun: "下書き", fallback: "対応記録の入力はAIなしで続けられます" }
       }.freeze
 
+      # 「AIの失敗」として扱う例外: APIの障害・タイムアウト・拒否、使えない応答、出力の検証（形・長さ）の失敗
+      AI_FAILURES = [
+        ::Anthropic::Errors::Error, AiClient::UnusableResponse,
+        DefectDraftGenerator::InvalidOutput, ResponseDraftGenerator::InvalidOutput, SimilarTroubleFinder::InvalidOutput
+      ].freeze
+
       # GET /api/v1/ai/status — 画面が、AIのボタンを出すか・残り回数を出すかを決める
       def status
         authorize :ai, :status?
@@ -155,6 +161,9 @@ module Api
         yield
       rescue StandardError => e
         suggestion.update!(status: "failed", error_class: e.class.name)
+        # コードの不具合など、AIの失敗でないものは、AIの障害に見せかけず、そのまま500にする（記録は失敗にしてある）
+        raise unless AI_FAILURES.any? { |klass| e.is_a?(klass) }
+
         Rails.logger.error("[AI] #{suggestion.kind} failed: #{e.class}: #{e.message}")
         timeout = e.is_a?(::Anthropic::Errors::APITimeoutError)
         text = KIND_TEXT.fetch(suggestion.kind)

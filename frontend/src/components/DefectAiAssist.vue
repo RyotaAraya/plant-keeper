@@ -10,6 +10,7 @@ import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import type { AiDefectDraft, AiStatus } from '@/types/models'
+import { latestGuard } from '@/utils/latestGuard'
 
 const props = defineProps<{
   status: AiStatus
@@ -33,8 +34,20 @@ const loading = ref(false)
 const draft = ref<AiDefectDraft | null>(null)
 const error = ref('')
 
+// 下書きを作っている間に設備・計器が変わる（clear）ことがある。古い呼び出しの応答は、あとから返っても反映しない
+const guard = latestGuard()
+
 // メモ・設備・計器が変わったら、前の入力に対する類似トラブルの結果は消す（今の入力への結果に見えないように）
 watch([memo, () => props.equipmentId, () => props.instrumentId], () => similar.clear())
+
+// 下書きは、設備・計器についてのもの。変わったら消す（別の設備の下書きを反映してしまわないように）。
+// メモの手直しでは消さない（作った下書きを、回数を使ってまで作り直させないため。反映前に人が確認する）
+watch([() => props.equipmentId, () => props.instrumentId], () => {
+  guard()
+  draft.value = null
+  error.value = ''
+  loading.value = false
+})
 
 function searchSimilar() {
   return similar.search({ equipmentId: props.equipmentId, instrumentId: props.instrumentId, memo: memo.value })
@@ -45,6 +58,7 @@ async function generate() {
     error.value = '先に設備を選んでください'
     return
   }
+  const isLatest = guard()
   loading.value = true
   error.value = ''
   draft.value = null
@@ -55,15 +69,18 @@ async function generate() {
       item_label: props.itemLabel,
       memo: memo.value,
     })
-    draft.value = res.data.data
+    // 残り回数は、古い呼び出しでも合わせる（回数は使っているため）
     emit('remaining', res.data.data.remaining_today)
+    if (!isLatest()) return
+    draft.value = res.data.data
   } catch (e: any) {
-    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。点検の入力はプラナなしで続けられます'
     // 失敗・上限も回数に数えるため、画面の残り回数を実際に合わせる
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
+    if (!isLatest()) return
+    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。点検の入力はプラナなしで続けられます'
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
