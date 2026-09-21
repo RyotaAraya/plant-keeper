@@ -6,6 +6,7 @@ import { equipmentSummary } from '@/utils/equipment'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import { siteIdsToQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
@@ -71,6 +72,17 @@ onMounted(fetchDashboard)
         </span>
       </div>
     </div>
+
+    <section class="pk-welcome">
+      <div class="pk-welcome__copy">
+        <span class="pk-welcome__icon"><v-icon color="primary" aria-hidden="true">mdi-weather-sunny</v-icon></span>
+        <div><h2>今日の保全を、ここから。</h2><p>点検の予定と、対応が必要な記録を確認しましょう。</p></div>
+      </div>
+      <router-link to="/plana" class="pk-welcome__plana">
+        <PlanaAvatar :size="48" />
+        <span><strong>記録の整理は、プラナと。</strong><small>使える機能を見る <v-icon size="14" aria-hidden="true">mdi-arrow-right</v-icon></small></span>
+      </router-link>
+    </section>
 
     <div class="mb-4">
       <SiteScopeTag v-model="selectedSiteIds" />
@@ -280,14 +292,24 @@ onMounted(fetchDashboard)
 </template>
 
 <style scoped>
+.pk-welcome { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.25rem; padding: 1.5rem; margin-bottom: 1.5rem; background: var(--pk-soft-blue); border-radius: 20px; }
+.pk-welcome__copy { display: flex; align-items: center; gap: 1rem; }
+.pk-welcome__copy h2 { font-size: 1.2rem; color: var(--pk-plana-navy); }
+.pk-welcome__copy p { font-size: 0.8125rem; margin-top: 0.35rem; color: var(--pk-muted); }
+.pk-welcome__icon { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 14px; background: #fff; }
+.pk-welcome__plana { display: flex; align-items: center; gap: 0.75rem; color: var(--pk-plana-navy); text-decoration: none; }
+.pk-welcome__plana strong { display: block; font-size: 0.875rem; }
+.pk-welcome__plana small { display: block; margin-top: 0.25rem; color: var(--pk-steel); }
+@media (max-width: 600px) { .pk-welcome { padding: 1.1rem; } .pk-welcome__icon { display: none; } }
+
 .pk-kpi {
   position: relative;
   display: block;
   width: 100%;
   background: #fff;
   border: 1px solid var(--pk-line);
-  border-left: 3px solid var(--pk-line);
-  padding: 1.1rem 1.25rem;
+  border-radius: 14px;
+  padding: 1.25rem;
   text-align: left;
   cursor: default;
   font: inherit;
@@ -306,7 +328,7 @@ button.pk-kpi:hover {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  opacity: 0.25;
+  opacity: 0.85;
   font-size: 1.5rem !important;
 }
 
@@ -345,7 +367,7 @@ button.pk-kpi:hover {
   flex: 1 1 100px;
   background: var(--pk-mist);
   border: 1px solid var(--pk-line);
-  border-radius: 2px;
+  border-radius: 10px;
   padding: 0.6rem 0.75rem;
   text-align: left;
   cursor: pointer;
@@ -375,4 +397,3 @@ button.pk-kpi:hover {
 .pk-stat-mini--success .pk-stat-mini__value { color: #2e7d4f; }
 .pk-stat-mini--muted .pk-stat-mini__value { color: var(--pk-ink); }
 </style>
-

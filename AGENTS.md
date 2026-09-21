@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## プロジェクト概要
 
@@ -161,7 +161,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   docker-compose exec -e DATABASE_URL='<Neonの接続文字列>' backend bundle exec rails db:seed
   ```
   （`db:seed:replant` は全データ削除のため、接続先を確認してから使うこと）
-- pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードで確認が必要（Claude Codeからは確認不可）
+- pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードで確認が必要（Codexからは確認不可）
 
 ## 設計ドキュメント
 

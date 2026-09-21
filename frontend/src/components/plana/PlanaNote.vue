@@ -17,6 +17,9 @@ import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
   align-items: flex-start;
   gap: 0.6rem;
   margin-bottom: 0.6rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--pk-soft-blue);
   font-size: 0.75rem;
   line-height: 1.6;
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));

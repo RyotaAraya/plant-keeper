@@ -35,10 +35,11 @@ async function handleLogout() {
 
 <template>
   <v-app-bar density="default">
-    <v-app-bar-nav-icon @click="$emit('toggle-drawer')" />
+    <v-app-bar-nav-icon aria-label="メニューを開閉" @click="$emit('toggle-drawer')" />
+    <span class="pk-app-label d-none d-md-inline">保全ワークスペース</span>
     <v-spacer />
     <!-- どの画面からでもプラナを呼び出せる入口（専用ページ /plana へ） -->
-    <v-btn to="/plana" variant="text" class="mr-2" aria-label="プラナに相談" data-testid="plana-call">
+    <v-btn to="/plana" variant="tonal" color="primary" class="mr-2" aria-label="プラナに相談" data-testid="plana-call">
       <template #prepend><PlanaAvatar :size="26" /></template>
       <span class="d-none d-sm-inline">プラナに相談</span>
     </v-btn>
@@ -47,10 +48,15 @@ async function handleLogout() {
         <span v-if="siteName" class="pk-site-tag mr-2"><v-icon size="14" aria-hidden="true">mdi-domain</v-icon>{{ siteName }}</span>
         {{ authStore.user.name }}
       </div>
-      <div class="text-caption text-medium-emphasis pk-mono">{{ roleLabel }} / {{ companyName }}</div>
+      <div class="text-caption text-medium-emphasis d-none d-sm-block">{{ roleLabel }} / {{ companyName }}</div>
     </div>
     <v-btn icon variant="text" aria-label="ログアウト" @click="handleLogout">
       <v-icon>mdi-logout-variant</v-icon>
     </v-btn>
   </v-app-bar>
 </template>
+
+<style scoped>
+.pk-app-label { color: var(--pk-muted); font-size: 0.8125rem; }
+@media (max-width: 600px) { .pk-site-tag { display: none; } }
+</style>

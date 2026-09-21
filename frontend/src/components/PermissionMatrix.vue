@@ -91,16 +91,16 @@ const columnGroups = computed(() => {
 
 <style scoped>
 .pk-matrix {
-  /* 配色は variant で切り替える（既存の鋼板の寒色とアンバー） */
+  /* 共通トークンで業務画面と揃える。dark は暗い背景用 */
   --m-text: var(--pk-ink);
-  --m-muted: #5b6b70;
+  --m-muted: var(--pk-muted);
   --m-rule: var(--pk-line);
   --m-group-bg: var(--pk-mist);
   --m-group-text: var(--pk-steel);
   --m-on: var(--pk-steel);
   --m-off: #b3bcbf;
-  --m-active-bg: rgba(46, 91, 122, 0.09);
-  --m-active-line: var(--pk-amber);
+  --m-active-bg: var(--pk-soft-blue);
+  --m-active-line: var(--pk-steel);
   --m-surface: #fff;
 
   color: var(--m-text);
@@ -125,6 +125,7 @@ const columnGroups = computed(() => {
   overflow-x: auto;
   background: var(--m-surface);
   border: 1px solid var(--m-rule);
+  border-radius: 12px;
 }
 
 .pk-matrix__table {

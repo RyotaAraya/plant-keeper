@@ -81,6 +81,7 @@ onMounted(async () => {
 <style scoped>
 .pk-plana-page {
   max-width: 1040px;
+  margin: 0 auto;
 }
 
 .pk-plana-head {
@@ -88,16 +89,19 @@ onMounted(async () => {
   align-items: stretch;
   gap: 1.5rem;
   margin-bottom: 1.25rem;
+  padding: 1.5rem;
+  background: var(--pk-soft-blue);
+  border-radius: 20px;
 }
 
-/* キャラクターは、銘板のような四角い台に載せる（業務画面の角ばった部品と揃える） */
+/* キャラクターと説明をひとつの案内面にまとめる */
 .pk-plana-head__figure {
   flex: none;
   width: 132px;
   height: 132px;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--pk-plana-navy) 0%, var(--pk-plana-blue) 55%, var(--pk-plana-sky) 100%);
-  border: 1px solid var(--pk-line);
+  background: #d8eafb;
+  border-radius: 24px;
 }
 
 .pk-plana-head__body {

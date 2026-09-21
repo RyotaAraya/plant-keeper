@@ -1,16 +1,18 @@
 /* PlantKeeper デザイントークン
-   計装保全の現場（銘板・計器盤・図面）を起点にした配色とタイポグラフィ。 */
+   プラナと業務画面をつなぐ、明るいブルーの配色と読みやすいタイポグラフィ。 */
 :root {
-  --pk-ink: #17222b;
-  --pk-steel: #2e5b7a;
-  --pk-steel-dark: #203f55;
-  --pk-amber: #c1631f;
-  --pk-mist: #eef1ef;
-  --pk-line: #d6dbd8;
+  --pk-ink: #203451;
+  --pk-steel: #2364c4;
+  --pk-steel-dark: #194b96;
+  --pk-amber: #a95612;
+  --pk-mist: #f3f7fc;
+  --pk-line: #dae4f0;
+  --pk-soft-blue: #eaf2fd;
+  --pk-muted: #566a83;
   /* AIアシスタント「プラナ」。キャラクターの制服（ネイビー・ブルー）と、ロゴの橙から取った色。
-     プラナが出る場所（トップの帯・専用ページ・小さなアイコン）だけで使い、業務画面の配色は変えない */
+     業務画面の操作色と揃え、キャラクターは支援の入口と提案に置く */
   --pk-plana-navy: #12306b;
-  --pk-plana-blue: #1f6fd6;
+  --pk-plana-blue: #2364c4;
   --pk-plana-sky: #9fd3f7;
   --pk-plana-glow: #f3a340;
   --pk-font-body: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
@@ -33,7 +35,7 @@ html {
 
 .v-application .v-card,
 .v-application .v-sheet {
-  --v-border-color: 214, 219, 216;
+  --v-border-color: 218, 228, 240;
   --v-border-opacity: 1;
 }
 
@@ -57,7 +59,7 @@ h1, h2, h3,
 }
 
 :focus-visible {
-  outline: 2px solid var(--pk-amber);
+  outline: 2px solid var(--pk-steel);
   outline-offset: 2px;
 }
 
@@ -82,7 +84,7 @@ h1, h2, h3,
 }
 
 .v-navigation-drawer .v-list-item--active {
-  background: rgba(46, 91, 122, 0.08);
+  background: var(--pk-soft-blue);
   color: var(--pk-steel) !important;
 }
 
@@ -110,6 +112,7 @@ h1, h2, h3,
   gap: 0.2rem;
   padding: 0.05rem 0.45rem;
   border: 1px solid var(--pk-line);
+  border-radius: 6px;
   background: var(--pk-mist);
   color: var(--pk-steel);
   font-size: 0.75rem;
@@ -129,7 +132,7 @@ h1, h2, h3,
   }
 }
 
-/* 画面のタイトルは、サイドバーの選択表示で分かるため画面上には出さない（h1 は読み上げ・文書構造用に残す） */
+/* 視覚的に補足不要なラベルを読み上げ用に残す */
 .pk-sr-only {
   position: absolute;
   width: 1px;
@@ -169,4 +172,27 @@ h1, h2, h3,
 
 .pk-filters .v-field--dirty .v-label.v-field-label--floating {
   color: var(--pk-steel);
+}
+
+/* 共通の操作と情報面。業務の状態色やページ固有の配置は上書きしない。 */
+.v-application .v-btn { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.v-application .v-card-title { font-size: 1rem; font-weight: 700; white-space: normal; }
+.v-application .v-field { --v-field-border-opacity: 0.32; }
+.v-application .v-field--focused { --v-field-border-opacity: 1; }
+.v-application .v-data-table { border: 1px solid var(--pk-line); border-radius: 12px; overflow: hidden; }
+.v-application .v-card--variant-outlined { border-color: var(--pk-line); background: rgb(var(--v-theme-surface)); }
+.v-application .v-card .v-data-table { border: 0; }
+.v-data-table tbody tr:hover { background: var(--pk-mist); }
+.v-data-table .v-data-table-footer { border-top: 1px solid var(--pk-line); gap: 0.5rem; }
+.v-application .v-list-item-title { font-size: 0.875rem; }
+.v-application .v-list-item-subtitle { line-height: 1.65; }
+.v-application h1 { text-wrap: balance; }
+.pk-filters { padding: 1rem; border: 1px solid var(--pk-line); border-radius: 12px; background: #fff; }
+.pk-filters .v-field--dirty { background: var(--pk-soft-blue); }
+
+@media (max-width: 600px) {
+  .pk-filters { padding: 0.75rem; }
+  .v-data-table > .v-table__wrapper > table { min-width: 680px; }
+  .v-data-table .v-data-table-footer { justify-content: flex-start; padding: 8px; }
+  .v-data-table-footer__items-per-page { margin-inline-end: 0; }
 }

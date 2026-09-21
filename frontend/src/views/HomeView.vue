@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import HeroCanvas from '@/components/home/HeroCanvas.vue'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaConsultBar from '@/components/plana/PlanaConsultBar.vue'
@@ -94,17 +93,15 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 <template>
   <v-main>
     <!-- ヘッダー -->
-    <v-app-bar class="px-2 px-sm-6" color="ink" theme="dark">
-      <v-icon color="#E7B778" size="24" class="mr-2">mdi-gauge-full</v-icon>
+    <v-app-bar class="px-2 px-sm-6" color="surface">
+      <v-icon color="primary" size="24" class="mr-2">mdi-gauge-full</v-icon>
       <span class="pk-navbrand">PlantKeeper</span>
       <v-spacer />
-      <v-btn variant="outlined" color="#E7B778" to="/login">ログイン</v-btn>
+      <v-btn variant="tonal" color="primary" to="/login">ログイン</v-btn>
     </v-app-bar>
 
     <!-- ヒーロー -->
     <section class="pk-hero">
-      <HeroCanvas />
-      <div class="pk-hero__scrim" />
       <v-container fluid class="pk-hero__content">
         <div class="pk-hero__layout">
           <div class="pk-hero__text">
@@ -120,7 +117,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
               <span class="pk-hero__ai-text"><strong>プラナ AI</strong>過去の記録から、次の判断をサポートします</span>
               <v-icon size="18" class="pk-hero__ai-chevron">mdi-chevron-down</v-icon>
             </button>
-            <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
+            <v-btn color="primary" size="x-large" class="px-8" @click="goToApp">
               デモアカウントで試す
             </v-btn>
             <div class="pk-hero__note">
@@ -364,25 +361,12 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 
 .pk-hero {
   position: relative;
-  min-height: min(86vh, 720px);
+  min-height: 560px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   overflow: hidden;
-  background: var(--pk-ink);
-  padding-bottom: clamp(3rem, 9vh, 6rem);
-}
-
-.pk-hero__scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, rgba(23, 34, 43, 0.82) 0%, rgba(23, 34, 43, 0.45) 42%, rgba(23, 34, 43, 0.08) 78%);
-  pointer-events: none;
-}
-
-@media (max-width: 900px) {
-  .pk-hero__scrim {
-    background: linear-gradient(180deg, rgba(23, 34, 43, 0.5) 0%, rgba(23, 34, 43, 0.8) 100%);
-  }
+  background: var(--pk-mist);
+  padding: clamp(3rem, 7vw, 6rem) 0;
 }
 
 .pk-hero__content {
@@ -414,8 +398,9 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-hero__shot-img {
   width: 100%;
   display: block;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--pk-line);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px -16px rgba(35, 100, 196, 0.2);
 }
 
 @media (max-width: 900px) {
@@ -434,8 +419,8 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-hero__brand {
   font-family: var(--pk-font-display);
   font-weight: 900;
-  color: #f5f6f5;
-  font-size: clamp(2rem, 11vw, 6.5rem);
+  color: var(--pk-plana-navy);
+  font-size: clamp(2rem, 5vw, 4rem);
   line-height: 1;
   letter-spacing: -0.01em;
   margin-bottom: 0.75rem;
@@ -445,7 +430,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   font-family: var(--pk-font-display);
   font-weight: 500;
   font-size: clamp(1.05rem, 2.6vw, 1.6rem);
-  color: rgba(245, 246, 245, 0.88);
+  color: var(--pk-ink);
   margin-bottom: 0.6rem;
 }
 
@@ -454,12 +439,12 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   margin-bottom: 1.25rem;
   font-size: 0.9rem;
   line-height: 1.8;
-  color: rgba(245, 246, 245, 0.7);
+  color: var(--pk-muted);
   text-wrap: pretty;
   word-break: auto-phrase;
 }
 
-/* ヒーローの「プラナ AI」の札。ヘッダーの琥珀の枠で、主役（ブランド）より控えめに */
+/* プラナの帯への入口。業務画面と同じ淡いブルーでつなぐ */
 .pk-hero__ai {
   display: inline-flex;
   align-items: center;
@@ -471,20 +456,21 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   font-size: 0.875rem;
   line-height: 1.5;
   text-align: left;
-  color: rgba(245, 246, 245, 0.88);
-  background: rgba(231, 183, 120, 0.08);
-  border: 1px solid rgba(231, 183, 120, 0.45);
+  color: var(--pk-muted);
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
   cursor: pointer;
   transition: background-color 0.15s, border-color 0.15s;
 }
 
 .pk-hero__ai:hover {
-  background: rgba(231, 183, 120, 0.16);
-  border-color: #e7b778;
+  background: var(--pk-soft-blue);
+  border-color: var(--pk-steel);
 }
 
 .pk-hero__ai:focus-visible {
-  outline: 2px solid #e7b778;
+  outline: 2px solid var(--pk-steel);
   outline-offset: 3px;
 }
 
@@ -496,7 +482,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-hero__ai-text strong {
   margin-right: 0.6em;
   font-weight: 700;
-  color: #fff;
+  color: var(--pk-plana-navy);
 }
 
 .pk-hero__ai-chevron {
@@ -507,17 +493,14 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
 .pk-hero__note {
   margin-top: 1rem;
   font-size: 0.8rem;
-  color: rgba(245, 246, 245, 0.65);
+  color: var(--pk-muted);
 }
 
 .pk-plana {
   position: relative;
   overflow: hidden;
-  color: #fff;
-  /* 夕暮れのプラント。上はネイビー、地平線に向かって水色へ。右下の橙は、ロゴの橙 */
-  background:
-    radial-gradient(ellipse 60% 55% at 82% 104%, rgba(243, 163, 64, 0.55), transparent 70%),
-    linear-gradient(180deg, #0d2450 0%, #1a4fa8 58%, #7fbfee 100%);
+  color: var(--pk-plana-navy);
+  background: #dfeefd;
 }
 
 .pk-plana__skyline {
@@ -526,6 +509,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   width: 100%;
   height: min(46%, 190px);
   pointer-events: none;
+  opacity: 0.2;
 }
 
 .pk-plana__inner {
@@ -585,7 +569,7 @@ const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
   margin: 0 0 1.5rem;
   font-size: 0.9rem;
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--pk-muted);
   text-wrap: pretty;
   word-break: auto-phrase;
 }

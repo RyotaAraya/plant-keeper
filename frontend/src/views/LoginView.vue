@@ -112,7 +112,7 @@ async function loginAs(accountEmail: string) {
   <div class="pk-login">
     <aside class="pk-login__brand">
       <router-link to="/" class="pk-login__brand-mark">
-        <v-icon color="#E7B778" size="26">mdi-gauge-full</v-icon>
+        <v-icon color="primary" size="26">mdi-gauge-full</v-icon>
         <span>PlantKeeper</span>
       </router-link>
       <div class="pk-login__brand-main">
@@ -124,7 +124,7 @@ async function loginAs(accountEmail: string) {
         <section v-if="!isNarrow" class="pk-login__matrix" aria-labelledby="pk-matrix-title-wide">
           <h2 id="pk-matrix-title-wide" class="pk-login__matrix-title">権限ごとに、できることが違います</h2>
           <p class="pk-login__matrix-lead">右のデモアカウントを選ぶと、その権限の列が光ります。</p>
-          <PermissionMatrix variant="dark" dense :highlight="highlightRole" />
+          <PermissionMatrix dense :highlight="highlightRole" />
         </section>
       </div>
       <router-link to="/" class="pk-login__back">
@@ -228,12 +228,8 @@ async function loginAs(accountEmail: string) {
 }
 
 .pk-login__brand {
-  background: var(--pk-ink);
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 44px 44px;
-  color: #f5f6f5;
+  background: var(--pk-soft-blue);
+  color: var(--pk-plana-navy);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -247,7 +243,7 @@ async function loginAs(accountEmail: string) {
   font-family: var(--pk-font-display);
   font-weight: 700;
   font-size: 1.1rem;
-  color: #f5f6f5;
+  color: var(--pk-plana-navy);
   text-decoration: none;
 }
 
@@ -268,7 +264,7 @@ async function loginAs(accountEmail: string) {
 .pk-login__matrix-lead {
   margin: 0 0 0.9rem;
   font-size: 0.8125rem;
-  color: rgba(245, 246, 245, 0.62);
+  color: var(--pk-muted);
 }
 
 .pk-login__matrix--narrow {
@@ -287,14 +283,14 @@ async function loginAs(accountEmail: string) {
 }
 
 .pk-login__brand-copy p {
-  color: rgba(245, 246, 245, 0.7);
+  color: var(--pk-muted);
   max-width: 400px;
   font-size: 0.95rem;
   text-wrap: pretty;
 }
 
 .pk-login__back {
-  color: rgba(245, 246, 245, 0.55);
+  color: var(--pk-steel);
   text-decoration: none;
   font-size: 0.85rem;
   display: inline-flex;
@@ -303,7 +299,7 @@ async function loginAs(accountEmail: string) {
 }
 
 .pk-login__back:hover {
-  color: #e7b778;
+  color: var(--pk-steel-dark);
 }
 
 .pk-login__form {
@@ -332,6 +328,7 @@ async function loginAs(accountEmail: string) {
   gap: 0.75rem;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--pk-line);
+  border-radius: 12px;
   background: #fff;
   cursor: pointer;
   text-align: left;

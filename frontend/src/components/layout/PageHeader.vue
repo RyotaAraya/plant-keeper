@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 一覧・管理画面の見出し行。
-// 今どの画面かはサイドバーの選択表示で分かるため、タイトルは画面上には出さず（読み上げ・文書構造用の h1 として残す）、
-// 代わりに「この画面で何をするか」を1行で示す。右端は操作ボタン（スロット）
+// タイトルと説明は左、主要操作は右。狭い画面でも現在地が分かるようにする。
 defineProps<{
   title: string
   description: string
@@ -10,8 +9,10 @@ defineProps<{
 
 <template>
   <header class="pk-page-header">
-    <h1 class="pk-sr-only">{{ title }}</h1>
-    <p class="pk-page-header__desc">{{ description }}</p>
+    <div>
+      <h1 class="pk-page-header__title">{{ title }}</h1>
+      <p class="pk-page-header__desc">{{ description }}</p>
+    </div>
     <div v-if="$slots.default" class="pk-page-header__actions">
       <slot />
     </div>
@@ -25,8 +26,10 @@ defineProps<{
   justify-content: space-between;
   gap: 1rem;
   min-height: 40px;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
+
+.pk-page-header__title { font-size: 1.55rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.35rem; }
 
 .pk-page-header__desc {
   max-width: 56em;
