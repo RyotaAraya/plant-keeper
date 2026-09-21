@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
+import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import {
   CHARACTERISTIC_LABEL,
@@ -74,19 +75,6 @@ async function saveInstrument() {
   } catch (e: any) {
     editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
-}
-
-const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', resolved: '解決済', closed: 'クローズ'
-}
-const priorityLabel: Record<string, string> = {
-  low: '低', medium: '中', high: '高', critical: '緊急'
-}
-const priorityColor: Record<string, string> = {
-  low: 'info', medium: 'warning', high: 'error', critical: 'error'
-}
-const inspectionStatusLabel: Record<string, string> = {
-  draft: '下書き', submitted: '提出済', approval_requested: '承認依頼中', approved: '承認済'
 }
 
 async function fetchInstrument() {
@@ -161,38 +149,11 @@ onMounted(fetchInstrument)
 
       <v-window v-model="tab">
         <v-window-item value="troubles">
-          <v-list v-if="(instrument.recent_troubles || []).length">
-            <v-list-item
-              v-for="t in instrument.recent_troubles"
-              :key="t.id"
-              :title="t.title"
-              :subtitle="t.reported_at?.slice(0, 10)"
-            >
-              <template #append>
-                <v-chip :color="priorityColor[t.priority] || 'grey'" size="small" class="mr-2">
-                  {{ priorityLabel[t.priority] || t.priority }}
-                </v-chip>
-                <v-chip size="small">{{ statusLabel[t.status] || t.status }}</v-chip>
-              </template>
-            </v-list-item>
-          </v-list>
-          <p v-else class="text-body-2 text-grey ml-4">トラブル履歴なし</p>
+          <InstrumentHistoryList kind="troubles" :instrument-id="instrument.id" />
         </v-window-item>
 
         <v-window-item value="inspections">
-          <v-list v-if="(instrument.recent_inspections || []).length">
-            <v-list-item
-              v-for="i in instrument.recent_inspections"
-              :key="i.id"
-              :title="i.inspection_type"
-              :subtitle="i.inspected_at?.slice(0, 10)"
-            >
-              <template #append>
-                <v-chip size="small">{{ inspectionStatusLabel[i.status] || i.status }}</v-chip>
-              </template>
-            </v-list-item>
-          </v-list>
-          <p v-else class="text-body-2 text-grey ml-4">点検履歴なし</p>
+          <InstrumentHistoryList kind="inspections" :instrument-id="instrument.id" />
         </v-window-item>
 
         <v-window-item value="history">

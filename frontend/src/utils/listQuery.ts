@@ -15,3 +15,9 @@ export function siteIdsFromQuery(value: unknown, fallback: number[]): number[] {
 export function listFromQuery(value: unknown): string[] {
   return typeof value === 'string' ? value.split(',').filter(Boolean) : []
 }
+
+// 計器などの、1つのID（`instrument_id=484`）。正の整数でなければ null
+export function idFromQuery(value: unknown): number | null {
+  const n = typeof value === 'string' ? Number(value) : NaN
+  return Number.isInteger(n) && n > 0 ? n : null
+}
