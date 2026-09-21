@@ -25,6 +25,7 @@ export default [
         WebGLRenderingContext: 'readonly',
         WebGLProgram: 'readonly',
         WebGLUniformLocation: 'readonly',
+        BeforeUnloadEvent: 'readonly',
       },
     },
   },

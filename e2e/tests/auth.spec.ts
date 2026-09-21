@@ -17,9 +17,9 @@ test('パスワードが違うとエラーが表示され、ログインでき�
   await expect(page).toHaveURL(/\/login/)
 })
 
-test('ログイン → ダッシュボード表示 → ログアウトでログイン画面に戻り、再アクセスもできない', async ({ page }) => {
+test('ログイン → プラナホーム表示 → ログアウトでログイン画面に戻り、再アクセスもできない', async ({ page }) => {
   await login(page, ACCOUNTS.logout)
-  await expect(page.getByRole('heading', { level: 1, name: 'ダッシュボード' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '今日は、何から始めますか？' })).toBeVisible()
 
   // フロントがサーバー側の失効（DELETE /logout → 204）まで行っていること
   const logoutResponse = page.waitForResponse(
@@ -58,7 +58,7 @@ test('同じユーザが2つの端末でログインでき、片方でログア�
 
   // 別端末のセッションは生きている（再読み込みしてもログインしたまま）
   await tablet.reload()
-  await expect(tablet.getByRole('heading', { level: 1, name: 'ダッシュボード' })).toBeVisible()
+  await expect(tablet.getByRole('heading', { level: 1, name: '今日は、何から始めますか？' })).toBeVisible()
 
   await pc.context().close()
   await tablet.context().close()

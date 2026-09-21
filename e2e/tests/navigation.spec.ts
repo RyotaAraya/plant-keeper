@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, login, ACCOUNTS, openFirstTrouble } from './support'
 
 // メニュー名 / 画面見出し / 一覧にシードデータが表示されるか
 const screens = [
@@ -48,4 +48,21 @@ test('自社所属のユーザには在庫管理メニューが表示され、�
   await page.getByRole('link', { name: '在庫管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '在庫管理' })).toBeVisible()
   await expect(page.locator('tbody tr').first()).toBeVisible()
+})
+
+// 詳細と入力画面の現在地・一覧への復帰を、実際のリンク操作で確認する。
+test('詳細と新規点検からヘッダーの一覧リンクで戻れる', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await openFirstTrouble(page)
+  const location = page.getByRole('navigation', { name: '現在の場所' })
+  await expect(location.locator('[aria-current="page"]')).toHaveText('詳細')
+  await expect(page.getByRole('link', { name: 'トラブル管理', exact: true })).toHaveAttribute('aria-current', 'page')
+  await location.getByRole('link', { name: 'トラブル管理の一覧へ戻る' }).click()
+  await expect(page).toHaveURL(/\/troubles$/)
+  await expect(location.locator('[aria-current="page"]')).toHaveText('トラブル管理')
+
+  await page.goto('/inspections/new')
+  await expect(location.locator('[aria-current="page"]')).toHaveText('新規点検')
+  await location.getByRole('link', { name: '点検・作業記録の一覧へ戻る' }).click()
+  await expect(page).toHaveURL(/\/inspections$/)
 })

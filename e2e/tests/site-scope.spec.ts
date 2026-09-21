@@ -167,7 +167,7 @@ test('別の拠点の点検計画から「点検を実施」を開いても、�
 
 test('拠点の絞り込みはすべての拠点データの一覧で同じ部品になっている', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
-  await expect(page.getByLabel('拠点', { exact: true })).toHaveValue('川崎製油所')
+  await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('川崎製油所')
 
   for (const menu of ['設備台帳', '装置・計器', '点検計画', '点検・作業記録', 'トラブル管理', '定期整備', '在庫管理', '修理管理']) {
     await openList(page, menu)

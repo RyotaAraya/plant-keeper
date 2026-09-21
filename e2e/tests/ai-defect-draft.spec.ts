@@ -1,19 +1,17 @@
 import { test, expect, login, selectFirstOption, requireFakeAi, ACCOUNTS } from './support'
 
 // 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）
-test('現場メモからAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
+test('プラナホームから現場メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
-  await page.goto('/inspections/new')
+  await login(page, ACCOUNTS.member)
   requireFakeAi((await (await statusResponse).json()).data.provider)
-  await selectFirstOption(page, '設備 *')
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の下書き' }).click()
+  await selectFirstOption(page, '対象の設備')
+  await page.getByRole('button', { name: '不具合の記録を始める' }).click()
+  await expect(page.getByTestId('from-plana')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toBeChecked()
   await selectFirstOption(page, '部署 *')
-  await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
-
-  // 不具合を付けるまで、AIの入力欄は出ない
-  await expect(page.getByTestId('ai-assist')).toHaveCount(0)
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
 
   await expect(page.getByTestId('ai-assist')).toBeVisible()
 

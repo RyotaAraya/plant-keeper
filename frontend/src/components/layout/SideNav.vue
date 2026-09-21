@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePermissions } from '@/composables/usePermissions'
+import { useNavigation } from '@/composables/useNavigation'
 import { useDisplay } from 'vuetify'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 
@@ -16,69 +15,7 @@ defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const {
-  canManageUsers,
-  canViewAuditLogs,
-  canAccessSettings,
-  canManageOrders,
-  canManageRepairs,
-  canViewStocks,
-  canViewMaterials,
-  canViewSites,
-} = usePermissions()
-
-type NavItem = { title: string; icon: string; to: string; permission?: { value: boolean } }
-type NavGroup = { label?: string; items: NavItem[] }
-
-// 業務の流れ順にグループ化する。項目名は変えない（E2Eがリンク名で辿るため）。
-// 見出しは、見える項目が1つもないグループでは出さない（協力会社や一般ユーザ向けの整理）。
-const navGroups: NavGroup[] = [
-  {
-    items: [{ title: 'ダッシュボード', icon: 'mdi-view-dashboard-outline', to: '/dashboard' }],
-  },
-  {
-    label: '日々の保全',
-    items: [
-      { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },
-      { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
-      { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },
-      { title: '定期整備', icon: 'mdi-wrench-outline', to: '/maintenances' },
-    ],
-  },
-  {
-    label: '設備',
-    items: [
-      { title: '拠点管理', icon: 'mdi-domain', to: '/sites', permission: canViewSites },
-      { title: '設備台帳', icon: 'mdi-factory', to: '/equipments' },
-      { title: '装置・計器', icon: 'mdi-gauge', to: '/instruments' },
-      { title: '基準器', icon: 'mdi-ruler-square', to: '/reference-standards' },
-    ],
-  },
-  {
-    label: '資材',
-    items: [
-      { title: '資材管理', icon: 'mdi-package-variant', to: '/materials', permission: canViewMaterials },
-      { title: '在庫管理', icon: 'mdi-warehouse', to: '/stocks', permission: canViewStocks },
-      { title: '修理管理', icon: 'mdi-hammer-wrench', to: '/repairs', permission: canManageRepairs },
-      { title: '発注管理', icon: 'mdi-cart-outline', to: '/orders', permission: canManageOrders },
-    ],
-  },
-  {
-    label: '管理',
-    items: [
-      { title: '部署管理', icon: 'mdi-office-building-outline', to: '/departments', permission: canManageUsers },
-      { title: 'ユーザ管理', icon: 'mdi-account-group-outline', to: '/users', permission: canManageUsers },
-      { title: '監査ログ', icon: 'mdi-file-document-outline', to: '/audit-logs', permission: canViewAuditLogs },
-      { title: '設定', icon: 'mdi-cog-outline', to: '/settings', permission: canAccessSettings },
-    ],
-  },
-]
-
-const visibleGroups = computed(() =>
-  navGroups
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.permission || item.permission.value) }))
-    .filter((group) => group.items.length > 0),
-)
+const { visibleGroups } = useNavigation()
 
 // 詳細画面（/sites/:id 等）は一覧と別ルートのため、Vue Routerの自動判定だけでは
 // アクティブ表示が外れてしまう。パスの前方一致で明示的に判定する。
@@ -93,6 +30,7 @@ function isItemActive(path: string) {
     :permanent="!mobile"
     :temporary="mobile"
     class="pk-sidenav"
+    aria-label="業務メニュー"
     width="248"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -100,12 +38,12 @@ function isItemActive(path: string) {
       <v-icon size="26" color="primary">mdi-gauge-full</v-icon>
       <span class="pk-sidenav__brand-text">PlantKeeper</span>
     </div>
-    <router-link to="/plana" class="pk-sidenav__assistant">
+    <router-link to="/plana" class="pk-sidenav__assistant" :aria-current="route.path === '/plana' ? 'page' : undefined">
       <PlanaAvatar :size="38" />
-      <span><strong>プラナ</strong><small>記録と調べものをサポート</small></span>
+      <span><strong>プラナ</strong><small>記録と調べもの</small></span>
       <v-icon size="16" aria-hidden="true">mdi-chevron-right</v-icon>
     </router-link>
-    <v-list nav class="pk-sidenav__list">
+    <v-list nav density="compact" class="pk-sidenav__list">
       <template v-for="group in visibleGroups" :key="group.label ?? 'top'">
         <v-list-subheader v-if="group.label" class="pk-sidenav__group">{{ group.label }}</v-list-subheader>
         <v-list-item
@@ -113,6 +51,7 @@ function isItemActive(path: string) {
           :key="item.title"
           :to="item.to"
           :active="isItemActive(item.to)"
+          :aria-current="isItemActive(item.to) ? 'page' : undefined"
           :prepend-icon="item.icon"
           :title="item.title"
           class="pk-sidenav__item"
@@ -132,7 +71,7 @@ function isItemActive(path: string) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.5rem 1.25rem 1.25rem;
+  padding: 1.1rem 1.25rem;
 }
 
 .pk-sidenav__brand-text {
@@ -150,6 +89,8 @@ function isItemActive(path: string) {
 .pk-sidenav__assistant { display: flex; align-items: center; gap: 0.55rem; margin: 0 0.75rem 0.5rem; padding: 0.85rem 0.65rem; background: var(--pk-soft-blue); border-radius: 14px; color: var(--pk-plana-navy); text-decoration: none; }
 .pk-sidenav__assistant strong { display: block; font-size: 0.875rem; }
 .pk-sidenav__assistant small { display: block; margin-top: 0.15rem; font-size: 0.65rem; color: var(--pk-muted); }
+.pk-sidenav__assistant:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 3px; }
+.pk-sidenav__assistant[aria-current="page"] { box-shadow: inset 3px 0 var(--pk-steel); }
 .pk-sidenav__assistant:hover { outline: 1px solid var(--pk-steel); }
 
 /* グループ見出し。項目より一段静かにし、右へ伸びる細線でグループの区切りを示す */
@@ -177,8 +118,8 @@ function isItemActive(path: string) {
 .pk-sidenav__item {
   border-radius: 10px;
   color: var(--pk-muted) !important;
-  min-height: 40px;
-  margin-bottom: 3px;
+  min-height: 36px;
+  margin-bottom: 2px;
 }
 
 .pk-sidenav__item :deep(.v-icon) {
