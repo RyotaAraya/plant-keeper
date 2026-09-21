@@ -38,7 +38,7 @@ const FIELD_LABELS: Record<string, string> = {
   deactivated_on: '退職日', is_active: '有効',
   // 設備・拠点などの ID の対象（opaque。日本語ラベルは「何が変わったか」を示す）
   equipment_id: '設備', instrument_id: '計器', site_id: '拠点', department_id: '部署', user_id: 'ユーザ',
-  service_id: 'サービス（流体）', line_class_id: '配管クラス', reported_by_id: '報告者', accepted_by_id: '検収者',
+  service_id: 'サービス（流体）', line_class_id: '配管クラス', reported_by_id: '報告者', assigned_to_id: '担当者', accepted_by_id: '検収者',
   trouble_id: 'トラブル', maintenance_task_id: '定期整備の作業', scheduled_maintenance_id: '定期整備',
   maintenance_series_id: '系列', checklist_template_id: 'チェックリスト', checklist_template_item_id: 'チェックリストの項目',
   inspection_item_id: '点検の項目', inspection_id: '点検',
@@ -97,12 +97,10 @@ export function formatAuditChanges(changes: unknown, auditableType: string, acti
     .filter(([key]) => !(action === 'create' && isIdKey(key) && key !== 'ai_suggestion_id'))
     .map(([key, raw]) => {
       const [from, to] = Array.isArray(raw) && raw.length === 2 ? raw : [null, raw]
-      return {
-        key,
-        label: FIELD_LABELS[key] ?? key,
-        from: formatValue(auditableType, key, from),
-        to: formatValue(auditableType, key, to),
-        opaque: isIdKey(key) && key !== 'ai_suggestion_id',
-      }
+      const fromText = formatValue(auditableType, key, from)
+      const toText = formatValue(auditableType, key, to)
+      // ID の変更と、件数だけでは違いが分からない配列（対象設備が同じ数のまま入れ替わったときの「2件 → 2件」）は、「変更あり」とだけ出す
+      const opaque = (isIdKey(key) && key !== 'ai_suggestion_id') || (Array.isArray(from) && Array.isArray(to) && fromText === toText)
+      return { key, label: FIELD_LABELS[key] ?? key, from: fromText, to: toText, opaque }
     })
 }

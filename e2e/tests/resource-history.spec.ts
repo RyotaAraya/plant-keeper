@@ -16,7 +16,8 @@ test('トラブル詳細の変更履歴は、日本語のラベルと状態の�
   })
   expect(created.ok()).toBeTruthy()
   const id = (await created.json()).data.id
-  const updated = await page.request.patch(`${api}/troubles/${id}`, { headers, data: { trouble: { status: 'in_progress' } } })
+  const me = await (await page.request.get(`${api}/current_user`, { headers })).json()
+  const updated = await page.request.patch(`${api}/troubles/${id}`, { headers, data: { trouble: { status: 'in_progress', assigned_to_id: me.user.id } } })
   expect(updated.ok()).toBeTruthy()
 
   await page.goto(`/troubles/${id}`)
@@ -31,8 +32,11 @@ test('トラブル詳細の変更履歴は、日本語のラベルと状態の�
   await expect(history).toContainText('優先度:')
   await expect(history).toContainText(title)
 
-  // カラム名（status / priority / reported_by_id など）と、IDの生の値は出ない
+  // IDのカラム（担当者）は、値でなく「変更あり」とだけ出る
+  await expect(history).toContainText(/担当者:\s*変更あり/)
+
+  // カラム名（status / priority / assigned_to_id など）と、IDの生の値は出ない
   const text = await history.innerText()
-  expect(text).not.toMatch(/\b(status|priority|title|description|reported_at|equipment_id|reported_by_id)\b/)
+  expect(text).not.toMatch(/\b(status|priority|title|description|reported_at|equipment_id|reported_by_id|assigned_to_id)\b/)
   expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T/) // 日時はISOのまま出さない
 })
