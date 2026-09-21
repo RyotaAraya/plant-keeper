@@ -28,3 +28,14 @@ test('スマホの一覧から作成ダイアログを開いて閉じられる',
   await dialog.getByRole('button', { name: 'キャンセル' }).click()
   await expect(dialog).not.toBeVisible()
 })
+
+// スマホ（600px 以下）以外では、メニューは開いた状態で始まる（Vuetify の既定だと 1280px 未満でも閉じてしまう）
+test.describe('タブレット・小さめのノートPCの幅', () => {
+  for (const width of [768, 1024]) {
+    test(`${width}px 幅では、メニューが開いた状態で始まる`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await login(page, ACCOUNTS.admin)
+      await expect(page.getByRole('link', { name: '設備台帳', exact: true })).toBeInViewport()
+    })
+  }
+})

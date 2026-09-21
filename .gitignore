@@ -10,3 +10,6 @@ frontend/dist/
 e2e/node_modules/
 e2e/test-results/
 e2e/playwright-report/
+
+# プラナの元画像（大きいため入れない。使うのは frontend/src/assets/plana/plana.webp のみ）
+プラナ参考画像/

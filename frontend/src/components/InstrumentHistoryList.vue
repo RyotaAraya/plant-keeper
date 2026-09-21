@@ -48,7 +48,8 @@ async function load() {
   }
 }
 
-const formatDate = (dt: string) => (dt ? new Date(dt).toLocaleDateString('ja-JP') : '')
+// APIは日本時間の「+09:00」付きで返すため、先頭の日付をそのまま使う（ブラウザのタイムゾーンに引きずられない）
+const formatDate = (dt: string) => (dt ? dt.slice(0, 10) : '')
 const detailPath = (id: number) => `/${props.kind}/${id}`
 
 // その計器で絞り込んだ一覧へ。ほかの拠点の計器でも見えるよう、全拠点にする

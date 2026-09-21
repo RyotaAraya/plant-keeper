@@ -92,7 +92,6 @@ function isItemActive(path: string) {
     :model-value="modelValue"
     :permanent="!mobile"
     :temporary="mobile"
-    :inert="mobile && !modelValue"
     class="pk-sidenav"
     width="248"
     @update:model-value="$emit('update:modelValue', $event)"

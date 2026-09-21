@@ -7,6 +7,7 @@ import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
+import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
@@ -45,18 +46,6 @@ const similar = useSimilarTroubles((count) => {
   if (aiStatus.value) aiStatus.value.remaining_today = count
 })
 
-const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
-}
-const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
-}
-const priorityLabel: Record<string, string> = {
-  low: '低', medium: '中', high: '高', critical: '緊急'
-}
-const priorityColor: Record<string, string> = {
-  low: 'success', medium: 'info', high: 'warning', critical: 'error'
-}
 const responseTypeLabel: Record<string, string> = {
   investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察'
 }
@@ -249,8 +238,8 @@ watch(() => route.params.id, (id, previous) => {
           <v-row>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">ステータス</div>
-              <v-chip :color="statusColor[trouble.status]" size="small">
-                {{ statusLabel[trouble.status] }}
+              <v-chip :color="troubleStatusColor[trouble.status]" size="small">
+                {{ troubleStatusLabel[trouble.status] }}
               </v-chip>
             </v-col>
             <v-col cols="6" md="3">

@@ -1,4 +1,4 @@
-// トラブル・点検の状態などの、画面に出す呼び方と色（履歴・類似トラブルの表示で共有する）
+// トラブル・点検の状態などの、画面に出す呼び方と色（一覧・詳細・履歴・類似トラブルで共有する。新しい画面でも、ここから import する）
 export const troubleStatusLabel: Record<string, string> = { open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了' }
 export const troubleStatusColor: Record<string, string> = { open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success' }
 export const priorityLabel: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }

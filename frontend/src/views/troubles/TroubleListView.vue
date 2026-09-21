@@ -9,6 +9,7 @@ import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
+import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
@@ -65,19 +66,6 @@ const headers = [
   { title: '担当者', key: 'assigned_to.name', width: '90px' },
   { title: 'ステータス', key: 'status', width: '110px' },
 ]
-
-const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
-}
-const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
-}
-const priorityLabel: Record<string, string> = {
-  low: '低', medium: '中', high: '高', critical: '緊急'
-}
-const priorityColor: Record<string, string> = {
-  low: 'success', medium: 'info', high: 'warning', critical: 'error'
-}
 
 const statusOptions = [
   { title: '未対応', value: 'open' },
@@ -232,8 +220,8 @@ watch(() => route.query, () => {
         </v-chip>
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
+        <v-chip :color="troubleStatusColor[item.status]" size="small">
+          {{ troubleStatusLabel[item.status] }}
         </v-chip>
       </template>
       <template #item.instrument.tag_number="{ item }">

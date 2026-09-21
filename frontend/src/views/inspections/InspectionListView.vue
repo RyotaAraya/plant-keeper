@@ -8,6 +8,7 @@ import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { inspectionStatusColor, inspectionStatusLabel, inspectionTypeLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
@@ -47,18 +48,6 @@ const headers = [
   { title: '部署', key: 'department.name', width: '140px' },
   { title: 'ステータス', key: 'status', width: '120px' },
 ]
-
-const inspectionTypeLabel: Record<string, string> = {
-  routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
-}
-
-const statusLabel: Record<string, string> = {
-  draft: '下書き', submitted: '提出済', approval_requested: '承認待ち', approved: '承認済'
-}
-
-const statusColor: Record<string, string> = {
-  draft: 'grey', submitted: 'info', approval_requested: 'warning', approved: 'success'
-}
 
 const inspectionTypeOptions = [
   { title: '日常点検', value: 'routine' },
@@ -177,8 +166,8 @@ watch(() => route.query, () => {
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] || item.status }}
+        <v-chip :color="inspectionStatusColor[item.status]" size="small">
+          {{ inspectionStatusLabel[item.status] || item.status }}
         </v-chip>
       </template>
     </v-data-table>

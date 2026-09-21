@@ -9,6 +9,9 @@ import { ja } from 'vuetify/locale'
 const vuetify = createVuetify({
   components,
   directives,
+  // スマホ（600px 以下。main.css の @media (max-width: 600px) と同じ）だけを mobile にする。
+  // 既定（1280px 未満）だと、ノートPCの小さめの窓やタブレットでも、メニューが閉じた状態で始まる
+  display: { mobileBreakpoint: 601 },
   locale: {
     locale: 'ja',
     messages: { ja },

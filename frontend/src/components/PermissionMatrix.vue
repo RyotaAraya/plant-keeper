@@ -6,13 +6,12 @@ import { MATRIX_GROUPS, MATRIX_ROLES, isAllowed } from '@/constants/permissionMa
 // （行=機能、列=権限、交点に●）で、保全の現場の人が見慣れた読み方ができるようにしている
 const props = withDefaults(
   defineProps<{
-    variant?: 'light' | 'dark'
     // 行間を詰める（幅・高さに余裕のない場所用）
     dense?: boolean
     // 強調する列（会社種別:ロール）。ログイン画面で、選んだデモアカウントの権限を示す
     highlight?: string | null
   }>(),
-  { variant: 'light', dense: false, highlight: null }
+  { dense: false, highlight: null }
 )
 
 // 行ラベルは「・」の位置でだけ折り返す（「監/査ログ」のように語の途中で折れないように、
@@ -32,7 +31,7 @@ const columnGroups = computed(() => {
 </script>
 
 <template>
-  <div class="pk-matrix" :class="[`pk-matrix--${props.variant}`, { 'pk-matrix--dense': props.dense }]">
+  <div class="pk-matrix" :class="{ 'pk-matrix--dense': props.dense }">
     <div class="pk-matrix__scroll">
       <table class="pk-matrix__table">
         <caption class="pk-matrix__sr">権限ごとに使える機能の一覧</caption>
@@ -91,7 +90,7 @@ const columnGroups = computed(() => {
 
 <style scoped>
 .pk-matrix {
-  /* 共通トークンで業務画面と揃える。dark は暗い背景用 */
+  /* 共通トークンで業務画面と揃える */
   --m-text: var(--pk-ink);
   --m-muted: var(--pk-muted);
   --m-rule: var(--pk-line);
@@ -104,19 +103,6 @@ const columnGroups = computed(() => {
   --m-surface: #fff;
 
   color: var(--m-text);
-}
-
-.pk-matrix--dark {
-  --m-text: #e8ecee;
-  --m-muted: rgba(232, 236, 238, 0.6);
-  --m-rule: rgba(255, 255, 255, 0.16);
-  --m-group-bg: rgba(255, 255, 255, 0.06);
-  --m-group-text: #e7b778;
-  --m-on: #e7b778;
-  --m-off: rgba(255, 255, 255, 0.3);
-  --m-active-bg: rgba(231, 183, 120, 0.16);
-  --m-active-line: #e7b778;
-  --m-surface: transparent;
 }
 
 .pk-matrix__scroll {
