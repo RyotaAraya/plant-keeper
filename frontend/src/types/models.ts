@@ -574,6 +574,37 @@ export interface AiSimilarTroubles {
   remaining_today: number
 }
 
+export interface DashboardScope {
+  siteId: number | null
+  departmentId: number | null
+}
+
+export interface DepartmentTreeNode {
+  id: number
+  name: string
+  level: string
+  children: DepartmentTreeNode[]
+}
+
+export interface DashboardSummary {
+  scope: { site_name: string | null; department_name: string | null }
+  troubles: { open: number; in_progress: number; critical: number }
+  inspections: { pending_approval: number }
+  maintenances: {
+    planned: number
+    in_progress: number
+    upcoming_count: number
+    upcoming: {
+      id: number
+      title: string
+      status: string
+      planned_start_on: string
+      planned_end_on: string | null
+      equipments: { id: number; name: string }[]
+    }[]
+  }
+}
+
 export interface AiResponseDraft {
   suggestion_id: number
   // AIが提案しない（メモから決められない・使えない値だった）ときは null

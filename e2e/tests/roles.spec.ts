@@ -47,12 +47,12 @@ test('協力会社のマネージャーは自社限定メニューが使えず�
   await expect(page.getByLabel('担当者')).toHaveCount(0)
 })
 
-test('協力会社は拠点管理を見られず（メニューにも出ず、URL直打ちでも戻される）、自分の所属拠点はヘッダーに表示される', async ({ page }) => {
+test('協力会社は拠点管理を見られず（メニューにも出ず、URL直打ちでも戻される）、自分の所属拠点はアカウントメニューに表示される', async ({ page }) => {
   await login(page, ACCOUNTS.contractorManager)
 
   await expect(page.getByRole('link', { name: '拠点管理', exact: true })).toHaveCount(0)
-  // ヘッダーの右上に所属拠点
-  await expect(page.locator('.v-app-bar .pk-site-tag')).toContainText('製油所')
+  await page.getByRole('button', { name: 'アカウントメニュー' }).click()
+  await expect(page.locator('.pk-account-menu')).toContainText('製油所')
 
   await page.goto('/sites')
   await expect(page).toHaveURL(/\/dashboard/)
@@ -65,10 +65,12 @@ test('協力会社は拠点管理を見られず（メニューにも出ず、UR
   }
 })
 
-test('自社のユーザは拠点管理が使え、ヘッダーに所属拠点が表示される', async ({ page }) => {
+test('自社のユーザは拠点管理が使え、アカウントメニューに所属拠点が表示される', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
 
-  await expect(page.locator('.v-app-bar .pk-site-tag')).toContainText('製油所')
+  await page.getByRole('button', { name: 'アカウントメニュー' }).click()
+  await expect(page.locator('.pk-account-menu')).toContainText('製油所')
+  await page.keyboard.press('Escape')
   await page.getByRole('link', { name: '拠点管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '拠点管理' })).toBeVisible()
 })

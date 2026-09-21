@@ -38,10 +38,13 @@ test('一般ユーザには管理系メニューが表示されず、URL直打�
 })
 
 // 自社/協力会社の判定はログインAPIが返す user.company に依存する（company_id のみだと常に「協力会社扱い」になる）
-test('自社所属のユーザには在庫管理メニューが表示され、ヘッダーに会社名が出る', async ({ page }) => {
+test('自社所属のユーザには在庫管理メニューが表示され、ヘッダーにログイン名が出る', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
 
-  await expect(page.getByRole('banner')).toContainText('プラント管理株式会社')
+  await expect(page.getByRole('banner')).toContainText('田中 太郎')
+  await page.getByRole('button', { name: 'アカウントメニュー' }).click()
+  await expect(page.getByText('プラント管理株式会社', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.getByRole('link', { name: '在庫管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '在庫管理' })).toBeVisible()
   await expect(page.locator('tbody tr').first()).toBeVisible()

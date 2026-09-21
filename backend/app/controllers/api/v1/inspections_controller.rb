@@ -24,7 +24,7 @@ module Api
           inspections = inspections.where(id: InspectionEquipment.where(equipment_id: equipment_ids).select(:inspection_id))
         end
         inspections = inspections.where(instrument_id: params[:instrument_id]) if params[:instrument_id].present?
-        inspections = inspections.where(department_id: params[:department_id]) if params[:department_id].present?
+        inspections = inspections.where(department_id: Department.subtree_ids(params[:department_id])) if params[:department_id].present?
         if (types = value_list_param(:inspection_types, :inspection_type))
           inspections = inspections.where(inspection_type: types)
         end
