@@ -123,7 +123,7 @@ watch(selectedSiteIds, fetchEquipments)
         <RegulationChip v-for="regulation in item.regulations" :key="regulation.id" :regulation="regulation" class="mr-1 my-1" />
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click.stop="openEdit(item)" />
       </template>
     </v-data-table>
 

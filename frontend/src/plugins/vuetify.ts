@@ -5,12 +5,13 @@ import * as directives from 'vuetify/directives'
 import { ja } from 'vuetify/locale'
 
 // PlantKeeper デザイントークン
-// 計装保全の現場（銘板・計器盤・P&ID図面）を起点にした配色。
-// 汎用SaaS的な紫系グラデーションを避け、鋼板のような寒色グレーに
-// 保全タグの錆色アンバーを差し色として使う。
+// プラナのブルーを共通の操作色に。状態を表す赤・黄・緑とは役割を分ける。
 const vuetify = createVuetify({
   components,
   directives,
+  // スマホ（600px 以下。main.css の @media (max-width: 600px) と同じ）だけを mobile にする。
+  // 既定（1280px 未満）だと、ノートPCの小さめの窓やタブレットでも、メニューが閉じた状態で始まる
+  display: { mobileBreakpoint: 601 },
   locale: {
     locale: 'ja',
     messages: { ja },
@@ -20,20 +21,21 @@ const vuetify = createVuetify({
     themes: {
       light: {
         colors: {
-          primary: '#2E5B7A',
-          'primary-darken-1': '#203F55',
-          secondary: '#5B6B70',
-          accent: '#C1631F',
+          primary: '#2364C4',
+          'primary-darken-1': '#194B96',
+          secondary: '#566A83',
+          accent: '#A95612',
           error: '#B3261E',
           success: '#2E7D4F',
           warning: '#B4720E',
-          info: '#3D6E8C',
-          background: '#EEF1EF',
+          info: '#2364C4',
+          background: '#F3F7FC',
           surface: '#FFFFFF',
-          'surface-variant': '#E7EBE8',
-          'on-surface-variant': '#3C4547',
-          outline: '#D6DBD8',
-          ink: '#17222B',
+          'on-surface': '#203451',
+          'surface-variant': '#EAF2FD',
+          'on-surface-variant': '#344C6B',
+          outline: '#DAE4F0',
+          ink: '#203451',
         },
         variables: {
           'border-color': '#17222B',
@@ -63,16 +65,17 @@ const vuetify = createVuetify({
   defaults: {
     VAppBar: { flat: true, color: 'surface' },
     VNavigationDrawer: { elevation: 0 },
-    VCard: { elevation: 0, rounded: 0, border: true },
-    VSheet: { elevation: 0, rounded: 0 },
-    VBtn: { elevation: 0, rounded: 'sm' },
-    VTextField: { variant: 'outlined', density: 'comfortable', rounded: 'sm' },
-    VSelect: { variant: 'outlined', density: 'comfortable', rounded: 'sm' },
-    VAutocomplete: { variant: 'outlined', density: 'comfortable', rounded: 'sm' },
-    VTextarea: { variant: 'outlined', density: 'comfortable', rounded: 'sm' },
-    VChip: { rounded: 'sm' },
-    VDialog: { VCard: { elevation: 3, rounded: 0 } },
-    VDataTable: { rounded: 0, itemsPerPage: 50 },
+    VCard: { elevation: 0, rounded: 'lg', border: true },
+    VSheet: { elevation: 0, rounded: 'lg' },
+    VBtn: { elevation: 0, rounded: 'lg' },
+    VTextField: { variant: 'outlined', density: 'comfortable', rounded: 'lg', color: 'primary' },
+    VSelect: { variant: 'outlined', density: 'comfortable', rounded: 'lg', color: 'primary' },
+    VAutocomplete: { variant: 'outlined', density: 'comfortable', rounded: 'lg', color: 'primary' },
+    VTextarea: { variant: 'outlined', density: 'comfortable', rounded: 'lg', color: 'primary' },
+    VChip: { rounded: 'lg' },
+    VAlert: { rounded: 'lg' },
+    VDialog: { VCard: { elevation: 3, rounded: 'xl' } },
+    VDataTable: { rounded: 'lg', itemsPerPage: 50 },
   },
 })
 

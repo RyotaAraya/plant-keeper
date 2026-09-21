@@ -20,13 +20,13 @@ test('現場メモからAIの下書きを作り、反映すると入力欄に入
   // メモが空のうちは押せない
   const button = page.getByTestId('ai-draft-button')
   await expect(button).toBeDisabled()
-  await page.getByLabel('現場メモ（AIで整える）').fill('PT-101の指示値が数秒おきに上下している。昨日の夕方から。')
+  await page.getByLabel('現場メモ（プラナで整える）').fill('PT-101の指示値が数秒おきに上下している。昨日の夕方から。')
   await expect(button).toBeEnabled()
   await button.click()
 
   const draft = page.getByTestId('ai-draft')
   await expect(draft).toBeVisible()
-  await expect(draft).toContainText('AIの下書きです')
+  await expect(draft).toContainText('プラナの下書きです')
   const draftTitle = (await draft.innerText()).match(/タイトル:\s*(.+)/)?.[1].trim()
   expect(draftTitle).toBeTruthy()
 

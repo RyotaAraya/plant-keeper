@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
+import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
+import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
+import { latestGuard } from '@/utils/latestGuard'
 import type { AiResponseDraft, AiStatus } from '@/types/models'
 
 const route = useRoute()
@@ -42,18 +46,6 @@ const similar = useSimilarTroubles((count) => {
   if (aiStatus.value) aiStatus.value.remaining_today = count
 })
 
-const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
-}
-const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
-}
-const priorityLabel: Record<string, string> = {
-  low: '低', medium: '中', high: '高', critical: '緊急'
-}
-const priorityColor: Record<string, string> = {
-  low: 'success', medium: 'info', high: 'warning', critical: 'error'
-}
 const responseTypeLabel: Record<string, string> = {
   investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察'
 }
@@ -102,13 +94,19 @@ const responseTypeOptions = [
   { title: '経過観察', value: 'observation' },
 ]
 
-async function fetchTrouble() {
-  loading.value = true
+// 履歴の行や戻る操作で、続けて別のトラブルへ移ることがある。古い取得の応答が、あとから新しい表示を上書きしないようにする
+const fetchGuard = latestGuard()
+
+// keepContent: 保存のあとの読み込み直しは、画面を作り直さずに（進捗表示に切り替えずに）、今の表示のまま更新する
+async function fetchTrouble({ keepContent = false } = {}) {
+  const isLatest = fetchGuard()
+  if (!keepContent) loading.value = true
   try {
     const res = await api.get(`/troubles/${route.params.id}`)
+    if (!isLatest()) return
     trouble.value = res.data.data
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -136,7 +134,7 @@ async function saveEdit() {
     const payload: any = { trouble: { ...editForm.value } }
     await api.patch(`/troubles/${route.params.id}`, payload)
     editDialog.value = false
-    await fetchTrouble()
+    await fetchTrouble({ keepContent: true })
   } catch (e: any) {
     editErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
@@ -193,7 +191,7 @@ async function saveResponse() {
       }
     })
     responseDialog.value = false
-    await fetchTrouble()
+    await fetchTrouble({ keepContent: true })
   } catch (e: any) {
     responseErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
@@ -207,6 +205,14 @@ function formatDate(dt: string) {
 onMounted(() => {
   fetchTrouble()
   fetchAiStatus()
+})
+
+// 履歴の行から別のトラブルへ移ると、同じ画面のまま ID だけが変わる。読み込み直し、前のトラブルへのAIの結果は消す
+watch(() => route.params.id, (id, previous) => {
+  if (id && id !== previous) {
+    similar.clear()
+    fetchTrouble()
+  }
 })
 </script>
 
@@ -232,8 +238,8 @@ onMounted(() => {
           <v-row>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">ステータス</div>
-              <v-chip :color="statusColor[trouble.status]" size="small">
-                {{ statusLabel[trouble.status] }}
+              <v-chip :color="troubleStatusColor[trouble.status]" size="small">
+                {{ troubleStatusLabel[trouble.status] }}
               </v-chip>
             </v-col>
             <v-col cols="6" md="3">
@@ -258,7 +264,8 @@ onMounted(() => {
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">計器</div>
-              <div>{{ trouble.instrument?.tag_number || '—' }}</div>
+              <router-link v-if="trouble.instrument" class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>
+              <div v-else>—</div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">報告者</div>
@@ -294,18 +301,37 @@ onMounted(() => {
         </v-card-text>
       </v-card>
 
+      <!-- この計器の過去のトラブルと点検。AIを使わずに、同じ計器の履歴を全件たどれる（各行から詳細へ、「すべて見る」から一覧へ） -->
+      <v-card v-if="trouble.instrument" class="mb-4" data-testid="instrument-history">
+        <v-card-title class="text-subtitle-1">
+          この計器（<router-link class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>）の履歴
+        </v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="6">
+              <div class="text-caption text-medium-emphasis mb-1">過去のトラブル</div>
+              <InstrumentHistoryList kind="troubles" :instrument-id="trouble.instrument.id" :exclude-trouble-id="trouble.id" />
+            </v-col>
+            <v-col cols="12" md="6">
+              <div class="text-caption text-medium-emphasis mb-1">最近の点検</div>
+              <InstrumentHistoryList kind="inspections" :instrument-id="trouble.instrument.id" />
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+
       <div v-if="aiStatus?.enabled" class="mb-4" data-testid="similar-section">
         <div class="d-flex align-center ga-3">
           <v-btn
             size="small"
             variant="tonal"
             color="primary"
-            prepend-icon="mdi-history"
             :loading="similar.loading.value"
             :disabled="aiStatus.remaining_today <= 0"
             data-testid="ai-similar-button"
             @click="searchSimilar"
           >
+            <template #prepend><PlanaAvatar :size="20" /></template>
             過去の類似トラブルを探す
           </v-btn>
           <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>

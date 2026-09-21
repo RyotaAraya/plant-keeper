@@ -318,7 +318,7 @@ onMounted(async () => {
 <template>
   <MainLayout>
     <div class="d-flex align-center mb-4">
-      <v-btn icon="mdi-arrow-left" variant="text" @click="router.back()" />
+      <v-btn icon="mdi-arrow-left" variant="text" aria-label="前の画面に戻る" @click="router.back()" />
       <h1 class="text-h5 ml-2">{{ isEdit ? '点検記録編集' : '新規点検記録' }}</h1>
     </div>
 

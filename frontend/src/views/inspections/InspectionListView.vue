@@ -5,10 +5,12 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
+import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { inspectionStatusColor, inspectionStatusLabel, inspectionTypeLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
-import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
 
 const route = useRoute()
@@ -21,13 +23,20 @@ const loading = ref(false)
 const totalCount = ref(0)
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
-// ダッシュボードから来たときは、その拠点・ステータスで絞り込んだ状態で開く
+// ダッシュボードから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
+function filtersFromQuery() {
+  return {
+    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    statuses: listFromQuery(route.query.status),
+    instrument_id: idFromQuery(route.query.instrument_id),
+  }
+}
+
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  ...filtersFromQuery(),
   equipment_ids: [] as number[],
   department_id: null as number | null,
   inspection_types: [] as string[],
-  statuses: listFromQuery(route.query.status),
 })
 
 const headers = [
@@ -39,18 +48,6 @@ const headers = [
   { title: '部署', key: 'department.name', width: '140px' },
   { title: 'ステータス', key: 'status', width: '120px' },
 ]
-
-const inspectionTypeLabel: Record<string, string> = {
-  routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
-}
-
-const statusLabel: Record<string, string> = {
-  draft: '下書き', submitted: '提出済', approval_requested: '承認待ち', approved: '承認済'
-}
-
-const statusColor: Record<string, string> = {
-  draft: 'grey', submitted: 'info', approval_requested: 'warning', approved: 'success'
-}
 
 const inspectionTypeOptions = [
   { title: '日常点検', value: 'routine' },
@@ -77,6 +74,7 @@ async function fetchInspections() {
     const params: any = { per_page: 1000 }
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
+    if (filters.value.instrument_id) params.instrument_id = filters.value.instrument_id
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.inspection_types.length) params.inspection_types = filters.value.inspection_types
     if (filters.value.statuses.length) params.statuses = filters.value.statuses
@@ -113,6 +111,15 @@ onMounted(() => {
   fetchInspections()
 })
 watch(filters, fetchInspections, { deep: true })
+
+// 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
+watch(() => route.query, () => {
+  if (route.path !== '/inspections') return
+  const q = filtersFromQuery()
+  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null, inspection_types: [] }
+  loadSiteOptions(q.site_ids)
+})
 </script>
 
 <template>
@@ -138,6 +145,7 @@ watch(filters, fetchInspections, { deep: true })
       />
       <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
     <v-data-table
@@ -158,8 +166,8 @@ watch(filters, fetchInspections, { deep: true })
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] || item.status }}
+        <v-chip :color="inspectionStatusColor[item.status]" size="small">
+          {{ inspectionStatusLabel[item.status] || item.status }}
         </v-chip>
       </template>
     </v-data-table>

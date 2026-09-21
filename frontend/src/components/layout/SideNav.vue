@@ -2,8 +2,11 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
+import { useDisplay } from 'vuetify'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 
 const route = useRoute()
+const { mobile } = useDisplay()
 
 defineProps<{
   modelValue: boolean
@@ -87,15 +90,21 @@ function isItemActive(path: string) {
 <template>
   <v-navigation-drawer
     :model-value="modelValue"
-    permanent
+    :permanent="!mobile"
+    :temporary="mobile"
     class="pk-sidenav"
     width="248"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <div class="pk-sidenav__brand">
-      <v-icon size="20" color="#E7B778">mdi-gauge-full</v-icon>
+      <v-icon size="26" color="primary">mdi-gauge-full</v-icon>
       <span class="pk-sidenav__brand-text">PlantKeeper</span>
     </div>
+    <router-link to="/plana" class="pk-sidenav__assistant">
+      <PlanaAvatar :size="38" />
+      <span><strong>プラナ</strong><small>記録と調べものをサポート</small></span>
+      <v-icon size="16" aria-hidden="true">mdi-chevron-right</v-icon>
+    </router-link>
     <v-list nav class="pk-sidenav__list">
       <template v-for="group in visibleGroups" :key="group.label ?? 'top'">
         <v-list-subheader v-if="group.label" class="pk-sidenav__group">{{ group.label }}</v-list-subheader>
@@ -115,28 +124,33 @@ function isItemActive(path: string) {
 
 <style scoped>
 .pk-sidenav {
-  background: var(--pk-ink) !important;
-  border-right: none !important;
+  background: #fff !important;
+  border-right: 1px solid var(--pk-line) !important;
 }
 
 .pk-sidenav__brand {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.25rem 1rem 1rem;
+  padding: 1.5rem 1.25rem 1.25rem;
 }
 
 .pk-sidenav__brand-text {
   font-family: var(--pk-font-display);
   font-weight: 700;
-  font-size: 1.05rem;
-  color: #f2f4f3;
+  font-size: 1.2rem;
+  color: var(--pk-plana-navy);
   letter-spacing: 0.01em;
 }
 
 .pk-sidenav__list {
-  padding: 0.5rem 0.5rem;
+  padding: 0.5rem 0.75rem 1rem;
 }
+
+.pk-sidenav__assistant { display: flex; align-items: center; gap: 0.55rem; margin: 0 0.75rem 0.5rem; padding: 0.85rem 0.65rem; background: var(--pk-soft-blue); border-radius: 14px; color: var(--pk-plana-navy); text-decoration: none; }
+.pk-sidenav__assistant strong { display: block; font-size: 0.875rem; }
+.pk-sidenav__assistant small { display: block; margin-top: 0.15rem; font-size: 0.65rem; color: var(--pk-muted); }
+.pk-sidenav__assistant:hover { outline: 1px solid var(--pk-steel); }
 
 /* グループ見出し。項目より一段静かにし、右へ伸びる細線でグループの区切りを示す */
 .pk-sidenav__group {
@@ -148,8 +162,8 @@ function isItemActive(path: string) {
   padding: 0.5rem 0.75rem 0.25rem !important;
   font-size: 0.72rem !important;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #8b979c !important;
+  letter-spacing: 0;
+  color: var(--pk-muted) !important;
   opacity: 1 !important;
 }
 
@@ -157,38 +171,37 @@ function isItemActive(path: string) {
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--pk-line);
 }
 
 .pk-sidenav__item {
-  border-radius: 0;
-  border-left: 2px solid transparent;
-  color: #aab4b8 !important;
-  min-height: 38px;
-  margin-bottom: 1px;
+  border-radius: 10px;
+  color: var(--pk-muted) !important;
+  min-height: 40px;
+  margin-bottom: 3px;
 }
 
 .pk-sidenav__item :deep(.v-icon) {
-  color: #7f8c91;
+  color: var(--pk-muted);
   transition: color 0.15s ease;
 }
 
 .pk-sidenav__item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #f2f4f3 !important;
+  background: var(--pk-mist);
+  color: var(--pk-steel) !important;
 }
 
 .pk-sidenav__item:hover :deep(.v-icon) {
-  color: #cfd6d8;
+  color: var(--pk-steel);
 }
 
 .pk-sidenav__item.v-list-item--active {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-left-color: #e7b778;
-  color: #f2f4f3 !important;
+  background: var(--pk-soft-blue) !important;
+  color: var(--pk-steel-dark) !important;
+  font-weight: 700;
 }
 
 .pk-sidenav__item.v-list-item--active :deep(.v-icon) {
-  color: #e7b778;
+  color: var(--pk-steel);
 }
 </style>

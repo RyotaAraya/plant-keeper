@@ -5,12 +5,14 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
+import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
+import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
-import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
@@ -26,11 +28,18 @@ const dialog = ref(false)
 const errors = ref<string[]>([])
 
 // 通常業務では自拠点のトラブルだけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
-// ダッシュボードから来たときは、その拠点・ステータス・優先度で絞り込んだ状態で開く
+// ダッシュボードから来たときは、その拠点・ステータス・優先度で、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
+function filtersFromQuery() {
+  return {
+    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    statuses: listFromQuery(route.query.status),
+    priorities: listFromQuery(route.query.priority),
+    instrument_id: idFromQuery(route.query.instrument_id),
+  }
+}
+
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
-  statuses: listFromQuery(route.query.status),
-  priorities: listFromQuery(route.query.priority),
+  ...filtersFromQuery(),
   equipment_ids: [] as number[],
   department_id: null as number | null,
   q: '',
@@ -58,19 +67,6 @@ const headers = [
   { title: 'ステータス', key: 'status', width: '110px' },
 ]
 
-const statusLabel: Record<string, string> = {
-  open: '未対応', in_progress: '対応中', deferred: '定修待ち', resolved: '解決済', closed: '完了'
-}
-const statusColor: Record<string, string> = {
-  open: 'error', in_progress: 'warning', deferred: 'deep-purple', resolved: 'info', closed: 'success'
-}
-const priorityLabel: Record<string, string> = {
-  low: '低', medium: '中', high: '高', critical: '緊急'
-}
-const priorityColor: Record<string, string> = {
-  low: 'success', medium: 'info', high: 'warning', critical: 'error'
-}
-
 const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
@@ -96,6 +92,7 @@ async function fetchTroubles() {
     if (filters.value.priorities.length) params.priorities = filters.value.priorities
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
+    if (filters.value.instrument_id) params.instrument_id = filters.value.instrument_id
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.q) params.q = filters.value.q
     const res = await api.get('/troubles', { params })
@@ -160,6 +157,15 @@ onMounted(() => {
   fetchTroubles()
 })
 watch(filters, fetchTroubles, { deep: true })
+
+// 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
+watch(() => route.query, () => {
+  if (route.path !== '/troubles') return
+  const q = filtersFromQuery()
+  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null }
+  loadSiteOptions(q.site_ids)
+})
 </script>
 
 <template>
@@ -194,6 +200,7 @@ watch(filters, fetchTroubles, { deep: true })
       />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
       <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" style="max-width: 200px" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
     <v-data-table
@@ -213,12 +220,14 @@ watch(filters, fetchTroubles, { deep: true })
         </v-chip>
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
+        <v-chip :color="troubleStatusColor[item.status]" size="small">
+          {{ troubleStatusLabel[item.status] }}
         </v-chip>
       </template>
       <template #item.instrument.tag_number="{ item }">
-        {{ item.instrument?.tag_number || '—' }}
+        <!-- 計器の詳細（過去のトラブル・点検の履歴）へ。行のクリック（トラブルの詳細）とは別に動かす -->
+        <router-link v-if="item.instrument" class="text-primary" :to="`/instruments/${item.instrument.id}`" @click.stop>{{ item.instrument.tag_number }}</router-link>
+        <template v-else>—</template>
       </template>
       <template #item.assigned_to.name="{ item }">
         {{ item.assigned_to?.name || '未割当' }}

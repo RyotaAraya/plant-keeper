@@ -96,8 +96,8 @@ function selectOwn() {
   min-height: 40px;
   padding: 0 0.75rem;
   border: 1px solid var(--pk-line);
-  border-left: 3px solid var(--pk-amber);
-  background: var(--pk-mist);
+  border-radius: 10px;
+  background: var(--pk-soft-blue);
   color: var(--pk-steel-dark);
   font-family: var(--pk-font-display);
   font-size: 0.9375rem;
@@ -111,7 +111,6 @@ function selectOwn() {
 
 .pk-site-scope--switchable:hover {
   border-color: var(--pk-steel);
-  border-left-color: var(--pk-amber);
 }
 
 .pointer-events-none {

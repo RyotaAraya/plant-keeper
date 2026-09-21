@@ -15,7 +15,7 @@ test('トラブルの詳細から、過去の類似トラブルを探すと、�
 
   const result = page.getByTestId('ai-similar-result')
   await expect(result).toBeVisible()
-  await expect(result).toContainText('AIが選んだ候補です')
+  await expect(result).toContainText('プラナが選んだ候補です')
   const found = page.getByTestId('ai-similar-case').first()
   await expect(found).toContainText('FT-301') // 同じ計器の別のトラブル
   await expect(found).toContainText('似ている点')
@@ -45,7 +45,7 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
 
   const button = page.getByTestId('ai-similar-button')
   await expect(button).toBeDisabled()
-  await page.getByLabel('現場メモ（AIで整える）').fill('指示値が数秒おきに上下している')
+  await page.getByLabel('現場メモ（プラナで整える）').fill('指示値が数秒おきに上下している')
   await expect(button).toBeEnabled()
   await button.click()
 
@@ -57,6 +57,6 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
   await expect(page.getByLabel('トラブルタイトル')).toHaveValue('')
 
   // メモを変えたら、前のメモに対する結果は消える（今の入力への結果に見えないように）
-  await page.getByLabel('現場メモ（AIで整える）').fill('指示値が急に振り切れた')
+  await page.getByLabel('現場メモ（プラナで整える）').fill('指示値が急に振り切れた')
   await expect(result).toHaveCount(0)
 })

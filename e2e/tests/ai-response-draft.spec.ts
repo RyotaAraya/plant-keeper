@@ -15,13 +15,13 @@ test('対応メモからAIの下書きを作り、反映すると入力欄に入
   // メモが空のうちは押せない
   const button = page.getByTestId('ai-response-button')
   await expect(button).toBeDisabled()
-  await page.getByLabel('対応メモ（AIで整える）').fill('オリフィスの上流側を清掃した。スケールが付着していた。')
+  await page.getByLabel('対応メモ（プラナで整える）').fill('オリフィスの上流側を清掃した。スケールが付着していた。')
   await expect(button).toBeEnabled()
   await button.click()
 
   const draft = page.getByTestId('ai-response-draft')
   await expect(draft).toBeVisible()
-  await expect(draft).toContainText('AIの下書きです')
+  await expect(draft).toContainText('プラナの下書きです')
 
   // 反映するまで、入力欄は変わらない
   const description = page.getByLabel('対応内容 *')

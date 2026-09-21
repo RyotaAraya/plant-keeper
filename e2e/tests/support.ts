@@ -64,7 +64,8 @@ export async function openListRow(page: Page, title: string) {
     for (let i = 0; i < 100 && !(await row.isVisible()) && (await next.isEnabled()); i++) await next.click()
     await expect(row).toBeVisible({ timeout: 1000 })
   }).toPass({ timeout: 20_000 })
-  await row.click()
+  // 行の端を押す（行の中には、計器の詳細へのリンクなどがあり、中央を押すとそちらに当たることがある）
+  await row.click({ position: { x: 8, y: 8 } })
 }
 
 export async function openFirstTrouble(page: Page) {
