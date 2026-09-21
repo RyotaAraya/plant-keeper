@@ -126,6 +126,15 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     assert_equal "Anthropic::Errors::APITimeoutError", AiSuggestion.last.error_class
   end
 
+  test "AIの失敗でない例外（コードの不具合など）は、AIの障害に見せかけず500のままにする。記録は失敗にする" do
+    use_client(StubClient.new(error: NoMethodError.new("undefined method 'foo' for nil")))
+
+    assert_raises(NoMethodError) { post_draft(memo: "不具合") }
+
+    suggestion = AiSuggestion.last
+    assert_equal [ "failed", "NoMethodError" ], [ suggestion.status, suggestion.error_class ]
+  end
+
   test "成功したあとの監査ログが書けなかったときは、成功の記録も戻り、AIの失敗としては記録しない（500）" do
     with_failing_audit_log do
       assert_raises(ActiveRecord::StatementInvalid) { post_draft(memo: "不具合") }
