@@ -1,11 +1,13 @@
 <script setup lang="ts">
-// 点検で見つけた不具合の現場メモから、トラブル報告の下書きをAIに作ってもらう。
-// AIは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は点検を保存したとき）。
+// 点検で見つけた不具合の現場メモから、トラブル報告の下書きをAIアシスタント「プラナ」に作ってもらう。
+// プラナは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は点検を保存したとき）。
 // 同じメモで、過去の類似トラブルも探せる（要求仕様書 2.5.1。こちらも表示するだけで、何も変えない）。
 // AIが使えない・失敗したときも、下の入力欄はそのまま使える
 import { ref, watch } from 'vue'
 import api from '@/api/axios'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
+import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import type { AiDefectDraft, AiStatus } from '@/types/models'
 
@@ -56,7 +58,7 @@ async function generate() {
     draft.value = res.data.data
     emit('remaining', res.data.data.remaining_today)
   } catch (e: any) {
-    error.value = e.response?.data?.errors?.[0] || 'AIから下書きを取得できませんでした。点検の入力はAIなしで続けられます'
+    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。点検の入力はプラナなしで続けられます'
     // 失敗・上限も回数に数えるため、画面の残り回数を実際に合わせる
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
@@ -68,7 +70,7 @@ async function generate() {
 function apply() {
   if (!draft.value) return
   // 断ったときは、下書きを残す（押し直せるように）
-  if (props.hasExisting && !confirm('入力済みのタイトル・説明を、AIの下書きで置き換えます。よろしいですか？')) return
+  if (props.hasExisting && !confirm('入力済みのタイトル・説明を、プラナの下書きで置き換えます。よろしいですか？')) return
   emit('apply', draft.value)
   draft.value = null
 }
@@ -78,7 +80,7 @@ function apply() {
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
     <v-textarea
       v-model="memo"
-      label="現場メモ（AIで整える）"
+      label="現場メモ（プラナで整える）"
       placeholder="例: PT-101の指示値が数秒おきに上下している。昨日から。"
       rows="2"
       auto-grow
@@ -93,24 +95,24 @@ function apply() {
         size="small"
         variant="tonal"
         color="primary"
-        prepend-icon="mdi-robot-outline"
         :loading="loading"
         :disabled="!memo.trim() || status.remaining_today <= 0"
         data-testid="ai-draft-button"
         @click="generate"
       >
-        AIで整える
+        <template #prepend><PlanaAvatar :size="20" /></template>
+        プラナで整える
       </v-btn>
       <v-btn
         size="small"
         variant="tonal"
         color="primary"
-        prepend-icon="mdi-history"
         :loading="similar.loading.value"
         :disabled="!memo.trim() || status.remaining_today <= 0"
         data-testid="ai-similar-button"
         @click="searchSimilar"
       >
+        <template #prepend><PlanaAvatar :size="20" /></template>
         過去の類似トラブルを探す
       </v-btn>
       <span class="text-caption text-medium-emphasis">今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</span>
@@ -122,7 +124,7 @@ function apply() {
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
       <v-card-text class="text-body-2">
-        <div class="text-caption text-medium-emphasis mb-2">AIの下書きです。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</div>
+        <PlanaNote>プラナの下書きです。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
         <div><span class="text-medium-emphasis">タイトル:</span> {{ draft.title }}</div>
         <div v-if="draft.description"><span class="text-medium-emphasis">説明:</span> {{ draft.description }}</div>
         <div>

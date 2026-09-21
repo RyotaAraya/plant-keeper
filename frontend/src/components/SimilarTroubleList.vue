@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// AIが選んだ、過去の類似トラブル。タイトル・状態などはDBの値で、「似ている点」「対応」がAIの要約。
+// プラナ（AI）が選んだ、過去の類似トラブル。タイトル・状態などはDBの値で、「似ている点」「対応」がAIの要約。
 // 元の画面（入力中の点検など）を離れないよう、トラブルは別のタブで開く
 import { useRouter } from 'vue-router'
+import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { priorityLabel, troubleStatusLabel } from '@/constants/recordLabels'
 import type { AiSimilarTroubles } from '@/types/models'
 
@@ -17,9 +18,9 @@ const formatDate = (dt: string) => new Date(dt).toLocaleDateString('ja-JP', { ye
 <template>
   <v-card variant="outlined" color="primary" class="mt-2" data-testid="ai-similar-result">
     <v-card-text class="text-body-2">
-      <div class="text-caption text-medium-emphasis mb-2">
-        AIが選んだ候補です（過去のトラブル {{ result.candidates_count }} 件と比べました）。似ているかどうかは、開いて記録を見て判断してください。
-      </div>
+      <PlanaNote>
+        プラナが選んだ候補です（過去のトラブル {{ result.candidates_count }} 件と比べました）。似ているかどうかは、開いて記録を見て判断してください。
+      </PlanaNote>
       <div v-if="!result.cases.length" class="text-medium-emphasis" data-testid="ai-similar-empty">
         <template v-if="result.candidates_count === 0">比べられる過去のトラブル（同じ設備・同じ種類の計器）がありません。</template>
         <template v-else>似ているトラブルは見つかりませんでした。</template>

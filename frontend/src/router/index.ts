@@ -22,6 +22,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/plana',
+      name: 'Plana',
+      component: () => import('@/views/plana/PlanaView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/sites',
       name: 'Sites',
       component: () => import('@/views/sites/SiteListView.vue'),

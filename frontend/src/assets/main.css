@@ -7,6 +7,12 @@
   --pk-amber: #c1631f;
   --pk-mist: #eef1ef;
   --pk-line: #d6dbd8;
+  /* AIアシスタント「プラナ」。キャラクターの制服（ネイビー・ブルー）と、ロゴの橙から取った色。
+     プラナが出る場所（トップの帯・専用ページ・小さなアイコン）だけで使い、業務画面の配色は変えない */
+  --pk-plana-navy: #12306b;
+  --pk-plana-blue: #1f6fd6;
+  --pk-plana-sky: #9fd3f7;
+  --pk-plana-glow: #f3a340;
   --pk-font-body: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
   --pk-font-display: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
   --pk-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;

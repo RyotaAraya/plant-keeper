@@ -9,6 +9,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
@@ -336,12 +337,12 @@ watch(() => route.params.id, (id, previous) => {
             size="small"
             variant="tonal"
             color="primary"
-            prepend-icon="mdi-history"
             :loading="similar.loading.value"
             :disabled="aiStatus.remaining_today <= 0"
             data-testid="ai-similar-button"
             @click="searchSimilar"
           >
+            <template #prepend><PlanaAvatar :size="20" /></template>
             過去の類似トラブルを探す
           </v-btn>
           <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>
