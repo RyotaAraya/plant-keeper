@@ -30,6 +30,9 @@ test('組織を階層で選べ、親の変更で子が解除され、定期整�
   await expect(page.getByRole('combobox', { name: '拠点', exact: true })).toHaveValue('川崎製油所')
   await expect(page.getByRole('combobox', { name: '部', exact: true })).toHaveValue('保全部')
   await expect(page.getByRole('heading', { name: '保全部の要対応' })).toBeVisible()
+
+  await selectOption(page, '拠点', '全拠点', { exact: true })
+  await expect(page.getByRole('heading', { name: '全拠点の要対応' })).toBeVisible()
 })
 
 test('チーム所属の人は自分のチームから始まり、協力会社は拠点全体から始まる', async ({ page, browser }) => {

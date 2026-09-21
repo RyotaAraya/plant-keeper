@@ -18,7 +18,7 @@ const scope = ref<DashboardScope>({
   departmentId: authStore.user?.department_id ?? null,
 })
 const fetchDashboardGuard = latestGuard()
-const scopeName = computed(() => dashboard.value?.scope.department_name ?? '拠点全体')
+const scopeName = computed(() => dashboard.value?.scope.department_name ?? (scope.value.siteId ? '拠点全体' : '全拠点'))
 const siteName = computed(() => dashboard.value?.scope.site_name ?? '全拠点')
 const maintenanceStats = computed(() => dashboard.value ? [
   { label: '計画・準備中', value: dashboard.value.maintenances.planned, icon: 'mdi-calendar-outline' },
