@@ -92,22 +92,15 @@ test('種別・ステータス・優先度は複数選択でき、選ぶとリ�
 // （未対応トラブルは、点検で不具合を報告するテストが1件ずつ増やす）
 async function expectCardOpensList(page: Page, card: RegExp, listHeading: string, scope: '自拠点' | '全拠点', options: { compareCount: boolean }) {
   await page.getByRole('link', { name: 'ダッシュボード', exact: true }).click()
-  const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
-  if (scope === '全拠点') {
-    await tag.click()
-    // 切り替えた直後は自拠点の数字が残っているため、全拠点で取得し直した結果が表示されるまで待つ
-    const reloaded = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/dashboard') && !r.url().includes('site_ids'))
-    await page.getByRole('button', { name: '全拠点' }).click()
-    await reloaded
-    await page.keyboard.press('Escape')
-    await expect(tag).toContainText('全拠点')
-  }
-  const button = page.getByRole('button', { name: card })
+  await expect(page.getByRole('heading', { level: 1, name: 'ダッシュボード' })).toBeVisible()
+  if (scope === '全拠点') await pickFilterOption(page, '拠点', '全拠点')
+  const button = page.getByRole('link', { name: card })
   await expect(button).toBeVisible()
   const count = (await button.locator('.pk-kpi__value').innerText()).trim()
 
   await button.click()
   await expect(page.getByRole('heading', { level: 1, name: listHeading })).toBeVisible()
+  const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
   await expect(tag).toContainText(scope === '全拠点' ? '全拠点' : '川崎製油所')
   if (options.compareCount) await expect(page.locator('.v-data-table-footer')).toContainText(`/ ${count}件`)
 }
@@ -174,7 +167,7 @@ test('別の拠点の点検計画から「点検を実施」を開いても、�
 
 test('拠点の絞り込みはすべての拠点データの一覧で同じ部品になっている', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
-  await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('川崎製油所')
+  await expect(page.getByLabel('拠点', { exact: true })).toHaveValue('川崎製油所')
 
   for (const menu of ['設備台帳', '装置・計器', '点検計画', '点検・作業記録', 'トラブル管理', '定期整備', '在庫管理', '修理管理']) {
     await openList(page, menu)

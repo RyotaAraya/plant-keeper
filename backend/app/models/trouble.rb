@@ -28,6 +28,11 @@ class Trouble < ApplicationRecord
   validates :title, presence: true
   validates :reported_at, presence: true
 
+  scope :for_departments, ->(ids) {
+    users = User.where(department_id: ids).select(:id)
+    where(reported_by_id: users).or(where(assigned_to_id: users))
+  }
+
   validate :deferred_needs_active_task
   before_save :stamp_resolved_at, if: :status_changed?
 

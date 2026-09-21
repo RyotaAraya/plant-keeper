@@ -40,15 +40,15 @@ class AccessControlTest < ActionDispatch::IntegrationTest
     worker = create_user(system_role: "worker", company: @contractor)
     get "/api/v1/dashboard", headers: auth_headers_for(worker)
     assert_response :ok
-    assert_equal %w[inspection_plans inspections maintenances troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections maintenances scope troubles], json["data"].keys.sort
 
     member = create_user(system_role: "member", company: @owner)
     get "/api/v1/dashboard", headers: auth_headers_for(member)
-    assert_equal %w[inspection_plans inspections maintenances stock_alerts troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections maintenances scope stock_alerts troubles], json["data"].keys.sort
 
     manager = create_user(system_role: "manager", company: @owner)
     get "/api/v1/dashboard", headers: auth_headers_for(manager)
-    assert_equal %w[inspection_plans inspections maintenances orders repairs stock_alerts troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections maintenances orders repairs scope stock_alerts troubles], json["data"].keys.sort
   end
 
   test "協力会社（業務管理者・技能員）は拠点を見られず、自社ユーザは見られる" do

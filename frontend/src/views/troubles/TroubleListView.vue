@@ -35,13 +35,13 @@ function filtersFromQuery() {
     statuses: listFromQuery(route.query.status),
     priorities: listFromQuery(route.query.priority),
     instrument_id: idFromQuery(route.query.instrument_id),
+    department_id: idFromQuery(route.query.department_id),
   }
 }
 
 const filters = ref({
   ...filtersFromQuery(),
   equipment_ids: [] as number[],
-  department_id: null as number | null,
   q: '',
 })
 
@@ -163,7 +163,7 @@ watch(filters, fetchTroubles, { deep: true })
 watch(() => route.query, () => {
   if (route.path !== '/troubles') return
   const q = filtersFromQuery()
-  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null }
+  filters.value = { ...filters.value, ...q, equipment_ids: [] }
   loadSiteOptions(q.site_ids)
 })
 </script>

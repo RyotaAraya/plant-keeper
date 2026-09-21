@@ -7,25 +7,12 @@ import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 const authStore = useAuthStore()
 const router = useRouter()
 
+const roleLabels: Record<string, string> = { admin: 'システム管理者', manager: '業務管理者', member: '一般', worker: '技能員' }
+const roleLabel = computed(() => roleLabels[authStore.user?.system_role ?? ''] ?? '')
+
 defineEmits<{
   'toggle-drawer': []
 }>()
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'システム管理者',
-  manager: '業務管理者',
-  member: '一般',
-  worker: '技能員',
-}
-
-const roleLabel = computed(() => {
-  const role = authStore.user?.system_role
-  return role ? (ROLE_LABELS[role] ?? role) : ''
-})
-
-const companyName = computed(() => authStore.user?.company?.name ?? '')
-// 所属拠点。拠点の一覧を見られない協力会社にも、自分の拠点だけは分かるようにする
-const siteName = computed(() => authStore.user?.site?.name ?? '')
 
 async function handleLogout() {
   await authStore.logout()
@@ -43,20 +30,33 @@ async function handleLogout() {
       <template #prepend><PlanaAvatar :size="26" /></template>
       <span class="d-none d-sm-inline">プラナに相談</span>
     </v-btn>
-    <div v-if="authStore.user" class="mr-4 text-right">
-      <div class="text-body-2 font-weight-medium">
-        <span v-if="siteName" class="pk-site-tag mr-2"><v-icon size="14" aria-hidden="true">mdi-domain</v-icon>{{ siteName }}</span>
-        {{ authStore.user.name }}
-      </div>
-      <div class="text-caption text-medium-emphasis d-none d-sm-block">{{ roleLabel }} / {{ companyName }}</div>
-    </div>
-    <v-btn icon variant="text" aria-label="ログアウト" @click="handleLogout">
-      <v-icon>mdi-logout-variant</v-icon>
-    </v-btn>
+    <v-menu v-if="authStore.user" location="bottom end" :offset="8">
+      <template #activator="{ props }">
+        <v-btn v-bind="props" variant="text" class="pk-account-button mr-3" aria-label="アカウントメニュー">
+          <span class="pk-account-avatar" aria-hidden="true">{{ authStore.user.name.trim().slice(0, 1) }}</span>
+          <span class="d-none d-sm-inline">{{ authStore.user.name }}</span>
+          <v-icon size="16" aria-hidden="true">mdi-chevron-down</v-icon>
+        </v-btn>
+      </template>
+      <v-card width="280" class="pk-account-menu">
+        <div class="pa-5">
+          <p class="font-weight-bold mb-1">{{ authStore.user.name }}</p>
+          <p class="text-body-2 text-medium-emphasis">{{ authStore.user.company?.name }}</p>
+          <p class="text-body-2 text-medium-emphasis mt-3"><v-icon size="16" class="mr-1" aria-hidden="true">mdi-domain</v-icon>{{ authStore.user.site?.name ?? '所属拠点なし' }}</p>
+          <p class="text-caption text-medium-emphasis mt-1">{{ roleLabel }}</p>
+        </div>
+        <v-divider />
+        <v-list density="compact" class="pa-1">
+          <v-list-item title="ログアウト" prepend-icon="mdi-logout-variant" @click="handleLogout" />
+        </v-list>
+      </v-card>
+    </v-menu>
   </v-app-bar>
 </template>
 
 <style scoped>
 .pk-app-label { color: var(--pk-muted); font-size: 0.8125rem; }
-@media (max-width: 600px) { .pk-site-tag { display: none; } }
+.pk-account-button { color: var(--pk-steel-dark); }
+.pk-account-button :deep(.v-btn__content) { gap: 8px; }
+.pk-account-avatar { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--pk-line); border-radius: 50%; background: var(--pk-mist); font-size: 0.75rem; font-weight: 700; }
 </style>
