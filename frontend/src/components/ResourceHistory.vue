@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import api from '@/api/axios'
+import { formatAuditChanges } from '@/utils/auditChanges'
 
 const props = defineProps<{
   auditableType: string
@@ -17,15 +18,10 @@ const actionColor: Record<string, string> = {
   create: 'success', update: 'info', delete: 'error',
 }
 
-function parseChanges(changes: any): { key: string; from: string; to: string }[] {
-  if (!changes || typeof changes !== 'object') return []
-  return Object.entries(changes)
-    .filter(([k]) => !['id', 'created_at', 'updated_at'].includes(k))
-    .map(([k, v]) => {
-      const arr = Array.isArray(v) ? v : [null, v]
-      return { key: k, from: arr[0] != null ? String(arr[0]) : '—', to: arr[1] != null ? String(arr[1]) : '—' }
-    })
-}
+// 各ログの変更内容を、画面に出す形（日本語のラベル・値）にする。テンプレートで何度も使うので、ログごとに1回だけ求める
+const logsWithChanges = computed(() =>
+  logs.value.map((log) => ({ ...log, changes: formatAuditChanges(log.changes_json, props.auditableType, log.action) })),
+)
 
 function formatDate(dt: string) {
   if (!dt) return ''
@@ -53,11 +49,11 @@ watch(() => props.auditableId, fetchHistory)
 </script>
 
 <template>
-  <div>
+  <div data-testid="resource-history">
     <v-progress-linear v-if="loading" indeterminate />
     <v-timeline v-else-if="logs.length" density="compact" side="end">
       <v-timeline-item
-        v-for="log in logs"
+        v-for="log in logsWithChanges"
         :key="log.id"
         :dot-color="actionColor[log.action] || 'grey'"
         size="x-small"
@@ -69,12 +65,15 @@ watch(() => props.auditableId, fetchHistory)
           <span class="text-body-2">{{ log.user?.name }}</span>
           <span class="text-caption text-grey ml-auto">{{ formatDate(log.performed_at) }}</span>
         </div>
-        <div v-if="parseChanges(log.changes_json).length" class="text-caption">
-          <div v-for="c in parseChanges(log.changes_json)" :key="c.key">
-            <span class="text-grey mr-1">{{ c.key }}:</span>
-            <span class="text-error">{{ c.from }}</span>
-            <v-icon size="x-small" class="mx-1">mdi-arrow-right</v-icon>
-            <span class="text-success">{{ c.to }}</span>
+        <div v-if="log.changes.length" class="text-caption">
+          <div v-for="c in log.changes" :key="c.key">
+            <span class="text-grey mr-1">{{ c.label }}:</span>
+            <span v-if="c.opaque" class="text-medium-emphasis">変更あり</span>
+            <template v-else>
+              <span class="text-error">{{ c.from }}</span>
+              <v-icon size="x-small" class="mx-1">mdi-arrow-right</v-icon>
+              <span class="text-success">{{ c.to }}</span>
+            </template>
           </div>
         </div>
       </v-timeline-item>

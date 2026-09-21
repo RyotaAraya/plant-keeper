@@ -2,11 +2,12 @@
 // トラブルへの対応の現場メモから、対応記録の下書きをAIアシスタント「プラナ」に作ってもらう（要求仕様書 2.5.2）。
 // プラナは提案までで、入力欄に入れるのは「反映」を押したときだけ（保存は対応記録を記録したとき）。
 // AIが使えない・失敗したときも、下の入力欄はそのまま使える
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import api from '@/api/axios'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
 import type { AiResponseDraft, AiStatus } from '@/types/models'
+import { latestGuard } from '@/utils/latestGuard'
 
 const props = defineProps<{
   status: AiStatus
@@ -26,21 +27,37 @@ const loading = ref(false)
 const draft = ref<AiResponseDraft | null>(null)
 const error = ref('')
 
+// 下書きを作っている間に、別のトラブルの詳細に変わる（同じ画面が使い回される）ことがある。
+// 古い呼び出しの応答は、あとから返っても反映しない
+const guard = latestGuard()
+
+// 下書きは、そのトラブルについてのもの。トラブルが変わったら消す
+watch(() => props.troubleId, () => {
+  guard()
+  draft.value = null
+  error.value = ''
+  loading.value = false
+})
+
 async function generate() {
+  const isLatest = guard()
   loading.value = true
   error.value = ''
   draft.value = null
   try {
     const res = await api.post('/ai/response_drafts', { trouble_id: props.troubleId, memo: memo.value })
-    draft.value = res.data.data
+    // 残り回数は、古い呼び出しでも合わせる（回数は使っているため）
     emit('remaining', res.data.data.remaining_today)
+    if (!isLatest()) return
+    draft.value = res.data.data
   } catch (e: any) {
-    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。対応記録の入力はプラナなしで続けられます'
     // 失敗・上限も回数に数えるため、画面の残り回数を実際に合わせる
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
+    if (!isLatest()) return
+    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。対応記録の入力はプラナなしで続けられます'
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
