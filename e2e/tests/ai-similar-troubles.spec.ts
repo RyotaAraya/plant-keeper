@@ -45,7 +45,7 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
 
   const button = page.getByTestId('ai-similar-button')
   await expect(button).toBeDisabled()
-  await page.getByLabel('現場メモ（プラナで整える）').fill('指示値が数秒おきに上下している')
+  await page.getByLabel('現場メモ').fill('指示値が数秒おきに上下している')
   await expect(button).toBeEnabled()
   await button.click()
 
@@ -57,6 +57,6 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
   await expect(page.getByLabel('トラブルタイトル')).toHaveValue('')
 
   // メモを変えたら、前のメモに対する結果は消える（今の入力への結果に見えないように）
-  await page.getByLabel('現場メモ（プラナで整える）').fill('指示値が急に振り切れた')
+  await page.getByLabel('現場メモ').fill('指示値が急に振り切れた')
   await expect(result).toHaveCount(0)
 })

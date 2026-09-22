@@ -18,7 +18,7 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
   // メモが空のうちは押せない
   const button = page.getByTestId('ai-draft-button')
   await expect(button).toBeDisabled()
-  await page.getByLabel('現場メモ（プラナで整える）').fill('PT-101の指示値が数秒おきに上下している。昨日の夕方から。')
+  await page.getByLabel('現場メモ').fill('PT-101の指示値が数秒おきに上下している。昨日の夕方から。')
   await expect(button).toBeEnabled()
   await button.click()
 
@@ -62,7 +62,7 @@ test('設備を変えると、前の設備についての下書きは消える',
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
   await page.getByRole('checkbox', { name: '不具合あり' }).check()
-  await page.getByLabel('現場メモ（プラナで整える）').fill('PT-101の指示値が数秒おきに上下している。')
+  await page.getByLabel('現場メモ').fill('PT-101の指示値が数秒おきに上下している。')
   await page.getByTestId('ai-draft-button').click()
   await expect(page.getByTestId('ai-draft')).toBeVisible()
 
@@ -86,7 +86,7 @@ test('下書きを作っている間に設備を変えると、あとから返�
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
   await page.getByRole('checkbox', { name: '不具合あり' }).check()
-  await page.getByLabel('現場メモ（プラナで整える）').fill('PT-101の指示値が数秒おきに上下している。')
+  await page.getByLabel('現場メモ').fill('PT-101の指示値が数秒おきに上下している。')
 
   // 下書きのAPIの応答を、設備を変えるまで止めておく
   let release!: () => void

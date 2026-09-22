@@ -78,7 +78,7 @@ async function generate() {
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
     if (!isLatest()) return
-    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。点検の入力はプラナなしで続けられます'
+    error.value = e.response?.data?.errors?.[0] || '下書きを取得できませんでした。報告内容は直接入力できます'
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -87,7 +87,7 @@ async function generate() {
 function apply() {
   if (!draft.value) return
   // 断ったときは、下書きを残す（押し直せるように）
-  if (props.hasExisting && !confirm('入力済みのタイトル・説明を、プラナの下書きで置き換えます。よろしいですか？')) return
+  if (props.hasExisting && !confirm('入力済みのタイトル・説明・優先度を、下書きで置き換えます。よろしいですか？')) return
   emit('apply', draft.value)
   draft.value = null
 }
@@ -97,7 +97,7 @@ function apply() {
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
     <v-textarea
       v-model="memo"
-      label="現場メモ（プラナで整える）"
+      label="現場メモ"
       placeholder="例: PT-101の指示値が数秒おきに上下している。昨日から。"
       rows="2"
       auto-grow
@@ -107,7 +107,7 @@ function apply() {
       hide-details="auto"
       data-testid="ai-memo"
     />
-    <div class="d-flex align-center ga-3 mt-1">
+    <div class="d-flex align-center flex-wrap ga-3 mt-1">
       <v-btn
         size="small"
         variant="tonal"
@@ -118,7 +118,7 @@ function apply() {
         @click="generate"
       >
         <template #prepend><PlanaAvatar :size="20" /></template>
-        プラナで整える
+        下書きを作る
       </v-btn>
       <v-btn
         size="small"

@@ -465,7 +465,7 @@ onMounted(async () => {
         <div class="d-flex align-center mb-2">
           <span class="text-subtitle-2">項目 {{ idx + 1 }}</span>
           <v-spacer />
-          <v-btn icon="mdi-close" size="x-small" variant="text" @click="removeItem(idx)" />
+          <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeItem(idx)" />
         </div>
         <v-row dense>
           <v-col cols="12" md="6">
@@ -499,16 +499,6 @@ onMounted(async () => {
         </v-row>
         <v-expand-transition>
           <div v-if="item.has_defect" class="mt-1">
-            <DefectAiAssist
-              v-if="aiStatus?.enabled"
-              :status="aiStatus"
-              :equipment-id="item.equipment_id ?? form.equipment_id"
-              :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
-              :item-label="item.content"
-              :has-existing="!!item.defect_title"
-              @apply="applyAiDraft(item, $event)"
-              @remaining="aiStatus.remaining_today = $event"
-            />
             <v-row v-if="multipleEquipments" dense>
               <v-col cols="12" md="5">
                 <v-select
@@ -522,24 +512,43 @@ onMounted(async () => {
                 />
               </v-col>
             </v-row>
-            <v-row dense>
-              <v-col cols="12" md="5">
-                <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-text-field v-model="item.defect_description" label="説明" density="compact" />
-              </v-col>
-              <v-col cols="6" md="3">
-                <v-select
-                  v-model="item.defect_priority"
-                  :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
-                  item-title="title"
-                  item-value="value"
-                  label="優先度"
-                  density="compact"
+            <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
+              <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
+                <h3 :id="`defect-draft-heading-${idx}`">メモから下書きを作る</h3>
+                <p class="defect-workspace__hint">現場で見たことを入力してください。下書きと過去の事例を確認できます。</p>
+                <DefectAiAssist
+                  :status="aiStatus"
+                  :equipment-id="item.equipment_id ?? form.equipment_id"
+                  :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
+                  :item-label="item.content"
+                  :has-existing="!!item.defect_title"
+                  @apply="applyAiDraft(item, $event)"
+                  @remaining="aiStatus.remaining_today = $event"
                 />
-              </v-col>
-            </v-row>
+              </section>
+              <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
+                <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
+                <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-textarea v-model="item.defect_description" label="説明" rows="3" auto-grow density="compact" />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-select
+                      v-model="item.defect_priority"
+                      :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
+                      item-title="title"
+                      item-value="value"
+                      label="優先度"
+                      density="compact"
+                    />
+                  </v-col>
+                </v-row>
+              </section>
+            </div>
           </div>
         </v-expand-transition>
       </v-card-text>
@@ -553,3 +562,14 @@ onMounted(async () => {
     </div>
   </MainLayout>
 </template>
+
+<style scoped>
+.defect-workspace { display: grid; gap: 24px; margin-top: 16px; }
+.defect-workspace h3 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
+.defect-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }
+.defect-workspace__draft { min-width: 0; padding: 20px; background: var(--pk-mist); border: 1px solid var(--pk-line); border-radius: 12px; }
+.defect-workspace__record { min-width: 0; padding-top: 20px; }
+@media (min-width: 960px) {
+  .defect-workspace--assisted { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+</style>
