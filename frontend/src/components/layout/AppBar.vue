@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useNavigation } from '@/composables/useNavigation'
+import { confirmUnsavedWork } from '@/composables/useUnsavedWork'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -25,6 +26,7 @@ defineEmits<{
 }>()
 
 async function handleLogout() {
+  if (!confirmUnsavedWork()) return
   await authStore.logout()
   router.push('/login')
 }

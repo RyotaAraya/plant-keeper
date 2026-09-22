@@ -28,6 +28,7 @@ const templates = ref<any[]>([])
 const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
+const initializing = ref(true)
 // AI支援の状況。AIが使えない環境（null・無効）では、AIのボタンを出さない
 const { status: aiStatus, loading: aiLoading, failed: aiFailed, refresh: fetchAiStatus } = useAiAvailability()
 
@@ -353,14 +354,18 @@ function defaultDepartment() {
 
 onMounted(async () => {
   void fetchAiStatus()
-  await fetchMasters()
-  await loadExisting()
-  await prefillFromPlan()
-  await prefillFromPlana()
-  defaultDepartment()
-  await ensureOptionsCoverEquipment()
-  await ensureDepartmentInOptions()
-  initialForm.value = JSON.stringify(form.value)
+  try {
+    await fetchMasters()
+    await loadExisting()
+    await prefillFromPlan()
+    await prefillFromPlana()
+    defaultDepartment()
+    await ensureOptionsCoverEquipment()
+    await ensureDepartmentInOptions()
+  } finally {
+    initialForm.value = JSON.stringify(form.value)
+    initializing.value = false
+  }
 })
 </script>
 
@@ -371,215 +376,222 @@ onMounted(async () => {
       <h1 class="text-h5 ml-2">{{ isEdit ? '点検記録編集' : '新規点検記録' }}</h1>
     </div>
 
-    <v-alert v-if="form.maintenance_task_id" type="info" variant="tonal" density="compact" class="mb-4" data-testid="from-maintenance-task">
-      定期整備の作業として実施する点検です。提出すると、その作業が完了になります。
-    </v-alert>
+    <div v-if="initializing" role="status" aria-live="polite">
+      <v-progress-linear indeterminate class="mb-3" />
+      <p class="text-body-2 text-medium-emphasis">点検入力を準備しています。</p>
+    </div>
 
-    <v-alert v-if="route.query.plana === 'defect-draft'" type="info" variant="tonal" class="mb-4" data-testid="from-plana">
-      対象を確認して、不具合欄に現場メモを入力してください。下書きを確認・反映したあと、点検を保存するとトラブルが登録されます。
-    </v-alert>
+    <template v-else>
+      <v-alert v-if="form.maintenance_task_id" type="info" variant="tonal" density="compact" class="mb-4" data-testid="from-maintenance-task">
+        定期整備の作業として実施する点検です。提出すると、その作業が完了になります。
+      </v-alert>
 
-    <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
-      <div v-for="err in errors" :key="err">{{ err }}</div>
-    </v-alert>
+      <v-alert v-if="route.query.plana === 'defect-draft'" type="info" variant="tonal" class="mb-4" data-testid="from-plana">
+        対象を確認して、不具合欄に現場メモを入力してください。下書きを確認・反映したあと、点検を保存するとトラブルが登録されます。
+      </v-alert>
 
-    <v-card class="mb-4">
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-select
-              v-model="form.equipment_ids"
-              :items="equipments"
-              item-title="name"
-              item-value="id"
-              label="設備 *"
-              multiple
-              chips
-              closable-chips
-              hint="複数の設備をまとめて点検できます（同じ拠点の設備。最初に選んだ設備が代表になります）"
-              persistent-hint
-              @update:model-value="onEquipmentChange"
-            />
-          </v-col>
-          <v-col v-if="!multipleEquipments" cols="12" md="6">
-            <v-select
-              v-model="form.instrument_id"
-              :items="instruments"
-              item-title="tag_number"
-              item-value="id"
-              label="計器（任意）"
-              clearable
-            />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-select
-              v-model="form.department_id"
-              :items="departments"
-              item-title="display_name"
-              item-value="id"
-              label="部署 *"
-            />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model="form.inspected_at"
-              label="点検日時 *"
-              type="datetime-local"
-            />
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="d-flex ga-2 align-center">
+      <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
+        <div v-for="err in errors" :key="err">{{ err }}</div>
+      </v-alert>
+
+      <v-card class="mb-4">
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="6">
               <v-select
-                v-model="form.checklist_template_id"
-                :items="templateOptions"
+                v-model="form.equipment_ids"
+                :items="equipments"
                 item-title="name"
                 item-value="id"
-                label="テンプレート（任意）"
-                clearable
-                @update:model-value="loadTemplate"
+                label="設備 *"
+                multiple
+                chips
+                closable-chips
+                hint="複数の設備をまとめて点検できます（同じ拠点の設備。最初に選んだ設備が代表になります）"
+                persistent-hint
+                @update:model-value="onEquipmentChange"
               />
-              <v-btn
-                v-if="form.checklist_template_id"
-                variant="outlined"
-                size="small"
-                prepend-icon="mdi-refresh"
-                @click="loadTemplate"
-              >
-                項目を読込
-              </v-btn>
-            </div>
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-select
-              v-model="form.inspection_type"
-              :items="inspectionTypeOptions"
-              item-title="title"
-              item-value="value"
-              label="点検種別"
-            />
-          </v-col>
-          <v-col cols="12">
-            <v-textarea v-model="form.notes" label="備考" rows="2" />
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <InspectionReferenceStandards
-      v-model="form.reference_standards"
-      :standards="referenceStandards"
-      :inspection-date="form.inspected_at.slice(0, 10)"
-      :require-traceable="requireTraceable"
-    />
-
-    <div class="d-flex align-center mb-3">
-      <h2 class="text-h6">点検項目</h2>
-      <v-spacer />
-      <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="addItem">項目追加</v-btn>
-    </div>
-
-    <v-card v-for="(item, idx) in form.items" :key="itemKey(item)" class="mb-3" variant="outlined">
-      <v-card-text>
-        <div class="d-flex align-center mb-2">
-          <span class="text-subtitle-2">項目 {{ idx + 1 }}</span>
-          <v-spacer />
-          <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeItem(idx)" />
-        </div>
-        <v-row dense>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="item.content" label="内容" density="compact" />
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-select v-model="item.instrument_id" :items="instrumentsFor(item)" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
-          </v-col>
-        </v-row>
-        <v-row dense>
-          <v-col v-if="item.item_type === 'check'" cols="6" md="3">
-            <v-checkbox v-model="item.checked" label="OK" density="compact" hide-details />
-          </v-col>
-          <v-col v-if="item.item_type === 'measurement'" cols="6" md="3">
-            <v-text-field v-model="item.measured_value" label="計測値" density="compact" />
-          </v-col>
-          <v-col v-if="item.item_type === 'text'" cols="12" md="6">
-            <v-text-field v-model="item.text_value" label="テキスト" density="compact" />
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" @update:model-value="onDefectToggle(item, $event)" />
-          </v-col>
-        </v-row>
-        <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
-          <v-col cols="12">
-            <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
-          </v-col>
-        </v-row>
-        <v-expand-transition>
-          <div v-if="item.has_defect || openedDefects.has(item)" v-show="item.has_defect" class="mt-1">
-            <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
-            <v-row v-if="multipleEquipments" dense>
-              <v-col cols="12" md="5">
+            </v-col>
+            <v-col v-if="!multipleEquipments" cols="12" md="6">
+              <v-select
+                v-model="form.instrument_id"
+                :items="instruments"
+                item-title="tag_number"
+                item-value="id"
+                label="計器（任意）"
+                clearable
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="form.department_id"
+                :items="departments"
+                item-title="display_name"
+                item-value="id"
+                label="部署 *"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="form.inspected_at"
+                label="点検日時 *"
+                type="datetime-local"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <div class="d-flex ga-2 align-center">
                 <v-select
-                  v-model="item.equipment_id"
-                  :items="selectedEquipments"
+                  v-model="form.checklist_template_id"
+                  :items="templateOptions"
                   item-title="name"
                   item-value="id"
-                  label="不具合の設備 *"
-                  density="compact"
-                  color="error"
+                  label="テンプレート（任意）"
+                  clearable
+                  @update:model-value="loadTemplate"
                 />
-              </v-col>
-            </v-row>
-            <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
-              <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
-                <h3 :id="`defect-draft-heading-${idx}`">メモから下書きを作る</h3>
-                <p class="defect-workspace__hint">現場で見たことを入力してください。下書きと過去の事例を確認できます。</p>
-                <DefectAiAssist
-                  :status="aiStatus"
-                  :equipment-id="item.equipment_id ?? form.equipment_id"
-                  :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
-                  :item-label="item.content"
-                  :has-existing="!!item.defect_title"
-                  @dirty="markMemo(item, $event)"
-                  @apply="applyAiDraft(item, $event)"
-                  @remaining="aiStatus.remaining_today = $event"
-                />
-              </section>
-              <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
-                <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
-                <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
-                <v-row dense>
-                  <v-col cols="12">
-                    <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-textarea v-model="item.defect_description" label="説明" rows="3" auto-grow density="compact" />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-select
-                      v-model="item.defect_priority"
-                      :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
-                      item-title="title"
-                      item-value="value"
-                      label="優先度"
-                      density="compact"
-                    />
-                  </v-col>
-                </v-row>
-              </section>
-            </div>
-          </div>
-        </v-expand-transition>
-      </v-card-text>
-    </v-card>
+                <v-btn
+                  v-if="form.checklist_template_id"
+                  variant="outlined"
+                  size="small"
+                  prepend-icon="mdi-refresh"
+                  @click="loadTemplate"
+                >
+                  項目を読込
+                </v-btn>
+              </div>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="form.inspection_type"
+                :items="inspectionTypeOptions"
+                item-title="title"
+                item-value="value"
+                label="点検種別"
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-textarea v-model="form.notes" label="備考" rows="2" />
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
 
-    <div class="d-flex ga-3 mt-4">
-      <v-btn @click="router.back()">キャンセル</v-btn>
-      <v-spacer />
-      <v-btn variant="outlined" :loading="saving" @click="save('draft')">下書き保存</v-btn>
-      <v-btn color="primary" :loading="saving" @click="save('submitted')">提出</v-btn>
-    </div>
+      <InspectionReferenceStandards
+        v-model="form.reference_standards"
+        :standards="referenceStandards"
+        :inspection-date="form.inspected_at.slice(0, 10)"
+        :require-traceable="requireTraceable"
+      />
+
+      <div class="d-flex align-center mb-3">
+        <h2 class="text-h6">点検項目</h2>
+        <v-spacer />
+        <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="addItem">項目追加</v-btn>
+      </div>
+
+      <v-card v-for="(item, idx) in form.items" :key="itemKey(item)" class="mb-3" variant="outlined">
+        <v-card-text>
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-2">項目 {{ idx + 1 }}</span>
+            <v-spacer />
+            <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeItem(idx)" />
+          </div>
+          <v-row dense>
+            <v-col cols="12" md="6">
+              <v-text-field v-model="item.content" label="内容" density="compact" />
+            </v-col>
+            <v-col cols="6" md="3">
+              <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
+            </v-col>
+            <v-col cols="6" md="3">
+              <v-select v-model="item.instrument_id" :items="instrumentsFor(item)" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col v-if="item.item_type === 'check'" cols="6" md="3">
+              <v-checkbox v-model="item.checked" label="OK" density="compact" hide-details />
+            </v-col>
+            <v-col v-if="item.item_type === 'measurement'" cols="6" md="3">
+              <v-text-field v-model="item.measured_value" label="計測値" density="compact" />
+            </v-col>
+            <v-col v-if="item.item_type === 'text'" cols="12" md="6">
+              <v-text-field v-model="item.text_value" label="テキスト" density="compact" />
+            </v-col>
+            <v-col cols="6" md="3">
+              <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" @update:model-value="onDefectToggle(item, $event)" />
+            </v-col>
+          </v-row>
+          <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
+            <v-col cols="12">
+              <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
+            </v-col>
+          </v-row>
+          <v-expand-transition>
+            <div v-if="item.has_defect || openedDefects.has(item)" v-show="item.has_defect" class="mt-1">
+              <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
+              <v-row v-if="multipleEquipments" dense>
+                <v-col cols="12" md="5">
+                  <v-select
+                    v-model="item.equipment_id"
+                    :items="selectedEquipments"
+                    item-title="name"
+                    item-value="id"
+                    label="不具合の設備 *"
+                    density="compact"
+                    color="error"
+                  />
+                </v-col>
+              </v-row>
+              <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
+                <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
+                  <h3 :id="`defect-draft-heading-${idx}`">メモから下書きを作る</h3>
+                  <p class="defect-workspace__hint">現場で見たことを入力してください。下書きと過去の事例を確認できます。</p>
+                  <DefectAiAssist
+                    :status="aiStatus"
+                    :equipment-id="item.equipment_id ?? form.equipment_id"
+                    :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
+                    :item-label="item.content"
+                    :has-existing="!!item.defect_title"
+                    @dirty="markMemo(item, $event)"
+                    @apply="applyAiDraft(item, $event)"
+                    @remaining="aiStatus.remaining_today = $event"
+                  />
+                </section>
+                <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
+                  <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
+                  <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
+                  <v-row dense>
+                    <v-col cols="12">
+                      <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
+                    </v-col>
+                    <v-col cols="12">
+                      <v-textarea v-model="item.defect_description" label="説明" rows="3" auto-grow density="compact" />
+                    </v-col>
+                    <v-col cols="12">
+                      <v-select
+                        v-model="item.defect_priority"
+                        :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
+                        item-title="title"
+                        item-value="value"
+                        label="優先度"
+                        density="compact"
+                      />
+                    </v-col>
+                  </v-row>
+                </section>
+              </div>
+            </div>
+          </v-expand-transition>
+        </v-card-text>
+      </v-card>
+
+      <div class="d-flex ga-3 mt-4">
+        <v-btn @click="router.back()">キャンセル</v-btn>
+        <v-spacer />
+        <v-btn variant="outlined" :loading="saving" @click="save('draft')">下書き保存</v-btn>
+        <v-btn color="primary" :loading="saving" @click="save('submitted')">提出</v-btn>
+      </div>
+    </template>
   </MainLayout>
 </template>
 

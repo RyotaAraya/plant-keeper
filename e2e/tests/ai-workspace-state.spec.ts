@@ -68,3 +68,38 @@ test('AI状況の再確認と上限到達で手入力を失わない', async ({ 
   await expect(page.getByLabel('トラブルタイトル')).toHaveValue('手入力の報告')
   await expect(page.getByLabel('現場メモ', { exact: true })).toHaveValue('残しておくメモ')
 })
+
+test('初期データの取得中は点検フォームを操作できない', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/api/v1/checklist_templates**', async (route) => {
+    await gate
+    await route.continue()
+  })
+  await page.goto('/inspections/new')
+  await expect(page.getByText('点検入力を準備しています。')).toBeVisible()
+  await expect(page.getByLabel('備考')).toHaveCount(0)
+  release()
+  await expect(page.getByLabel('備考')).toBeVisible()
+})
+
+test('未保存の点検入力があるとログアウト前に破棄を確認する', async ({ page }) => {
+  await login(page, ACCOUNTS.logout)
+  await page.goto('/inspections/new')
+  await page.getByLabel('備考').fill('保存前の点検メモ')
+  await page.getByRole('button', { name: 'アカウントメニュー' }).click()
+  page.once('dialog', (dialog) => dialog.dismiss())
+  await page.getByText('ログアウト', { exact: true }).click()
+  await expect(page).toHaveURL(/\/inspections\/new$/)
+  await expect(page.getByLabel('備考')).toHaveValue('保存前の点検メモ')
+
+  await page.getByRole('button', { name: 'アカウントメニュー' }).click()
+  const logoutResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/api/v1/logout') && response.request().method() === 'DELETE',
+  )
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByText('ログアウト', { exact: true }).click()
+  expect((await logoutResponse).status()).toBe(204)
+  await expect(page).toHaveURL(/\/login$/)
+})
