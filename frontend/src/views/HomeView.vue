@@ -21,7 +21,7 @@ const examples = [
       '配線・端子の緩み、電源の確認',
       'オリフィス・絞り部の詰まり・付着',
     ],
-    output: '報告の下書き', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    output: 'プラナが整理した報告', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
     possibleCauses: [
       'オリフィス・絞り部の詰まりの可能性（指示の低下が緩やかで、前日から変わっていないため）',
       '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
@@ -30,13 +30,13 @@ const examples = [
     note: '内容を確認してから、点検の記録に反映します。',
   },
   { label: '似た事例を探す', input: 'いま起きている症状', memo: '流量計の指示がゼロになった。\n現場では流れているように見える。', output: '過去の事例の提示', title: '流量計の信号途絶', detail: '似た症状の記録：流量計の指示がゼロになり、配線の断線を確認。配線を補修して指示が復旧。', note: '元のトラブル記録を開いて、症状や対応を確認できます。' },
-  { label: '対応を記録する', input: '作業後のメモ', memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。', output: '対応記録の下書き', title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。', note: '下書きを確認・編集してから、対応記録として保存します。' },
+  { label: '対応を記録する', input: '作業後のメモ', memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。', output: 'プラナが整理した対応記録', title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。', note: '整理された内容を確認・編集してから、対応記録として保存します。' },
 ]
 const example = computed(() => examples[selectedExample.value]!)
 const steps = [
-  '設備・計器を選ぶ → 点検の不具合欄を開く → メモを入力して下書きを作る',
+  '設備・計器を選ぶ → 点検の不具合欄を開く → メモを入力してプラナに整理してもらう',
   '設備・計器を選ぶ → 症状を入力する → 類似トラブルを検索する',
-  '対応したトラブルを選ぶ → 対応メモを入力する → 下書きを作る',
+  '対応したトラブルを選ぶ → 対応メモを入力する → プラナに整理してもらう',
 ]
 const capability = computed(() => planaCapabilities[selectedExample.value]!)
 const foundations = [
@@ -72,7 +72,7 @@ const foundations = [
     </section>
 
     <section class="landing-section landing-demo" aria-labelledby="work-title">
-      <div class="landing-section-heading"><h2 id="work-title">現場で気づいたことを、プラナに相談する。</h2><p>計器の一次点検の定石とプラナの整理。似た事例の検索、対応記録の下書きも。3つの仕事をタブでご紹介します。</p></div>
+      <div class="landing-section-heading"><h2 id="work-title">現場で気づいたことを、プラナに相談する。</h2><p>計器の一次点検の定石とプラナの整理。似た事例の検索、対応記録の整理も。3つの仕事をタブでご紹介します。</p></div>
       <v-tabs v-model="selectedExample" color="primary" class="landing-work" aria-label="プラナの仕事の表示例">
         <v-tab v-for="(item, index) in examples" :id="`example-tab-${index}`" :key="item.label" :value="index" aria-controls="example-panel">{{ item.label }}</v-tab>
       </v-tabs>
@@ -106,7 +106,7 @@ const foundations = [
     <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
       <h2 id="try-title">体験を始めるには</h2>
       <ol><li>ログイン画面でデモアカウントを選びます。3つの仕事を試すなら、自社の「一般」が使えます。</li><li>仕事を選び、デモデータの設備やトラブルを指定して、自分でメモを入力します。上の表示例は自動入力されません。</li><li>AIの提案を確認します。記録に反映・保存するかは、自分で決められます。</li></ol>
-      <p>AIが無効、または1日の利用上限に達している場合は、AIによる下書き・検索は使えません。通常の記録入力や過去の記録の閲覧は利用できます。利用状況はログイン後に確認できます。</p>
+      <p>AIが無効、または1日の利用上限に達している場合は、プラナによる整理・検索は使えません。通常の記録入力や過去の記録の閲覧は利用できます。利用状況はログイン後に確認できます。</p>
     </section>
 
     <section class="landing-foundation">
@@ -121,7 +121,7 @@ const foundations = [
     </section>
     <section id="permissions" class="landing-section" aria-labelledby="permission-title">
       <div class="landing-section-heading"><h2 id="permission-title">自社も協力会社も、同じ記録で。</h2><p>所属と権限に合わせて、見られる情報・できる操作を分けています。</p></div>
-      <p class="landing-permissions-summary">不具合報告の下書き・類似トラブルの検索は、5種類すべてのデモ権限で利用できます。対応記録の下書きは、協力会社の「技能員」を除く4種類で利用できます。</p>
+      <p class="landing-permissions-summary">不具合報告の整理・類似トラブルの検索は、5種類すべてのデモ権限で利用できます。対応記録の整理は、協力会社の「技能員」を除く4種類で利用できます。</p>
       <details class="landing-permissions"><summary>業務機能の詳しい権限を見る</summary><PermissionMatrix /></details>
     </section>
     <section class="landing-story landing-section">

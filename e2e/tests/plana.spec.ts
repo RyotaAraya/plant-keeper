@@ -58,7 +58,7 @@ test('期限切れのトークンでログイン画面を開いても復帰先�
 
 test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合欄から始める', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await selectFirstOption(page, '対象の設備')
   await selectFirstOption(page, '対象の計器（任意）')
   const selectedTag = await page.getByRole('combobox', { name: '対象の計器（任意）' }).inputValue()
@@ -88,7 +88,7 @@ test('協力会社はURLで他拠点の設備を指定しても点検対象に�
 
 test('トラブルを探して対応記録の入力を直接開ける', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByTestId('plana-task').filter({ hasText: '対応記録の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '対応記録の整理' }).click()
   await page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true }).fill('FT-301')
   await page.getByRole('button', { name: '検索', exact: true }).click()
   await page.locator('.plana-records a').first().click()
@@ -129,7 +129,7 @@ test('AI無効でもメモと対象を保ったまま仕事を切り替え、通
   await selectFirstOption(page, '対象の設備')
   await page.getByLabel('いま起きている症状').fill('残しておきたいメモ')
   await expect(page.getByTestId('plana-search')).toBeDisabled()
-  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await expect(page.getByRole('button', { name: '不具合の記録を始める' })).toBeEnabled()
   await page.getByTestId('plana-task').filter({ hasText: '過去の類似トラブル' }).click()
   await expect(page.getByLabel('いま起きている症状')).toHaveValue('残しておきたいメモ')

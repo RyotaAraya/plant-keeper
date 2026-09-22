@@ -88,7 +88,7 @@ async function generate() {
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
     if (!isLatest()) return
-    error.value = e.response?.data?.errors?.[0] || '下書きを取得できませんでした。報告内容は直接入力できます'
+    error.value = e.response?.data?.errors?.[0] || 'プラナの提案を取得できませんでした。報告内容は直接入力できます'
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -96,8 +96,8 @@ async function generate() {
 
 function apply() {
   if (!draft.value) return
-  // 断ったときは、下書きを残す（押し直せるように）
-  if (props.hasExisting && !confirm('入力済みのタイトル・説明・優先度を、下書きで置き換えます。よろしいですか？')) return
+  // 断ったときは、プラナの提案を残す（押し直せるように）
+  if (props.hasExisting && !confirm('入力済みのタイトル・説明・優先度を、プラナが整理した内容で置き換えます。よろしいですか？')) return
   emit('apply', draft.value)
   draft.value = null
 }
@@ -135,7 +135,7 @@ function apply() {
         @click="generate"
       >
         <template #prepend><PlanaAvatar :size="20" /></template>
-        下書きを作る
+        プラナに整えてもらう
       </v-btn>
       <v-btn
         ref="similarButton"
@@ -159,7 +159,7 @@ function apply() {
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
       <v-card-text class="text-body-2">
-        <PlanaNote>プラナの下書きです。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
+        <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
         <div><span class="text-medium-emphasis">タイトル:</span> {{ draft.title }}</div>
         <div v-if="draft.description"><span class="text-medium-emphasis">説明:</span> {{ draft.description }}</div>
         <div>

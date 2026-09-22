@@ -13,8 +13,8 @@ export interface PlanaCapability {
 export const planaCapabilities: PlanaCapability[] = [
   {
     key: 'defect-draft',
-    title: '不具合報告の下書き',
-    summary: '点検中のメモから、トラブル報告の下書きを作成します。',
+    title: '不具合報告の整理',
+    summary: '点検中のメモを、トラブル報告として整理します。',
     to: '/plana?task=defect-draft',
     icon: 'mdi-clipboard-edit-outline',
   },
@@ -27,8 +27,8 @@ export const planaCapabilities: PlanaCapability[] = [
   },
   {
     key: 'response-draft',
-    title: '対応記録の下書き',
-    summary: '対応内容のメモをもとに、対応記録の下書きを作成します。',
+    title: '対応記録の整理',
+    summary: '対応内容のメモを、対応記録として整理します。',
     to: '/plana?task=response-draft',
     icon: 'mdi-text-box-edit-outline',
   },

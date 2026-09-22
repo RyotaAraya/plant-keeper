@@ -37,7 +37,7 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
   const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
   await login(page, ACCOUNTS.member)
   requireFakeAi((await (await statusResponse).json()).data.provider)
-  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await selectFirstOption(page, '対象の設備')
   await page.getByRole('button', { name: '不具合の記録を始める' }).click()
   await expect(page.getByTestId('from-plana')).toBeVisible()
@@ -56,7 +56,7 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
 
   const draft = page.getByTestId('ai-draft')
   await expect(draft).toBeVisible()
-  await expect(draft).toContainText('プラナの下書きです')
+  await expect(draft).toContainText('プラナが整理しました')
   const draftTitle = (await draft.innerText()).match(/タイトル:\s*(.+)/)?.[1].trim()
   expect(draftTitle).toBeTruthy()
 

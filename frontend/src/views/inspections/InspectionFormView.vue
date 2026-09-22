@@ -393,7 +393,7 @@ onMounted(async () => {
       </v-alert>
 
       <v-alert v-if="route.query.plana === 'defect-draft'" type="info" variant="tonal" class="mb-4" data-testid="from-plana">
-        対象を確認して、不具合欄に現場メモを入力してください。下書きを確認・反映したあと、点検を保存するとトラブルが登録されます。
+        対象を確認して、不具合欄に現場メモを入力してください。内容を確認・反映したあと、点検を保存するとトラブルが登録されます。
       </v-alert>
 
       <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
@@ -550,8 +550,8 @@ onMounted(async () => {
               </v-row>
               <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
                 <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
-                  <h3 :id="`defect-draft-heading-${idx}`">メモから下書きを作る</h3>
-                  <p class="defect-workspace__hint">現場で見たことを入力してください。下書きと過去の事例を確認できます。</p>
+                  <h3 :id="`defect-draft-heading-${idx}`">メモをプラナに整理してもらう</h3>
+                  <p class="defect-workspace__hint">現場で見たことを入力してください。整理した内容と過去の事例を確認できます。</p>
                   <DefectAiAssist
                     :status="aiStatus"
                     :equipment-id="item.equipment_id ?? form.equipment_id"

@@ -43,7 +43,7 @@ const FIELD_LABELS: Record<string, string> = {
   maintenance_series_id: '系列', checklist_template_id: 'チェックリスト', checklist_template_item_id: 'チェックリストの項目',
   inspection_item_id: '点検の項目', inspection_id: '点検',
   equipment_ids: '対象設備', regulation_ids: '適用法規', intervals: '周期',
-  ai_suggestion_id: 'プラナの下書き',
+  ai_suggestion_id: 'プラナの整理案',
 }
 
 const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
