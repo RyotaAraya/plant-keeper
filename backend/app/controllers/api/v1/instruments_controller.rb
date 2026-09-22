@@ -44,7 +44,7 @@ module Api
 
         render json: {
           data: instruments.as_json(
-            methods: [ :calibration_kind, :calibratable ],
+            methods: [ :calibration_kind, :calibratable, :troubleshooting_checks ],
             include: {
               equipment: { only: [ :id, :name ] },
               service: { only: [ :id, :name ] },
@@ -59,7 +59,7 @@ module Api
         authorize @instrument
         render json: {
           data: @instrument.as_json(
-            methods: [ :calibration_kind, :calibratable ],
+            methods: [ :calibration_kind, :calibratable, :troubleshooting_checks ],
             include: {
               equipment: { only: [ :id, :name ], include: { site: { only: [ :id, :name ] } } },
               service: {},
@@ -99,6 +99,7 @@ module Api
       def instrument_params
         params.require(:instrument).permit(
           :equipment_id, :tag_number, :instrument_type, :service_id, :line_class_id, :location, :notes,
+          :seal_fluid,
           :range_lower, :range_upper, :range_unit, :output_characteristic, :dcs_characteristic,
           :dcs_range_lower, :dcs_range_upper, :dcs_range_unit, :tolerance_percent, :tolerance_basis,
           :telemetry, :custody_transfer

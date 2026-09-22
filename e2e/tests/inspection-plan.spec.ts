@@ -2,14 +2,10 @@ import { test, expect, login, resetSession, ACCOUNTS } from './support'
 
 const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 
-// 点検計画（周期・次回期限）: 期限超過が見え、そこから点検を始められる。
+// 点検計画（周期・次回期限）: 一覧で期限超過が見え、そこから点検を始められる。
 // 点検を提出すると期限が進み、シードの状態が変わってしまうため、ここでは提出まではしない
 test('点検計画に期限超過が表示され、「点検を実施」で計画の設備を引き継いだ点検画面が開く', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-
-  await test.step('ダッシュボードに点検期限が出る', async () => {
-    await expect(page.getByText('点検期限').first()).toBeVisible()
-  })
 
   await page.getByRole('link', { name: '点検計画', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()

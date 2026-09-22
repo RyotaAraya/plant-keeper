@@ -1,7 +1,8 @@
 module Api
   module V1
     class DashboardController < BaseController
-      # GET /api/v1/dashboard?site_ids[]=1&site_ids[]=2（拠点の指定がなければ全拠点）
+      # GET /api/v1/dashboard?site_id=1&department_id=2
+      # ダッシュボードは日々の判断を優先するため、選んだ部署とその配下に関係する記録へ絞れる。
       def show
         authorize :dashboard, :show?
         dashboard_policy = policy(:dashboard)
@@ -15,6 +16,17 @@ module Api
 
         maintenances_scope = ScheduledMaintenance.all
         maintenances_scope = maintenances_scope.where(site_id: site_ids) if site_ids
+
+        selected_department = department_for_dashboard(site_ids)
+        if params[:department_id].present? && selected_department.nil?
+          render json: { errors: [ "選択した拠点の部署を指定してください" ] }, status: :unprocessable_entity
+          return
+        end
+        if selected_department
+          department_ids = Department.subtree_ids(selected_department.id)
+          troubles_scope = troubles_scope.for_departments(department_ids)
+          inspections_scope = inspections_scope.where(department_id: department_ids)
+        end
 
         plans_scope = InspectionPlan.active
         plans_scope = plans_scope.for_sites(site_ids) if site_ids
@@ -35,6 +47,10 @@ module Api
         }
 
         data = {
+            scope: {
+              site_name: site_ids&.one? ? Site.find_by(id: site_ids.first)&.name : nil,
+              department_name: selected_department&.name
+            },
             # トラブル統計
             troubles: {
               open: troubles_scope.open.count,
@@ -56,15 +72,17 @@ module Api
                 .as_json(methods: [ :days_until_due ], include: { equipment: { only: [ :id, :name ] }, equipments: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] },
                                                                    reference_standard: { only: [ :id, :name ] } })
             },
-            # 定期整備
+            # 設備停止の見通しは拠点全体。部署による絞り込みを適用しない。
             maintenances: {
               # 計画中・準備中（これから）と、実施中・検収（進行中）
               planned: maintenances_scope.where(status: %w[planned preparing]).count,
               in_progress: maintenances_scope.where(status: %w[in_progress acceptance]).count,
+              upcoming_count: maintenances_scope.where(status: %w[planned preparing])
+                .where(planned_start_on: Date.current..30.days.from_now).count,
               upcoming: maintenances_scope.where(status: %w[planned preparing])
                 .where(planned_start_on: Date.current..30.days.from_now)
                 .includes(:equipments)
-                .order(:planned_start_on)
+                .order(:planned_start_on, :id)
                 .limit(5)
                 .as_json(include: { equipments: { only: [ :id, :name ] } })
             }
@@ -96,6 +114,16 @@ module Api
         end
 
         render json: { data: data }
+      end
+
+      private
+
+      def department_for_dashboard(site_ids)
+        return if params[:department_id].blank?
+
+        scope = Department.where(id: params[:department_id])
+        scope = scope.where(site_id: site_ids) if site_ids
+        scope.first
       end
     end
   end

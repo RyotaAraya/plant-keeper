@@ -15,6 +15,20 @@ class Department < ApplicationRecord
   validate :valid_parent_level
   validate :not_self_referential
 
+  # 一覧とダッシュボードで同じ範囲を扱う。存在しない部署は空で、全件に戻さない。
+  def self.subtree_ids(id)
+    department = find_by(id: id)
+    return [] unless department
+
+    ids = [ department.id ]
+    frontier = ids
+    while frontier.any?
+      frontier = where(site_id: department.site_id, parent_id: frontier).where.not(id: ids).pluck(:id)
+      ids.concat(frontier)
+    end
+    ids
+  end
+
   # 部 > 課 > チーム のフルパスを返す
   def full_path
     ancestors = []

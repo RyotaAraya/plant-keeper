@@ -1,165 +1,239 @@
 <script setup lang="ts">
-// プラナ（AIアシスタント）の入口。プラナは各画面（点検の入力・トラブル詳細）の中で呼び出すもので、
-// このページは「何ができるか」と、使う場所への案内を示す。チャットはまだなく、
-// 相談欄（トップ・ここ）に入れた文は、回答ではなくこのページの案内につながる。
-// AIの処理は既存のまま（このページは AI を呼ばず、状況の取得 GET /ai/status だけ）
-import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
-import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
-import PlanaConsultBar from '@/components/plana/PlanaConsultBar.vue'
-import PlanaNote from '@/components/plana/PlanaNote.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
-import type { AiStatus } from '@/types/models'
+import { useAuthStore } from '@/stores/auth'
+import { usePermissions } from '@/composables/usePermissions'
+import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
+import { latestGuard } from '@/utils/latestGuard'
+import AiAvailability from '@/components/AiAvailability.vue'
+import { useAiAvailability } from '@/composables/useAiAvailability'
 
 const route = useRoute()
-const question = computed(() => (typeof route.query.q === 'string' ? route.query.q.trim() : ''))
+const router = useRouter()
+const auth = useAuthStore()
+const { canCreateTroubleResponse } = usePermissions()
+const tasks = computed(() => planaCapabilities.filter((task) => task.key !== 'response-draft' || canCreateTroubleResponse.value))
+const activeTask = computed(() => tasks.value.find((task) => task.key === route.query.task) ?? tasks.value[1]!)
+const unavailableTask = computed(() => route.query.task === 'response-draft' && !canCreateTroubleResponse.value)
+const siteIds = ref<number[]>(auth.user?.site_id ? [auth.user.site_id] : [])
+const { equipments, load } = useSiteScopeOptions({ withDepartments: false })
+const equipmentId = ref<number | null>(null)
+const instrumentId = ref<number | null>(null)
+const instruments = ref<{ id: number; tag_number: string }[]>([])
+const memo = ref('')
+const optionsLoading = ref(false)
+const optionsError = ref('')
+const instrumentLoading = ref(false)
+const instrumentError = ref('')
+const optionsGuard = latestGuard()
+const instrumentGuard = latestGuard()
+const { status, loading: statusLoading, failed: statusError, refresh: fetchStatus } = useAiAvailability()
+const similar = useSimilarTroubles((count) => { if (status.value) status.value.remaining_today = count })
+const searchButton = ref<{ $el: { focus(): void } } | null>(null)
+function closeSimilar() {
+  similar.clear()
+  searchButton.value?.$el.focus()
+}
+const canSearch = computed(() => !!equipmentId.value && !!memo.value.trim() && !!status.value?.enabled && status.value.remaining_today > 0 && !optionsLoading.value && !optionsError.value && !instrumentLoading.value && !instrumentError.value)
+const equipmentOptions = computed(() => equipments.value.map((equipment) => ({ ...equipment, label: siteIds.value.length === 1 ? equipment.name : `${equipment.site?.name ?? ''} ${equipment.name}` })))
 
-// 状況が取れなくても、案内の表示には影響しない（回数の表示を出さないだけ）
-const status = ref<AiStatus | null>(null)
-onMounted(async () => {
+async function fetchOptions() {
+  const isLatest = optionsGuard()
+  optionsLoading.value = true
+  optionsError.value = ''
+  equipmentId.value = null
+  instruments.value = []
+  try { await load(siteIds.value) }
+  catch { if (isLatest()) optionsError.value = '設備を読み込めませんでした。もう一度お試しください。' }
+  finally { if (isLatest()) optionsLoading.value = false }
+}
+
+async function fetchInstruments() {
+  const isLatest = instrumentGuard()
+  instrumentId.value = null
+  instruments.value = []
+  instrumentError.value = ''
+  instrumentLoading.value = !!equipmentId.value
+  if (!equipmentId.value) return
   try {
-    status.value = (await api.get('/ai/status')).data.data
-  } catch {
-    status.value = null
-  }
+    const res = await api.get('/instruments', { params: { equipment_id: equipmentId.value, per_page: 1000 } })
+    if (isLatest()) instruments.value = res.data.data
+  } catch { if (isLatest()) instrumentError.value = '計器を読み込めませんでした。もう一度お試しください。' }
+  finally { if (isLatest()) instrumentLoading.value = false }
+}
+
+function search() {
+  if (!canSearch.value || similar.loading.value) return
+  void similar.search({ equipmentId: equipmentId.value, instrumentId: instrumentId.value, memo: memo.value.trim() })
+}
+function startInspection() {
+  if (!equipmentId.value || optionsLoading.value || optionsError.value || instrumentLoading.value || instrumentError.value) return
+  void router.push({ path: '/inspections/new', query: { plana: 'defect-draft', equipment_id: String(equipmentId.value), ...(instrumentId.value ? { instrument_id: String(instrumentId.value) } : {}) } })
+}
+
+// 対応記録の対象はサーバー検索・ページ送りで選ぶ。先頭数件だけに限定しない。
+interface TroubleOption { id: number; title: string; equipment: { name: string }; instrument?: { tag_number: string } }
+const troubleQuery = ref('')
+const submittedQuery = ref('')
+const troublePage = ref(1)
+const troubles = ref<TroubleOption[]>([])
+const troubleTotal = ref(0)
+const troubleLoading = ref(false)
+const troubleError = ref('')
+const troubleGuard = latestGuard()
+async function fetchTroubles() {
+  const isLatest = troubleGuard()
+  troubleLoading.value = true
+  troubleError.value = ''
+  troubles.value = []
+  try {
+    const res = await api.get('/troubles', { params: { ...(siteIds.value.length ? { site_ids: siteIds.value } : {}), q: submittedQuery.value, page: troublePage.value, per_page: 5 } })
+    if (!isLatest()) return
+    troubles.value = res.data.data
+    troubleTotal.value = res.data.meta.total_count
+  } catch { if (isLatest()) troubleError.value = 'トラブルを読み込めませんでした。もう一度お試しください。' }
+  finally { if (isLatest()) troubleLoading.value = false }
+}
+function findTroubles() {
+  submittedQuery.value = (troubleQuery.value ?? '').trim()
+  if (troublePage.value !== 1) troublePage.value = 1
+  else void fetchTroubles()
+}
+
+watch(siteIds, () => {
+  void fetchOptions()
+  troublePage.value = 1
+  if (activeTask.value.key === 'response-draft') void fetchTroubles()
+}, { deep: true })
+watch(equipmentId, fetchInstruments)
+watch([memo, equipmentId, instrumentId, () => activeTask.value.key], () => similar.clear(), { flush: 'sync' })
+watch(() => activeTask.value.key, (key) => { if (key === 'response-draft') void fetchTroubles() })
+watch(troublePage, fetchTroubles)
+onBeforeRouteLeave(() => !auth.isLoggedIn || !memo.value.trim() || window.confirm('入力した症状のメモを破棄して、別の画面へ移動しますか？'))
+function warnBeforeUnload(event: BeforeUnloadEvent) {
+  if (!memo.value.trim()) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+onMounted(() => {
+  void fetchStatus()
+  void fetchOptions()
+  if (activeTask.value.key === 'response-draft') void fetchTroubles()
+  window.addEventListener('beforeunload', warnBeforeUnload)
+})
+onUnmounted(() => {
+  similar.clear()
+  optionsGuard(); instrumentGuard(); troubleGuard()
+  window.removeEventListener('beforeunload', warnBeforeUnload)
 })
 </script>
 
 <template>
   <MainLayout>
-    <div class="pk-plana-page">
-      <header class="pk-plana-head">
-        <div class="pk-plana-head__figure">
-          <PlanaAvatar variant="full" alt="プラナ。ヘルメットをかぶり、タブレットを持った、PlantKeeperのAIアシスタントのキャラクター" />
-        </div>
-        <div class="pk-plana-head__body">
-          <h1 class="pk-plana-head__title">プラナ <span class="pk-plana-head__badge">AI</span></h1>
-          <p class="pk-plana-head__lead">
-            PlantKeeperに蓄積された設備・点検・トラブルなどの記録をもとに、情報の整理や過去事例の検索、報告の下書き作成などをサポートするAIアシスタントです。提案までがプラナの役割で、記録する内容と次の判断は、いつも人が決めます。
-          </p>
-          <p v-if="status?.enabled" class="pk-plana-head__meta" data-testid="plana-remaining">
-            今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回（下書きと類似トラブルの合計です）
-          </p>
-        </div>
+    <div class="plana-workspace">
+      <header class="plana-heading">
+        <h1>仕事を始める</h1>
+        <p v-if="status?.enabled" data-testid="plana-remaining">AI利用：今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</p>
       </header>
+      <v-alert v-if="unavailableTask" type="info" variant="tonal" class="mb-4" role="status">この権限では対応記録を作成できません。不具合報告と類似事例の検索を利用できます。</v-alert>
+      <div class="plana-desk">
+        <nav class="plana-tasks" aria-label="仕事を選ぶ">
+          <router-link v-for="task in tasks" :key="task.key" :to="task.to" :aria-current="activeTask.key === task.key ? 'page' : undefined" :class="{ selected: activeTask.key === task.key }" data-testid="plana-task">
+            <v-icon size="22" aria-hidden="true">{{ task.icon }}</v-icon>
+            <span>{{ task.title }}</span>
+          </router-link>
+        </nav>
+        <section class="plana-task-body" :aria-label="activeTask.title">
+          <div class="plana-task-heading">
+            <SiteScopeTag v-model="siteIds" />
+          </div>
+          <AiAvailability
+            :status="status"
+            :loading="statusLoading"
+            :failed="statusError"
+            :data-testid="status && !status.enabled ? 'plana-disabled' : undefined"
+            @retry="fetchStatus"
+          />
 
-      <v-alert v-if="status && !status.enabled" type="info" variant="tonal" density="compact" class="mb-4" data-testid="plana-disabled">
-        この環境では、プラナのAIは有効になっていません。各画面のプラナのボタンは出ませんが、記録の入力はそのまま使えます。
-      </v-alert>
-
-      <PlanaConsultBar tone="plain" :initial="question" class="mb-4" />
-
-      <v-card v-if="question" variant="flat" class="pa-4 mb-6" data-testid="plana-question">
-        <div class="text-caption text-medium-emphasis mb-1">いただいた相談</div>
-        <div class="text-body-1 mb-3 pk-plana-question">{{ question }}</div>
-        <PlanaNote>
-          文章での質問への回答は、まだ用意できていません。いまは、下の場面でプラナを呼び出せます。
-        </PlanaNote>
-      </v-card>
-
-      <h2 class="text-subtitle-1 font-weight-bold mb-3 mt-6">プラナでできること</h2>
-      <v-row>
-        <v-col v-for="cap in planaCapabilities" :key="cap.key" cols="12" md="4">
-          <v-card class="pa-4 h-100 d-flex flex-column" data-testid="plana-capability">
-            <div class="d-flex align-center ga-2 mb-2">
-              <v-icon color="primary" size="20" aria-hidden="true">{{ cap.icon }}</v-icon>
-              <h3 class="text-subtitle-2 font-weight-bold">{{ cap.title }}</h3>
+          <template v-if="activeTask.key !== 'response-draft'">
+            <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '設備を選ぶと、点検の不具合欄でプラナに整理してもらえます。' : '設備と症状から、過去のトラブルと対応記録を探します。' }}</p>
+            <v-alert v-if="optionsError" type="error" variant="tonal" class="mb-3" role="alert">{{ optionsError }} <v-btn variant="text" @click="fetchOptions">設備を再読み込み</v-btn></v-alert>
+            <div class="plana-targets">
+              <v-autocomplete v-model="equipmentId" :items="equipmentOptions" item-title="label" item-value="id" label="対象の設備" :loading="optionsLoading" :disabled="optionsLoading || !!optionsError" clearable no-data-text="選択できる設備がありません" />
+              <v-autocomplete v-model="instrumentId" :items="instruments" item-title="tag_number" item-value="id" label="対象の計器（任意）" :loading="instrumentLoading" :disabled="!equipmentId || instrumentLoading || !!instrumentError" clearable no-data-text="計器がありません" />
             </div>
-            <p class="text-body-2 text-medium-emphasis mb-4 flex-grow-1">{{ cap.summary }}</p>
-            <div>
-              <v-btn size="small" variant="tonal" color="primary" :to="cap.to">{{ cap.linkLabel }}</v-btn>
-            </div>
-          </v-card>
-        </v-col>
-      </v-row>
+            <v-alert v-if="instrumentError" type="error" variant="tonal" class="mb-3" role="alert">{{ instrumentError }} <v-btn variant="text" @click="fetchInstruments">計器を再読み込み</v-btn></v-alert>
+            <template v-if="activeTask.key === 'defect-draft'">
+              <v-btn color="primary" :disabled="!equipmentId || optionsLoading || !!optionsError || instrumentLoading || !!instrumentError" @click="startInspection">不具合の記録を始める</v-btn>
+            </template>
+            <form v-else @submit.prevent="search">
+              <v-textarea v-model="memo" label="いま起きている症状" placeholder="例：流量の指示が低い。導圧管のつまりが疑われる。" rows="4" auto-grow :maxlength="status?.max_memo_length ?? 1000" :counter="status?.max_memo_length ?? 1000" hint="検索しても記録は変更されません。" persistent-hint />
+              <div class="plana-actions">
+                <v-btn ref="searchButton" type="submit" color="primary" :disabled="!canSearch" :loading="similar.loading.value" data-testid="plana-search">似た事例を探す</v-btn>
+                <v-btn variant="text" :to="{ path: '/troubles', query: { site_ids: siteIds.length ? siteIds.join(',') : 'all', ...(equipmentId ? { equipment_id: String(equipmentId) } : {}) } }">記録を自分で探す</v-btn>
+              </div>
+              <p v-if="similar.loading.value" role="status" class="plana-state">過去の記録を確認しています。</p>
+              <v-alert v-if="similar.error.value" type="warning" variant="tonal" role="alert" class="mt-4">{{ similar.error.value }}</v-alert>
+              <div aria-live="polite"><SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" /></div>
+            </form>
+          </template>
+          <template v-else>
+            <p class="plana-instruction">対応したトラブルを選ぶと、対応記録の入力画面が開きます。</p>
+            <form class="plana-trouble-search" @submit.prevent="findTroubles">
+              <v-text-field v-model="troubleQuery" label="トラブルのタイトルで検索" hide-details clearable />
+              <v-btn type="submit" variant="outlined" :loading="troubleLoading">検索</v-btn>
+            </form>
+            <v-alert v-if="troubleError" type="error" variant="tonal" role="alert">{{ troubleError }} <v-btn variant="text" @click="fetchTroubles">再読み込み</v-btn></v-alert>
+            <p v-else-if="troubleLoading" role="status" class="plana-state">トラブルを読み込んでいます。</p>
+            <template v-else>
+              <ul class="plana-records">
+                <li v-for="trouble in troubles" :key="trouble.id"><router-link :to="{ path: `/troubles/${trouble.id}`, query: { plana: 'response-draft' } }"><span><strong>{{ trouble.title }}</strong><small>{{ trouble.equipment.name }}<template v-if="trouble.instrument"> / {{ trouble.instrument.tag_number }}</template></small></span><v-icon aria-hidden="true">mdi-chevron-right</v-icon></router-link></li>
+              </ul>
+              <p v-if="!troubles.length" class="plana-state">該当するトラブルがありません。検索する言葉や拠点を変更してください。</p>
+              <v-pagination v-if="troubleTotal > 5" v-model="troublePage" :length="Math.ceil(troubleTotal / 5)" :total-visible="3" aria-label="トラブルのページ" />
+            </template>
+          </template>
+        </section>
+      </div>
     </div>
   </MainLayout>
 </template>
 
 <style scoped>
-.pk-plana-page {
-  max-width: 1040px;
-  margin: 0 auto;
-}
-
-.pk-plana-head {
-  display: flex;
-  align-items: stretch;
-  gap: 1.5rem;
-  margin-bottom: 1.25rem;
-  padding: 1.5rem;
-  background: var(--pk-soft-blue);
-  border-radius: 20px;
-}
-
-/* キャラクターと説明をひとつの案内面にまとめる */
-.pk-plana-head__figure {
-  flex: none;
-  width: 132px;
-  height: 132px;
-  overflow: hidden;
-  background: #d8eafb;
-  border-radius: 24px;
-}
-
-.pk-plana-head__body {
-  align-self: center;
-  min-width: 0;
-}
-
-.pk-plana-head__title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.35rem;
-  font-family: var(--pk-font-display);
-  font-size: 1.75rem;
-  font-weight: 900;
-  line-height: 1.2;
-  color: var(--pk-plana-navy);
-}
-
-.pk-plana-head__badge {
-  padding: 0.05rem 0.55rem;
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: var(--pk-plana-navy);
-  background: var(--pk-plana-glow);
-  border-radius: 999px;
-}
-
-.pk-plana-head__lead {
-  max-width: 44em;
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: rgb(var(--v-theme-secondary));
-  text-wrap: pretty;
-  word-break: auto-phrase;
-}
-
-.pk-plana-head__meta {
-  margin: 0.4rem 0 0;
-  font-size: 0.75rem;
-  color: rgb(var(--v-theme-secondary));
-}
-
-.pk-plana-question {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
+.plana-workspace { max-width: 1040px; margin: 0 auto; }
+.plana-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 8px 0 24px; }
+.plana-heading h1 { font-size: 1.6rem; line-height: 1.5; text-wrap: balance; }
+.plana-heading p { color: var(--pk-muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.plana-desk { border: 1px solid var(--pk-line); border-radius: 12px; overflow: hidden; background: white; }
+.plana-tasks { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 16px 0; border-bottom: 1px solid var(--pk-line); }
+.plana-tasks a { display: flex; align-items: center; gap: 8px; padding: 16px 12px; border-bottom: 3px solid transparent; text-decoration: none; color: var(--pk-muted); font-size: .9375rem; }
+.plana-tasks a.selected { color: var(--pk-steel); border-bottom-color: var(--pk-steel); font-weight: 700; }
+.plana-tasks a:hover { background: var(--pk-mist); color: var(--pk-steel); }
+.plana-tasks a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: -4px; }
+.plana-task-body { padding: 28px 32px 32px; min-width: 0; }
+.plana-task-heading { margin-bottom: 16px; }
+.plana-instruction { color: var(--pk-muted); font-size: .875rem; line-height: 1.9; margin-bottom: 24px; text-wrap: pretty; }
+.plana-targets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.plana-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.plana-state { color: var(--pk-muted); font-size: .875rem; margin: 16px 0; }
+.plana-trouble-search { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.plana-records { list-style: none; padding: 0; }
+.plana-records a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 4px; border-bottom: 1px solid var(--pk-line); text-decoration: none; color: var(--pk-ink); }
+.plana-records a:hover { color: var(--pk-steel); }
+.plana-records strong { overflow-wrap: anywhere; }
+.plana-records small { display: block; margin-top: 6px; color: var(--pk-muted); }
 @media (max-width: 600px) {
-  .pk-plana-head {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .pk-plana-head__figure {
-    width: 104px;
-    height: 104px;
-  }
+  .plana-heading { margin: 4px 0 20px; }
+  .plana-heading h1 { font-size: 1.4rem; }
+  .plana-task-body { padding: 20px 16px; }
+  .plana-tasks { padding: 4px 8px 0; gap: 0; }
+  .plana-tasks a { padding: 12px 8px; font-size: .8125rem; }
+  .plana-targets { grid-template-columns: 1fr; gap: 0; }
 }
 </style>

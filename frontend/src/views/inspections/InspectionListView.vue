@@ -29,13 +29,13 @@ function filtersFromQuery() {
     site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
     statuses: listFromQuery(route.query.status),
     instrument_id: idFromQuery(route.query.instrument_id),
+    department_id: idFromQuery(route.query.department_id),
   }
 }
 
 const filters = ref({
   ...filtersFromQuery(),
   equipment_ids: [] as number[],
-  department_id: null as number | null,
   inspection_types: [] as string[],
 })
 
@@ -117,7 +117,7 @@ watch(filters, fetchInspections, { deep: true })
 watch(() => route.query, () => {
   if (route.path !== '/inspections') return
   const q = filtersFromQuery()
-  filters.value = { ...filters.value, ...q, equipment_ids: [], department_id: null, inspection_types: [] }
+  filters.value = { ...filters.value, ...q, equipment_ids: [], inspection_types: [] }
   loadSiteOptions(q.site_ids)
 })
 </script>

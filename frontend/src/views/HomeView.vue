@@ -1,74 +1,16 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
+import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
-import PlanaConsultBar from '@/components/plana/PlanaConsultBar.vue'
-import inspectionsShot from '@/assets/screenshots/inspections.png'
-import materialsShot from '@/assets/screenshots/materials.png'
-import departmentsShot from '@/assets/screenshots/departments.png'
-import dashboardShot from '@/assets/screenshots/dashboard.png'
-import aiDraftShot from '@/assets/screenshots/ai-draft.png'
+import PlanaNote from '@/components/plana/PlanaNote.vue'
+import { planaCapabilities } from '@/constants/planaCapabilities'
 
-const router = useRouter()
-const authStore = useAuthStore()
+const auth = useAuthStore()
 
-function goToApp() {
-  router.push(authStore.isLoggedIn ? '/dashboard' : '/login')
-}
+// 上から「PlantKeeperとは何か」→「その記録の上で働くプラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる
 
-// ヒーローの「プラナ AI」から、すぐ下のプラナの帯へ移る（動きを減らす設定のときは、滑らかにスクロールしない）
-function scrollToPlana() {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  document.getElementById('plana')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
-}
-
-const featureGroups = [
-  {
-    key: 'maintenance',
-    icon: 'mdi-clipboard-check-outline',
-    title: '保全管理',
-    description: '設備台帳・点検記録・トラブル対応・定期整備のスケジュールまで、現場の保全業務を一元管理。',
-    shot: inspectionsShot,
-    shotAlt: '点検・作業記録画面のスクリーンショット。減圧蒸留装置や接触改質装置などの点検記録が計器タグ番号・ステータス付きで並ぶ',
-    shotCaption: '実際の点検・作業記録画面',
-  },
-  {
-    key: 'materials',
-    icon: 'mdi-package-variant-closed',
-    title: '資材管理',
-    description: '型番・在庫・発注・修理の状況を拠点横断で把握し、資材切れや二重発注を防ぐ。',
-    shot: materialsShot,
-    shotAlt: '資材管理画面のスクリーンショット。ガスケットやパッキンなどの資材が型番付きで並ぶ',
-    shotCaption: '実際の資材管理画面',
-  },
-  {
-    key: 'organization',
-    icon: 'mdi-office-building-outline',
-    title: '組織管理',
-    description: '複数拠点・複数会社が関わる保全体制を、権限管理も含めて柔軟に表現。',
-    shot: departmentsShot,
-    shotAlt: '部署管理画面のスクリーンショット。保全部の下の計装保全課を選択し、所属チームとメンバー（鈴木一郎、課長）が表示されている',
-    shotCaption: '実際の部署管理画面',
-  },
-  {
-    key: 'ai',
-    icon: '',
-    title: 'プラナの提案',
-    description: '点検中のメモから、トラブル報告の下書きを作ります。タイトル・優先度・推定原因の候補まで整えます。過去の類似トラブルの検索と、対応記録の下書きも、プラナが手伝います。',
-    points: [
-      'プラナは提案まで。入力欄に反映するかは、人が決めます',
-      '応急処置の手順や、運転を続けてよいかの判断は出しません',
-      '呼び出しは記録され、AIの案と確定した内容を突き合わせられます',
-    ],
-    shot: aiDraftShot,
-    shotAlt: '点検記録の入力画面のスクリーンショット。現場メモの下に、AIの下書きが表示されている。タイトル・説明・優先度と、推定原因の候補、確認したい点が並び、「入力欄に反映」ボタンがある',
-    shotCaption: '実際の点検記録の入力画面。「反映」を押すまで、入力欄は変わりません',
-    fit: true,
-  },
-]
-
-// 「主な機能」の頭に置く、保全業務でデータがつながる順。説明は、実装済みの動作だけを書く
+// 保全業務でデータがつながる順。説明は、実装済みの動作だけを書く
 const flowSteps = [
   { icon: 'mdi-factory', title: '設備', note: '設備台帳・計器・タグ番号' },
   { icon: 'mdi-clipboard-check-outline', title: '点検', note: 'チェックリストと承認' },
@@ -78,805 +20,355 @@ const flowSteps = [
   { icon: 'mdi-warehouse', title: '在庫', note: '拠点をまたいで確認' },
   { icon: 'mdi-cart-outline', title: '発注', note: '受領すると在庫へ入庫' },
 ]
-
-const techStack = ['Vue 3', 'TypeScript', 'Vuetify 3', 'Ruby on Rails 8', 'PostgreSQL']
-
-const painPoints = [
-  { icon: 'mdi-file-document-alert-outline', text: '最新版かわからない回路図。手書きの追記だけが残り、更新されないまま放置された図面' },
-  { icon: 'mdi-file-image-outline', text: '紙の記録とデータの二重管理。検索性の低いスキャン画像の山' },
-  { icon: 'mdi-clipboard-text-multiple-outline', text: '何重にもなったチェックリストと、ハンコリレーによる承認フロー' },
+const foundations = [
+  { title: '設備と記録をつなぐ', description: '設備台帳・計器・点検・トラブルをひとつにつなぎ、過去の記録をたどれます。', icon: 'mdi-factory' },
+  { title: '保全の仕事を進める', description: '点検計画から承認、定期整備まで。現場と管理者が同じ記録を見ながら進められます。', icon: 'mdi-clipboard-check-outline' },
+  { title: '資材まで見渡す', description: '型番・在庫・修理・発注を管理。必要な資材を、拠点をまたいで確認できます。', icon: 'mdi-package-variant-closed' },
+]
+const planaPrinciples = [
+  'プラナは提案まで。記録に反映・保存するかは、人が決めます',
+  '応急処置の手順や、運転を続けてよいかの判断は出しません',
+  '呼び出しは記録され、AIの案と確定した内容を突き合わせられます',
 ]
 
-const GITHUB_URL = 'https://github.com/RyotaAraya/plant-keeper'
+// 3つの仕事を、同じ1件のトラブル（FT-301の指示低下）の流れで見せる。架空のメモ・記録による表示例。
+// 1の routineChecks は backend/app/models/instrument_troubleshooting_catalog.rb の
+// CHECKS['flow_transmitter'] と同じ内容（実際の値は計器種別ごとにアプリが確定的に出す）
+const capability = (key: string) => planaCapabilities.find((c) => c.key === key)!
+const story = [
+  {
+    key: 'defect-draft',
+    scene: '点検で気づく',
+    lead: '巡回で指示の低さに気づいた。メモのまま、トラブル報告に整えてもらう。',
+    input: '点検で気づいたこと',
+    memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
+    routineChecks: [
+      '導圧管の閉塞（固形物の堆積・凍結・気体/液体の溜まり）。ブロー・貫通棒での貫通でOKになるか',
+      'ゼロ点ズレの確認',
+      'バルブマニホールド（元弁・平衡弁）が誤って閉止・半開になっていないか',
+      '配線・端子の緩み、電源の確認',
+      'オリフィス・絞り部の詰まり・付着',
+    ],
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: 'FT-301 流量指示の低下',
+    meta: '優先度 中',
+    detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    possibleCauses: [
+      'オリフィス・絞り部の詰まりの可能性（指示の低下が緩やかで、前日から変わっていないため）',
+      '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
+    ],
+    checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
+    caption: '見立ては可能性であり断定ではありません。定型項目とは重複させません。',
+    result: '確認して点検を保存すると、トラブルとして登録されます。',
+  },
+  {
+    key: 'similar-troubles',
+    scene: '過去の事例を見る',
+    lead: '同じ計器・同じ種類の計器の過去のトラブルから、症状が同じものを探してもらう。',
+    input: 'いま起きている症状（1と同じメモ）',
+    memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
+    planaNote: 'プラナが選んだ候補です（過去のトラブル9件と比べました）。似ているかどうかは、開いて記録を見て判断してください。',
+    title: 'FT-301 流量指示の緩やかな低下',
+    meta: '完了・優先度 中・2年前',
+    similarity: '同じ計器で、指示が低めの状態が続いた点が一致',
+    howHandled: '導圧管にスラッジの堆積を確認し、ブローして指示が復旧した',
+    caption: 'タイトル・状態は記録の値です。プラナが書くのは「似ている点」と「過去の対応」だけです。',
+    result: '見立ての2つのうち、まず導圧管から確かめる手がかりになります。',
+  },
+  {
+    key: 'response-draft',
+    scene: '対応を記録する',
+    lead: '対応を終えたら、作業後のメモを対応記録に整えてもらう。',
+    input: '作業後のメモ',
+    memo: '導圧管ブローしたら黒いスラッジが出た。\nブロー後は指示が戻った。\n現場の流量計と合ってる。',
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: 'FT-301 導圧管のブロー・指示の復旧確認',
+    meta: '対応種別: 修理',
+    detail: '導圧管をブローしたところ、黒色のスラッジが排出された。ブロー後に指示の復旧を確認し、現場流量計の指示とも一致した。',
+    usedMaterials: 'なし',
+    checkPoint: 'スラッジの出どころ（原油の性状の変化など）は分かっているか？',
+    caption: '確認したい点は記録には反映されません。',
+    result: '確認して保存すると、トラブルの対応記録として残ります。次に同じ症状が出たとき、2の手がかりになります。',
+  },
+].map((step) => ({ ...step, to: capability(step.key).to, task: capability(step.key).title }))
 </script>
 
 <template>
-  <v-main>
-    <!-- ヘッダー -->
-    <v-app-bar class="px-2 px-sm-6" color="surface">
-      <v-icon color="primary" size="24" class="mr-2">mdi-gauge-full</v-icon>
-      <span class="pk-navbrand">PlantKeeper</span>
-      <v-spacer />
-      <v-btn variant="tonal" color="primary" to="/login">ログイン</v-btn>
-    </v-app-bar>
-
-    <!-- ヒーロー -->
-    <section class="pk-hero">
-      <v-container fluid class="pk-hero__content">
-        <div class="pk-hero__layout">
-          <div class="pk-hero__text">
-            <h1 class="pk-hero__brand">PlantKeeper</h1>
-            <p class="pk-hero__tagline">
-              設備保全に必要な情報を、ひとつの場所へ。
-            </p>
-            <p class="pk-hero__lead">
-              設備・点検・トラブル・修理・資材・在庫・発注まで、保全業務に必要な情報を一元管理します。
-            </p>
-            <button type="button" class="pk-hero__ai" @click="scrollToPlana">
-              <PlanaAvatar :size="30" />
-              <span class="pk-hero__ai-text"><strong>プラナ AI</strong>過去の記録から、次の判断をサポートします</span>
-              <v-icon size="18" class="pk-hero__ai-chevron">mdi-chevron-down</v-icon>
-            </button>
-            <v-btn color="primary" size="x-large" class="px-8" @click="goToApp">
-              デモアカウントで試す
-            </v-btn>
-            <div class="pk-hero__note">
-              登録不要。ログイン画面のデモアカウント一覧からクリックするだけで操作を試せます。
-            </div>
+  <v-app-bar color="surface" class="landing-nav px-2 px-sm-6">
+    <v-icon color="primary" size="24" class="mr-2" aria-hidden="true">mdi-gauge-full</v-icon>
+    <span class="landing-brand">PlantKeeper</span>
+    <v-spacer />
+    <v-btn variant="text" :to="auth.isLoggedIn ? '/plana' : '/login'">{{ auth.isLoggedIn ? 'ホーム' : 'ログイン' }}</v-btn>
+  </v-app-bar>
+  <v-main class="landing">
+    <!-- 1. PlantKeeperとは -->
+    <section class="landing-hero" aria-labelledby="hero-title">
+      <div class="landing-hero-inner">
+        <div class="landing-hero-copy">
+          <h1 id="hero-title" class="landing-hero-brand">PlantKeeper</h1>
+          <p class="landing-hero-tagline">設備保全に必要な情報を、ひとつの場所へ。</p>
+          <p class="landing-lead">石油プラントの保全業務のためのWebアプリです。設備・点検・トラブル・修理・資材・在庫・発注までを、ひとつの記録としてつなぎます。</p>
+          <a href="#plana" class="landing-hero-plana">
+            <PlanaAvatar :size="30" />
+            <span><strong>AIアシスタント「プラナ」</strong>記録をもとに、現場の報告と調べものを手伝います</span>
+            <v-icon size="18" aria-hidden="true">mdi-chevron-down</v-icon>
+          </a>
+          <div>
+            <v-btn to="/plana" color="primary" size="x-large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで試す' }}</v-btn>
           </div>
-          <div class="pk-hero__shot">
-            <img
-              :src="dashboardShot"
-              alt="ログイン後のダッシュボード画面のスクリーンショット。未対応トラブルや在庫アラートなどが一覧表示されている"
-              class="pk-hero__shot-img"
-            />
-          </div>
+          <p class="landing-caption">{{ auth.isLoggedIn ? '設備やトラブルを選んで、作業を始められます。' : '登録不要。ログイン画面でデモアカウントを選ぶだけで試せます。' }}</p>
         </div>
-      </v-container>
+        <figure class="landing-hero-shot">
+          <a :href="troubleScreenshot" target="_blank" rel="noopener" aria-label="トラブル詳細の画面を拡大する（新しいタブ）"><img :src="troubleScreenshot" width="1144" height="584" alt="トラブル詳細画面。対象設備の常圧蒸留装置、計器PV-201、発生元点検と最近の点検履歴を同じ画面で確認できる。" /></a>
+          <figcaption>デモデータを表示した実際のトラブル詳細画面。設備・計器・発生元の点検と、過去の点検履歴を同じ画面でたどれます。</figcaption>
+        </figure>
+      </div>
     </section>
 
-    <!-- プラナ AI: PlantKeeperのAIアシスタント。主役は業務機能なので、帯は1つだけ・ヒーローの下に置く -->
-    <section id="plana" class="pk-plana" aria-labelledby="plana-title">
-      <svg class="pk-plana__skyline" viewBox="0 0 1440 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-        <g fill="#fff" fill-opacity="0.16">
-          <rect x="90" y="70" width="34" height="150" />
-          <rect x="96" y="56" width="22" height="14" />
-          <rect x="105" y="20" width="5" height="36" />
-          <rect x="150" y="104" width="26" height="116" />
-          <rect x="154" y="94" width="18" height="10" />
-          <path d="M250 220V150q60-38 120 0v70z" />
-          <rect x="420" y="84" width="30" height="136" />
-          <rect x="425" y="70" width="20" height="14" />
-          <rect x="470" y="112" width="22" height="108" />
-          <rect x="474" y="30" width="6" height="82" />
-          <path d="M560 220V160q52-30 104 0v70z" />
-          <rect x="700" y="64" width="36" height="156" />
-          <rect x="707" y="50" width="22" height="14" />
-          <rect x="716" y="14" width="5" height="36" />
-          <rect x="752" y="100" width="24" height="120" />
-          <rect x="820" y="130" width="120" height="90" />
-          <path d="M820 130q60-30 120 0z" />
-          <rect x="1010" y="80" width="30" height="140" />
-          <rect x="1015" y="66" width="20" height="14" />
-          <rect x="1180" y="100" width="28" height="120" />
-          <rect x="1184" y="88" width="20" height="12" />
-          <rect x="1230" y="118" width="22" height="102" />
-          <rect x="1300" y="150" width="140" height="70" />
-          <path d="M1300 150q70-32 140 0z" />
-        </g>
-        <g fill="#12306b" fill-opacity="0.5">
-          <rect x="0" y="192" width="1440" height="6" />
-          <rect x="60" y="192" width="6" height="28" />
-          <rect x="360" y="192" width="6" height="28" />
-          <rect x="640" y="192" width="6" height="28" />
-          <rect x="960" y="192" width="6" height="28" />
-          <rect x="1260" y="192" width="6" height="28" />
-          <circle cx="210" cy="200" r="20" />
-          <circle cx="262" cy="204" r="16" />
-          <circle cx="1090" cy="200" r="20" />
-          <circle cx="1142" cy="204" r="16" />
-          <rect x="0" y="210" width="1440" height="10" />
-        </g>
-        <!-- 遠くのフレアスタック。夕暮れの橙は、ロゴの橙 -->
-        <rect x="1122" y="62" width="5" height="140" fill="#fff" fill-opacity="0.34" />
-        <path d="M1124.5 30c8 10 10 18 3 28-3 4-9 4-12 0-6-8-2-18 9-28z" fill="#f3a340" />
-      </svg>
+    <section id="features" class="landing-section" aria-labelledby="features-title">
+      <div class="landing-section-heading"><h2 id="features-title">保全の記録が、ひとつの流れでつながる。</h2><p>設備から発注まで、保全の仕事で生まれる記録を順にたどれます。</p></div>
+      <ol class="landing-flow" aria-label="PlantKeeperで管理する保全業務の流れ">
+        <li v-for="step in flowSteps" :key="step.title">
+          <v-icon size="22" color="primary" aria-hidden="true">{{ step.icon }}</v-icon>
+          <strong>{{ step.title }}</strong>
+          <span>{{ step.note }}</span>
+        </li>
+      </ol>
+      <div class="landing-foundation-grid"><article v-for="item in foundations" :key="item.title"><v-icon size="24" color="primary" aria-hidden="true">{{ item.icon }}</v-icon><h3>{{ item.title }}</h3><p>{{ item.description }}</p></article></div>
+    </section>
 
-      <div class="pk-plana__inner">
-        <div class="pk-plana__figure">
-          <PlanaAvatar variant="full" alt="プラナ。ヘルメットをかぶり、タブレットを持った、PlantKeeperのAIアシスタントのキャラクター" />
-        </div>
-        <div class="pk-plana__body">
-          <h2 id="plana-title" class="pk-plana__title">プラナ <span class="pk-plana__badge">AI</span></h2>
-          <p class="pk-plana__tagline">過去の記録から、次の判断をサポート。</p>
-          <p class="pk-plana__lead">
-            PlantKeeperに蓄積された設備・点検・トラブルなどの記録をもとに、情報の整理や過去事例の検索、報告の下書き作成などをサポートします。
-          </p>
-          <PlanaConsultBar tone="scene" />
-          <p v-if="!authStore.isLoggedIn" class="pk-plana__note">プラナはログイン後に使えます。デモアカウントで、そのまま試せます。</p>
+    <!-- 2. プラナとは -->
+    <section id="plana" class="landing-plana" aria-labelledby="plana-title">
+      <div class="landing-plana-inner">
+        <figure class="landing-character">
+          <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
+        </figure>
+        <div>
+          <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
+          <h2 id="plana-title">プラナ</h2>
+          <p class="landing-plana-tagline">記録をもとに、現場の判断を支える。</p>
+          <p class="landing-plana-lead">PlantKeeperに蓄積された設備・計器・トラブルの記録をもとに、不具合報告の整理、過去の類似トラブルの検索、対応記録の整理を手伝います。判断するのは人です。</p>
+          <ul class="landing-principles"><li v-for="p in planaPrinciples" :key="p"><v-icon size="16" color="primary" aria-hidden="true">mdi-check</v-icon>{{ p }}</li></ul>
         </div>
       </div>
     </section>
 
-    <!-- 機能紹介 -->
-    <section class="px-4 px-sm-8 py-12 py-sm-16">
-      <v-container>
-        <div class="mb-10">
-          <h2 class="text-h4 font-weight-bold mb-2">主な機能</h2>
-          <p class="text-body-2 text-medium-emphasis">保全業務に必要な情報を、一つの流れで管理します。</p>
-        </div>
-        <ol class="pk-flow" aria-label="PlantKeeperで管理する保全業務の流れ">
-          <li v-for="step in flowSteps" :key="step.title" class="pk-flow__step">
-            <v-icon size="22" color="primary" aria-hidden="true">{{ step.icon }}</v-icon>
-            <strong class="pk-flow__name">{{ step.title }}</strong>
-            <span class="pk-flow__note">{{ step.note }}</span>
-          </li>
-        </ol>
-        <div class="pk-feature-rows">
-          <div v-for="group in featureGroups" :key="group.title" class="pk-feature-row">
-            <div class="pk-feature-row__text">
-              <div class="pk-feature-row__heading">
-                <PlanaAvatar v-if="group.key === 'ai'" :size="26" />
-                <v-icon v-else color="primary" size="22">{{ group.icon }}</v-icon>
-                <h3 class="text-h6 font-weight-bold">{{ group.title }}</h3>
-              </div>
-              <p class="text-body-2 text-medium-emphasis">{{ group.description }}</p>
-              <ul v-if="group.points" class="pk-feature-row__points">
-                <li v-for="point in group.points" :key="point">{{ point }}</li>
-              </ul>
-            </div>
-
-            <figure class="pk-shot pk-feature-row__shot">
-              <div class="pk-shot__frame" :class="{ 'pk-shot__frame--fit': group.fit }">
-                <img :src="group.shot" :alt="group.shotAlt" class="pk-shot__img" loading="lazy" />
-                <div class="pk-shot__fade" />
-              </div>
-              <figcaption class="pk-shot__caption">{{ group.shotCaption }}</figcaption>
-            </figure>
-          </div>
-        </div>
-      </v-container>
-    </section>
-
-    <!-- 権限ごとにできること -->
-    <section id="permissions" class="px-4 px-sm-8 py-12 py-sm-16 pk-permissions">
-      <v-container>
-        <div class="pk-permissions__intro mb-8">
-          <h2 class="text-h4 font-weight-bold mb-2">権限ごとに、できることが違います</h2>
-          <p class="text-body-2 text-medium-emphasis">
-            自社と協力会社で、見られる範囲も操作できる範囲も分かれます。デモアカウントは、この5つの権限に1人ずつ用意しています。
-          </p>
-        </div>
-        <PermissionMatrix />
-      </v-container>
-    </section>
-
-    <!-- 開発の背景 -->
-    <section class="px-4 px-sm-8 py-12 py-sm-16 pk-story">
-      <v-container>
-        <v-row justify="center">
-          <v-col cols="12" md="10" lg="8">
-            <h2 class="text-h4 font-weight-bold mb-10">なぜPlantKeeperを作ったのか</h2>
-
-            <ol class="pk-timeline">
-              <li class="pk-timeline__item">
-                <span class="pk-timeline__dot" />
-                <div class="pk-timeline__label pk-mono">計装保全員として10年</div>
-                <p class="text-body-1 text-medium-emphasis mb-4">
-                  石油プラントの現場で計器や自動制御機器の保守に携わってきました。
-                  その中でずっと感じていたのが、現場に根強く残る「非効率」でした。
-                </p>
-                <v-card variant="flat" border class="pa-6 mb-4" color="surface-variant">
-                  <ul class="pk-pain-list">
-                    <li v-for="point in painPoints" :key="point.text">
-                      <v-icon color="warning" class="mr-3">{{ point.icon }}</v-icon>
-                      <span class="text-body-2">{{ point.text }}</span>
-                    </li>
-                  </ul>
-                </v-card>
-                <p class="text-body-2 text-medium-emphasis">
-                  これらをすべて一度に解決するのは現実的ではないと考え、PlantKeeperでは
-                  <strong class="text-high-emphasis">点検記録のチェックリスト化と承認フローの簡略化</strong>、
-                  <strong class="text-high-emphasis">設備台帳・トラブル管理・資材管理の一元化</strong>にスコープを絞って実装しています。
-                  回路図面のバージョン管理や、紙資料をスキャンした画像の検索性改善は、今回は対象外としました。
-                </p>
-              </li>
-
-              <li class="pk-timeline__item">
-                <span class="pk-timeline__dot" />
-                <div class="pk-timeline__label pk-mono">小さな気づきから独学へ</div>
-                <p class="text-body-1 text-medium-emphasis">
-                  朝会・夕会で使う進捗確認表をExcelで使いやすく作り替えたのがきっかけで、「業務改善そのもの」に楽しさを見出し、
-                  独学でプログラミングを学び始めました。
-                </p>
-              </li>
-
-              <li class="pk-timeline__item">
-                <span class="pk-timeline__dot" />
-                <div class="pk-timeline__label pk-mono">エンジニアとしてのキャリア</div>
-                <p class="text-body-1 text-medium-emphasis">
-                  現場を離れてからは、電力会社・SaaS企業でWebエンジニアとして開発・チーム運営に携わってきました。
-                </p>
-              </li>
-
-              <li class="pk-timeline__item pk-timeline__item--last">
-                <span class="pk-timeline__dot pk-timeline__dot--accent" />
-                <div class="pk-timeline__label pk-mono">そして、PlantKeeperへ</div>
-                <p class="text-body-1 font-weight-medium mb-4">
-                  その原体験をもとに「現場が本当に使いたくなる保全システムとは何か」を考えながら設計したアプリケーションです。
-                  設備台帳・点検記録・トラブル管理・資材管理を紙とExcelから解放し、
-                  計装保全の実務で培った現場感覚をそのままシステム設計に落とし込みました。
-                </p>
-              </li>
-            </ol>
-          </v-col>
-        </v-row>
-      </v-container>
-    </section>
-
-    <!-- CTA -->
-    <section class="px-4 px-sm-8 py-12 py-sm-16">
-      <v-container>
-        <v-card color="ink" theme="dark" class="pa-8 pa-sm-12 text-center">
-          <h2 class="text-h4 font-weight-bold mb-3">今すぐ触って試せます</h2>
-          <p class="text-body-1 mb-6" style="color: rgba(255, 255, 255, 0.78)">
-            ログイン画面に用意されたデモアカウントをクリックするだけで、管理者権限のダッシュボードから全機能を確認いただけます。
-          </p>
-          <v-btn color="accent" size="x-large" class="px-8" @click="goToApp">
-            ログイン画面へ
-          </v-btn>
-        </v-card>
-      </v-container>
-    </section>
-
-    <!-- フッター -->
-    <v-footer class="d-flex flex-column py-6 px-4" color="ink" theme="dark">
-      <div class="d-flex flex-wrap ga-2 justify-center mb-4">
-        <span v-for="tech in techStack" :key="tech" class="pk-mono pk-tech-chip">{{ tech }}</span>
+    <!-- 3. 1件のトラブルでたどるプラナの仕事 -->
+    <section id="plana-work" class="landing-section" aria-labelledby="plana-work-title">
+      <div class="landing-section-heading">
+        <h2 id="plana-work-title">1件のトラブルで見る、プラナの仕事。</h2>
+        <p>流量計FT-301の指示が低い。気づいてから対応を記録するまでに、プラナが手伝う3つの場面です。<span class="landing-note-inline">架空のメモ・記録による表示例</span></p>
       </div>
-      <div class="text-caption text-grey-lighten-1 mb-1">Developed by Ryota Araya</div>
-      <v-btn
-        :href="GITHUB_URL"
-        target="_blank"
-        rel="noopener"
-        variant="text"
-        size="small"
-        prepend-icon="mdi-github"
-        color="grey-lighten-1"
-        class="mb-2"
-      >
-        GitHubでソースコードを見る
-      </v-btn>
-      <div class="text-caption text-grey-lighten-1">© {{ new Date().getFullYear() }} PlantKeeper</div>
-    </v-footer>
+      <ol class="landing-story-steps">
+        <li v-for="(step, index) in story" :key="step.key" class="landing-step" :data-task="step.key">
+          <div class="landing-step-marker" aria-hidden="true">{{ index + 1 }}</div>
+          <div class="landing-step-body">
+            <header class="landing-step-header">
+              <p class="landing-step-task">{{ step.task }}</p>
+              <h3>{{ step.scene }}</h3>
+              <p>{{ step.lead }}</p>
+            </header>
+            <div class="landing-comparison">
+              <div class="landing-input">
+                <h4>{{ step.input }}</h4>
+                <p>{{ step.memo }}</p>
+              </div>
+              <div>
+                <div v-if="step.routineChecks" class="pk-reference">
+                  <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器（流量伝送器）の一次点検の定型項目</h4>
+                  <p class="pk-reference-meta">参考。計器種別ごとにアプリが確定的に表示</p>
+                  <ul><li v-for="c in step.routineChecks" :key="c">{{ c }}</li></ul>
+                </div>
+                <div class="pk-plana-card">
+                  <div class="pk-plana-card-body">
+                    <PlanaNote>{{ step.planaNote }}</PlanaNote>
+                    <div class="pk-plana-card-title-row">
+                      <p class="pk-plana-card-title">{{ step.title }}</p>
+                      <span class="pk-plana-card-meta">{{ step.meta }}</span>
+                    </div>
+                    <p v-if="step.detail">{{ step.detail }}</p>
+                    <p v-if="step.similarity"><strong>似ている点:</strong> {{ step.similarity }}</p>
+                    <p v-if="step.howHandled"><strong>過去の対応:</strong> {{ step.howHandled }}</p>
+                    <p v-if="step.usedMaterials"><strong>使用資材:</strong> {{ step.usedMaterials }}</p>
+                    <div v-if="step.possibleCauses || step.checkPoint" class="pk-plana-card-grid" :class="{ 'pk-plana-card-grid-single': !step.possibleCauses || !step.checkPoint }">
+                      <div v-if="step.possibleCauses">
+                        <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
+                        <ul><li v-for="c in step.possibleCauses" :key="c">{{ c }}</li></ul>
+                      </div>
+                      <div v-if="step.checkPoint">
+                        <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
+                        <p>{{ step.checkPoint }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="pk-plana-card-caption">{{ step.caption }}</p>
+                </div>
+              </div>
+            </div>
+            <footer class="landing-step-footer">
+              <p>{{ step.result }}</p>
+              <v-btn :to="step.to" variant="outlined" color="primary">{{ step.task }}を試す</v-btn>
+            </footer>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
+      <h2 id="try-title">体験を始めるには</h2>
+      <ol><li>ログイン画面でデモアカウントを選びます。3つの仕事を試すなら、自社の「一般」が使えます。</li><li>仕事を選び、デモデータの設備やトラブルを指定して、自分でメモを入力します。上の表示例は自動入力されません。</li><li>AIの提案を確認します。記録に反映・保存するかは、自分で決められます。</li></ol>
+      <p>AIが無効、または1日の利用上限に達している場合は、プラナによる整理・検索は使えません。通常の記録入力や過去の記録の閲覧は利用できます。利用状況はログイン後に確認できます。</p>
+    </section>
+
+    <section id="permissions" class="landing-section" aria-labelledby="permission-title">
+      <div class="landing-section-heading"><h2 id="permission-title">自社も協力会社も、同じ記録で。</h2><p>所属と権限に合わせて、見られる情報・できる操作を分けています。デモアカウントは5つの権限に1人ずつ用意しています。</p></div>
+      <p class="landing-permissions-summary">不具合報告の整理・類似トラブルの検索は、5種類すべてのデモ権限で利用できます。対応記録の整理は、協力会社の「技能員」を除く4種類で利用できます。</p>
+      <details class="landing-permissions"><summary>業務機能の詳しい権限を見る</summary><PermissionMatrix /></details>
+    </section>
+    <section class="landing-story landing-section">
+      <div><h2>計装保全の現場から<br />生まれたPlantKeeper。</h2></div>
+      <div><p>石油プラントの計装保全に10年間携わった経験から、紙やExcelに分かれていた情報をつなぐために作りました。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
+    </section>
+    <section class="landing-section landing-final" aria-labelledby="final-title">
+      <div><h2 id="final-title">デモデータで、保全の流れを試す。</h2><p>設備やトラブルを選び、メモを入力するところから始められます。</p></div>
+      <v-btn to="/plana" color="primary" size="large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで始める' }}</v-btn>
+    </section>
+    <footer class="landing-footer"><span>PlantKeeper</span><span>Developed by Ryota Araya</span></footer>
   </v-main>
 </template>
 
 <style scoped>
-.pk-navbrand {
-  font-family: var(--pk-font-display);
-  font-weight: 700;
-  font-size: 1.05rem;
-}
+.landing { background: #fff; color: var(--pk-ink); }
+.landing-brand { font-weight: 700; font-family: var(--pk-font-display); }
+.landing-caption { font-size: .75rem; line-height: 1.9; color: var(--pk-muted); margin-top: 16px; }
 
-.pk-hero {
-  position: relative;
-  min-height: 560px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  background: var(--pk-mist);
-  padding: clamp(3rem, 7vw, 6rem) 0;
-}
+/* ヒーロー: 何のシステムかを先に言う */
+.landing-hero { background: var(--pk-mist); }
+.landing-hero-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 1.1fr; gap: 56px; align-items: center; padding: 64px 32px; }
+.landing-hero-copy { min-width: 0; }
+.landing-hero-brand { font-family: var(--pk-font-display); font-weight: 900; color: var(--pk-plana-navy); font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; margin-bottom: 16px; }
+.landing-hero-tagline { font-family: var(--pk-font-display); font-weight: 700; font-size: clamp(1.25rem, 2.6vw, 1.75rem); line-height: 1.5; word-break: auto-phrase; }
+.landing-lead { font-size: 1rem; line-height: 1.9; margin: 16px 0 24px; color: var(--pk-muted); word-break: auto-phrase; }
+.landing-hero-plana { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-bottom: 28px; padding: 6px 12px 6px 6px; border: 1px solid var(--pk-line); border-radius: 12px; background: #fff; color: var(--pk-muted); font-size: .8125rem; line-height: 1.5; text-decoration: none; transition: background-color .15s, border-color .15s; }
+.landing-hero-plana:hover { background: var(--pk-soft-blue); border-color: var(--pk-steel); }
+.landing-hero-plana:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 3px; }
+.landing-hero-plana span { min-width: 0; word-break: auto-phrase; }
+.landing-hero-plana strong { display: block; color: var(--pk-plana-navy); font-weight: 700; }
+.landing-hero-shot { margin: 0; min-width: 0; }
+.landing-hero-shot img { display: block; width: 100%; height: auto; border: 1px solid var(--pk-line); border-radius: 12px; box-shadow: 0 16px 40px -16px rgba(35, 100, 196, .25); }
+.landing-hero-shot figcaption { font-size: .75rem; color: var(--pk-muted); line-height: 1.8; margin-top: 12px; }
 
-.pk-hero__content {
-  position: relative;
-  z-index: 1;
-  max-width: 1240px;
-  width: 100%;
-  padding-left: clamp(1.5rem, 7vw, 6.5rem) !important;
-  padding-right: clamp(1.5rem, 6vw, 3rem) !important;
-}
-
-.pk-hero__layout {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(2rem, 5vw, 4rem);
-}
-
-.pk-hero__text {
-  flex: 1 1 480px;
-  max-width: 560px;
-}
-
-.pk-hero__shot {
-  flex: 1 1 520px;
-  width: 100%;
-}
-
-.pk-hero__shot-img {
-  width: 100%;
-  display: block;
-  border: 1px solid var(--pk-line);
-  border-radius: 16px;
-  box-shadow: 0 16px 40px -16px rgba(35, 100, 196, 0.2);
-}
-
-@media (max-width: 900px) {
-  .pk-hero__layout {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pk-hero__text,
-  .pk-hero__shot {
-    flex: 0 0 auto;
-    max-width: none;
-  }
-}
-
-.pk-hero__brand {
-  font-family: var(--pk-font-display);
-  font-weight: 900;
-  color: var(--pk-plana-navy);
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1;
-  letter-spacing: -0.01em;
-  margin-bottom: 0.75rem;
-}
-
-.pk-hero__tagline {
-  font-family: var(--pk-font-display);
-  font-weight: 500;
-  font-size: clamp(1.05rem, 2.6vw, 1.6rem);
-  color: var(--pk-ink);
-  margin-bottom: 0.6rem;
-}
-
-.pk-hero__lead {
-  max-width: 32em;
-  margin-bottom: 1.25rem;
-  font-size: 0.9rem;
-  line-height: 1.8;
-  color: var(--pk-muted);
-  text-wrap: pretty;
-  word-break: auto-phrase;
-}
-
-/* プラナの帯への入口。業務画面と同じ淡いブルーでつなぐ */
-.pk-hero__ai {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  max-width: 100%;
-  margin-bottom: 2rem;
-  padding: 0.4rem 0.75rem 0.4rem 0.4rem;
-  font: inherit;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  text-align: left;
-  color: var(--pk-muted);
-  background: #fff;
-  border: 1px solid var(--pk-line);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.pk-hero__ai:hover {
-  background: var(--pk-soft-blue);
-  border-color: var(--pk-steel);
-}
-
-.pk-hero__ai:focus-visible {
-  outline: 2px solid var(--pk-steel);
-  outline-offset: 3px;
-}
-
-.pk-hero__ai-text {
-  min-width: 0;
-  word-break: auto-phrase;
-}
-
-.pk-hero__ai-text strong {
-  margin-right: 0.6em;
-  font-weight: 700;
-  color: var(--pk-plana-navy);
-}
-
-.pk-hero__ai-chevron {
-  flex: 0 0 auto;
-  opacity: 0.7;
-}
-
-.pk-hero__note {
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: var(--pk-muted);
-}
-
-.pk-plana {
-  position: relative;
-  overflow: hidden;
-  color: var(--pk-plana-navy);
-  background: #dfeefd;
-}
-
-.pk-plana__skyline {
-  position: absolute;
-  inset: auto 0 0 0;
-  width: 100%;
-  height: min(46%, 190px);
-  pointer-events: none;
-  opacity: 0.2;
-}
-
-.pk-plana__inner {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, clamp(220px, 32%, 380px)) minmax(0, 1fr);
-  align-items: end;
-  column-gap: clamp(1.5rem, 4vw, 3.5rem);
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 2.5rem clamp(1.5rem, 6vw, 3rem) 0 clamp(1.5rem, 7vw, 6.5rem);
-}
-
-/* キャラクターは帯の下端で切れる（元の画像が腰のあたりまでなので、そのまま立たせる） */
-.pk-plana__figure {
-  align-self: end;
-}
-
-.pk-plana__body {
-  align-self: center;
-  max-width: 640px;
-  padding-bottom: 3rem;
-}
-
-.pk-plana__title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0 0 0.5rem;
-  font-family: var(--pk-font-display);
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: 0.02em;
-}
-
-.pk-plana__badge {
-  padding: 0.05rem 0.7rem;
-  font-size: 0.4em;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: var(--pk-plana-navy);
-  background: var(--pk-plana-glow);
-  border-radius: 999px;
-}
-
-.pk-plana__tagline {
-  margin: 0 0 0.75rem;
-  font-family: var(--pk-font-display);
-  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
-  font-weight: 700;
-}
-
-.pk-plana__lead {
-  max-width: 34em;
-  margin: 0 0 1.5rem;
-  font-size: 0.9rem;
-  line-height: 1.8;
-  color: var(--pk-muted);
-  text-wrap: pretty;
-  word-break: auto-phrase;
-}
-
-.pk-plana__note {
-  margin: 0.75rem 0 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--pk-plana-navy);
-  word-break: auto-phrase;
-}
-
-@media (max-width: 720px) {
-  .pk-plana__inner {
-    grid-template-columns: minmax(0, 1fr);
-    padding-top: 1.75rem;
-    padding-right: 1.5rem;
-  }
-
-  .pk-plana__figure {
-    width: min(58%, 200px);
-    margin-bottom: -0.75rem;
-  }
-
-  .pk-plana__body {
-    padding-bottom: 3rem;
-  }
-}
+.landing-section { max-width: 1200px; margin-inline: auto; padding: 64px 32px; }
+.landing-section-heading { margin-bottom: 32px; }
+.landing-section h2 { font-size: 1.875rem; line-height: 1.5; text-wrap: balance; word-break: auto-phrase; }
+.landing-section-heading p { font-size: .9375rem; color: var(--pk-muted); margin-top: 12px; line-height: 1.9; }
+.landing-note-inline { display: inline-block; margin-left: 8px; padding: 0 8px; font-size: .75rem; border: 1px solid var(--pk-line); border-radius: 999px; }
 
 /* 設備から発注までの流れ。区切り線の上の山形が、次の業務へつながることを示す */
-.pk-flow {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  margin: 0 0 2.5rem;
-  padding: 0;
-  list-style: none;
-  background: #fff;
-  border: 1px solid var(--pk-line);
-}
+.landing-flow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin: 0 0 48px; padding: 0; list-style: none; border: 1px solid var(--pk-line); border-radius: 12px; }
+.landing-flow li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 16px; border-left: 1px solid var(--pk-line); }
+.landing-flow li:first-child { border-left: none; }
+.landing-flow li:not(:last-child)::after { content: ''; position: absolute; top: 20px; right: -6px; z-index: 1; width: 11px; height: 11px; background: #fff; border-top: 1px solid var(--pk-steel); border-right: 1px solid var(--pk-steel); transform: rotate(45deg); }
+.landing-flow strong { font-family: var(--pk-font-display); font-size: .9375rem; }
+.landing-flow span { font-size: .75rem; line-height: 1.55; color: var(--pk-muted); word-break: auto-phrase; }
+.landing-foundation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.landing-foundation-grid h3 { font-size: 1.125rem; margin: 16px 0 12px; }
+.landing-foundation-grid p { font-size: .875rem; line-height: 1.9; color: var(--pk-muted); }
 
-.pk-flow__step {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.9rem 0.85rem 1rem;
-  border-left: 1px solid var(--pk-line);
-}
+/* プラナとは */
+.landing-plana { background: #dfeefd; overflow: hidden; }
+.landing-plana-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 56px; align-items: end; padding: 40px 32px 0; }
+.landing-plana-inner > div { align-self: center; padding-bottom: 40px; }
+.landing-character { margin: 0; }
+.landing-character :deep(.pk-plana-full) { display: block; width: 100%; max-width: 320px; transform: scaleX(-1); }
+.landing-eyebrow { font-size: .8125rem; color: var(--pk-steel-dark); font-weight: 600; }
+.landing-plana h2 { font-family: var(--pk-font-display); font-size: clamp(2.25rem, 5vw, 3.25rem); font-weight: 900; color: var(--pk-plana-navy); line-height: 1.2; margin-top: 4px; }
+.landing-plana-tagline { font-family: var(--pk-font-display); font-size: 1.25rem; font-weight: 700; color: var(--pk-plana-navy); margin-top: 8px; }
+.landing-plana-lead { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 12px; max-width: 36em; word-break: auto-phrase; }
+.landing-principles { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 8px; }
+.landing-principles li { display: flex; align-items: flex-start; gap: 8px; font-size: .875rem; line-height: 1.7; }
+.landing-principles .v-icon { margin-top: 3px; }
 
-.pk-flow__step:first-child {
-  border-left: none;
-}
+/* 1件のトラブルの流れ。番号の縦線で、3つの場面が続いていることを示す */
+.landing-story-steps { list-style: none; margin: 0; padding: 0; }
+.landing-step { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 24px; position: relative; padding-bottom: 48px; }
+.landing-step:not(:last-child)::before { content: ''; position: absolute; left: 19px; top: 44px; bottom: 4px; width: 2px; background: var(--pk-line); }
+.landing-step:last-child { padding-bottom: 0; }
+.landing-step-marker { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--pk-steel); color: #fff; font-weight: 700; font-family: var(--pk-font-display); }
+.landing-step-body { min-width: 0; }
+.landing-step-header { margin-bottom: 20px; }
+.landing-step-task { font-size: .75rem; font-weight: 700; color: var(--pk-steel); }
+.landing-step-header h3 { font-size: 1.375rem; margin: 2px 0 6px; }
+.landing-step-header p:last-child { font-size: .9375rem; color: var(--pk-muted); line-height: 1.8; }
+.landing-comparison { display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px; align-items: start; }
+.landing-input { background: var(--pk-mist); border-radius: 8px; padding: 20px 24px; }
+.landing-input h4 { font-size: .8125rem; color: var(--pk-muted); margin-bottom: 12px; }
+.landing-input p { white-space: pre-line; font-size: 1.0625rem; line-height: 2; }
+.landing-step-footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--pk-line); }
+.landing-step-footer p { font-size: .875rem; line-height: 1.8; }
 
-.pk-flow__step:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  top: 1.3rem;
-  right: -6px;
-  z-index: 1;
-  width: 11px;
-  height: 11px;
-  background: #fff;
-  border-top: 1px solid var(--pk-steel);
-  border-right: 1px solid var(--pk-steel);
-  transform: rotate(45deg);
-}
+/* 参考知識（計器種別ごとの一次点検の定型項目）。プラナの提案とは別の見え方にする：
+   ニュートラルな鋼色のアクセント罫＋薄い背景で「AIの発言ではない」ことを色で示す */
+.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 16px 20px; margin-bottom: 20px; }
+.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
+.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 12px 24px; }
+.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .65em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
 
-.pk-flow__name {
-  font-family: var(--pk-font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-}
+/* プラナの提案は1枚のカードにまとめ、「プラナ」を名乗るのは見出し1箇所だけにする */
+.pk-plana-card { border: 1px solid var(--pk-steel); border-radius: 12px; overflow: hidden; background: #fff; }
+.pk-plana-card-body { padding: 20px; }
+.pk-plana-card-body :deep(.pk-plana-note) { margin-bottom: 16px; }
+.pk-plana-card-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.pk-plana-card-title { font-size: 1.125rem; font-weight: 700; color: var(--pk-ink); }
+.pk-plana-card-meta { font-size: .75rem; color: var(--pk-muted); }
+.pk-plana-card-body > p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 8px; }
+.pk-plana-card-body > p strong { color: var(--pk-ink); font-weight: 700; }
+.pk-plana-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--pk-line); }
+.pk-plana-card-grid-single { grid-template-columns: 1fr; }
+.pk-plana-card-grid h5 { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--pk-steel); margin-bottom: 8px; }
+.pk-plana-card-grid ul { margin: 0; padding-left: 18px; }
+.pk-plana-card-grid li, .pk-plana-card-grid p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-plana-card-caption { padding: 0 20px 16px; font-size: .6875rem; color: var(--pk-muted); }
 
-.pk-flow__note {
-  font-size: 0.75rem;
-  line-height: 1.55;
-  color: #4a575c;
-  word-break: auto-phrase;
-}
-
-@media (max-width: 900px) {
-  .pk-flow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pk-flow__step {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.7rem 1rem;
-    border-left: none;
-    border-top: 1px solid var(--pk-line);
-  }
-
-  .pk-flow__step:first-child {
-    border-top: none;
-  }
-
-  .pk-flow__step .v-icon {
-    align-self: center;
-  }
-
-  .pk-flow__name {
-    flex: 0 0 4.5em;
-  }
-
-  .pk-flow__step:not(:last-child)::after {
-    top: auto;
-    right: auto;
-    bottom: -6px;
-    left: 1.5rem;
-    transform: rotate(135deg);
-  }
-}
-
-.pk-feature-rows {
-  display: flex;
-  flex-direction: column;
-}
-
-.pk-feature-row {
-  scroll-margin-top: 5rem;
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(2rem, 5vw, 4rem);
-  padding: 2.5rem 0;
-  border-top: 1px solid var(--pk-line);
-}
-
-.pk-feature-row:first-child {
-  padding-top: 0;
-  border-top: none;
-}
-
-.pk-feature-row__text {
-  flex: 0 0 300px;
-  max-width: 300px;
-  word-break: auto-phrase;
-}
-
-.pk-feature-row__heading {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.75rem;
-}
-
-.pk-feature-row__shot {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.pk-feature-row__points {
-  margin: 0.9rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pk-feature-row__points li {
-  padding: 0.4rem 0;
-  font-size: 0.8125rem;
-  line-height: 1.7;
-  color: #4a575c;
-  border-top: 1px solid var(--pk-line);
-}
+.landing-guide { border-top: 1px solid var(--pk-line); padding-block: 32px 48px; scroll-margin-top: 80px; }
+.landing-guide h2 { font-size: 1.25rem; }
+.landing-guide ol { padding-left: 24px; margin: 20px 0; font-size: .875rem; line-height: 2; }
+.landing-guide > p, .landing-permissions-summary { color: var(--pk-muted); font-size: .875rem; line-height: 1.9; max-width: 70em; }
+.landing-permissions { margin-top: 24px; border-block: 1px solid var(--pk-line); }
+.landing-permissions summary { cursor: pointer; padding: 20px 0; color: var(--pk-steel); font-weight: 600; }
+.landing-permissions[open] { padding-bottom: 24px; }
+.landing-final { border-top: 1px solid var(--pk-line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.landing-final h2 { font-size: 1.5rem; }
+.landing-final p { margin-top: 12px; color: var(--pk-muted); font-size: .875rem; }
+.landing-story { display: grid; grid-template-columns: 1fr 1.5fr; gap: 48px; border-top: 1px solid var(--pk-line); }
+.landing-story p { color: var(--pk-muted); line-height: 2; margin-bottom: 16px; font-size: .9375rem; }
+.landing-story a { color: var(--pk-steel); font-size: .875rem; }
+.landing-footer { border-top: 1px solid var(--pk-line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; font-size: .75rem; color: var(--pk-muted); }
+#plana, #plana-work, #features { scroll-margin-top: 64px; }
 
 @media (max-width: 900px) {
-  .pk-feature-row {
-    flex-direction: column;
-  }
-
-  .pk-feature-row__text {
-    flex: 0 0 auto;
-    max-width: none;
-  }
+  .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; }
+  .landing-flow { grid-template-columns: 1fr; }
+  .landing-flow li { flex-direction: row; align-items: baseline; gap: 12px; padding: 10px 16px; border-left: none; border-top: 1px solid var(--pk-line); }
+  .landing-flow li:first-child { border-top: none; }
+  .landing-flow .v-icon { align-self: center; }
+  .landing-flow strong { flex: 0 0 4.5em; }
+  .landing-flow li:not(:last-child)::after { top: auto; right: auto; bottom: -6px; left: 24px; transform: rotate(135deg); }
+  .landing-comparison { grid-template-columns: 1fr; gap: 20px; }
 }
-
-.pk-pain-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+@media (max-width: 700px) {
+  .landing-hero-inner { padding: 40px 16px; }
+  .landing-section { padding: 40px 16px; }
+  .landing-plana-inner { grid-template-columns: 1fr; gap: 16px; padding: 32px 16px 0; }
+  .landing-character { order: 2; }
+  .landing-character :deep(.pk-plana-full) { width: 200px; margin-inline: auto; }
+  .landing-plana-inner > div { padding-bottom: 0; }
+  .landing-foundation-grid, .landing-story, .pk-plana-card-grid { grid-template-columns: 1fr; gap: 24px; }
+  .landing-step { grid-template-columns: 1fr; gap: 12px; }
+  .landing-step:not(:last-child)::before { display: none; }
+  .landing-step-marker { width: 32px; height: 32px; }
+  .landing-step-footer { align-items: start; flex-direction: column; }
 }
-
-.pk-pain-list li {
-  display: flex;
-  align-items: flex-start;
-  padding: 0.25rem 0;
-}
-
-.pk-shot {
-  margin: 0;
-  border: 1px solid var(--pk-line);
-  background: #fff;
-}
-
-.pk-shot__frame {
-  position: relative;
-  height: clamp(200px, 24vw, 320px);
-  overflow: hidden;
-  background: var(--pk-mist);
-}
-
-.pk-shot__img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* 切り出した画面は、上だけを見せず、全体を見せる */
-.pk-shot__frame--fit {
-  height: auto;
-}
-
-.pk-shot__frame--fit .pk-shot__img {
-  position: static;
-}
-
-.pk-shot__frame--fit .pk-shot__fade {
-  display: none;
-}
-
-.pk-shot__fade {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 2.5rem;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff);
-}
-
-.pk-shot__caption {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.7rem;
-  color: #8a9296;
-  border-top: 1px solid var(--pk-line);
-}
-
-.pk-permissions {
-  border-top: 1px solid var(--pk-line);
-}
-
-.pk-permissions__intro {
-  max-width: 640px;
-}
-
-.pk-permissions__intro p {
-  text-wrap: pretty;
-}
-
-.pk-story {
-  background: var(--pk-mist);
-}
-
-.pk-timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-
-.pk-timeline::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  bottom: 6px;
-  width: 1px;
-  background: var(--pk-line);
-}
-
-.pk-timeline__item {
-  position: relative;
-  padding-left: 2.25rem;
-  padding-bottom: 3rem;
-}
-
-.pk-timeline__item--last {
-  padding-bottom: 0;
-}
-
-.pk-timeline__dot {
-  position: absolute;
-  left: 0;
-  top: 6px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--pk-mist);
-  border: 2px solid var(--pk-steel);
-}
-
-.pk-timeline__dot--accent {
-  border-color: var(--pk-amber);
-}
-
-.pk-timeline__label {
-  font-size: 0.8rem;
-  color: var(--pk-steel);
-  margin-bottom: 0.5rem;
-}
-
-.pk-tech-chip {
-  font-size: 0.75rem;
-  color: #cfd6d8;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  padding: 0.25rem 0.6rem;
-}
-
 </style>

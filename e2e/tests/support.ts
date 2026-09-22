@@ -30,7 +30,7 @@ export async function login(page: Page, account: { email: string; password: stri
   await page.getByLabel('メールアドレス').fill(account.email)
   await page.getByLabel('パスワード').fill(account.password)
   await page.getByRole('button', { name: 'ログイン', exact: true }).click()
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(/\/plana$/)
 }
 
 // Vuetifyのv-selectは入力要素が別要素に覆われていて直接クリックできないため、入力欄（.v-field）を操作して先頭の選択肢を選ぶ

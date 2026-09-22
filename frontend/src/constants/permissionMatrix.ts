@@ -45,6 +45,14 @@ export const MATRIX_GROUPS: MatrixGroup[] = [
     ],
   },
   {
+    title: 'AI支援（プラナ）',
+    rows: [
+      { label: '不具合報告を整理する', allowed: (p) => p.canInputInspection },
+      { label: '類似トラブルを検索する', allowed: (p) => p.canViewRecords },
+      { label: '対応記録を整理する', allowed: (p) => p.canCreateTroubleResponse },
+    ],
+  },
+  {
     title: '資材',
     rows: [
       { label: '資材を見る', allowed: (p) => p.canViewMaterials },

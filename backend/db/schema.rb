@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_21_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_22_111025) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -262,6 +262,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_21_090000) do
     t.string "tolerance_basis"
     t.boolean "telemetry", default: false, null: false
     t.boolean "custody_transfer", default: false, null: false
+    t.string "seal_fluid"
     t.index ["equipment_id", "tag_number"], name: "index_instruments_on_equipment_id_and_tag_number", unique: true
     t.index ["equipment_id"], name: "index_instruments_on_equipment_id"
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"

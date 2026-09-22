@@ -49,6 +49,9 @@ export interface Instrument {
   line_class_id: number | null
   location: string
   notes: string | null
+  seal_fluid?: string | null
+  // 計器種別ごとの一次点検の定型項目（参考。InstrumentTroubleshootingCatalog）。DefectAiAssistで表示する
+  troubleshooting_checks?: string[]
   // 校正の条件（数値はAPIから文字列で返る）。5点校正できるのは、範囲と許容差が設定済みの計器
   range_lower?: string | number | null
   range_upper?: string | number | null
@@ -572,6 +575,37 @@ export interface AiSimilarTroubles {
   // 比べた過去のトラブルの件数（0のときはAIを呼んでいない）
   candidates_count: number
   remaining_today: number
+}
+
+export interface DashboardScope {
+  siteId: number | null
+  departmentId: number | null
+}
+
+export interface DepartmentTreeNode {
+  id: number
+  name: string
+  level: string
+  children: DepartmentTreeNode[]
+}
+
+export interface DashboardSummary {
+  scope: { site_name: string | null; department_name: string | null }
+  troubles: { open: number; in_progress: number; critical: number }
+  inspections: { pending_approval: number }
+  maintenances: {
+    planned: number
+    in_progress: number
+    upcoming_count: number
+    upcoming: {
+      id: number
+      title: string
+      status: string
+      planned_start_on: string
+      planned_end_on: string | null
+      equipments: { id: number; name: string }[]
+    }[]
+  }
 }
 
 export interface AiResponseDraft {

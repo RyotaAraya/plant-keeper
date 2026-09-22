@@ -1,45 +1,173 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, login, ACCOUNTS, apiBaseUrl, selectFirstOption, requireFakeAi, openFirstTrouble } from './support'
+import type { Page } from '@playwright/test'
 
-// プラナ（AIアシスタント）の入口。AIは呼ばない（このページが呼ぶのは GET /ai/status だけ）ので、
-// バックエンドのAIが fake でも本物でも無効でも、同じように実行できる
-test('ヘッダーのプラナから専用ページを開くと、できること3つが、使う場所への入口つきで並ぶ', async ({ page }) => {
+async function submitLogin(page: Page) {
+  await page.getByLabel('メールアドレス').fill(ACCOUNTS.member.email)
+  await page.getByLabel('パスワード').fill(ACCOUNTS.member.password)
+  await page.getByRole('button', { name: 'ログイン', exact: true }).click()
+}
+
+test('ログインするとプラナの作業場が開き、初期表示ではAIを呼ばない', async ({ page }) => {
+  const calls: string[] = []
+  page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/ai/')) calls.push(r.url()) })
   await login(page, ACCOUNTS.member)
-
-  await page.getByTestId('plana-call').click()
-  await expect(page).toHaveURL(/\/plana$/)
-  await expect(page.getByRole('heading', { level: 1, name: 'プラナ AI' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'プラナでできること' })).toBeVisible()
-  await expect(page.getByTestId('plana-capability')).toHaveCount(3)
-  await expect(page.getByRole('heading', { name: '不具合報告の下書き' })).toBeVisible()
-
-  // 各機能は、使う画面へ案内する（プラナは各画面の中で呼び出す）
-  await page.getByRole('link', { name: '点検を入力する' }).click()
-  await expect(page).toHaveURL(/\/inspections\/new$/)
+  await expect(page.getByRole('heading', { level: 1, name: '仕事を始める' })).toBeVisible()
+  await expect(page.getByTestId('plana-task')).toHaveCount(3)
+  await expect(page.getByLabel('いま起きている症状')).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  expect(calls).toEqual([])
 })
 
-test('相談欄に入れた文は、専用ページで「いただいた相談」として表示され、まだ答えられないことを伝える', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
-  await page.goto('/plana')
-
-  await expect(page.getByTestId('plana-question')).toHaveCount(0)
-  await page.getByLabel('プラナに相談する').fill('PT-100の過去のトラブルを教えてください')
-  await page.getByRole('button', { name: '相談する' }).click()
-
-  await expect(page).toHaveURL(/\/plana\?q=/)
-  const question = page.getByTestId('plana-question')
-  await expect(question).toContainText('PT-100の過去のトラブルを教えてください')
-  await expect(question).toContainText('文章での質問への回答は、まだ用意できていません')
-})
-
-test('ログイン済みでトップページから相談すると、専用ページに移って相談内容が出る', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
+test('公開トップで選んだ仕事を、通常ログイン後に引き継ぐ', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('link', { name: '対応記録の整理を試す' }).click()
+  await expect(page).toHaveURL(/\/login\?redirect=/)
+  await submitLogin(page)
+  await expect(page).toHaveURL(/\/plana\?task=response-draft$/)
+  await expect(page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true })).toBeVisible()
+})
 
-  const plana = page.locator('#plana')
-  await expect(plana).not.toContainText('プラナはログイン後に使えます')
-  await plana.getByLabel('プラナに相談する').fill('点検結果の傾向を知りたい')
-  await plana.getByRole('button', { name: '相談する' }).click()
+test('デモログインでも目的を引き継ぎ、技能員には対応記録の入口を出さない', async ({ page }) => {
+  await page.goto('/plana?task=response-draft')
+  await page.locator('.pk-demo-item').filter({ hasText: '技能員' }).click()
+  await expect(page.getByText('この権限では対応記録を作成できません。', { exact: false })).toBeVisible()
+  await expect(page.getByTestId('plana-task')).toHaveCount(2)
+  await expect(page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toHaveCount(0)
+})
 
-  await expect(page).toHaveURL(/\/plana\?q=/)
-  await expect(page.getByTestId('plana-question')).toContainText('点検結果の傾向を知りたい')
+test('外部URLや存在しない画面を認証後の復帰先に使わない', async ({ page }) => {
+  await page.goto('/login?redirect=https%3A%2F%2Fexample.com')
+  await submitLogin(page)
+  await expect(page).toHaveURL(/\/plana$/)
+  for (const destination of ['//example.com', '/login', '/not-a-route', '/\\example.com']) {
+    await page.goto(`/login?redirect=${encodeURIComponent(destination)}`)
+    await expect(page).toHaveURL(/\/plana$/)
+  }
+})
+
+test('期限切れのトークンでログイン画面を開いても復帰先を保ってログインできる', async ({ page }) => {
+  await page.goto('/vite.svg')
+  await page.evaluate(() => localStorage.setItem('jwt', 'expired.token.value'))
+  await page.goto('/login?redirect=%2Fplana%3Ftask%3Ddefect-draft')
+  await expect(page.getByLabel('メールアドレス')).toBeVisible()
+  await submitLogin(page)
+  await expect(page).toHaveURL(/\/plana\?task=defect-draft$/)
+})
+
+test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合欄から始める', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
+  await selectFirstOption(page, '対象の設備')
+  await selectFirstOption(page, '対象の計器（任意）')
+  const selectedTag = await page.getByRole('combobox', { name: '対象の計器（任意）' }).inputValue()
+  await page.getByRole('button', { name: '不具合の記録を始める' }).click()
+  await expect(page).toHaveURL(/\/inspections\/new\?plana=defect-draft/)
+  await expect(page.getByTestId('from-plana')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toBeChecked()
+  await expect(page.getByRole('combobox', { name: '計器（任意）', exact: true })).toHaveValue(selectedTag)
+  await expect(page.getByLabel('トラブルタイトル')).toBeVisible()
+})
+
+test('協力会社はURLで他拠点の設備を指定しても点検対象にできない', async ({ page }) => {
+  await login(page, { email: 'honda@example.com', password: 'password' })
+  const otherSiteEquipmentId = await page.evaluate(async (apiUrl) => {
+    const token = localStorage.getItem('jwt')
+    const current = await fetch(`${apiUrl}/current_user`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json())
+    const equipments = await fetch(`${apiUrl}/equipments?per_page=1000`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json())
+    return equipments.data.find((equipment: { id: number; site_id: number }) => equipment.site_id !== current.user.site_id)?.id
+  }, apiBaseUrl())
+  expect(otherSiteEquipmentId).toEqual(expect.any(Number))
+
+  await page.goto(`/inspections/new?plana=defect-draft&equipment_id=${otherSiteEquipmentId}`)
+  await expect(page.getByText('所属拠点の設備を選んでください。')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: '設備 *' })).toHaveValue('')
+  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toHaveCount(0)
+})
+
+test('トラブルを探して対応記録の入力を直接開ける', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.getByTestId('plana-task').filter({ hasText: '対応記録の整理' }).click()
+  await page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true }).fill('FT-301')
+  await page.getByRole('button', { name: '検索', exact: true }).click()
+  await page.locator('.plana-records a').first().click()
+  await expect(page).toHaveURL(/\/troubles\/\d+\?plana=response-draft/)
+  await expect(page.getByRole('dialog', { name: '対応記録追加' })).toBeVisible()
+  await expect(page.getByLabel('対応内容 *')).toHaveValue('')
+  await page.getByRole('button', { name: 'キャンセル', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('技能員が対応記録の直接URLを開いてもダイアログは開かない', async ({ page }) => {
+  await login(page, { email: 'honda@example.com', password: 'password' })
+  await openFirstTrouble(page)
+  await expect(page).toHaveURL(/\/troubles\/\d+$/)
+  await page.goto(`${page.url()}?plana=response-draft`)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('プラナの作業場で類似事例を検索し、メモを変えると古い結果を消す', async ({ page }) => {
+  const status = page.waitForResponse((r) => r.url().endsWith('/ai/status'))
+  await login(page, ACCOUNTS.member)
+  requireFakeAi((await (await status).json()).data.provider)
+  await selectFirstOption(page, '対象の設備')
+  await page.getByLabel('いま起きている症状').fill('流量指示が低い。導圧管のつまりが疑われる。')
+  await page.getByTestId('plana-search').click()
+  await expect(page.getByTestId('ai-similar-result')).toBeVisible()
+  await expect(page.getByLabel('いま起きている症状')).toHaveValue('流量指示が低い。導圧管のつまりが疑われる。')
+  await page.getByLabel('いま起きている症状').fill('温度の指示が高い')
+  await expect(page.getByTestId('ai-similar-result')).toHaveCount(0)
+})
+
+test('AI無効でもメモと対象を保ったまま仕事を切り替え、通常入力へ進める', async ({ page }) => {
+  await page.route('**/api/v1/ai/status', (route) => route.fulfill({ json: { data: { enabled: false, remaining_today: 0, daily_limit: 20, max_memo_length: 1000 } } }))
+  await login(page, ACCOUNTS.member)
+  await expect(page.getByTestId('plana-disabled')).toBeVisible()
+  await selectFirstOption(page, '対象の設備')
+  await page.getByLabel('いま起きている症状').fill('残しておきたいメモ')
+  await expect(page.getByTestId('plana-search')).toBeDisabled()
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
+  await expect(page.getByRole('button', { name: '不具合の記録を始める' })).toBeEnabled()
+  await page.getByTestId('plana-task').filter({ hasText: '過去の類似トラブル' }).click()
+  await expect(page.getByLabel('いま起きている症状')).toHaveValue('残しておきたいメモ')
+  page.once('dialog', (dialog) => dialog.dismiss())
+  await page.getByRole('link', { name: '記録を自分で探す' }).click()
+  await expect(page).toHaveURL(/\/plana\?task=similar-troubles$/)
+  await expect(page.getByLabel('いま起きている症状')).toHaveValue('残しておきたいメモ')
+})
+
+test('利用状況の取得に失敗しても、メモを残して再確認できる', async ({ page }) => {
+  await page.route('**/api/v1/ai/status', (route) => route.abort('failed'), { times: 1 })
+  await login(page, ACCOUNTS.member)
+  await expect(page.getByText('AIの利用状況を取得できませんでした。', { exact: false })).toBeVisible()
+  await page.getByLabel('いま起きている症状').fill('取得が失敗しても残すメモ')
+  await page.getByRole('button', { name: '再確認', exact: true }).click()
+  await expect(page.getByRole('button', { name: '再確認', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('いま起きている症状')).toHaveValue('取得が失敗しても残すメモ')
+})
+
+test('検索中にメモを変更すると古い検索結果を表示せず、残り回数だけを更新する', async ({ page }) => {
+  // AIの応答はすべてスタブ。実APIを呼ばず、応答の順序だけを制御する。
+  await page.route('**/api/v1/ai/status', (route) => route.fulfill({ json: { data: { enabled: true, provider: 'fake', remaining_today: 20, daily_limit: 20, max_memo_length: 1000 } } }))
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/api/v1/ai/similar_troubles', async (route) => {
+    await gate
+    await route.fulfill({ json: { data: { cases: [], candidates_count: 1, remaining_today: 19 } } })
+  })
+  await login(page, ACCOUNTS.member)
+  await selectFirstOption(page, '対象の設備')
+  await page.getByLabel('いま起きている症状').fill('変更前の症状')
+  const request = page.waitForRequest((r) => r.url().endsWith('/ai/similar_troubles') && r.method() === 'POST')
+  await page.getByTestId('plana-search').click()
+  await request
+  await page.getByLabel('いま起きている症状').fill('変更後の症状')
+  const response = page.waitForResponse((r) => r.url().endsWith('/ai/similar_troubles'))
+  release()
+  await response
+  await expect(page.getByTestId('plana-remaining')).toContainText('19 / 20')
+  await expect(page.getByTestId('ai-similar-result')).toHaveCount(0)
+  await expect(page.getByTestId('plana-search')).toBeEnabled()
 })

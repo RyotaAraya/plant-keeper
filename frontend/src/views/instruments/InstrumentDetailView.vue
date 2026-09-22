@@ -35,6 +35,7 @@ const editForm = ref({
   line_class_id: null as number | null,
   location: '',
   notes: '',
+  seal_fluid: '',
 })
 const calibrationForm = ref<CalibrationFields>(emptyCalibrationFields())
 const equipments = ref<any[]>([])
@@ -60,6 +61,7 @@ async function openEditInstrument() {
     line_class_id: instrument.value.line_class_id ?? null,
     location: instrument.value.location || '',
     notes: instrument.value.notes || '',
+    seal_fluid: instrument.value.seal_fluid || '',
   }
   calibrationForm.value = calibrationFieldsFrom(instrument.value)
   editErrors.value = []
@@ -114,6 +116,7 @@ onMounted(fetchInstrument)
             <v-col cols="12" md="3"><strong>サービス:</strong> {{ instrument.service?.name || '—' }}</v-col>
             <v-col cols="12" md="3"><strong>ラインクラス:</strong> {{ instrument.line_class?.code || '—' }}</v-col>
             <v-col cols="12" md="3"><strong>設置場所:</strong> {{ instrument.location || '—' }}</v-col>
+            <v-col v-if="instrument.seal_fluid" cols="12" md="3"><strong>シール液:</strong> {{ instrument.seal_fluid }}</v-col>
           </v-row>
           <v-row v-if="instrument.service" class="mt-2">
             <v-col cols="12" md="3"><strong>温度:</strong> {{ instrument.service.temperature }}</v-col>
@@ -126,6 +129,12 @@ onMounted(fetchInstrument)
             </v-col>
           </v-row>
           <p v-if="instrument.notes" class="mt-3"><strong>備考:</strong> {{ instrument.notes }}</p>
+          <div v-if="instrument.troubleshooting_checks?.length" class="mt-3" data-testid="troubleshooting-checks">
+            <strong>一次点検の定型項目（参考。手順書・保全基準の代わりではありません）:</strong>
+            <ul class="ml-5">
+              <li v-for="c in instrument.troubleshooting_checks" :key="c">{{ c }}</li>
+            </ul>
+          </div>
           <div class="mt-3" data-testid="calibration-conditions">
             <strong>校正の条件:</strong>
             <template v-if="instrument.calibratable">
@@ -176,6 +185,7 @@ onMounted(fetchInstrument)
           <v-select v-model="editForm.service_id" :items="services" item-title="name" item-value="id" label="サービス・流体" clearable class="mb-2" />
           <v-select v-model="editForm.line_class_id" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" clearable class="mb-2" />
           <v-text-field v-model="editForm.location" label="設置場所" class="mb-2" />
+          <v-text-field v-model="editForm.seal_fluid" label="シール液（任意。ダイアフラムシール式などで使用）" class="mb-2" />
           <v-textarea v-model="editForm.notes" label="備考" rows="2" />
           <InstrumentCalibrationFields v-model="calibrationForm" />
         </v-card-text>

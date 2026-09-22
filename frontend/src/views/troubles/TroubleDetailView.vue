@@ -2,6 +2,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import AiAvailability from '@/components/AiAvailability.vue'
+import { useAiAvailability } from '@/composables/useAiAvailability'
+import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -14,7 +17,7 @@ import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
-import type { AiResponseDraft, AiStatus } from '@/types/models'
+import type { AiResponseDraft } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,8 +43,27 @@ const responseErrors = ref<string[]>([])
 // AIの下書きを反映したときの提案のID（保存のときに送り、AIの案と確定した内容を突き合わせられるようにする）
 const responseAiSuggestionId = ref<number | null>(null)
 
+const responseInitial = ref('')
+const responseMemoDirty = ref(false)
+const responseSession = ref(0)
+const responseDirty = computed(() => responseDialog.value && (
+  responseMemoDirty.value || JSON.stringify(responseForm.value) !== responseInitial.value
+))
+useUnsavedWork(responseDirty)
+function closeResponse() {
+  if (responseDirty.value && !confirm('入力中の対応記録とメモを破棄しますか？')) return
+  responseDialog.value = false
+  responseMemoDirty.value = false
+  responseSession.value++
+}
+
 // AI支援（対応記録の下書き・類似トラブル）。状況が取れない・無効なときは、AIのボタンを出さない
-const aiStatus = ref<AiStatus | null>(null)
+const { status: aiStatus, loading: aiLoading, failed: aiFailed, refresh: fetchAiStatus } = useAiAvailability()
+const similarButton = ref<{ $el: { focus(): void } } | null>(null)
+function closeSimilar() {
+  similar.clear()
+  similarButton.value?.$el.focus()
+}
 const similar = useSimilarTroubles((count) => {
   if (aiStatus.value) aiStatus.value.remaining_today = count
 })
@@ -141,6 +163,7 @@ async function saveEdit() {
 }
 
 function openResponse() {
+  if (!canCreateTroubleResponse.value || !trouble.value) return
   responseForm.value = {
     response_type: 'investigation',
     description: '',
@@ -149,16 +172,10 @@ function openResponse() {
   }
   responseAiSuggestionId.value = null
   responseErrors.value = []
+  responseInitial.value = JSON.stringify(responseForm.value)
+  responseMemoDirty.value = false
+  responseSession.value++
   responseDialog.value = true
-}
-
-async function fetchAiStatus() {
-  try {
-    aiStatus.value = (await api.get('/ai/status')).data.data
-  } catch {
-    // AIの状況が取れなくても、トラブルの表示・対応記録には影響しない（AIのボタンを出さないだけ）
-    aiStatus.value = null
-  }
 }
 
 // AIの下書きを入力欄に入れる（保存はしない。対応日時は入れない）。対応種別は、AIが決められなかったときは今の値のまま
@@ -207,9 +224,16 @@ onMounted(() => {
   fetchAiStatus()
 })
 
+// 目的を持って開いたときだけ入力欄を開く。AIは利用者が押すまで呼び出さない。
+watch([() => trouble.value?.id, () => route.query.plana], ([id, task]) => {
+  if (id === Number(route.params.id) && task === 'response-draft' && canCreateTroubleResponse.value) openResponse()
+})
+
 // 履歴の行から別のトラブルへ移ると、同じ画面のまま ID だけが変わる。読み込み直し、前のトラブルへのAIの結果は消す
 watch(() => route.params.id, (id, previous) => {
   if (id && id !== previous) {
+    responseDialog.value = false
+    responseAiSuggestionId.value = null
     similar.clear()
     fetchTrouble()
   }
@@ -320,9 +344,11 @@ watch(() => route.params.id, (id, previous) => {
         </v-card-text>
       </v-card>
 
+      <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
       <div v-if="aiStatus?.enabled" class="mb-4" data-testid="similar-section">
         <div class="d-flex align-center ga-3">
           <v-btn
+            ref="similarButton"
             size="small"
             variant="tonal"
             color="primary"
@@ -337,7 +363,7 @@ watch(() => route.params.id, (id, previous) => {
           <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>
         </div>
         <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
-        <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="similar.clear()" />
+        <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
       </div>
 
       <h2 class="text-h6 mb-3">対応履歴</h2>
@@ -403,29 +429,42 @@ watch(() => route.params.id, (id, previous) => {
       </v-dialog>
 
       <!-- Response Dialog -->
-      <v-dialog v-model="responseDialog" max-width="600">
+      <v-dialog :model-value="responseDialog" :max-width="aiStatus?.enabled ? 1100 : 600" aria-labelledby="response-dialog-title" @update:model-value="!$event && closeResponse()">
         <v-card>
-          <v-card-title>対応記録追加</v-card-title>
+          <v-card-title id="response-dialog-title">対応記録追加</v-card-title>
           <v-card-text>
+            <p class="text-body-2 text-medium-emphasis mb-4">{{ trouble.title }}の対応を記録します。内容を確認してから、「記録」で保存します。</p>
             <v-alert v-if="responseErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in responseErrors" :key="err">{{ err }}</div>
             </v-alert>
-            <ResponseAiAssist
-              v-if="aiStatus?.enabled"
-              :status="aiStatus"
-              :trouble-id="trouble.id"
-              :has-existing="!!responseForm.description.trim()"
-              @apply="applyAiResponseDraft"
-              @remaining="aiStatus.remaining_today = $event"
-            />
-            <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />
-            <v-textarea v-model="responseForm.description" label="対応内容 *" rows="4" class="mb-2" />
-            <v-text-field v-model="responseForm.used_materials" label="使用資材" class="mb-2" />
-            <v-text-field v-model="responseForm.responded_at" label="対応日時" type="datetime-local" />
+            <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
+            <div class="response-workspace" :class="{ 'response-workspace--assisted': aiStatus?.enabled }">
+              <section v-if="aiStatus?.enabled" class="response-workspace__draft" aria-labelledby="response-draft-heading">
+                <h2 id="response-draft-heading">メモをプラナに整理してもらう</h2>
+                <p class="response-workspace__hint">行った対応を短いメモで入力してください。提案は確認してから反映できます。</p>
+                <ResponseAiAssist
+                  :key="responseSession"
+                  :status="aiStatus"
+                  :trouble-id="trouble.id"
+                  :has-existing="!!responseForm.description.trim()"
+                  @dirty="responseMemoDirty = $event"
+                  @apply="applyAiResponseDraft"
+                  @remaining="aiStatus.remaining_today = $event"
+                />
+              </section>
+              <section class="response-workspace__record" aria-labelledby="response-record-heading">
+                <h2 id="response-record-heading">保存する内容</h2>
+                <p class="response-workspace__hint">直接入力・編集できます。「記録」を押すと保存されます。</p>
+                <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />
+                <v-textarea v-model="responseForm.description" label="対応内容 *" rows="4" class="mb-2" />
+                <v-text-field v-model="responseForm.used_materials" label="使用資材" class="mb-2" />
+                <v-text-field v-model="responseForm.responded_at" label="対応日時" type="datetime-local" />
+              </section>
+            </div>
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="responseDialog = false">キャンセル</v-btn>
+            <v-btn @click="closeResponse">キャンセル</v-btn>
             <v-btn color="primary" @click="saveResponse">記録</v-btn>
           </v-card-actions>
         </v-card>
@@ -434,3 +473,15 @@ watch(() => route.params.id, (id, previous) => {
     <DeferTroubleDialog v-if="trouble" v-model="deferDialog" :trouble="trouble" @done="onDeferred" />
   </MainLayout>
 </template>
+
+<style scoped>
+.response-workspace { display: grid; gap: 24px; }
+.response-workspace--assisted { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.response-workspace h2 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
+.response-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }
+.response-workspace__draft { padding: 20px; background: var(--pk-mist); border: 1px solid var(--pk-line); border-radius: 12px; }
+.response-workspace__record { padding-top: 20px; }
+@media (max-width: 960px) {
+  .response-workspace--assisted { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
