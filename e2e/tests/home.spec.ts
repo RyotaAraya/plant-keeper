@@ -1,53 +1,59 @@
 import { test, expect } from './support'
 
-// トップページ: ヒーローで「何のシステムか」を説明し、直下にプラナ（AIアシスタント）の帯、「主な機能」は
-// 設備から発注までの流れ → 保全管理・資材管理・組織管理・プラナの提案（プラナは主役ではなく、業務機能を呼び出せる助手）。
-// スマホで横にはみ出さないこと
-test('ヒーローは、何を一元管理するシステムかを説明し、その下にプラナの帯が続く', async ({ page }) => {
+// 公開トップは、プラナで始められる実在の仕事を先に示し、その土台として
+// PlantKeeperの保全管理機能と権限を説明する。回答しない相談欄は置かない。
+test('ヒーローは現場メモから記録へ進む流れと、確認が必要な表示例を示す', async ({ page }) => {
   await page.goto('/')
-  const hero = page.locator('.pk-hero')
-  await expect(hero).toContainText('設備保全に必要な情報を、ひとつの場所へ。')
-  await expect(hero).toContainText('設備・点検・トラブル・修理・資材・在庫・発注まで、保全業務に必要な情報を一元管理します。')
 
-  // プラナの帯はヒーローより下（PlantKeeperの説明が先）
-  const heroBox = await hero.boundingBox()
-  const planaBox = await page.locator('#plana').boundingBox()
-  expect(planaBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 1)
-  await expect(page.locator('#plana')).toContainText('過去の記録から、次の判断をサポート。')
+  const hero = page.locator('.landing-hero')
+  await expect(hero.getByRole('heading', { level: 1 })).toHaveText('現場のメモから、次につながる記録へ。')
+  await expect(hero).toContainText('報告を整える。似た事例を探す。対応を残す。')
+
+  const example = hero.locator('.landing-example')
+  await expect(example).toContainText('表示例')
+  await expect(example).toContainText('流量指示低下・導圧管閉塞の疑い')
+  await expect(example).toContainText('内容を確認してから、記録に反映')
 })
 
-test('主な機能の頭に、設備から発注までの業務の流れが並ぶ', async ({ page }) => {
+test('トップから実装済みの3つの仕事を選べる', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('.pk-flow__step .pk-flow__name')).toHaveText(['設備', '点検', 'トラブル', '修理', '資材', '在庫', '発注'])
+
+  await expect(page.locator('.landing-work h3')).toHaveText([
+    '不具合報告の下書き',
+    '過去の類似トラブル',
+    '対応記録の下書き',
+  ])
+  const links = page.locator('.landing-work a')
+  await expect(links).toHaveCount(3)
+  for (let i = 0; i < 3; i++) await expect(links.nth(i)).toHaveAttribute('href', /\/plana\?task=/)
 })
 
-test('トップページの主な機能に、保全管理・資材管理・組織管理に続けて、プラナの提案が載っている', async ({ page }) => {
+test('AIの仕事のあとに、保全管理の土台と権限の説明が続く', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('PlantKeeper')
 
-  await expect(page.locator('.pk-feature-row h3')).toHaveText(['保全管理', '資材管理', '組織管理', 'プラナの提案'])
-  const ai = page.locator('.pk-feature-row', { has: page.getByRole('heading', { name: 'プラナの提案' }) })
-  await expect(ai).toContainText('応急処置の手順や、運転を続けてよいかの判断は出しません')
-  await expect(ai.getByRole('img')).toHaveAttribute('alt', /AIの下書き/)
+  await expect(page.locator('.landing-foundation-grid h3')).toHaveText([
+    '設備と記録をつなぐ',
+    '保全の仕事を進める',
+    '資材まで見渡す',
+  ])
+  await expect(page.getByRole('heading', { name: '自社も協力会社も、同じ記録で。' })).toBeVisible()
+  await expect(page.locator('#permissions')).toContainText('所属と権限に合わせて')
 })
 
-test('ヒーローの「プラナ AI」を押すと、すぐ下のプラナの帯に移る', async ({ page }) => {
+test('ログイン前に仕事を始めると、選んだ仕事を復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
-  await page.locator('.pk-hero__ai').click()
+  await page.getByRole('link', { name: /過去の類似トラブル.*この仕事を始める/ }).click()
 
-  await expect(page.locator('#plana')).toBeInViewport()
-  await expect(page.locator('#plana').getByRole('heading', { name: 'プラナ AI' })).toBeVisible()
+  await expect(page).toHaveURL(/\/login\?redirect=/)
+  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana?task=similar-troubles')
 })
 
-test('ログイン前は、プラナの相談欄に入れて送るとログイン画面へ移る（案内も出ている）', async ({ page }) => {
+test('ヒーローのCTAから作業ホームを復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
-  const plana = page.locator('#plana')
-  await expect(plana).toContainText('プラナはログイン後に使えます')
+  await page.getByRole('link', { name: 'プラナを試す', exact: true }).click()
 
-  await plana.getByLabel('プラナに相談する').fill('PT-100の過去のトラブルを教えてください')
-  await plana.getByRole('button', { name: '相談する' }).click()
-
-  await expect(page).toHaveURL(/\/login$/)
+  await expect(page).toHaveURL(/\/login\?redirect=/)
+  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana')
 })
 
 test('トップページは、スマホの幅でも横にはみ出さない', async ({ page }) => {
