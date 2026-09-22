@@ -32,6 +32,7 @@ const API_BY_ROW: Record<string, string[]> = {
 
 test('トップページの権限マトリクスは、実際にログインしたときのメニューと一致する', async ({ page }) => {
   await page.goto('/')
+  await page.getByText('業務機能の詳しい権限を見る', { exact: true }).click()
   const matrix = page.locator('#permissions .pk-matrix__table')
   await expect(matrix.locator('thead th[scope="col"]')).toHaveCount(ROLES.length)
 

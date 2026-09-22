@@ -11,7 +11,7 @@ test('ログインするとプラナの作業場が開き、初期表示ではAI
   const calls: string[] = []
   page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/ai/')) calls.push(r.url()) })
   await login(page, ACCOUNTS.member)
-  await expect(page.getByRole('heading', { level: 1, name: '今日は、何から始めますか？' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '仕事を始める' })).toBeVisible()
   await expect(page.getByTestId('plana-task')).toHaveCount(3)
   await expect(page.getByLabel('いま起きている症状')).toBeVisible()
   await page.waitForLoadState('networkidle')
@@ -20,7 +20,8 @@ test('ログインするとプラナの作業場が開き、初期表示ではAI
 
 test('公開トップで選んだ仕事を、通常ログイン後に引き継ぐ', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: /対応記録の下書き.*この仕事を始める/ }).click()
+  await page.getByRole('tab', { name: '対応を記録する' }).click()
+  await page.getByRole('link', { name: 'この仕事を試す' }).click()
   await expect(page).toHaveURL(/\/login\?redirect=/)
   await submitLogin(page)
   await expect(page).toHaveURL(/\/plana\?task=response-draft$/)

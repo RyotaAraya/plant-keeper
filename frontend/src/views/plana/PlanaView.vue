@@ -138,27 +138,19 @@ onUnmounted(() => {
   <MainLayout>
     <div class="plana-workspace">
       <header class="plana-heading">
-        <div>
-          <h1>今日は、何から始めますか？</h1>
-          <p>現場の記録を整える。過去の事例を手がかりにする。</p>
-        </div>
+        <h1>仕事を始める</h1>
+        <p v-if="status?.enabled" data-testid="plana-remaining">AI利用：今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</p>
       </header>
       <v-alert v-if="unavailableTask" type="info" variant="tonal" class="mb-4" role="status">この権限では対応記録を作成できません。不具合報告と類似事例の検索を利用できます。</v-alert>
       <div class="plana-desk">
         <nav class="plana-tasks" aria-label="仕事を選ぶ">
-          <h2>仕事を選ぶ</h2>
           <router-link v-for="task in tasks" :key="task.key" :to="task.to" :aria-current="activeTask.key === task.key ? 'page' : undefined" :class="{ selected: activeTask.key === task.key }" data-testid="plana-task">
             <v-icon size="22" aria-hidden="true">{{ task.icon }}</v-icon>
-            <span><strong>{{ task.title }}</strong><small>{{ task.summary }}</small></span>
+            <span>{{ task.title }}</span>
           </router-link>
-          <div class="plana-help">
-            <p>AIは提案まで。<br />記録する内容は、あなたが確認して決めます。</p>
-            <p v-if="status?.enabled" data-testid="plana-remaining">今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</p>
-          </div>
         </nav>
         <section class="plana-task-body" :aria-label="activeTask.title">
           <div class="plana-task-heading">
-            <h2>{{ activeTask.title }}</h2>
             <SiteScopeTag v-model="siteIds" />
           </div>
           <AiAvailability
@@ -170,7 +162,7 @@ onUnmounted(() => {
           />
 
           <template v-if="activeTask.key !== 'response-draft'">
-            <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '不具合が見つかった設備を選んでください。点検の不具合欄で、メモから報告を整えます。' : '設備と症状を教えてください。関連する過去のトラブルから、似た事例と対応記録を探します。' }}</p>
+            <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '設備を選ぶと、点検の不具合欄で下書きを作成できます。' : '設備と症状から、過去のトラブルと対応記録を探します。' }}</p>
             <v-alert v-if="optionsError" type="error" variant="tonal" class="mb-3" role="alert">{{ optionsError }} <v-btn variant="text" @click="fetchOptions">設備を再読み込み</v-btn></v-alert>
             <div class="plana-targets">
               <v-autocomplete v-model="equipmentId" :items="equipmentOptions" item-title="label" item-value="id" label="対象の設備" :loading="optionsLoading" :disabled="optionsLoading || !!optionsError" clearable no-data-text="選択できる設備がありません" />
@@ -178,11 +170,10 @@ onUnmounted(() => {
             </div>
             <v-alert v-if="instrumentError" type="error" variant="tonal" class="mb-3" role="alert">{{ instrumentError }} <v-btn variant="text" @click="fetchInstruments">計器を再読み込み</v-btn></v-alert>
             <template v-if="activeTask.key === 'defect-draft'">
-              <div class="plana-next-step"><h3>点検の記録につなげます</h3><p>設備・計器を引き継いで、不具合の入力欄を開きます。下書きを確認し、必要な情報を補って点検を保存してください。</p></div>
               <v-btn color="primary" :disabled="!equipmentId || optionsLoading || !!optionsError || instrumentLoading || !!instrumentError" @click="startInspection">不具合の記録を始める</v-btn>
             </template>
             <form v-else @submit.prevent="search">
-              <v-textarea v-model="memo" label="いま起きている症状" placeholder="例：流量の指示が低い。導圧管のつまりが疑われる。" rows="4" auto-grow :maxlength="status?.max_memo_length ?? 1000" :counter="status?.max_memo_length ?? 1000" hint="設備と症状を入力すると検索できます。結果は提案として表示され、記録は変更されません。" persistent-hint />
+              <v-textarea v-model="memo" label="いま起きている症状" placeholder="例：流量の指示が低い。導圧管のつまりが疑われる。" rows="4" auto-grow :maxlength="status?.max_memo_length ?? 1000" :counter="status?.max_memo_length ?? 1000" hint="検索しても記録は変更されません。" persistent-hint />
               <div class="plana-actions">
                 <v-btn ref="searchButton" type="submit" color="primary" :disabled="!canSearch" :loading="similar.loading.value" data-testid="plana-search">似た事例を探す</v-btn>
                 <v-btn variant="text" :to="{ path: '/troubles', query: { site_ids: siteIds.length ? siteIds.join(',') : 'all', ...(equipmentId ? { equipment_id: String(equipmentId) } : {}) } }">記録を自分で探す</v-btn>
@@ -193,7 +184,7 @@ onUnmounted(() => {
             </form>
           </template>
           <template v-else>
-            <p class="plana-instruction">対応したトラブルを選んでください。対応メモを下書きに整え、確認して記録できます。</p>
+            <p class="plana-instruction">対応したトラブルを選ぶと、対応記録の入力画面が開きます。</p>
             <form class="plana-trouble-search" @submit.prevent="findTroubles">
               <v-text-field v-model="troubleQuery" label="トラブルのタイトルで検索" hide-details clearable />
               <v-btn type="submit" variant="outlined" :loading="troubleLoading">検索</v-btn>
@@ -210,46 +201,39 @@ onUnmounted(() => {
           </template>
         </section>
       </div>
-      <footer class="plana-work-links"><span>組織の状況や予定を確認する</span><router-link to="/dashboard">ダッシュボードを開く <v-icon size="18" aria-hidden="true">mdi-arrow-right</v-icon></router-link></footer>
     </div>
   </MainLayout>
 </template>
 
 <style scoped>
-.plana-workspace { max-width: 1200px; margin: 0 auto; }
-.plana-heading { display: flex; gap: 20px; align-items: center; margin: 8px 0 32px; }
-.plana-heading h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); line-height: 1.45; margin: 3px 0 8px; }
-.plana-heading p { color: var(--pk-muted); font-size: .9rem; }
-.plana-desk { display: grid; grid-template-columns: 280px minmax(0, 1fr); border: 1px solid var(--pk-line); border-radius: 20px; overflow: hidden; background: white; }
-.plana-tasks { padding: 28px 16px; background: var(--pk-soft-blue); border-right: 1px solid var(--pk-line); }
-.plana-tasks h2 { font-size: .875rem; padding: 0 12px 16px; }
-.plana-tasks a { display: flex; gap: 12px; padding: 16px 12px; border-radius: 12px; text-decoration: none; color: var(--pk-ink); border: 1px solid transparent; margin-bottom: 8px; }
-.plana-tasks a.selected { background: #fff; border-color: var(--pk-steel); }
-.plana-tasks a:hover { background: #fff; }
-.plana-tasks a > .v-icon { color: var(--pk-steel); margin-top: 2px; }
-.plana-tasks strong, .plana-records strong { display: block; font-size: .9375rem; }
-.plana-tasks small { display: block; color: var(--pk-muted); margin-top: 8px; line-height: 1.7; font-size: .75rem; }
-.plana-help { padding: 20px 12px 0; font-size: .75rem; line-height: 1.9; color: var(--pk-muted); }
-.plana-help p + p { margin-top: 16px; }
-.plana-task-body { padding: 32px; min-width: 0; }
-.plana-task-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-.plana-task-heading h2 { font-size: 1.25rem; }
-.plana-instruction { color: var(--pk-muted); font-size: .875rem; line-height: 1.9; margin-bottom: 24px; max-width: 42em; }
+.plana-workspace { max-width: 1040px; margin: 0 auto; }
+.plana-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 8px 0 24px; }
+.plana-heading h1 { font-size: 1.6rem; line-height: 1.5; text-wrap: balance; }
+.plana-heading p { color: var(--pk-muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.plana-desk { border: 1px solid var(--pk-line); border-radius: 12px; overflow: hidden; background: white; }
+.plana-tasks { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 16px 0; border-bottom: 1px solid var(--pk-line); }
+.plana-tasks a { display: flex; align-items: center; gap: 8px; padding: 16px 12px; border-bottom: 3px solid transparent; text-decoration: none; color: var(--pk-muted); font-size: .9375rem; }
+.plana-tasks a.selected { color: var(--pk-steel); border-bottom-color: var(--pk-steel); font-weight: 700; }
+.plana-tasks a:hover { background: var(--pk-mist); color: var(--pk-steel); }
+.plana-tasks a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: -4px; }
+.plana-task-body { padding: 28px 32px 32px; min-width: 0; }
+.plana-task-heading { margin-bottom: 16px; }
+.plana-instruction { color: var(--pk-muted); font-size: .875rem; line-height: 1.9; margin-bottom: 24px; text-wrap: pretty; }
 .plana-targets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .plana-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .plana-state { color: var(--pk-muted); font-size: .875rem; margin: 16px 0; }
-.plana-next-step { border-left: 3px solid var(--pk-line); padding: 0 0 0 20px; margin: 16px 0 28px; }
-.plana-next-step h3 { font-size: 1rem; margin-bottom: 8px; }
-.plana-next-step p { font-size: .875rem; line-height: 1.9; color: var(--pk-muted); }
 .plana-trouble-search { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .plana-records { list-style: none; padding: 0; }
 .plana-records a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 4px; border-bottom: 1px solid var(--pk-line); text-decoration: none; color: var(--pk-ink); }
 .plana-records a:hover { color: var(--pk-steel); }
 .plana-records strong { overflow-wrap: anywhere; }
 .plana-records small { display: block; margin-top: 6px; color: var(--pk-muted); }
-.plana-work-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 24px 4px; font-size: .875rem; color: var(--pk-muted); }
-.plana-work-links a { color: var(--pk-steel); text-decoration: none; }
-@media (max-width: 1100px) { .plana-desk { grid-template-columns: 220px minmax(0, 1fr); } .plana-targets { grid-template-columns: 1fr; gap: 0; } .plana-task-body { padding: 24px; } }
-@media (max-width: 850px) { .plana-desk { grid-template-columns: 1fr; } .plana-tasks { border-right: 0; border-bottom: 1px solid var(--pk-line); padding: 16px; } .plana-tasks a { padding: 12px; margin-bottom: 4px; } .plana-tasks small, .plana-help { display: none; } .plana-tasks h2 { padding-bottom: 8px; } }
-@media (max-width: 600px) { .plana-heading { gap: 12px; align-items: start; margin: 4px 0 24px; } .plana-heading h1 { font-size: 1.4rem; } .plana-heading p { font-size: .75rem; } .plana-task-body { padding: 20px 16px; } .plana-desk { border-radius: 16px; } }
+@media (max-width: 600px) {
+  .plana-heading { margin: 4px 0 20px; }
+  .plana-heading h1 { font-size: 1.4rem; }
+  .plana-task-body { padding: 20px 16px; }
+  .plana-tasks { padding: 4px 8px 0; gap: 0; }
+  .plana-tasks a { padding: 12px 8px; font-size: .8125rem; }
+  .plana-targets { grid-template-columns: 1fr; gap: 0; }
+}
 </style>
