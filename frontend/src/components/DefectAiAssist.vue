@@ -19,9 +19,6 @@ const props = defineProps<{
   itemLabel: string
   // 入力欄にすでにタイトルがあるとき（反映で置き換わるため、確認する）
   hasExisting: boolean
-  // 選んだ計器の一次点検の定型項目・シール液（参考情報。AIは介さず確定的に表示する）
-  troubleshootingChecks?: string[]
-  sealFluid?: string | null
 }>()
 const emit = defineEmits<{
   apply: [draft: AiDefectDraft]
@@ -105,11 +102,6 @@ function apply() {
 
 <template>
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
-    <div v-if="troubleshootingChecks?.length" class="pk-reference" data-testid="routine-checks">
-      <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器の一次点検の定型項目</h4>
-      <p class="pk-reference-meta">参考。手順書・保全基準の代わりではありません<template v-if="sealFluid">／シール液: {{ sealFluid }}</template></p>
-      <ul><li v-for="c in troubleshootingChecks" :key="c">{{ c }}</li></ul>
-    </div>
     <v-textarea
       v-model="memo"
       label="現場メモ"
@@ -176,7 +168,10 @@ function apply() {
             <ul><li v-for="c in draft.check_points" :key="c">{{ c }}</li></ul>
           </div>
         </div>
-        <p v-if="draft.possible_causes.length" class="pk-ai-report-caption">見立ては可能性であり断定ではありません。タイトル・説明・優先度以外は反映されません。</p>
+        <p v-if="draft.possible_causes.length || draft.check_points.length" class="pk-ai-report-caption">
+          <template v-if="draft.possible_causes.length">見立ては可能性であり断定ではありません。</template>
+          タイトル・説明・優先度以外は反映されません。
+        </p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -188,14 +183,6 @@ function apply() {
 </template>
 
 <style scoped>
-/* 参考知識（計器種別ごとの一次点検の定型項目）。プラナの発言ではないと色で示す（鋼色のアクセント罫＋薄い背景） */
-.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 8px; }
-.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
-.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 10px 24px; }
-.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
-.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .6em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
-
 /* プラナの提案：「プラナ」を名乗るのは PlanaNote の見出し1箇所だけにし、見立て・確認したい点は並べて見せる */
 .pk-ai-report-title { font-size: 1.0625rem; color: var(--pk-ink); margin-bottom: 4px; }
 .pk-ai-report-desc { color: var(--pk-muted); line-height: 1.8; margin-bottom: 8px; }

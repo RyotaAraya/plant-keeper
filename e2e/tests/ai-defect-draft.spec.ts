@@ -21,6 +21,21 @@ test('選んだ計器の種別に応じた一次点検の定型項目を、不�
   await expect(routine).toHaveCount(0)
 })
 
+test('AI無効でも、一次点検の定型項目は表示される（AIとは独立した区画にあるため）', async ({ page }) => {
+  await page.route('**/api/v1/ai/status', (route) => route.fulfill({ json: { data: { enabled: false, remaining_today: 0, daily_limit: 20, max_memo_length: 1000 } } }))
+  await login(page, ACCOUNTS.member)
+  await page.goto('/inspections/new')
+  await selectOption(page, '設備 *', '常圧蒸留装置')
+  await selectOption(page, '計器（任意）', 'FT-301')
+  await page.getByRole('button', { name: '項目追加' }).click()
+  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+
+  await expect(page.getByTestId('ai-assist')).toHaveCount(0)
+  const routine = page.getByTestId('routine-checks')
+  await expect(routine).toBeVisible()
+  await expect(routine).toContainText('ゼロ点ズレの確認')
+})
+
 test('計器詳細にも、シール液と一次点検の定型項目が表示される', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '装置・計器', exact: true }).click()

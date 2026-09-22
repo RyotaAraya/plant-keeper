@@ -535,6 +535,11 @@ onMounted(async () => {
           <v-expand-transition>
             <div v-if="item.has_defect || openedDefects.has(item)" v-show="item.has_defect" class="mt-1">
               <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
+              <div v-if="defectInstrumentFor(item)?.troubleshooting_checks?.length" class="pk-reference" data-testid="routine-checks">
+                <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器の一次点検の定型項目</h4>
+                <p class="pk-reference-meta">参考。手順書・保全基準の代わりではありません<template v-if="defectInstrumentFor(item)?.seal_fluid">／シール液: {{ defectInstrumentFor(item)?.seal_fluid }}</template></p>
+                <ul><li v-for="c in defectInstrumentFor(item)?.troubleshooting_checks" :key="c">{{ c }}</li></ul>
+              </div>
               <v-row v-if="multipleEquipments" dense>
                 <v-col cols="12" md="5">
                   <v-select
@@ -558,8 +563,6 @@ onMounted(async () => {
                     :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
                     :item-label="item.content"
                     :has-existing="!!item.defect_title"
-                    :troubleshooting-checks="defectInstrumentFor(item)?.troubleshooting_checks ?? []"
-                    :seal-fluid="defectInstrumentFor(item)?.seal_fluid"
                     @dirty="markMemo(item, $event)"
                     @apply="applyAiDraft(item, $event)"
                     @remaining="aiStatus.remaining_today = $event"
@@ -604,6 +607,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* 参考知識（計器種別ごとの一次点検の定型項目）。AIの有効・無効に関わらず表示するため、
+   defect-workspace（AIが有効なときだけの区画）の外に置く */
+.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 12px 0; }
+.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
+.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 10px 24px; }
+.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
+.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .6em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
 .defect-workspace { display: grid; gap: 24px; margin-top: 16px; }
 .defect-workspace h3 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
 .defect-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }

@@ -23,7 +23,7 @@ module AiPromptSupport
     lines = [ "設備: #{equipment.name}" ]
     if instrument
       lines << "計器: #{instrument_label(instrument)}"
-      lines << "シール液: #{instrument.seal_fluid}" if instrument.seal_fluid.present?
+      lines << "シール液: #{escape(instrument.seal_fluid)}" if instrument.seal_fluid.present?
       lines.concat(service_lines(instrument.service))
     end
     lines
