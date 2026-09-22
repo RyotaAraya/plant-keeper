@@ -34,7 +34,7 @@ test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', a
   const choices = [
     ['不具合を相談する', 'FT-301 流量指示の低下', 'defect-draft'],
     ['似た事例を探す', '流量計の指示ゼロ固着', 'similar-troubles'],
-    ['対応を記録する', '端子の増し締め・指示の復旧確認', 'response-draft'],
+    ['対応を記録する', 'LT-701 シール液の補液・指示の復旧確認', 'response-draft'],
   ]
   for (const [label, title, task] of choices) {
     await page.getByRole('tab', { name: label }).click()
