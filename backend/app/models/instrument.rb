@@ -32,6 +32,11 @@ class Instrument < ApplicationRecord
   def calibratable? = calibration_kind.present? && range_lower.present? && range_upper.present? && tolerance_percent.present?
   alias_method :calibratable, :calibratable?
 
+  # 不具合発見時にまず確認する、計器種別ごとの一次点検の定型項目（参考情報。InstrumentTroubleshootingCatalog）
+  def troubleshooting_checks
+    InstrumentTroubleshootingCatalog.for(instrument_type)
+  end
+
   private
 
   # 範囲は下限と上限をセットで、上限が下限より大きいこと。DCSの範囲も同様で、DCSが平方根のときは必須

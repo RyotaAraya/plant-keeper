@@ -4,20 +4,58 @@ import { useAuthStore } from '@/stores/auth'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
+import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
 
 const auth = useAuthStore()
 const selectedExample = ref(0)
+// tab 0（不具合）の routineChecks は backend/app/models/instrument_troubleshooting_catalog.rb の
+// CHECKS['flow_transmitter'] と同じ内容（表示例。実際の値は計器種別ごとにアプリが確定的に出す）
 const examples = [
-  { label: '不具合を報告する', input: '点検で気づいたこと', memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。', output: '報告の下書き', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。', note: '内容を確認してから、点検の記録に反映します。' },
-  { label: '似た事例を探す', input: 'いま起きている症状', memo: '流量計の指示がゼロになった。\n現場では流れているように見える。', output: '過去の事例の提示', title: '流量計の信号途絶', detail: '似た症状の記録：流量計の指示がゼロになり、配線の断線を確認。配線を補修して指示が復旧。', note: '元のトラブル記録を開いて、症状や対応を確認できます。' },
-  { label: '対応を記録する', input: '作業後のメモ', memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。', output: '対応記録の下書き', title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。', note: '下書きを確認・編集してから、対応記録として保存します。' },
+  {
+    label: '不具合を相談する', input: '点検で気づいたこと',
+    memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
+    routineChecks: [
+      '導圧管の閉塞（固形物の堆積・凍結・気体/液体の溜まり）。ブロー・貫通棒での貫通でOKになるか',
+      'ゼロ点ズレの確認',
+      'バルブマニホールド（元弁・平衡弁）が誤って閉止・半開になっていないか',
+      '配線・端子の緩み、電源の確認',
+      'オリフィス・絞り部の詰まり・付着',
+    ],
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    possibleCauses: [
+      'オリフィス・絞り部の詰まりの可能性（指示の低下が緩やかで、前日から変わっていないため）',
+      '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
+    ],
+    checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
+    note: '内容を確認してから、点検の記録に反映します。',
+  },
+  {
+    label: '似た事例を探す', input: 'いま起きている症状',
+    memo: '流量計の指示がゼロに張り付いている。\n現場では流れているように見える。',
+    planaNote: 'プラナが選んだ候補です（過去のトラブル12件と比べました）。似ているかどうかは、開いて記録を見て判断してください。',
+    title: '流量計の指示ゼロ固着', meta: '解決済・優先度 高',
+    similarity: '指示がゼロに張り付いた点が一致',
+    howHandled: '導圧管の閉塞を確認し、ブローして指示が復旧',
+    note: '元のトラブル記録を開いて、症状や対応を確認できます。',
+  },
+  {
+    label: '対応を記録する', input: '作業後のメモ',
+    memo: 'LT-701のシール液が減ってた。トレーサーの熱で蒸発した感じ。\n水を足しといた。指示は戻った。',
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: 'LT-701 シール液の補液・指示の復旧確認', meta: '対応種別: 修理',
+    detail: 'シール液（水封）の減少を確認。スチームトレーサーの加熱による蒸発と判断し、水を補充。作業後、指示の復旧を確認した。',
+    usedMaterials: '水（シール液用）',
+    checkPoint: '再発防止のため、スチームトレーサーのトラップ調整やスチーム停止は必要か？',
+    note: '整理された内容を確認・編集してから、対応記録として保存します。',
+  },
 ]
 const example = computed(() => examples[selectedExample.value]!)
 const steps = [
-  '設備・計器を選ぶ → 点検の不具合欄を開く → メモを入力して下書きを作る',
+  '設備・計器を選ぶ → 点検の不具合欄を開く → メモを入力してプラナに整理してもらう',
   '設備・計器を選ぶ → 症状を入力する → 類似トラブルを検索する',
-  '対応したトラブルを選ぶ → 対応メモを入力する → 下書きを作る',
+  '対応したトラブルを選ぶ → 対応メモを入力する → プラナに整理してもらう',
 ]
 const capability = computed(() => planaCapabilities[selectedExample.value]!)
 const foundations = [
@@ -53,7 +91,7 @@ const foundations = [
     </section>
 
     <section class="landing-section landing-demo" aria-labelledby="work-title">
-      <div class="landing-section-heading"><h2 id="work-title">そのメモから、仕事が進む。</h2><p>報告・事例探し・対応記録。プラナが手伝う3つの仕事をご紹介します。</p></div>
+      <div class="landing-section-heading"><h2 id="work-title">現場で気づいたことを、プラナに相談する。</h2><p>計器の一次点検の定石とプラナの整理。似た事例の検索、対応記録の整理も。3つの仕事をタブでご紹介します。</p></div>
       <v-tabs v-model="selectedExample" color="primary" class="landing-work" aria-label="プラナの仕事の表示例">
         <v-tab v-for="(item, index) in examples" :id="`example-tab-${index}`" :key="item.label" :value="index" aria-controls="example-panel">{{ item.label }}</v-tab>
       </v-tabs>
@@ -65,10 +103,39 @@ const foundations = [
             <p>{{ example.memo }}</p>
           </div>
           <div class="landing-output">
-            <h3><v-icon size="20" aria-hidden="true">mdi-auto-fix</v-icon>{{ example.output }}</h3>
-            <h4>{{ example.title }}</h4>
-            <p>{{ example.detail }}</p>
-            <div v-if="selectedExample === 0" class="landing-check-points"><h4>確認したい点</h4><p>現場の流量と、FT-301の指示は一致しているか？</p></div>
+            <div v-if="example.routineChecks" class="pk-reference">
+              <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器（流量伝送器）の一次点検の定型項目</h4>
+              <p class="pk-reference-meta">参考。計器種別ごとにアプリが確定的に表示</p>
+              <ul><li v-for="c in example.routineChecks" :key="c">{{ c }}</li></ul>
+            </div>
+
+            <div class="pk-plana-card">
+              <div class="pk-plana-card-body">
+                <PlanaNote>{{ example.planaNote }}</PlanaNote>
+                <div v-if="example.meta" class="pk-plana-card-title-row">
+                  <h3 class="pk-plana-card-title">{{ example.title }}</h3>
+                  <span class="pk-plana-card-meta">{{ example.meta }}</span>
+                </div>
+                <h3 v-else class="pk-plana-card-title">{{ example.title }}</h3>
+                <p v-if="example.detail">{{ example.detail }}</p>
+                <p v-if="example.similarity"><strong>似ている点:</strong> {{ example.similarity }}</p>
+                <p v-if="example.howHandled"><strong>過去の対応:</strong> {{ example.howHandled }}</p>
+                <p v-if="example.usedMaterials"><strong>使用資材:</strong> {{ example.usedMaterials }}</p>
+
+                <div v-if="example.possibleCauses || example.checkPoint" class="pk-plana-card-grid" :class="{ 'pk-plana-card-grid-single': !example.possibleCauses || !example.checkPoint }">
+                  <div v-if="example.possibleCauses">
+                    <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
+                    <ul><li v-for="c in example.possibleCauses" :key="c">{{ c }}</li></ul>
+                  </div>
+                  <div v-if="example.checkPoint">
+                    <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
+                    <p>{{ example.checkPoint }}</p>
+                  </div>
+                </div>
+              </div>
+              <p v-if="example.possibleCauses" class="pk-plana-card-caption">見立ては可能性であり断定ではありません。定型項目とは重複させません。</p>
+              <p v-else-if="example.checkPoint" class="pk-plana-card-caption">確認したい点は記録には反映されません。</p>
+            </div>
           </div>
         </div>
         <div class="landing-example-footer">
@@ -82,7 +149,7 @@ const foundations = [
     <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
       <h2 id="try-title">体験を始めるには</h2>
       <ol><li>ログイン画面でデモアカウントを選びます。3つの仕事を試すなら、自社の「一般」が使えます。</li><li>仕事を選び、デモデータの設備やトラブルを指定して、自分でメモを入力します。上の表示例は自動入力されません。</li><li>AIの提案を確認します。記録に反映・保存するかは、自分で決められます。</li></ol>
-      <p>AIが無効、または1日の利用上限に達している場合は、AIによる下書き・検索は使えません。通常の記録入力や過去の記録の閲覧は利用できます。利用状況はログイン後に確認できます。</p>
+      <p>AIが無効、または1日の利用上限に達している場合は、プラナによる整理・検索は使えません。通常の記録入力や過去の記録の閲覧は利用できます。利用状況はログイン後に確認できます。</p>
     </section>
 
     <section class="landing-foundation">
@@ -97,7 +164,7 @@ const foundations = [
     </section>
     <section id="permissions" class="landing-section" aria-labelledby="permission-title">
       <div class="landing-section-heading"><h2 id="permission-title">自社も協力会社も、同じ記録で。</h2><p>所属と権限に合わせて、見られる情報・できる操作を分けています。</p></div>
-      <p class="landing-permissions-summary">不具合報告の下書き・類似トラブルの検索は、5種類すべてのデモ権限で利用できます。対応記録の下書きは、協力会社の「技能員」を除く4種類で利用できます。</p>
+      <p class="landing-permissions-summary">不具合報告の整理・類似トラブルの検索は、5種類すべてのデモ権限で利用できます。対応記録の整理は、協力会社の「技能員」を除く4種類で利用できます。</p>
       <details class="landing-permissions"><summary>業務機能の詳しい権限を見る</summary><PermissionMatrix /></details>
     </section>
     <section class="landing-story landing-section">
@@ -140,14 +207,35 @@ const foundations = [
 .landing-input h3 { color: var(--pk-muted); }
 .landing-input p { white-space: pre-line; font-size: 1.125rem; line-height: 2; }
 .landing-output { padding: 24px 0; }
-.landing-output h3 { color: var(--pk-steel); }
-.landing-output h4 { font-size: 1.125rem; line-height: 1.6; margin-bottom: 12px; }
-.landing-output p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); }
 .landing-example-footer { border-top: 1px solid var(--pk-line); padding-top: 24px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .landing-example-footer p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
 .landing-guide-link { display: inline-block; color: var(--pk-steel); font-size: .8125rem; margin-top: 8px; }
-.landing-check-points { border-top: 1px solid var(--pk-line); margin-top: 20px; padding-top: 16px; }
-.landing-check-points h4 { font-size: .8125rem; margin-bottom: 8px; }
+
+/* 参考知識（計器種別ごとの一次点検の定型項目）。プラナの提案とは別の見え方にする：
+   ニュートラルな鋼色のアクセント罫＋薄い背景で「AIの発言ではない」ことを色で示す */
+.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 16px 20px; margin-bottom: 20px; }
+.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
+.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 12px 24px; }
+.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .65em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
+
+/* プラナの提案は1枚のカードにまとめ、「プラナ」を名乗るのは見出し1箇所だけにする
+   （タイトル/見立て/確認したい点をそれぞれ「プラナの〜」と呼ばない） */
+.pk-plana-card { border: 1px solid var(--pk-steel); border-radius: 12px; overflow: hidden; background: #fff; }
+.pk-plana-card-body { padding: 20px; }
+.pk-plana-card-body :deep(.pk-plana-note) { margin-bottom: 16px; }
+.pk-plana-card-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.pk-plana-card-title { font-size: 1.125rem; color: var(--pk-ink); }
+.pk-plana-card-meta { font-size: .75rem; color: var(--pk-muted); }
+.pk-plana-card-body > p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 8px; }
+.pk-plana-card-body > p strong { color: var(--pk-ink); font-weight: 700; }
+.pk-plana-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--pk-line); }
+.pk-plana-card-grid-single { grid-template-columns: 1fr; }
+.pk-plana-card-grid h5 { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--pk-steel); margin-bottom: 8px; }
+.pk-plana-card-grid ul { margin: 0; padding-left: 18px; }
+.pk-plana-card-grid li, .pk-plana-card-grid p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-plana-card-caption { padding: 0 20px 16px; font-size: .6875rem; color: var(--pk-muted); }
 .landing-example-footer .landing-steps { margin-top: 8px; color: var(--pk-ink); }
 .landing-guide { border-top: 1px solid var(--pk-line); padding-block: 32px 48px; scroll-margin-top: 80px; }
 .landing-guide h2 { font-size: 1.25rem; }
@@ -174,7 +262,7 @@ const foundations = [
   .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; padding: 40px 20px; }
   .landing-character :deep(.pk-plana-full) { width: 240px; }
   .landing-section { padding: 40px 20px; }
-  .landing-comparison, .landing-foundation-grid, .landing-story { grid-template-columns: 1fr; gap: 24px; }
+  .landing-comparison, .landing-foundation-grid, .landing-story, .pk-plana-card-grid { grid-template-columns: 1fr; gap: 24px; }
   .landing-example { padding: 20px; }
   .landing-example-footer { align-items: start; flex-direction: column; }
 }

@@ -433,14 +433,14 @@ watch(() => route.params.id, (id, previous) => {
         <v-card>
           <v-card-title id="response-dialog-title">対応記録追加</v-card-title>
           <v-card-text>
-            <p class="text-body-2 text-medium-emphasis mb-4">{{ trouble.title }}の対応を記録します。下書きを確認・反映したあと、「記録」で保存します。</p>
+            <p class="text-body-2 text-medium-emphasis mb-4">{{ trouble.title }}の対応を記録します。内容を確認してから、「記録」で保存します。</p>
             <v-alert v-if="responseErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in responseErrors" :key="err">{{ err }}</div>
             </v-alert>
             <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
             <div class="response-workspace" :class="{ 'response-workspace--assisted': aiStatus?.enabled }">
               <section v-if="aiStatus?.enabled" class="response-workspace__draft" aria-labelledby="response-draft-heading">
-                <h2 id="response-draft-heading">メモから下書きを作る</h2>
+                <h2 id="response-draft-heading">メモをプラナに整理してもらう</h2>
                 <p class="response-workspace__hint">行った対応を短いメモで入力してください。提案は確認してから反映できます。</p>
                 <ResponseAiAssist
                   :key="responseSession"

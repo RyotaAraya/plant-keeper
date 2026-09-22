@@ -12,6 +12,28 @@ test('ヒーローは紹介とプラナに絞り、具体例は次の段に表�
   await expect(page.getByRole('tabpanel')).toContainText('FT-301 流量指示の低下')
 })
 
+test('不具合の相談の例は、定型項目とプラナの提案（見立て・確認したい点）を1つのカードにまとめて示す', async ({ page }) => {
+  await page.goto('/')
+  const panel = page.getByRole('tabpanel')
+  await expect(panel).toContainText('一次点検の定型項目')
+  await expect(panel).toContainText('ゼロ点ズレの確認')
+  // 「プラナ」を名乗るのはカードの案内文1箇所だけ（見立て・確認したい点はプラナの前置きを繰り返さない）
+  await expect(panel.locator('.pk-plana-card')).toContainText('プラナが整理しました')
+  await expect(panel.getByText('見立て', { exact: true })).toBeVisible()
+  await expect(panel).toContainText('オリフィス・絞り部の詰まりの可能性')
+  await expect(panel.getByText('確認したい点', { exact: true })).toBeVisible()
+})
+
+test('対応記録の例は、口語のメモが対応種別・使用資材・確認したい点に整理されることを示す（メモの言い換え止まりにしない）', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('tab', { name: '対応を記録する' }).click()
+  const panel = page.getByRole('tabpanel')
+  await expect(panel).toContainText('対応種別: 修理')
+  await expect(panel).toContainText('使用資材:')
+  await expect(panel).toContainText('水（シール液用）')
+  await expect(panel).toContainText('再発防止のため、スチームトレーサーのトラップ調整やスチーム停止は必要か？')
+})
+
 test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', async ({ page }) => {
   const aiCalls: string[] = []
   page.on('request', (request) => {
@@ -19,9 +41,9 @@ test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', a
   })
   await page.goto('/')
   const choices = [
-    ['不具合を報告する', 'FT-301 流量指示の低下', 'defect-draft'],
-    ['似た事例を探す', '流量計の信号途絶', 'similar-troubles'],
-    ['対応を記録する', '端子の増し締め・指示の復旧確認', 'response-draft'],
+    ['不具合を相談する', 'FT-301 流量指示の低下', 'defect-draft'],
+    ['似た事例を探す', '流量計の指示ゼロ固着', 'similar-troubles'],
+    ['対応を記録する', 'LT-701 シール液の補液・指示の復旧確認', 'response-draft'],
   ]
   for (const [label, title, task] of choices) {
     await page.getByRole('tab', { name: label }).click()

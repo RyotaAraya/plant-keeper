@@ -48,6 +48,7 @@ const form = ref({
   line_class_id: null as number | null,
   location: '',
   notes: '',
+  seal_fluid: '',
 })
 const calibrationForm = ref<CalibrationFields>(emptyCalibrationFields())
 const errors = ref<string[]>([])
@@ -102,7 +103,7 @@ function openCreate() {
     tag_number: '', instrument_type: '',
     service_id: selectedServiceIds.value.length === 1 ? (selectedServiceIds.value[0] ?? null) : null,
     line_class_id: selectedLineClassIds.value.length === 1 ? (selectedLineClassIds.value[0] ?? null) : null,
-    location: '', notes: '',
+    location: '', notes: '', seal_fluid: '',
   }
   calibrationForm.value = emptyCalibrationFields()
   errors.value = []
@@ -119,6 +120,7 @@ function openEdit(item: any) {
     line_class_id: item.line_class_id ?? null,
     location: item.location || '',
     notes: item.notes || '',
+    seal_fluid: item.seal_fluid || '',
   }
   calibrationForm.value = calibrationFieldsFrom(item)
   errors.value = []
@@ -231,6 +233,7 @@ onMounted(() => {
           <v-select v-model="form.service_id" :items="services" item-title="name" item-value="id" label="サービス・流体" clearable class="mb-2" />
           <v-select v-model="form.line_class_id" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" clearable class="mb-2" />
           <v-text-field v-model="form.location" label="設置場所" class="mb-2" />
+          <v-text-field v-model="form.seal_fluid" label="シール液（任意。ダイアフラムシール式などで使用）" class="mb-2" />
           <v-textarea v-model="form.notes" label="備考" rows="2" />
           <InstrumentCalibrationFields v-model="calibrationForm" />
         </v-card-text>

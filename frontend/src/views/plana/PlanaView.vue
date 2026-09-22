@@ -162,7 +162,7 @@ onUnmounted(() => {
           />
 
           <template v-if="activeTask.key !== 'response-draft'">
-            <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '設備を選ぶと、点検の不具合欄で下書きを作成できます。' : '設備と症状から、過去のトラブルと対応記録を探します。' }}</p>
+            <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '設備を選ぶと、点検の不具合欄でプラナに整理してもらえます。' : '設備と症状から、過去のトラブルと対応記録を探します。' }}</p>
             <v-alert v-if="optionsError" type="error" variant="tonal" class="mb-3" role="alert">{{ optionsError }} <v-btn variant="text" @click="fetchOptions">設備を再読み込み</v-btn></v-alert>
             <div class="plana-targets">
               <v-autocomplete v-model="equipmentId" :items="equipmentOptions" item-title="label" item-value="id" label="対象の設備" :loading="optionsLoading" :disabled="optionsLoading || !!optionsError" clearable no-data-text="選択できる設備がありません" />

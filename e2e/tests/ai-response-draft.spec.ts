@@ -6,7 +6,7 @@ test('プラナホームから対応メモを入力してAIの下書きを作り
   const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
   await login(page, ACCOUNTS.member)
   requireFakeAi((await (await statusResponse).json()).data.provider)
-  await page.getByTestId('plana-task').filter({ hasText: '対応記録の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '対応記録の整理' }).click()
   await page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true }).fill('FT-301 オリフィス閉塞疑い')
   await page.getByRole('button', { name: '検索', exact: true }).click()
   await page.locator('.plana-records a').filter({ hasText: 'FT-301 オリフィス閉塞疑い' }).click()
@@ -22,7 +22,7 @@ test('プラナホームから対応メモを入力してAIの下書きを作り
 
   const draft = page.getByTestId('ai-response-draft')
   await expect(draft).toBeVisible()
-  await expect(draft).toContainText('プラナの下書きです')
+  await expect(draft).toContainText('プラナが整理しました')
 
   // 反映するまで、入力欄は変わらない
   const description = page.getByLabel('対応内容 *')

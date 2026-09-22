@@ -1,11 +1,58 @@
-import { test, expect, login, selectFirstOption, requireFakeAi, ACCOUNTS } from './support'
+import { test, expect, login, selectFirstOption, selectOption, requireFakeAi, ACCOUNTS } from './support'
+
+// 計器種別ごとの一次点検の定型項目（InstrumentTroubleshootingCatalog）はAIを介さず確定的に表示するため、
+// AIの有効・無効に関わらず確認できる（requireFakeAiのゲートは不要）
+test('選んだ計器の種別に応じた一次点検の定型項目を、不具合欄の上に表示する（計器を変えると更新される）', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.goto('/inspections/new')
+  await selectOption(page, '設備 *', '常圧蒸留装置')
+  await selectOption(page, '計器（任意）', 'FT-301')
+  await page.getByRole('button', { name: '項目追加' }).click()
+  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+
+  const routine = page.getByTestId('routine-checks')
+  await expect(routine).toBeVisible()
+  await expect(routine).toContainText('一次点検の定型項目')
+  await expect(routine).toContainText('ゼロ点ズレの確認')
+  await expect(routine).toContainText('オリフィス・絞り部の詰まり・付着')
+
+  // 計器を変えると、その種別の定型項目に変わる（手動弁は定型項目を持たず、非表示になる）
+  await selectOption(page, '計器（任意）', 'HV-101')
+  await expect(routine).toHaveCount(0)
+})
+
+test('AI無効でも、一次点検の定型項目は表示される（AIとは独立した区画にあるため）', async ({ page }) => {
+  await page.route('**/api/v1/ai/status', (route) => route.fulfill({ json: { data: { enabled: false, remaining_today: 0, daily_limit: 20, max_memo_length: 1000 } } }))
+  await login(page, ACCOUNTS.member)
+  await page.goto('/inspections/new')
+  await selectOption(page, '設備 *', '常圧蒸留装置')
+  await selectOption(page, '計器（任意）', 'FT-301')
+  await page.getByRole('button', { name: '項目追加' }).click()
+  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+
+  await expect(page.getByTestId('ai-assist')).toHaveCount(0)
+  const routine = page.getByTestId('routine-checks')
+  await expect(routine).toBeVisible()
+  await expect(routine).toContainText('ゼロ点ズレの確認')
+})
+
+test('計器詳細にも、シール液と一次点検の定型項目が表示される', async ({ page }) => {
+  await login(page, ACCOUNTS.admin)
+  await page.getByRole('link', { name: '装置・計器', exact: true }).click()
+  await page.getByRole('textbox', { name: 'タグ番号・種別・設置場所' }).fill('LT-701')
+  await page.locator('tbody tr', { hasText: 'LT-701' }).first().click()
+
+  await expect(page.getByText('シール液:')).toBeVisible()
+  const checks = page.getByTestId('troubleshooting-checks')
+  await expect(checks).toContainText('シール液の種類の確認')
+})
 
 // 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）
 test('プラナホームから現場メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
   await login(page, ACCOUNTS.member)
   requireFakeAi((await (await statusResponse).json()).data.provider)
-  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の下書き' }).click()
+  await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await selectFirstOption(page, '対象の設備')
   await page.getByRole('button', { name: '不具合の記録を始める' }).click()
   await expect(page.getByTestId('from-plana')).toBeVisible()
@@ -24,8 +71,8 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
 
   const draft = page.getByTestId('ai-draft')
   await expect(draft).toBeVisible()
-  await expect(draft).toContainText('プラナの下書きです')
-  const draftTitle = (await draft.innerText()).match(/タイトル:\s*(.+)/)?.[1].trim()
+  await expect(draft).toContainText('プラナが整理しました')
+  const draftTitle = (await page.getByTestId('ai-draft-title').innerText()).trim()
   expect(draftTitle).toBeTruthy()
 
   // 反映するまで、入力欄は変わらない

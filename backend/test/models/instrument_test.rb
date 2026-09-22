@@ -34,4 +34,19 @@ class InstrumentTest < ActiveSupport::TestCase
       Instrument.new(equipment: equipment, tag_number: "PI-101").save!(validate: false)
     end
   end
+
+  test "troubleshooting_checks は種別ごとの一次点検の定型項目を返し、定義のない種別・手動弁は空" do
+    transmitter = Instrument.new(instrument_type: "pressure_transmitter")
+    assert_includes transmitter.troubleshooting_checks, "ゼロ点ズレの確認"
+
+    assert_equal [], Instrument.new(instrument_type: "hand_valve").troubleshooting_checks
+    assert_equal [], Instrument.new(instrument_type: nil).troubleshooting_checks
+    assert_equal [], Instrument.new(instrument_type: "不明な種別").troubleshooting_checks
+  end
+
+  test "調節弁の4種別（pressure/level/flow/temperature_valve）は同じ定型項目を持つ" do
+    checks = Instrument::CONTROL_VALVE_TYPES.map { |type| Instrument.new(instrument_type: type).troubleshooting_checks }
+    assert checks.all? { |c| c == checks.first }
+    assert checks.first.present?
+  end
 end
