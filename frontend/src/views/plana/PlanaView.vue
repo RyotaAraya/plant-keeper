@@ -11,7 +11,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import { latestGuard } from '@/utils/latestGuard'
-import type { AiStatus } from '@/types/models'
+import AiAvailability from '@/components/AiAvailability.vue'
+import { useAiAvailability } from '@/composables/useAiAvailability'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,9 +33,7 @@ const instrumentLoading = ref(false)
 const instrumentError = ref('')
 const optionsGuard = latestGuard()
 const instrumentGuard = latestGuard()
-const status = ref<AiStatus | null>(null)
-const statusLoading = ref(true)
-const statusError = ref(false)
+const { status, loading: statusLoading, failed: statusError, refresh: fetchStatus } = useAiAvailability()
 const similar = useSimilarTroubles((count) => { if (status.value) status.value.remaining_today = count })
 const searchButton = ref<{ $el: { focus(): void } } | null>(null)
 function closeSimilar() {
@@ -43,14 +42,6 @@ function closeSimilar() {
 }
 const canSearch = computed(() => !!equipmentId.value && !!memo.value.trim() && !!status.value?.enabled && status.value.remaining_today > 0 && !optionsLoading.value && !optionsError.value && !instrumentLoading.value && !instrumentError.value)
 const equipmentOptions = computed(() => equipments.value.map((equipment) => ({ ...equipment, label: siteIds.value.length === 1 ? equipment.name : `${equipment.site?.name ?? ''} ${equipment.name}` })))
-
-async function fetchStatus() {
-  statusLoading.value = true
-  statusError.value = false
-  try { status.value = (await api.get('/ai/status')).data.data }
-  catch { status.value = null; statusError.value = true }
-  finally { statusLoading.value = false }
-}
 
 async function fetchOptions() {
   const isLatest = optionsGuard()
@@ -170,13 +161,13 @@ onUnmounted(() => {
             <h2>{{ activeTask.title }}</h2>
             <SiteScopeTag v-model="siteIds" />
           </div>
-          <p v-if="statusLoading" role="status" class="plana-state">AIの利用状況を確認しています。</p>
-          <v-alert v-else-if="statusError" type="info" variant="tonal" class="mb-4" role="status">
-            AIの利用状況を確認できません。通常の記録入力と履歴の参照は利用できます。
-            <v-btn variant="text" size="small" @click="fetchStatus">利用状況を再確認</v-btn>
-          </v-alert>
-          <v-alert v-else-if="status && !status.enabled" type="info" variant="tonal" class="mb-4" data-testid="plana-disabled">この環境ではAI機能は無効です。記録の入力と過去のトラブルの参照は利用できます。</v-alert>
-          <v-alert v-else-if="status?.remaining_today === 0" type="info" variant="tonal" class="mb-4">今日のAI利用回数の上限に達しました。記録の入力と過去のトラブルの参照は続けられます。</v-alert>
+          <AiAvailability
+            :status="status"
+            :loading="statusLoading"
+            :failed="statusError"
+            :data-testid="status && !status.enabled ? 'plana-disabled' : undefined"
+            @retry="fetchStatus"
+          />
 
           <template v-if="activeTask.key !== 'response-draft'">
             <p class="plana-instruction">{{ activeTask.key === 'defect-draft' ? '不具合が見つかった設備を選んでください。点検の不具合欄で、メモから報告を整えます。' : '設備と症状を教えてください。関連する過去のトラブルから、似た事例と対応記録を探します。' }}</p>

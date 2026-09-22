@@ -141,10 +141,10 @@ test('AI無効でもメモと対象を保ったまま仕事を切り替え、通
 test('利用状況の取得に失敗しても、メモを残して再確認できる', async ({ page }) => {
   await page.route('**/api/v1/ai/status', (route) => route.abort('failed'), { times: 1 })
   await login(page, ACCOUNTS.member)
-  await expect(page.getByText('AIの利用状況を確認できません。', { exact: false })).toBeVisible()
+  await expect(page.getByText('AIの利用状況を取得できませんでした。', { exact: false })).toBeVisible()
   await page.getByLabel('いま起きている症状').fill('取得が失敗しても残すメモ')
-  await page.getByRole('button', { name: '利用状況を再確認' }).click()
-  await expect(page.getByRole('button', { name: '利用状況を再確認' })).toHaveCount(0)
+  await page.getByRole('button', { name: '再確認', exact: true }).click()
+  await expect(page.getByRole('button', { name: '再確認', exact: true })).toHaveCount(0)
   await expect(page.getByLabel('いま起きている症状')).toHaveValue('取得が失敗しても残すメモ')
 })
 

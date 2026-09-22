@@ -17,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   apply: [draft: AiResponseDraft]
   remaining: [count: number]
+  dirty: [value: boolean]
 }>()
 
 const RESPONSE_TYPE_LABEL: Record<string, string> = { investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察' }
@@ -25,6 +26,7 @@ const memo = ref('')
 const loading = ref(false)
 const draft = ref<AiResponseDraft | null>(null)
 const error = ref('')
+watch([memo, draft, loading], () => emit('dirty', !!memo.value.trim() || !!draft.value || loading.value), { flush: 'sync' })
 
 // 下書きを作っている間に、別のトラブルの詳細に変わる（同じ画面が使い回される）ことがある。
 // 古い呼び出しの応答は、あとから返っても反映しない
@@ -83,7 +85,7 @@ function apply() {
       hide-details="auto"
       data-testid="ai-response-memo"
     />
-    <div class="d-flex align-center ga-3 mt-1">
+    <div class="d-flex align-center flex-wrap ga-3 mt-1">
       <v-btn
         size="small"
         variant="tonal"

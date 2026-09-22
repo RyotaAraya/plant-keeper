@@ -23,16 +23,23 @@ const props = defineProps<{
 const emit = defineEmits<{
   apply: [draft: AiDefectDraft]
   remaining: [count: number]
+  dirty: [value: boolean]
 }>()
 
 const PRIORITY_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
 
+const similarButton = ref<{ $el: { focus(): void } } | null>(null)
+function closeSimilar() {
+  similar.clear()
+  similarButton.value?.$el.focus()
+}
 const similar = useSimilarTroubles((count) => emit('remaining', count))
 
 const memo = ref('')
 const loading = ref(false)
 const draft = ref<AiDefectDraft | null>(null)
 const error = ref('')
+watch([memo, draft, loading], () => emit('dirty', !!memo.value.trim() || !!draft.value || loading.value), { flush: 'sync' })
 
 // 下書きを作っている間に設備・計器が変わる（clear）ことがある。古い呼び出しの応答は、あとから返っても反映しない
 const guard = latestGuard()
@@ -121,6 +128,7 @@ function apply() {
         下書きを作る
       </v-btn>
       <v-btn
+        ref="similarButton"
         size="small"
         variant="tonal"
         color="primary"
@@ -137,7 +145,7 @@ function apply() {
 
     <v-alert v-if="error" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-error">{{ error }}</v-alert>
     <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
-    <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="similar.clear()" />
+    <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
       <v-card-text class="text-body-2">

@@ -2,13 +2,16 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import AiAvailability from '@/components/AiAvailability.vue'
+import { useAiAvailability } from '@/composables/useAiAvailability'
+import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DefectAiAssist from '@/components/DefectAiAssist.vue'
 import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
-import type { AiDefectDraft, AiStatus, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
+import type { AiDefectDraft, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
 import { nowForInput } from '@/utils/datetime'
 
@@ -26,7 +29,7 @@ const referenceStandards = ref<ReferenceStandard[]>([])
 const errors = ref<string[]>([])
 const saving = ref(false)
 // AI支援の状況。AIが使えない環境（null・無効）では、AIのボタンを出さない
-const aiStatus = ref<AiStatus | null>(null)
+const { status: aiStatus, loading: aiLoading, failed: aiFailed, refresh: fetchAiStatus } = useAiAvailability()
 
 const form = ref({
   // 点検で見た設備。複数の設備をまとめて点検（巡回など）できる。先頭が代表の設備（equipment_id）
@@ -43,6 +46,26 @@ const form = ref({
   items: [] as any[],
   reference_standards: [] as InspectionReferenceStandardUse[],
 })
+
+// 項目の位置ではなくオブジェクトを識別し、削除時に他項目へメモを移さない。
+const itemKeys = new WeakMap<object, number>()
+let nextItemKey = 0
+function itemKey(item: object) {
+  if (!itemKeys.has(item)) itemKeys.set(item, ++nextItemKey)
+  return itemKeys.get(item)!
+}
+const memoItems = ref(new Set<object>())
+const openedDefects = ref(new Set<object>())
+function markMemo(item: object, dirty: boolean) {
+  if (dirty) memoItems.value.add(item)
+  else memoItems.value.delete(item)
+}
+const initialForm = ref('')
+const saved = ref(false)
+const dirty = computed(() => !saved.value && !!initialForm.value && (
+  JSON.stringify(form.value) !== initialForm.value || form.value.items.some((item) => memoItems.value.has(item))
+))
+useUnsavedWork(dirty)
 
 // 点検で見た設備（選択肢のうち、選ばれているもの）
 const selectedEquipments = computed(() => equipments.value.filter((e) => form.value.equipment_ids.includes(e.id)))
@@ -129,15 +152,6 @@ async function fetchInstruments() {
   instruments.value = res.data.data
 }
 
-async function fetchAiStatus() {
-  try {
-    aiStatus.value = (await api.get('/ai/status')).data.data
-  } catch {
-    // AIの状況が取れなくても、点検の入力には影響しない（AIのボタンを出さないだけ）
-    aiStatus.value = null
-  }
-}
-
 // AIの下書きを、項目の不具合の入力欄に入れる（タイトル・説明・優先度だけ。保存は点検を保存したとき）。
 // どの提案をもとにしたかを、保存時に送る（監査ログに残り、AIの案と人が確定した内容を突き合わせられる）
 function applyAiDraft(item: any, draft: AiDefectDraft) {
@@ -163,6 +177,7 @@ async function onEquipmentChange() {
 
 // 複数の設備をまとめた点検で、不具合がどの設備のものかを決める（初期値は代表の設備）
 function onDefectToggle(item: any, on: boolean | null) {
+  openedDefects.value.add(item)
   if (on && multipleEquipments.value && !item.equipment_id) item.equipment_id = form.value.equipment_ids[0]
 }
 
@@ -210,6 +225,7 @@ function addItem() {
 }
 
 function removeItem(idx: number) {
+  if (!confirm('この点検項目と入力中のメモを削除しますか？')) return
   form.value.items.splice(idx, 1)
 }
 
@@ -228,6 +244,7 @@ async function save(status?: string) {
     } else {
       await api.post('/inspections', payload)
     }
+    saved.value = true
     router.push('/inspections')
   } catch (e: any) {
     errors.value = e.response?.data?.errors || ['保存に失敗しました']
@@ -343,6 +360,7 @@ onMounted(async () => {
   defaultDepartment()
   await ensureOptionsCoverEquipment()
   await ensureDepartmentInOptions()
+  initialForm.value = JSON.stringify(form.value)
 })
 </script>
 
@@ -460,7 +478,7 @@ onMounted(async () => {
       <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="addItem">項目追加</v-btn>
     </div>
 
-    <v-card v-for="(item, idx) in form.items" :key="idx" class="mb-3" variant="outlined">
+    <v-card v-for="(item, idx) in form.items" :key="itemKey(item)" class="mb-3" variant="outlined">
       <v-card-text>
         <div class="d-flex align-center mb-2">
           <span class="text-subtitle-2">項目 {{ idx + 1 }}</span>
@@ -498,7 +516,8 @@ onMounted(async () => {
           </v-col>
         </v-row>
         <v-expand-transition>
-          <div v-if="item.has_defect" class="mt-1">
+          <div v-if="item.has_defect || openedDefects.has(item)" v-show="item.has_defect" class="mt-1">
+            <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
             <v-row v-if="multipleEquipments" dense>
               <v-col cols="12" md="5">
                 <v-select
@@ -522,6 +541,7 @@ onMounted(async () => {
                   :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
                   :item-label="item.content"
                   :has-existing="!!item.defect_title"
+                  @dirty="markMemo(item, $event)"
                   @apply="applyAiDraft(item, $event)"
                   @remaining="aiStatus.remaining_today = $event"
                 />
