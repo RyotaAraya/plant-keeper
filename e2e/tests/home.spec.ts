@@ -33,7 +33,7 @@ test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', a
   await page.goto('/')
   const choices = [
     ['不具合を相談する', 'FT-301 流量指示の低下', 'defect-draft'],
-    ['似た事例を探す', '流量計の信号途絶', 'similar-troubles'],
+    ['似た事例を探す', '流量計の指示ゼロ固着', 'similar-troubles'],
     ['対応を記録する', '端子の増し締め・指示の復旧確認', 'response-draft'],
   ]
   for (const [label, title, task] of choices) {
