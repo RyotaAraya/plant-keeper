@@ -306,6 +306,12 @@ async function prefillFromPlana() {
     errors.value = ['対象の設備を選んでください。']
     return
   }
+  // 協力会社は所属拠点の選択肢だけを使う。URLの equipment_id を書き換えても
+  // 他拠点の設備を読み込まず、API側の保存時検証と同じ境界にそろえる。
+  if (authStore.user?.company?.company_type === 'contractor' && !equipments.value.some((equipment) => equipment.id === id)) {
+    errors.value = ['所属拠点の設備を選んでください。']
+    return
+  }
   try {
     const res = await api.get(`/equipments/${id}`)
     await loadSiteOptions([res.data.data.site_id])

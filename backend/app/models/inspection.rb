@@ -35,6 +35,7 @@ class Inspection < ApplicationRecord
   enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
 
   validates :inspected_at, presence: true
+  validate :contractor_uses_own_site
   validate :plan_matches_equipment, if: :plan_check_needed?
   validate :task_matches_equipment
 
@@ -80,6 +81,17 @@ class Inspection < ApplicationRecord
   end
 
   private
+
+  # 協力会社は画面上で所属拠点に固定されるが、URLやAPIを直接組み立てても
+  # 他拠点の設備を点検対象にできないよう、保存時にも同じ境界を保証する。
+  def contractor_uses_own_site
+    return unless user&.company&.contractor?
+
+    site_ids = Equipment.where(id: covered_equipment_ids).distinct.pluck(:site_id)
+    return if site_ids.present? && site_ids.all? { |site_id| site_id == user.site_id }
+
+    errors.add(:equipment, "は所属拠点の設備を選んでください")
+  end
 
   # 取引用の計器（点検の計器、または項目の計器）の点検か
   def custody_transfer_instrument?

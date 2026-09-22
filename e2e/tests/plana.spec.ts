@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS, selectFirstOption, requireFakeAi, openFirstTrouble } from './support'
+import { test, expect, login, ACCOUNTS, apiBaseUrl, selectFirstOption, requireFakeAi, openFirstTrouble } from './support'
 import type { Page } from '@playwright/test'
 
 async function submitLogin(page: Page) {
@@ -67,6 +67,22 @@ test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合�
   await expect(page.getByRole('checkbox', { name: '不具合あり' })).toBeChecked()
   await expect(page.getByRole('combobox', { name: '計器（任意）', exact: true })).toHaveValue(selectedTag)
   await expect(page.getByLabel('トラブルタイトル')).toBeVisible()
+})
+
+test('協力会社はURLで他拠点の設備を指定しても点検対象にできない', async ({ page }) => {
+  await login(page, { email: 'honda@example.com', password: 'password' })
+  const otherSiteEquipmentId = await page.evaluate(async (apiUrl) => {
+    const token = localStorage.getItem('jwt')
+    const current = await fetch(`${apiUrl}/current_user`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json())
+    const equipments = await fetch(`${apiUrl}/equipments?per_page=1000`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json())
+    return equipments.data.find((equipment: { id: number; site_id: number }) => equipment.site_id !== current.user.site_id)?.id
+  }, apiBaseUrl())
+  expect(otherSiteEquipmentId).toEqual(expect.any(Number))
+
+  await page.goto(`/inspections/new?plana=defect-draft&equipment_id=${otherSiteEquipmentId}`)
+  await expect(page.getByText('所属拠点の設備を選んでください。')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: '設備 *' })).toHaveValue('')
+  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toHaveCount(0)
 })
 
 test('トラブルを探して対応記録の入力を直接開ける', async ({ page }) => {

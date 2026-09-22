@@ -134,6 +134,32 @@ class InspectionsTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, other.id
   end
 
+  test "協力会社はURLやAPIを直接指定しても他拠点の設備を点検できない" do
+    contractor = create_user(
+      system_role: "worker",
+      company: create_company(company_type: "contractor", name: "テスト協力会社"),
+      site: @site
+    )
+    other_equipment = create_equipment(site: create_site(name: "第二製油所"), name: "他拠点設備")
+    params = {
+      inspection: {
+        equipment_id: other_equipment.id,
+        department_id: @department.id,
+        inspection_type: "routine",
+        status: "draft",
+        inspected_at: Time.current.iso8601,
+        items: []
+      }
+    }
+
+    assert_no_difference "Inspection.count" do
+      post "/api/v1/inspections", params: params, headers: auth_headers_for(contractor), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes json["errors"].join, "所属拠点"
+  end
+
   test "トラブル一覧は拠点（設備の拠点）で絞り込める" do
     other_equipment = create_equipment(site: create_site(name: "第二製油所"))
     mine = Trouble.create!(equipment: @equipment, reported_by: @user, title: "自拠点のトラブル", reported_at: Time.current)
