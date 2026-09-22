@@ -23,16 +23,23 @@ const props = defineProps<{
 const emit = defineEmits<{
   apply: [draft: AiDefectDraft]
   remaining: [count: number]
+  dirty: [value: boolean]
 }>()
 
 const PRIORITY_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
 
+const similarButton = ref<{ $el: { focus(): void } } | null>(null)
+function closeSimilar() {
+  similar.clear()
+  similarButton.value?.$el.focus()
+}
 const similar = useSimilarTroubles((count) => emit('remaining', count))
 
 const memo = ref('')
 const loading = ref(false)
 const draft = ref<AiDefectDraft | null>(null)
 const error = ref('')
+watch([memo, draft, loading], () => emit('dirty', !!memo.value.trim() || !!draft.value || loading.value), { flush: 'sync' })
 
 // 下書きを作っている間に設備・計器が変わる（clear）ことがある。古い呼び出しの応答は、あとから返っても反映しない
 const guard = latestGuard()
@@ -78,7 +85,7 @@ async function generate() {
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
     if (!isLatest()) return
-    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。点検の入力はプラナなしで続けられます'
+    error.value = e.response?.data?.errors?.[0] || '下書きを取得できませんでした。報告内容は直接入力できます'
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -87,7 +94,7 @@ async function generate() {
 function apply() {
   if (!draft.value) return
   // 断ったときは、下書きを残す（押し直せるように）
-  if (props.hasExisting && !confirm('入力済みのタイトル・説明を、プラナの下書きで置き換えます。よろしいですか？')) return
+  if (props.hasExisting && !confirm('入力済みのタイトル・説明・優先度を、下書きで置き換えます。よろしいですか？')) return
   emit('apply', draft.value)
   draft.value = null
 }
@@ -97,7 +104,7 @@ function apply() {
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
     <v-textarea
       v-model="memo"
-      label="現場メモ（プラナで整える）"
+      label="現場メモ"
       placeholder="例: PT-101の指示値が数秒おきに上下している。昨日から。"
       rows="2"
       auto-grow
@@ -107,7 +114,7 @@ function apply() {
       hide-details="auto"
       data-testid="ai-memo"
     />
-    <div class="d-flex align-center ga-3 mt-1">
+    <div class="d-flex align-center flex-wrap ga-3 mt-1">
       <v-btn
         size="small"
         variant="tonal"
@@ -118,9 +125,10 @@ function apply() {
         @click="generate"
       >
         <template #prepend><PlanaAvatar :size="20" /></template>
-        プラナで整える
+        下書きを作る
       </v-btn>
       <v-btn
+        ref="similarButton"
         size="small"
         variant="tonal"
         color="primary"
@@ -137,7 +145,7 @@ function apply() {
 
     <v-alert v-if="error" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-error">{{ error }}</v-alert>
     <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
-    <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="similar.clear()" />
+    <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
       <v-card-text class="text-body-2">
