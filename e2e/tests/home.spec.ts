@@ -1,77 +1,80 @@
 import { test, expect } from './support'
 
-// 公開トップは、プラナで始められる実在の仕事を先に示し、その土台として
-// PlantKeeperの保全管理機能と権限を説明する。回答しない相談欄は置かない。
-test('ヒーローは紹介とプラナに絞り、具体例は次の段に表示する', async ({ page }) => {
+// 公開トップは「PlantKeeperとは何か」→「プラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる。
+// プラナの3つの仕事は、同じトラブル（FT-301の指示低下）の流れでつなげる
+test('ヒーローで、PlantKeeperが何を一元管理するシステムかを先に示す', async ({ page }) => {
   await page.goto('/')
   const hero = page.locator('.landing-hero')
-  await expect(hero.getByRole('heading', { level: 1 })).toHaveText('プラナと進める、設備保全。')
+  await expect(hero.getByRole('heading', { level: 1 })).toHaveText('PlantKeeper')
+  await expect(hero).toContainText('設備保全に必要な情報を、ひとつの場所へ。')
   await expect(hero.getByRole('img')).toBeVisible()
-  await expect(hero.locator('.landing-example')).toHaveCount(0)
-  await expect(page.getByRole('tabpanel')).toContainText('架空のメモ・記録による表示例')
-  await expect(page.getByRole('tabpanel')).toContainText('FT-301 流量指示の低下')
+  expect(await hero.getByRole('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
 })
 
-test('不具合の相談の例は、定型項目とプラナの提案（見立て・確認したい点）を1つのカードにまとめて示す', async ({ page }) => {
+test('保全業務の流れ・プラナの紹介・1件のトラブルの流れの順に並ぶ', async ({ page }) => {
   await page.goto('/')
-  const panel = page.getByRole('tabpanel')
-  await expect(panel).toContainText('一次点検の定型項目')
-  await expect(panel).toContainText('ゼロ点ズレの確認')
-  // 「プラナ」を名乗るのはカードの案内文1箇所だけ（見立て・確認したい点はプラナの前置きを繰り返さない）
-  await expect(panel.locator('.pk-plana-card')).toContainText('プラナが整理しました')
-  await expect(panel.getByText('見立て', { exact: true })).toBeVisible()
-  await expect(panel).toContainText('オリフィス・絞り部の詰まりの可能性')
-  await expect(panel.getByText('確認したい点', { exact: true })).toBeVisible()
+  await expect(page.locator('.landing-flow strong')).toHaveText(['設備', '点検', 'トラブル', '修理', '資材', '在庫', '発注'])
+  await expect(page.locator('.landing-foundation-grid h3')).toHaveText(['設備と記録をつなぐ', '保全の仕事を進める', '資材まで見渡す'])
+
+  const order = await page.evaluate(() => ['#features', '#plana', '#plana-work', '#try-guide', '#permissions']
+    .map((selector) => document.querySelector(selector)!.getBoundingClientRect().top))
+  expect([...order].sort((a, b) => a - b)).toEqual(order)
+
+  await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
+  await expect(page.locator('#plana')).toContainText('運転を続けてよいかの判断は出しません')
 })
 
-test('対応記録の例は、口語のメモが対応種別・使用資材・確認したい点に整理されることを示す（メモの言い換え止まりにしない）', async ({ page }) => {
+test('ヒーローのプラナの入口から、プラナの紹介へ移る', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('tab', { name: '対応を記録する' }).click()
-  const panel = page.getByRole('tabpanel')
-  await expect(panel).toContainText('対応種別: 修理')
-  await expect(panel).toContainText('使用資材:')
-  await expect(panel).toContainText('水（シール液用）')
-  await expect(panel).toContainText('再発防止のため、スチームトレーサーのトラップ調整やスチーム停止は必要か？')
+  await page.getByRole('link', { name: /AIアシスタント「プラナ」/ }).click()
+  await expect(page).toHaveURL(/#plana$/)
+  await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toBeInViewport()
 })
 
-test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', async ({ page }) => {
+test('3つの仕事は、同じFT-301のトラブルを、気づく → 過去の事例 → 対応の記録の順にたどる', async ({ page }) => {
   const aiCalls: string[] = []
   page.on('request', (request) => {
     if (request.method() === 'POST' && request.url().includes('/ai/')) aiCalls.push(request.url())
   })
   await page.goto('/')
-  const choices = [
-    ['不具合を相談する', 'FT-301 流量指示の低下', 'defect-draft'],
-    ['似た事例を探す', '流量計の指示ゼロ固着', 'similar-troubles'],
-    ['対応を記録する', 'LT-701 シール液の補液・指示の復旧確認', 'response-draft'],
+  const steps = page.locator('.landing-step')
+  await expect(steps.locator('h3')).toHaveText(['点検で気づく', '過去の事例を見る', '対応を記録する'])
+  for (let i = 0; i < 3; i++) await expect(steps.nth(i)).toContainText('FT-301')
+
+  // 1: 定型項目とプラナの提案（見立て・確認したい点）。「プラナ」を名乗るのはカードの案内文1箇所だけ
+  const defect = steps.nth(0)
+  await expect(defect).toContainText('一次点検の定型項目')
+  await expect(defect).toContainText('ゼロ点ズレの確認')
+  await expect(defect.locator('.pk-plana-card')).toContainText('プラナが整理しました')
+  await expect(defect.getByText('見立て', { exact: true })).toBeVisible()
+  await expect(defect).toContainText('導圧管の閉塞の可能性')
+
+  // 2: 過去の事例が、1の見立て（導圧管）の手がかりになる
+  const similar = steps.nth(1)
+  await expect(similar).toContainText('似ている点:')
+  await expect(similar).toContainText('過去の対応:')
+  await expect(similar).toContainText('導圧管')
+
+  // 3: 口語のメモが、対応種別・使用資材・確認したい点に整理される（メモの言い換え止まりにしない）
+  const response = steps.nth(2)
+  await expect(response).toContainText('対応種別: 修理')
+  await expect(response).toContainText('使用資材:')
+  await expect(response.getByText('確認したい点', { exact: true })).toBeVisible()
+
+  const links = [
+    ['不具合報告の整理を試す', 'defect-draft'],
+    ['過去の類似トラブルを試す', 'similar-troubles'],
+    ['対応記録の整理を試す', 'response-draft'],
   ]
-  for (const [label, title, task] of choices) {
-    await page.getByRole('tab', { name: label }).click()
-    await expect(page.getByRole('tab', { name: label })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByRole('tabpanel')).toContainText(title)
-    await expect(page.getByRole('link', { name: 'この仕事を試す' })).toHaveAttribute('href', `/plana?task=${task}`)
+  for (const [name, task] of links) {
+    await expect(page.getByRole('link', { name })).toHaveAttribute('href', `/plana?task=${task}`)
   }
-  await page.getByRole('tab', { name: '対応を記録する' }).press('ArrowLeft')
-  await expect(page.getByRole('tab', { name: '似た事例を探す' })).toBeFocused()
   expect(aiCalls).toEqual([])
-})
-
-test('AIの仕事のあとに、保全管理の土台と権限の説明が続く', async ({ page }) => {
-  await page.goto('/')
-
-  await expect(page.locator('.landing-foundation-grid h3')).toHaveText([
-    '設備と記録をつなぐ',
-    '保全の仕事を進める',
-    '資材まで見渡す',
-  ])
-  await expect(page.getByRole('heading', { name: '自社も協力会社も、同じ記録で。' })).toBeVisible()
-  await expect(page.locator('#permissions')).toContainText('所属と権限に合わせて')
 })
 
 test('ログイン前に仕事を始めると、選んだ仕事を復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('tab', { name: '似た事例を探す' }).click()
-  await page.getByRole('link', { name: 'この仕事を試す' }).click()
+  await page.getByRole('link', { name: '過去の類似トラブルを試す' }).click()
 
   await expect(page).toHaveURL(/\/login\?redirect=/)
   expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana?task=similar-troubles')
@@ -79,7 +82,7 @@ test('ログイン前に仕事を始めると、選んだ仕事を復帰先に�
 
 test('ヒーローのCTAから作業ホームを復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'プラナを試す', exact: true }).click()
+  await page.getByRole('link', { name: 'デモアカウントで試す', exact: true }).click()
 
   await expect(page).toHaveURL(/\/login\?redirect=/)
   expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana')
@@ -94,18 +97,16 @@ test('トップページは、スマホの幅でも横にはみ出さない', as
   expect(overflow).toBe(0)
 })
 
-
 test('体験条件を案内し、詳細権限は必要なときに開ける', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('#try-guide')).toContainText('上の表示例は自動入力されません')
   await expect(page.locator('#try-guide')).toContainText('1日の利用上限')
+  await expect(page.getByRole('heading', { name: '自社も協力会社も、同じ記録で。' })).toBeVisible()
   await expect(page.locator('#permissions')).toContainText('技能員')
   const matrix = page.locator('#permissions table')
   await expect(matrix).toBeHidden()
   await page.getByText('業務機能の詳しい権限を見る', { exact: true }).click()
   await expect(matrix).toBeVisible()
-  await expect(page.locator('.landing-product img')).toBeVisible()
-  expect(await page.locator('.landing-product img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
   await page.getByRole('link', { name: 'デモアカウントで始める' }).click()
   await expect(page).toHaveURL(/\/login\?redirect=/)
 })

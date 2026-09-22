@@ -20,8 +20,7 @@ test('ログインするとプラナの作業場が開き、初期表示ではAI
 
 test('公開トップで選んだ仕事を、通常ログイン後に引き継ぐ', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('tab', { name: '対応を記録する' }).click()
-  await page.getByRole('link', { name: 'この仕事を試す' }).click()
+  await page.getByRole('link', { name: '対応記録の整理を試す' }).click()
   await expect(page).toHaveURL(/\/login\?redirect=/)
   await submitLogin(page)
   await expect(page).toHaveURL(/\/plana\?task=response-draft$/)
