@@ -84,6 +84,8 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     assert_includes sent, "この計器の一次点検の定型項目（現場ですでに確認済みの前提）"
     assert_includes sent, "シール液の種類の確認"
     assert_includes @client.calls.first[:system], "定型項目でカバーされない"
+    # possible_causes も、定型項目の中から症状に照らして優先させる（プラナの見立てが単なるメモの言い換えにならないため）
+    assert_includes @client.calls.first[:system], "まずその中から"
   end
 
   test "定型項目のない計器種別（手動弁）では、定型項目の行を渡さない" do

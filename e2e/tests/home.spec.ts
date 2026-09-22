@@ -12,11 +12,13 @@ test('ヒーローは紹介とプラナに絞り、具体例は次の段に表�
   await expect(page.getByRole('tabpanel')).toContainText('FT-301 流量指示の低下')
 })
 
-test('不具合の相談の例は、計器の一次点検の定型項目とプラナ固有の確認事項を分けて示す', async ({ page }) => {
+test('不具合の相談の例は、定型項目・プラナの見立て・プラナ固有の確認事項を分けて示す', async ({ page }) => {
   await page.goto('/')
   const panel = page.getByRole('tabpanel')
   await expect(panel).toContainText('一次点検の定型項目')
   await expect(panel).toContainText('ゼロ点ズレの確認')
+  await expect(panel).toContainText('プラナの見立て')
+  await expect(panel).toContainText('オリフィス・絞り部の詰まりの可能性')
   await expect(panel).toContainText('プラナが挙げた確認したい点')
   await expect(panel).toContainText('現場の流量と、FT-301の指示は一致しているか？')
 })

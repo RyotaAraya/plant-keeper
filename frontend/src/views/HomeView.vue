@@ -22,6 +22,10 @@ const examples = [
       'オリフィス・絞り部の詰まり・付着',
     ],
     output: '報告の下書き', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    possibleCauses: [
+      'オリフィス・絞り部の詰まりの可能性（指示の低下が緩やかで、前日から変わっていないため）',
+      '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
+    ],
     checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
     note: '内容を確認してから、点検の記録に反映します。',
   },
@@ -87,6 +91,7 @@ const foundations = [
             <h3><v-icon size="20" aria-hidden="true">mdi-auto-fix</v-icon>{{ example.output }}</h3>
             <h4>{{ example.title }}</h4>
             <p>{{ example.detail }}</p>
+            <div v-if="example.possibleCauses" class="landing-check-points"><h4>プラナの見立て<span>定型項目の中から、症状に照らして優先度が高いものを選ぶ。可能性であり断定ではない</span></h4><ul><li v-for="c in example.possibleCauses" :key="c">{{ c }}</li></ul></div>
             <div v-if="example.checkPoint" class="landing-check-points"><h4>プラナが挙げた確認したい点<span>このメモ特有。定型項目とは重複させない</span></h4><p>{{ example.checkPoint }}</p></div>
           </div>
         </div>
@@ -168,6 +173,7 @@ const foundations = [
 .landing-check-points { border-top: 1px solid var(--pk-line); margin-top: 20px; padding-top: 16px; }
 .landing-check-points h4, .landing-routine-checks h4 { font-size: .8125rem; margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .landing-check-points h4 span, .landing-routine-checks h4 span { font-size: .6875rem; font-weight: 400; color: var(--pk-muted); }
+.landing-check-points ul { margin: 0; padding-left: 20px; font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); }
 .landing-routine-checks { background: var(--pk-mist); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
 .landing-routine-checks ul { margin: 0; padding-left: 20px; font-size: .8125rem; line-height: 1.9; color: var(--pk-muted); }
 .landing-example-footer .landing-steps { margin-top: 8px; color: var(--pk-ink); }
