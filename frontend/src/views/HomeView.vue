@@ -8,8 +8,23 @@ import { planaCapabilities } from '@/constants/planaCapabilities'
 
 const auth = useAuthStore()
 const selectedExample = ref(0)
+// tab 0（不具合）の routineChecks は backend/app/models/instrument_troubleshooting_catalog.rb の
+// CHECKS['flow_transmitter'] と同じ内容（表示例。実際の値は計器種別ごとにアプリが確定的に出す）
 const examples = [
-  { label: '不具合を報告する', input: '点検で気づいたこと', memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。', output: '報告の下書き', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。', note: '内容を確認してから、点検の記録に反映します。' },
+  {
+    label: '不具合を相談する', input: '点検で気づいたこと',
+    memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
+    routineChecks: [
+      '導圧管の閉塞（固形物の堆積・凍結・気体/液体の溜まり）。ブロー・貫通棒での貫通でOKになるか',
+      'ゼロ点ズレの確認',
+      'バルブマニホールド（元弁・平衡弁）が誤って閉止・半開になっていないか',
+      '配線・端子の緩み、電源の確認',
+      'オリフィス・絞り部の詰まり・付着',
+    ],
+    output: '報告の下書き', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
+    note: '内容を確認してから、点検の記録に反映します。',
+  },
   { label: '似た事例を探す', input: 'いま起きている症状', memo: '流量計の指示がゼロになった。\n現場では流れているように見える。', output: '過去の事例の提示', title: '流量計の信号途絶', detail: '似た症状の記録：流量計の指示がゼロになり、配線の断線を確認。配線を補修して指示が復旧。', note: '元のトラブル記録を開いて、症状や対応を確認できます。' },
   { label: '対応を記録する', input: '作業後のメモ', memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。', output: '対応記録の下書き', title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。', note: '下書きを確認・編集してから、対応記録として保存します。' },
 ]
@@ -53,7 +68,7 @@ const foundations = [
     </section>
 
     <section class="landing-section landing-demo" aria-labelledby="work-title">
-      <div class="landing-section-heading"><h2 id="work-title">そのメモから、仕事が進む。</h2><p>報告・事例探し・対応記録。プラナが手伝う3つの仕事をご紹介します。</p></div>
+      <div class="landing-section-heading"><h2 id="work-title">現場で気づいたことを、プラナに相談する。</h2><p>計器の一次点検の定石とプラナの整理。似た事例の検索、対応記録の下書きも。3つの仕事をタブでご紹介します。</p></div>
       <v-tabs v-model="selectedExample" color="primary" class="landing-work" aria-label="プラナの仕事の表示例">
         <v-tab v-for="(item, index) in examples" :id="`example-tab-${index}`" :key="item.label" :value="index" aria-controls="example-panel">{{ item.label }}</v-tab>
       </v-tabs>
@@ -65,10 +80,14 @@ const foundations = [
             <p>{{ example.memo }}</p>
           </div>
           <div class="landing-output">
+            <div v-if="example.routineChecks" class="landing-routine-checks">
+              <h4>この計器（流量伝送器）の一次点検の定型項目<span>参考。計器種別ごとにアプリが確定的に表示</span></h4>
+              <ul><li v-for="c in example.routineChecks" :key="c">{{ c }}</li></ul>
+            </div>
             <h3><v-icon size="20" aria-hidden="true">mdi-auto-fix</v-icon>{{ example.output }}</h3>
             <h4>{{ example.title }}</h4>
             <p>{{ example.detail }}</p>
-            <div v-if="selectedExample === 0" class="landing-check-points"><h4>確認したい点</h4><p>現場の流量と、FT-301の指示は一致しているか？</p></div>
+            <div v-if="example.checkPoint" class="landing-check-points"><h4>プラナが挙げた確認したい点<span>このメモ特有。定型項目とは重複させない</span></h4><p>{{ example.checkPoint }}</p></div>
           </div>
         </div>
         <div class="landing-example-footer">
@@ -147,7 +166,10 @@ const foundations = [
 .landing-example-footer p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
 .landing-guide-link { display: inline-block; color: var(--pk-steel); font-size: .8125rem; margin-top: 8px; }
 .landing-check-points { border-top: 1px solid var(--pk-line); margin-top: 20px; padding-top: 16px; }
-.landing-check-points h4 { font-size: .8125rem; margin-bottom: 8px; }
+.landing-check-points h4, .landing-routine-checks h4 { font-size: .8125rem; margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.landing-check-points h4 span, .landing-routine-checks h4 span { font-size: .6875rem; font-weight: 400; color: var(--pk-muted); }
+.landing-routine-checks { background: var(--pk-mist); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+.landing-routine-checks ul { margin: 0; padding-left: 20px; font-size: .8125rem; line-height: 1.9; color: var(--pk-muted); }
 .landing-example-footer .landing-steps { margin-top: 8px; color: var(--pk-ink); }
 .landing-guide { border-top: 1px solid var(--pk-line); padding-block: 32px 48px; scroll-margin-top: 80px; }
 .landing-guide h2 { font-size: 1.25rem; }

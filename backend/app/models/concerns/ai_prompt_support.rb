@@ -7,6 +7,7 @@ module AiPromptSupport
     "temperature_transmitter" => "温度伝送器", "pressure_transmitter" => "圧力伝送器",
     "flow_transmitter" => "流量伝送器", "level_transmitter" => "液面伝送器",
     "pressure_valve" => "調節弁（圧力）", "level_valve" => "調節弁（液面）",
+    "flow_valve" => "調節弁（流量）", "temperature_valve" => "調節弁（温度）",
     "shutoff_valve" => "遮断弁", "hand_valve" => "手動弁"
   }.freeze
 
@@ -22,9 +23,22 @@ module AiPromptSupport
     lines = [ "設備: #{equipment.name}" ]
     if instrument
       lines << "計器: #{instrument_label(instrument)}"
+      lines << "シール液: #{instrument.seal_fluid}" if instrument.seal_fluid.present?
       lines.concat(service_lines(instrument.service))
     end
     lines
+  end
+
+  # 計器種別ごとの一次点検の定型項目（InstrumentTroubleshootingCatalog）。
+  # 不具合報告の下書き（DefectDraftGenerator）だけで使い、AIにはすでに確認済みの前提として渡す
+  # （check_points がこれと同じ内容を繰り返さないようにするため。他の2つのジェネレータでは使わない）
+  def troubleshooting_lines(instrument)
+    return [] unless instrument
+
+    checks = instrument.troubleshooting_checks
+    return [] if checks.empty?
+
+    [ "この計器の一次点検の定型項目（現場ですでに確認済みの前提）:" ] + checks.map { |c| "- #{c}" }
   end
 
   # 「タグ番号 PT-101、種類 圧力伝送器」

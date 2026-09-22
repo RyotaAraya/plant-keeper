@@ -49,6 +49,9 @@ export interface Instrument {
   line_class_id: number | null
   location: string
   notes: string | null
+  seal_fluid?: string | null
+  // 計器種別ごとの一次点検の定型項目（参考。InstrumentTroubleshootingCatalog）。DefectAiAssistで表示する
+  troubleshooting_checks?: string[]
   // 校正の条件（数値はAPIから文字列で返る）。5点校正できるのは、範囲と許容差が設定済みの計器
   range_lower?: string | number | null
   range_upper?: string | number | null

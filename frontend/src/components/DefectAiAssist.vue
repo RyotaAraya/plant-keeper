@@ -19,6 +19,9 @@ const props = defineProps<{
   itemLabel: string
   // 入力欄にすでにタイトルがあるとき（反映で置き換わるため、確認する）
   hasExisting: boolean
+  // 選んだ計器の一次点検の定型項目・シール液（参考情報。AIは介さず確定的に表示する）
+  troubleshootingChecks?: string[]
+  sealFluid?: string | null
 }>()
 const emit = defineEmits<{
   apply: [draft: AiDefectDraft]
@@ -102,6 +105,13 @@ function apply() {
 
 <template>
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
+    <v-alert v-if="troubleshootingChecks?.length" type="info" variant="tonal" density="compact" class="mb-2" data-testid="routine-checks">
+      <p class="text-caption font-weight-bold mb-1">この計器の一次点検の定型項目（参考。手順書・保全基準の代わりではありません）</p>
+      <p v-if="sealFluid" class="text-caption mb-1"><strong>シール液:</strong> {{ sealFluid }}</p>
+      <ul class="text-caption ml-5 mb-0">
+        <li v-for="c in troubleshootingChecks" :key="c">{{ c }}</li>
+      </ul>
+    </v-alert>
     <v-textarea
       v-model="memo"
       label="現場メモ"

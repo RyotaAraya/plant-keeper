@@ -12,6 +12,15 @@ test('ヒーローは紹介とプラナに絞り、具体例は次の段に表�
   await expect(page.getByRole('tabpanel')).toContainText('FT-301 流量指示の低下')
 })
 
+test('不具合の相談の例は、計器の一次点検の定型項目とプラナ固有の確認事項を分けて示す', async ({ page }) => {
+  await page.goto('/')
+  const panel = page.getByRole('tabpanel')
+  await expect(panel).toContainText('一次点検の定型項目')
+  await expect(panel).toContainText('ゼロ点ズレの確認')
+  await expect(panel).toContainText('プラナが挙げた確認したい点')
+  await expect(panel).toContainText('現場の流量と、FT-301の指示は一致しているか？')
+})
+
 test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', async ({ page }) => {
   const aiCalls: string[] = []
   page.on('request', (request) => {
@@ -19,7 +28,7 @@ test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', a
   })
   await page.goto('/')
   const choices = [
-    ['不具合を報告する', 'FT-301 流量指示の低下', 'defect-draft'],
+    ['不具合を相談する', 'FT-301 流量指示の低下', 'defect-draft'],
     ['似た事例を探す', '流量計の信号途絶', 'similar-troubles'],
     ['対応を記録する', '端子の増し締め・指示の復旧確認', 'response-draft'],
   ]

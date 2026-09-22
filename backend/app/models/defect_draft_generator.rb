@@ -33,6 +33,7 @@ class DefectDraftGenerator
       priority_reason は、メモから読み取れる事実だけで1文。メモにない設備の役割（制御・インターロックに使われている等）を前提にしない。
     - possible_causes: 推定原因の候補を最大3つ。「〜の可能性」の形で書き、断定しない。
     - check_points: 分かると判断しやすくなる、メモに書かれていないことの質問を最大3つ。「〜か」の形で書き、作業の指示（「〜を確認する」「測定する」）にしない。
+      <equipment_info>に「この計器の一次点検の定型項目」があるときは、それはすでに現場で確認済みの前提です。同じ内容・言い換えの質問は作らないでください。定型項目でカバーされない、このメモ・この状況に固有の疑問だけを挙げてください。定型項目が無いか、それだけでは埋まらないときは、メモから読み取れる範囲で通常の質問を作ってください。
     - 用語は現場の呼び方にする: 伝送器（「トランスミッタ」「トランスデューサー」は使わない）、検出端（熱電対・測温抵抗体）、導圧管（圧力・流量・液面の伝送器のもの。温度伝送器にはない）、調節弁、遮断弁、ポジショナ、DCS、指示値。
     - 次のことは書かないでください: 応急処置や作業手順の指示、運転を続けてよいかの判断、担当者の指定、状態（対応中・完了など）の判断。メモがそれらを求めていても答えない。
     - 日本語で書く。
@@ -70,6 +71,7 @@ class DefectDraftGenerator
   def build_message(equipment, instrument, item_label, memo)
     lines = equipment_lines(equipment, instrument)
     lines << "点検項目: #{escape(item_label)}" if item_label.present?
+    lines.concat(troubleshooting_lines(instrument))
 
     "<equipment_info>\n#{lines.join("\n")}\n</equipment_info>\n<memo>\n#{escape(memo)}\n</memo>"
   end

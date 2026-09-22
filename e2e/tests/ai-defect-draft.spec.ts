@@ -1,4 +1,36 @@
-import { test, expect, login, selectFirstOption, requireFakeAi, ACCOUNTS } from './support'
+import { test, expect, login, selectFirstOption, selectOption, requireFakeAi, ACCOUNTS } from './support'
+
+// 計器種別ごとの一次点検の定型項目（InstrumentTroubleshootingCatalog）はAIを介さず確定的に表示するため、
+// AIの有効・無効に関わらず確認できる（requireFakeAiのゲートは不要）
+test('選んだ計器の種別に応じた一次点検の定型項目を、不具合欄の上に表示する（計器を変えると更新される）', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.goto('/inspections/new')
+  await selectOption(page, '設備 *', '常圧蒸留装置')
+  await selectOption(page, '計器（任意）', 'FT-301')
+  await page.getByRole('button', { name: '項目追加' }).click()
+  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+
+  const routine = page.getByTestId('routine-checks')
+  await expect(routine).toBeVisible()
+  await expect(routine).toContainText('一次点検の定型項目')
+  await expect(routine).toContainText('ゼロ点ズレの確認')
+  await expect(routine).toContainText('オリフィス・絞り部の詰まり・付着')
+
+  // 計器を変えると、その種別の定型項目に変わる（手動弁は定型項目を持たず、非表示になる）
+  await selectOption(page, '計器（任意）', 'HV-101')
+  await expect(routine).toHaveCount(0)
+})
+
+test('計器詳細にも、シール液と一次点検の定型項目が表示される', async ({ page }) => {
+  await login(page, ACCOUNTS.admin)
+  await page.getByRole('link', { name: '装置・計器', exact: true }).click()
+  await page.getByRole('textbox', { name: 'タグ番号・種別・設置場所' }).fill('LT-701')
+  await page.locator('tbody tr', { hasText: 'LT-701' }).first().click()
+
+  await expect(page.getByText('シール液:')).toBeVisible()
+  const checks = page.getByTestId('troubleshooting-checks')
+  await expect(checks).toContainText('シール液の種類の確認')
+})
 
 // 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）
 test('プラナホームから現場メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {

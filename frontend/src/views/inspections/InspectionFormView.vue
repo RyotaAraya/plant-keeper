@@ -112,6 +112,12 @@ function snapshotFor(item: any) {
   return snapshotFromInstrument(instruments.value.find((i: any) => i.id === id))
 }
 
+// 不具合欄に出す、選んだ計器（項目の計器、なければ複数設備でなければ点検の計器）の一次点検の定型項目・シール液
+function defectInstrumentFor(item: any) {
+  const id = item.instrument_id ?? (multipleEquipments.value ? null : form.value.instrument_id)
+  return id ? instruments.value.find((i: any) => i.id === id) : null
+}
+
 async function fetchMasters() {
   const [, tmplRes, standardRes] = await Promise.all([
     loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
@@ -552,6 +558,8 @@ onMounted(async () => {
                     :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
                     :item-label="item.content"
                     :has-existing="!!item.defect_title"
+                    :troubleshooting-checks="defectInstrumentFor(item)?.troubleshooting_checks ?? []"
+                    :seal-fluid="defectInstrumentFor(item)?.seal_fluid"
                     @dirty="markMemo(item, $event)"
                     @apply="applyAiDraft(item, $event)"
                     @remaining="aiStatus.remaining_today = $event"

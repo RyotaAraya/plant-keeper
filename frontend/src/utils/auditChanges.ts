@@ -27,7 +27,7 @@ const FIELD_LABELS: Record<string, string> = {
   measured_value: '測定値', text_value: '入力内容', calibration_result: '校正の結果',
   planned_start_on: '予定開始日', planned_end_on: '予定終了日', actual_start_on: '実績開始日', actual_end_on: '実績終了日',
   completed_on: '完了日', accepted_on: '検収日', acceptance_result: '検収の結果', acceptance_notes: '検収の備考',
-  tag_number: 'タグ番号', instrument_type: '計器の種類',
+  tag_number: 'タグ番号', instrument_type: '計器の種類', seal_fluid: 'シール液',
   management_number: '管理番号', category: '区分', model_number: '型番', serial_number: 'シリアル番号',
   measuring_range: '測定範囲', accuracy: '精度',
   range_lower: '範囲の下限', range_upper: '範囲の上限', range_unit: '範囲の単位',

@@ -39,7 +39,7 @@ instrument_data = [
   { equip: [ "川崎製油所", "流動接触分解装置" ], tag: "LT-601",  type: "level_transmitter", service: "原油", lc: "A2A", loc: "FCC メインフラクショネーター", notes: "塔底液位。" },
   # === 川崎 ボイラー ===
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "FT-701", type: "flow_transmitter", service: "スチーム", lc: "D1A", loc: "ボイラー スチームヘッダー", notes: "高圧スチーム流量計。渦流量計。" },
-  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "LT-701", type: "level_transmitter", service: "冷却水", lc: "E1A", loc: "ボイラー ドラム", notes: "ボイラードラム液位。安全計装。" },
+  { equip: [ "川崎製油所", "ボイラー設備" ], tag: "LT-701", type: "level_transmitter", service: "冷却水", lc: "E1A", loc: "ボイラー ドラム", notes: "ボイラードラム液位。安全計装。", seal: "水（凍結防止のスチームトレーサーで保温）" },
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "PT-701", type: "pressure_transmitter", service: "スチーム", lc: "D1A", loc: "ボイラー スチームドラム", notes: "ドラム圧力監視。" },
   { equip: [ "川崎製油所", "ボイラー設備" ], tag: "TV-701", type: "temperature_transmitter", service: "スチーム", lc: "D1A", loc: "ボイラー 過熱器出口", notes: "過熱スチーム温度。" },
   # === 川崎 CRF ===
@@ -262,6 +262,7 @@ instrument_data.each do |data|
     service: services[data[:service]],
     line_class: data[:lc] ? line_classes[data[:lc]] : nil,
     location: data[:loc],
-    notes: data[:notes]
+    notes: data[:notes],
+    seal_fluid: data[:seal]
   )
 end
