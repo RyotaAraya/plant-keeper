@@ -105,13 +105,11 @@ function apply() {
 
 <template>
   <div class="pk-ai-assist mb-2" data-testid="ai-assist">
-    <v-alert v-if="troubleshootingChecks?.length" type="info" variant="tonal" density="compact" class="mb-2" data-testid="routine-checks">
-      <p class="text-caption font-weight-bold mb-1">この計器の一次点検の定型項目（参考。手順書・保全基準の代わりではありません）</p>
-      <p v-if="sealFluid" class="text-caption mb-1"><strong>シール液:</strong> {{ sealFluid }}</p>
-      <ul class="text-caption ml-5 mb-0">
-        <li v-for="c in troubleshootingChecks" :key="c">{{ c }}</li>
-      </ul>
-    </v-alert>
+    <div v-if="troubleshootingChecks?.length" class="pk-reference" data-testid="routine-checks">
+      <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器の一次点検の定型項目</h4>
+      <p class="pk-reference-meta">参考。手順書・保全基準の代わりではありません<template v-if="sealFluid">／シール液: {{ sealFluid }}</template></p>
+      <ul><li v-for="c in troubleshootingChecks" :key="c">{{ c }}</li></ul>
+    </div>
     <v-textarea
       v-model="memo"
       label="現場メモ"
@@ -157,25 +155,28 @@ function apply() {
     <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
     <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
 
-    <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-draft">
+    <v-card v-if="draft" variant="outlined" color="primary" class="mt-2 pk-ai-report" data-testid="ai-draft">
       <v-card-text class="text-body-2">
         <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
-        <div><span class="text-medium-emphasis">タイトル:</span> {{ draft.title }}</div>
-        <div v-if="draft.description"><span class="text-medium-emphasis">説明:</span> {{ draft.description }}</div>
-        <div>
-          <span class="text-medium-emphasis">優先度:</span>
+        <h3 class="pk-ai-report-title" data-testid="ai-draft-title">{{ draft.title }}</h3>
+        <p v-if="draft.description" class="pk-ai-report-desc">{{ draft.description }}</p>
+        <div class="pk-ai-report-priority">
+          優先度:
           <template v-if="draft.priority">{{ PRIORITY_LABEL[draft.priority] }}</template>
           <template v-else>提案なし（入力欄の値のまま）</template>
           <span v-if="draft.priority_reason" class="text-medium-emphasis">（{{ draft.priority_reason }}）</span>
         </div>
-        <div v-if="draft.possible_causes.length" class="mt-2">
-          <div class="text-medium-emphasis">推定原因の候補（可能性であり、断定ではありません。反映されません）</div>
-          <ul class="ml-5"><li v-for="c in draft.possible_causes" :key="c">{{ c }}</li></ul>
+        <div v-if="draft.possible_causes.length || draft.check_points.length" class="pk-ai-report-grid">
+          <div v-if="draft.possible_causes.length">
+            <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
+            <ul><li v-for="c in draft.possible_causes" :key="c">{{ c }}</li></ul>
+          </div>
+          <div v-if="draft.check_points.length">
+            <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
+            <ul><li v-for="c in draft.check_points" :key="c">{{ c }}</li></ul>
+          </div>
         </div>
-        <div v-if="draft.check_points.length" class="mt-2">
-          <div class="text-medium-emphasis">確認したい点（反映されません）</div>
-          <ul class="ml-5"><li v-for="c in draft.check_points" :key="c">{{ c }}</li></ul>
-        </div>
+        <p v-if="draft.possible_causes.length" class="pk-ai-report-caption">見立ては可能性であり断定ではありません。タイトル・説明・優先度以外は反映されません。</p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -185,3 +186,26 @@ function apply() {
     </v-card>
   </div>
 </template>
+
+<style scoped>
+/* 参考知識（計器種別ごとの一次点検の定型項目）。プラナの発言ではないと色で示す（鋼色のアクセント罫＋薄い背景） */
+.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 8px; }
+.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
+.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 10px 24px; }
+.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
+.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .6em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
+
+/* プラナの提案：「プラナ」を名乗るのは PlanaNote の見出し1箇所だけにし、見立て・確認したい点は並べて見せる */
+.pk-ai-report-title { font-size: 1.0625rem; color: var(--pk-ink); margin-bottom: 4px; }
+.pk-ai-report-desc { color: var(--pk-muted); line-height: 1.8; margin-bottom: 8px; }
+.pk-ai-report-priority { font-size: .875rem; color: var(--pk-muted); }
+.pk-ai-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--pk-line); }
+.pk-ai-report-grid h5 { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--pk-steel); margin-bottom: 6px; }
+.pk-ai-report-grid ul { margin: 0; padding-left: 18px; }
+.pk-ai-report-grid li { font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
+.pk-ai-report-caption { font-size: .6875rem; color: var(--pk-muted); margin-top: 12px; }
+@media (max-width: 600px) {
+  .pk-ai-report-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+</style>

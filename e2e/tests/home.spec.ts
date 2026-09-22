@@ -12,14 +12,16 @@ test('ヒーローは紹介とプラナに絞り、具体例は次の段に表�
   await expect(page.getByRole('tabpanel')).toContainText('FT-301 流量指示の低下')
 })
 
-test('不具合の相談の例は、定型項目・プラナの見立て・プラナ固有の確認事項を分けて示す', async ({ page }) => {
+test('不具合の相談の例は、定型項目とプラナの提案（見立て・確認したい点）を1つのカードにまとめて示す', async ({ page }) => {
   await page.goto('/')
   const panel = page.getByRole('tabpanel')
   await expect(panel).toContainText('一次点検の定型項目')
   await expect(panel).toContainText('ゼロ点ズレの確認')
-  await expect(panel).toContainText('プラナの見立て')
+  // 「プラナ」を名乗るのはカードの案内文1箇所だけ（見立て・確認したい点はプラナの前置きを繰り返さない）
+  await expect(panel.locator('.pk-plana-card')).toContainText('プラナが整理しました')
+  await expect(panel.getByText('見立て', { exact: true })).toBeVisible()
   await expect(panel).toContainText('オリフィス・絞り部の詰まりの可能性')
-  await expect(panel).toContainText('プラナが挙げた確認したい点')
+  await expect(panel.getByText('確認したい点', { exact: true })).toBeVisible()
   await expect(panel).toContainText('現場の流量と、FT-301の指示は一致しているか？')
 })
 

@@ -57,7 +57,7 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
   const draft = page.getByTestId('ai-draft')
   await expect(draft).toBeVisible()
   await expect(draft).toContainText('プラナが整理しました')
-  const draftTitle = (await draft.innerText()).match(/タイトル:\s*(.+)/)?.[1].trim()
+  const draftTitle = (await page.getByTestId('ai-draft-title').innerText()).trim()
   expect(draftTitle).toBeTruthy()
 
   // 反映するまで、入力欄は変わらない

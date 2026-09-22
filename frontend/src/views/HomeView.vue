@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
+import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
 
 const auth = useAuthStore()
@@ -21,7 +22,8 @@ const examples = [
       '配線・端子の緩み、電源の確認',
       'オリフィス・絞り部の詰まり・付着',
     ],
-    output: 'プラナが整理した報告', title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: 'FT-301 流量指示の低下', detail: '朝の巡回時にFT-301の指示低下を確認。前日も同様の状態だった。発生時期は不明で、現場の流量は未確認。',
     possibleCauses: [
       'オリフィス・絞り部の詰まりの可能性（指示の低下が緩やかで、前日から変わっていないため）',
       '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
@@ -29,8 +31,22 @@ const examples = [
     checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
     note: '内容を確認してから、点検の記録に反映します。',
   },
-  { label: '似た事例を探す', input: 'いま起きている症状', memo: '流量計の指示がゼロになった。\n現場では流れているように見える。', output: '過去の事例の提示', title: '流量計の信号途絶', detail: '似た症状の記録：流量計の指示がゼロになり、配線の断線を確認。配線を補修して指示が復旧。', note: '元のトラブル記録を開いて、症状や対応を確認できます。' },
-  { label: '対応を記録する', input: '作業後のメモ', memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。', output: 'プラナが整理した対応記録', title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。', note: '整理された内容を確認・編集してから、対応記録として保存します。' },
+  {
+    label: '似た事例を探す', input: 'いま起きている症状',
+    memo: '流量計の指示がゼロになった。\n現場では流れているように見える。',
+    planaNote: 'プラナが選んだ候補です（過去のトラブル12件と比べました）。似ているかどうかは、開いて記録を見て判断してください。',
+    title: '流量計の信号途絶', meta: '解決済・優先度 高',
+    similarity: '流量計の指示がゼロになった点が一致',
+    howHandled: '配線の断線を確認し、補修して指示が復旧',
+    note: '元のトラブル記録を開いて、症状や対応を確認できます。',
+  },
+  {
+    label: '対応を記録する', input: '作業後のメモ',
+    memo: '端子のゆるみを確認。\n増し締めして、指示が戻った。',
+    planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
+    title: '端子の増し締め・指示の復旧確認', detail: '端子のゆるみを確認し、増し締めを実施。作業後、指示が復旧したことを確認した。',
+    note: '整理された内容を確認・編集してから、対応記録として保存します。',
+  },
 ]
 const example = computed(() => examples[selectedExample.value]!)
 const steps = [
@@ -84,15 +100,37 @@ const foundations = [
             <p>{{ example.memo }}</p>
           </div>
           <div class="landing-output">
-            <div v-if="example.routineChecks" class="landing-routine-checks">
-              <h4>この計器（流量伝送器）の一次点検の定型項目<span>参考。計器種別ごとにアプリが確定的に表示</span></h4>
+            <div v-if="example.routineChecks" class="pk-reference">
+              <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器（流量伝送器）の一次点検の定型項目</h4>
+              <p class="pk-reference-meta">参考。計器種別ごとにアプリが確定的に表示</p>
               <ul><li v-for="c in example.routineChecks" :key="c">{{ c }}</li></ul>
             </div>
-            <h3><v-icon size="20" aria-hidden="true">mdi-auto-fix</v-icon>{{ example.output }}</h3>
-            <h4>{{ example.title }}</h4>
-            <p>{{ example.detail }}</p>
-            <div v-if="example.possibleCauses" class="landing-check-points"><h4>プラナの見立て<span>定型項目の中から、症状に照らして優先度が高いものを選ぶ。可能性であり断定ではない</span></h4><ul><li v-for="c in example.possibleCauses" :key="c">{{ c }}</li></ul></div>
-            <div v-if="example.checkPoint" class="landing-check-points"><h4>プラナが挙げた確認したい点<span>このメモ特有。定型項目とは重複させない</span></h4><p>{{ example.checkPoint }}</p></div>
+
+            <div class="pk-plana-card">
+              <div class="pk-plana-card-body">
+                <PlanaNote>{{ example.planaNote }}</PlanaNote>
+                <div v-if="example.meta" class="pk-plana-card-title-row">
+                  <h3 class="pk-plana-card-title">{{ example.title }}</h3>
+                  <span class="pk-plana-card-meta">{{ example.meta }}</span>
+                </div>
+                <h3 v-else class="pk-plana-card-title">{{ example.title }}</h3>
+                <p v-if="example.detail">{{ example.detail }}</p>
+                <p v-if="example.similarity"><strong>似ている点:</strong> {{ example.similarity }}</p>
+                <p v-if="example.howHandled"><strong>過去の対応:</strong> {{ example.howHandled }}</p>
+
+                <div v-if="example.possibleCauses || example.checkPoint" class="pk-plana-card-grid">
+                  <div v-if="example.possibleCauses">
+                    <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
+                    <ul><li v-for="c in example.possibleCauses" :key="c">{{ c }}</li></ul>
+                  </div>
+                  <div v-if="example.checkPoint">
+                    <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
+                    <p>{{ example.checkPoint }}</p>
+                  </div>
+                </div>
+              </div>
+              <p v-if="example.possibleCauses" class="pk-plana-card-caption">見立ては可能性であり断定ではありません。定型項目とは重複させません。</p>
+            </div>
           </div>
         </div>
         <div class="landing-example-footer">
@@ -164,18 +202,34 @@ const foundations = [
 .landing-input h3 { color: var(--pk-muted); }
 .landing-input p { white-space: pre-line; font-size: 1.125rem; line-height: 2; }
 .landing-output { padding: 24px 0; }
-.landing-output h3 { color: var(--pk-steel); }
-.landing-output h4 { font-size: 1.125rem; line-height: 1.6; margin-bottom: 12px; }
-.landing-output p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); }
 .landing-example-footer { border-top: 1px solid var(--pk-line); padding-top: 24px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .landing-example-footer p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
 .landing-guide-link { display: inline-block; color: var(--pk-steel); font-size: .8125rem; margin-top: 8px; }
-.landing-check-points { border-top: 1px solid var(--pk-line); margin-top: 20px; padding-top: 16px; }
-.landing-check-points h4, .landing-routine-checks h4 { font-size: .8125rem; margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
-.landing-check-points h4 span, .landing-routine-checks h4 span { font-size: .6875rem; font-weight: 400; color: var(--pk-muted); }
-.landing-check-points ul { margin: 0; padding-left: 20px; font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); }
-.landing-routine-checks { background: var(--pk-mist); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
-.landing-routine-checks ul { margin: 0; padding-left: 20px; font-size: .8125rem; line-height: 1.9; color: var(--pk-muted); }
+
+/* 参考知識（計器種別ごとの一次点検の定型項目）。プラナの提案とは別の見え方にする：
+   ニュートラルな鋼色のアクセント罫＋薄い背景で「AIの発言ではない」ことを色で示す */
+.pk-reference { border-left: 3px solid var(--pk-steel); background: var(--pk-mist); border-radius: 0 10px 10px 0; padding: 16px 20px; margin-bottom: 20px; }
+.pk-reference h4 { display: flex; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 700; color: var(--pk-ink); margin: 0; }
+.pk-reference-meta { font-size: .6875rem; color: var(--pk-muted); margin: 4px 0 12px 24px; }
+.pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-reference li::before { content: ''; position: absolute; left: 1px; top: .65em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
+
+/* プラナの提案は1枚のカードにまとめ、「プラナ」を名乗るのは見出し1箇所だけにする
+   （タイトル/見立て/確認したい点をそれぞれ「プラナの〜」と呼ばない） */
+.pk-plana-card { border: 1px solid var(--pk-steel); border-radius: 12px; overflow: hidden; background: #fff; }
+.pk-plana-card-body { padding: 20px; }
+.pk-plana-card-body :deep(.pk-plana-note) { margin-bottom: 16px; }
+.pk-plana-card-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.pk-plana-card-title { font-size: 1.125rem; color: var(--pk-ink); }
+.pk-plana-card-meta { font-size: .75rem; color: var(--pk-muted); }
+.pk-plana-card-body > p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 8px; }
+.pk-plana-card-body > p strong { color: var(--pk-ink); font-weight: 700; }
+.pk-plana-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--pk-line); }
+.pk-plana-card-grid h5 { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--pk-steel); margin-bottom: 8px; }
+.pk-plana-card-grid ul { margin: 0; padding-left: 18px; }
+.pk-plana-card-grid li, .pk-plana-card-grid p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }
+.pk-plana-card-caption { padding: 0 20px 16px; font-size: .6875rem; color: var(--pk-muted); }
 .landing-example-footer .landing-steps { margin-top: 8px; color: var(--pk-ink); }
 .landing-guide { border-top: 1px solid var(--pk-line); padding-block: 32px 48px; scroll-margin-top: 80px; }
 .landing-guide h2 { font-size: 1.25rem; }
@@ -202,7 +256,7 @@ const foundations = [
   .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; padding: 40px 20px; }
   .landing-character :deep(.pk-plana-full) { width: 240px; }
   .landing-section { padding: 40px 20px; }
-  .landing-comparison, .landing-foundation-grid, .landing-story { grid-template-columns: 1fr; gap: 24px; }
+  .landing-comparison, .landing-foundation-grid, .landing-story, .pk-plana-card-grid { grid-template-columns: 1fr; gap: 24px; }
   .landing-example { padding: 20px; }
   .landing-example-footer { align-items: start; flex-direction: column; }
 }
