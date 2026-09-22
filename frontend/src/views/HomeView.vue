@@ -42,9 +42,12 @@ const examples = [
   },
   {
     label: '対応を記録する', input: '作業後のメモ',
-    memo: 'LT-701のシール液が減っていた。\nスチームトレーサーの熱で蒸発した様子。\n補液して、指示が復旧。',
+    memo: 'LT-701のシール液が減ってた。トレーサーの熱で蒸発した感じ。\n水を足しといた。指示は戻った。',
     planaNote: 'プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください。',
-    title: 'LT-701 シール液の補液・指示の復旧確認', detail: 'シール液（水封）の減少を確認。スチームトレーサーの加熱による蒸発と判断し、補液を実施。作業後、指示の復旧を確認した。',
+    title: 'LT-701 シール液の補液・指示の復旧確認', meta: '対応種別: 修理',
+    detail: 'シール液（水封）の減少を確認。スチームトレーサーの加熱による蒸発と判断し、水を補充。作業後、指示の復旧を確認した。',
+    usedMaterials: '水（シール液用）',
+    checkPoint: '再発防止のため、スチームトレーサーのトラップ調整やスチーム停止は必要か？',
     note: '整理された内容を確認・編集してから、対応記録として保存します。',
   },
 ]
@@ -117,8 +120,9 @@ const foundations = [
                 <p v-if="example.detail">{{ example.detail }}</p>
                 <p v-if="example.similarity"><strong>似ている点:</strong> {{ example.similarity }}</p>
                 <p v-if="example.howHandled"><strong>過去の対応:</strong> {{ example.howHandled }}</p>
+                <p v-if="example.usedMaterials"><strong>使用資材:</strong> {{ example.usedMaterials }}</p>
 
-                <div v-if="example.possibleCauses || example.checkPoint" class="pk-plana-card-grid">
+                <div v-if="example.possibleCauses || example.checkPoint" class="pk-plana-card-grid" :class="{ 'pk-plana-card-grid-single': !example.possibleCauses || !example.checkPoint }">
                   <div v-if="example.possibleCauses">
                     <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
                     <ul><li v-for="c in example.possibleCauses" :key="c">{{ c }}</li></ul>
@@ -130,6 +134,7 @@ const foundations = [
                 </div>
               </div>
               <p v-if="example.possibleCauses" class="pk-plana-card-caption">見立ては可能性であり断定ではありません。定型項目とは重複させません。</p>
+              <p v-else-if="example.checkPoint" class="pk-plana-card-caption">確認したい点は記録には反映されません。</p>
             </div>
           </div>
         </div>
@@ -226,6 +231,7 @@ const foundations = [
 .pk-plana-card-body > p { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 8px; }
 .pk-plana-card-body > p strong { color: var(--pk-ink); font-weight: 700; }
 .pk-plana-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--pk-line); }
+.pk-plana-card-grid-single { grid-template-columns: 1fr; }
 .pk-plana-card-grid h5 { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--pk-steel); margin-bottom: 8px; }
 .pk-plana-card-grid ul { margin: 0; padding-left: 18px; }
 .pk-plana-card-grid li, .pk-plana-card-grid p { font-size: .8125rem; line-height: 1.8; color: var(--pk-muted); }

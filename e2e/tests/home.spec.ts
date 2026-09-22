@@ -22,7 +22,16 @@ test('不具合の相談の例は、定型項目とプラナの提案（見立�
   await expect(panel.getByText('見立て', { exact: true })).toBeVisible()
   await expect(panel).toContainText('オリフィス・絞り部の詰まりの可能性')
   await expect(panel.getByText('確認したい点', { exact: true })).toBeVisible()
-  await expect(panel).toContainText('現場の流量と、FT-301の指示は一致しているか？')
+})
+
+test('対応記録の例は、口語のメモが対応種別・使用資材・確認したい点に整理されることを示す（メモの言い換え止まりにしない）', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('tab', { name: '対応を記録する' }).click()
+  const panel = page.getByRole('tabpanel')
+  await expect(panel).toContainText('対応種別: 修理')
+  await expect(panel).toContainText('使用資材:')
+  await expect(panel).toContainText('水（シール液用）')
+  await expect(panel).toContainText('再発防止のため、スチームトレーサーのトラップ調整やスチーム停止は必要か？')
 })
 
 test('3つの仕事の表示例を切り替え、選んだ仕事を試せる', async ({ page }) => {
