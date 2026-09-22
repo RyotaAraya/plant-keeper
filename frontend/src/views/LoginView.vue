@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import { roleKeyOf } from '@/constants/permissionMatrix'
+import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
+import { loginDestination } from '@/utils/loginDestination'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -70,7 +72,7 @@ async function handleLogin() {
   loading.value = true
   try {
     await authStore.login(email.value, password.value)
-    await router.push('/dashboard')
+    await router.replace(loginDestination(router, route.query.redirect))
   } catch (e: any) {
     console.error('Login error:', e)
     if (e?.response?.status === 401) {
@@ -99,7 +101,7 @@ async function loginAs(accountEmail: string) {
   loading.value = true
   try {
     await authStore.login(accountEmail, 'password')
-    await router.push('/dashboard')
+    await router.replace(loginDestination(router, route.query.redirect))
   } catch {
     errorMessage.value = 'ログインに失敗しました。'
   } finally {
@@ -117,8 +119,9 @@ async function loginAs(accountEmail: string) {
       </router-link>
       <div class="pk-login__brand-main">
         <div class="pk-login__brand-copy">
-          <h1>プラント保全業務を、<br />まるごと一つに。</h1>
-          <p>設備台帳・点検記録・トラブル管理・資材管理を一元化した、現場発の統合管理システムです。</p>
+          <PlanaAvatar :size="80" class="mb-5" />
+          <h1>プラナと、<br />今日の保全を進めよう。</h1>
+          <p>現場のメモを記録に。似たトラブルを次の手がかりに。ログインして、仕事の続きを始めましょう。</p>
         </div>
 
         <section v-if="!isNarrow" class="pk-login__matrix" aria-labelledby="pk-matrix-title-wide">

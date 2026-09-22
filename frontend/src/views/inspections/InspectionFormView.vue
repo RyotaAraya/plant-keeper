@@ -298,6 +298,36 @@ async function prefillFromPlan() {
   if (form.value.checklist_template_id) loadTemplate()
 }
 
+// プラナからは計画IDを作らず、選んだ設備・計器と不具合の入力欄だけを用意する。
+async function prefillFromPlana() {
+  if (isEdit.value || route.query.plana !== 'defect-draft' || route.query.inspection_plan_id || route.query.maintenance_task_id) return
+  const id = Number(route.query.equipment_id)
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    errors.value = ['対象の設備を選んでください。']
+    return
+  }
+  // 協力会社は所属拠点の選択肢だけを使う。URLの equipment_id を書き換えても
+  // 他拠点の設備を読み込まず、API側の保存時検証と同じ境界にそろえる。
+  if (authStore.user?.company?.company_type === 'contractor' && !equipments.value.some((equipment) => equipment.id === id)) {
+    errors.value = ['所属拠点の設備を選んでください。']
+    return
+  }
+  try {
+    const res = await api.get(`/equipments/${id}`)
+    await loadSiteOptions([res.data.data.site_id])
+    form.value.equipment_id = id
+    form.value.equipment_ids = [id]
+    await fetchInstruments()
+    const instrumentId = Number(route.query.instrument_id)
+    form.value.instrument_id = instruments.value.some((instrument) => instrument.id === instrumentId) ? instrumentId : null
+    addItem()
+    form.value.items[0].content = '不具合の確認'
+    form.value.items[0].has_defect = true
+  } catch {
+    errors.value = ['プラナで選んだ設備を読み込めませんでした。設備を選び直して入力できます。']
+  }
+}
+
 // 新規の点検記録の部署は、自分の所属部署を初期値にする（編集は記録の部署のまま。所属のない協力会社は未選択）
 function defaultDepartment() {
   if (isEdit.value || form.value.department_id) return
@@ -309,6 +339,7 @@ onMounted(async () => {
   await fetchMasters()
   await loadExisting()
   await prefillFromPlan()
+  await prefillFromPlana()
   defaultDepartment()
   await ensureOptionsCoverEquipment()
   await ensureDepartmentInOptions()
@@ -324,6 +355,10 @@ onMounted(async () => {
 
     <v-alert v-if="form.maintenance_task_id" type="info" variant="tonal" density="compact" class="mb-4" data-testid="from-maintenance-task">
       定期整備の作業として実施する点検です。提出すると、その作業が完了になります。
+    </v-alert>
+
+    <v-alert v-if="route.query.plana === 'defect-draft'" type="info" variant="tonal" class="mb-4" data-testid="from-plana">
+      対象を確認して、不具合欄に現場メモを入力してください。下書きを確認・反映したあと、点検を保存するとトラブルが登録されます。
     </v-alert>
 
     <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">

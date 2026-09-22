@@ -4,7 +4,6 @@
 // AIが使えない・失敗したときも、下の入力欄はそのまま使える
 import { ref, watch } from 'vue'
 import api from '@/api/axios'
-import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
 import type { AiResponseDraft, AiStatus } from '@/types/models'
 import { latestGuard } from '@/utils/latestGuard'
@@ -55,7 +54,7 @@ async function generate() {
     const left = e.response?.data?.remaining_today
     if (typeof left === 'number') emit('remaining', left)
     if (!isLatest()) return
-    error.value = e.response?.data?.errors?.[0] || 'プラナから下書きを取得できませんでした。対応記録の入力はプラナなしで続けられます'
+    error.value = e.response?.data?.errors?.[0] || '下書きを取得できませんでした。対応記録は直接入力できます'
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -64,7 +63,7 @@ async function generate() {
 function apply() {
   if (!draft.value) return
   // 断ったときは、下書きを残す（押し直せるように）
-  if (props.hasExisting && !confirm('入力済みの対応内容を、プラナの下書きで置き換えます。よろしいですか？')) return
+  if (props.hasExisting && !confirm('入力済みの対応内容を、下書きで置き換えます。よろしいですか？')) return
   emit('apply', draft.value)
   draft.value = null
 }
@@ -74,7 +73,7 @@ function apply() {
   <div class="mb-3" data-testid="ai-response-assist">
     <v-textarea
       v-model="memo"
-      label="対応メモ（プラナで整える）"
+      label="対応メモ"
       placeholder="例: 導圧管のつまりを除去。伝送器を交換した。"
       rows="2"
       auto-grow
@@ -94,8 +93,7 @@ function apply() {
         data-testid="ai-response-button"
         @click="generate"
       >
-        <template #prepend><PlanaAvatar :size="20" /></template>
-        プラナで整える
+        下書きを作る
       </v-btn>
       <span class="text-caption text-medium-emphasis">今日の残り {{ status.remaining_today }} / {{ status.daily_limit }} 回</span>
     </div>
@@ -120,7 +118,7 @@ function apply() {
       <v-card-actions>
         <v-spacer />
         <v-btn size="small" variant="text" @click="draft = null">破棄</v-btn>
-        <v-btn size="small" color="primary" variant="flat" data-testid="ai-response-apply" @click="apply">対応種別・対応内容・使用資材を入力欄に反映</v-btn>
+        <v-btn size="small" color="primary" variant="flat" data-testid="ai-response-apply" @click="apply">入力欄に反映</v-btn>
       </v-card-actions>
     </v-card>
   </div>

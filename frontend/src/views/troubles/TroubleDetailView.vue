@@ -141,6 +141,7 @@ async function saveEdit() {
 }
 
 function openResponse() {
+  if (!canCreateTroubleResponse.value || !trouble.value) return
   responseForm.value = {
     response_type: 'investigation',
     description: '',
@@ -207,9 +208,16 @@ onMounted(() => {
   fetchAiStatus()
 })
 
+// 目的を持って開いたときだけ入力欄を開く。AIは利用者が押すまで呼び出さない。
+watch([() => trouble.value?.id, () => route.query.plana], ([id, task]) => {
+  if (id === Number(route.params.id) && task === 'response-draft' && canCreateTroubleResponse.value) openResponse()
+})
+
 // 履歴の行から別のトラブルへ移ると、同じ画面のまま ID だけが変わる。読み込み直し、前のトラブルへのAIの結果は消す
 watch(() => route.params.id, (id, previous) => {
   if (id && id !== previous) {
+    responseDialog.value = false
+    responseAiSuggestionId.value = null
     similar.clear()
     fetchTrouble()
   }
@@ -403,25 +411,35 @@ watch(() => route.params.id, (id, previous) => {
       </v-dialog>
 
       <!-- Response Dialog -->
-      <v-dialog v-model="responseDialog" max-width="600">
+      <v-dialog v-model="responseDialog" :max-width="aiStatus?.enabled ? 1100 : 600" aria-labelledby="response-dialog-title">
         <v-card>
-          <v-card-title>対応記録追加</v-card-title>
+          <v-card-title id="response-dialog-title">対応記録追加</v-card-title>
           <v-card-text>
+            <p class="text-body-2 text-medium-emphasis mb-4">{{ trouble.title }}の対応を記録します。下書きを確認・反映したあと、「記録」で保存します。</p>
             <v-alert v-if="responseErrors.length" type="error" density="compact" class="mb-4">
               <div v-for="err in responseErrors" :key="err">{{ err }}</div>
             </v-alert>
-            <ResponseAiAssist
-              v-if="aiStatus?.enabled"
-              :status="aiStatus"
-              :trouble-id="trouble.id"
-              :has-existing="!!responseForm.description.trim()"
-              @apply="applyAiResponseDraft"
-              @remaining="aiStatus.remaining_today = $event"
-            />
-            <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />
-            <v-textarea v-model="responseForm.description" label="対応内容 *" rows="4" class="mb-2" />
-            <v-text-field v-model="responseForm.used_materials" label="使用資材" class="mb-2" />
-            <v-text-field v-model="responseForm.responded_at" label="対応日時" type="datetime-local" />
+            <div class="response-workspace" :class="{ 'response-workspace--assisted': aiStatus?.enabled }">
+              <section v-if="aiStatus?.enabled" class="response-workspace__draft" aria-labelledby="response-draft-heading">
+                <h2 id="response-draft-heading">メモから下書きを作る</h2>
+                <p class="response-workspace__hint">行った対応を短いメモで入力してください。提案は確認してから反映できます。</p>
+                <ResponseAiAssist
+                  :status="aiStatus"
+                  :trouble-id="trouble.id"
+                  :has-existing="!!responseForm.description.trim()"
+                  @apply="applyAiResponseDraft"
+                  @remaining="aiStatus.remaining_today = $event"
+                />
+              </section>
+              <section class="response-workspace__record" aria-labelledby="response-record-heading">
+                <h2 id="response-record-heading">保存する内容</h2>
+                <p class="response-workspace__hint">直接入力・編集できます。「記録」を押すと保存されます。</p>
+                <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />
+                <v-textarea v-model="responseForm.description" label="対応内容 *" rows="4" class="mb-2" />
+                <v-text-field v-model="responseForm.used_materials" label="使用資材" class="mb-2" />
+                <v-text-field v-model="responseForm.responded_at" label="対応日時" type="datetime-local" />
+              </section>
+            </div>
           </v-card-text>
           <v-card-actions>
             <v-spacer />
@@ -434,3 +452,15 @@ watch(() => route.params.id, (id, previous) => {
     <DeferTroubleDialog v-if="trouble" v-model="deferDialog" :trouble="trouble" @done="onDeferred" />
   </MainLayout>
 </template>
+
+<style scoped>
+.response-workspace { display: grid; gap: 24px; }
+.response-workspace--assisted { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.response-workspace h2 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
+.response-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }
+.response-workspace__draft { padding: 20px; background: var(--pk-mist); border: 1px solid var(--pk-line); border-radius: 12px; }
+.response-workspace__record { padding-top: 20px; }
+@media (max-width: 960px) {
+  .response-workspace--assisted { grid-template-columns: minmax(0, 1fr); }
+}
+</style>

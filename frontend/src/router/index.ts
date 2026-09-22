@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { loginDestination } from '@/utils/loginDestination'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -220,11 +221,11 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    return { path: '/login' }
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.guest && authStore.isLoggedIn) {
-    return { path: '/dashboard' }
+    return loginDestination(router, to.query.redirect)
   }
 
   if (authStore.isLoggedIn) {
