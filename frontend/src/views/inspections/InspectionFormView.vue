@@ -13,7 +13,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import type { AiDefectDraft, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
-import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
+import { calibrationInputFrom, emptyCalibrationInput, evaluateCalibration, snapshotFromInstrument } from '@/utils/calibration'
 import { ITEM_TYPE_OPTIONS, criteriaOf, isFilled, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
 import { nowForInput } from '@/utils/datetime'
 
@@ -100,8 +100,13 @@ const itemTypeOptions = ITEM_TYPE_OPTIONS
 // 不具合ありの判定の項目は、トラブルの入力欄を開く
 const isDefect = (item: any) => item.result === 'defect'
 
-// 提出の前に、未記入の必須の項目の数を示す（提出時にサーバーでも確認する）
-const missingRequired = computed(() => form.value.items.filter((item) => item.required && !isFilled(item)).length)
+// 提出の前に、未記入の必須の項目の数を示す（提出時にサーバーでも確認する）。
+// 判定のない5点校正は、合格ならサーバーが良好にするため、記入ありとみなす
+function calibrationPassed(item: any) {
+  const snapshot = snapshotFor(item)
+  return item.item_type === 'calibration' && !!snapshot && !!item.calibration && evaluateCalibration(snapshot, item.calibration).result === 'pass'
+}
+const missingRequired = computed(() => form.value.items.filter((item) => item.required && !isFilled(item) && !calibrationPassed(item)).length)
 
 // 測定値の許容範囲の外・数値でないときの案内
 function measurementMessage(item: any) {

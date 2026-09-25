@@ -23,7 +23,6 @@ export const ITEM_TYPE_OPTIONS = [
   { title: '自由記述', value: 'text' },
   { title: '5点校正', value: 'calibration' },
 ]
-export const ITEM_TYPE_LABEL: Record<string, string> = Object.fromEntries(ITEM_TYPE_OPTIONS.map((o) => [o.value, o.title]))
 
 export const RESULT_LABEL: Record<ItemResult, string> = { good: '良好', defect: '不具合あり', na: '－' }
 export const RESULT_COLOR: Record<ItemResult, string> = { good: 'success', defect: 'error', na: 'grey' }
