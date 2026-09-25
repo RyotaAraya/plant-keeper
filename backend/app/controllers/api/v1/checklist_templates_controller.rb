@@ -3,6 +3,9 @@ module Api
     class ChecklistTemplatesController < BaseController
       before_action :set_template, only: [ :show, :update, :destroy, :duplicate ]
 
+      # 項目の型と基準（ChecklistCriteria）
+      ITEM_FIELDS = [ :id, :position, :content, :item_type, :section, :criterion, :unit, :lower_limit, :upper_limit, :options, :required ].freeze
+
       # GET /api/v1/checklist_templates
       # 廃止したテンプレート（点検の選択肢から外したもの）は、include_inactive=true のときだけ含める
       def index
@@ -16,7 +19,7 @@ module Api
           data: ChecklistTemplate.in_display_order(templates).as_json(
             include: {
               department: { only: [ :id, :name ] },
-              checklist_template_items: { only: [ :id, :position, :content, :item_type ] }
+              checklist_template_items: { only: ITEM_FIELDS }
             }
           )
         }
@@ -29,7 +32,7 @@ module Api
           data: @template.as_json(
             include: {
               department: { only: [ :id, :name ] },
-              checklist_template_items: { only: [ :id, :position, :content, :item_type ] }
+              checklist_template_items: { only: ITEM_FIELDS }
             }
           )
         }
@@ -46,16 +49,12 @@ module Api
 
           if params[:checklist_template][:items].present?
             params[:checklist_template][:items].each_with_index do |item, idx|
-              template.checklist_template_items.create!(
-                position: idx + 1,
-                content: item[:content],
-                item_type: item[:item_type] || "check"
-              )
+              template.checklist_template_items.create!(item_params(item, idx))
             end
           end
         end
 
-        render json: { data: template.as_json(include: { checklist_template_items: {} }) }, status: :created
+        render json: { data: template.as_json(include: { checklist_template_items: { only: ITEM_FIELDS } }) }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
@@ -73,14 +72,9 @@ module Api
 
             params[:checklist_template][:items].each_with_index do |item, idx|
               if item[:id]
-                ci = @template.checklist_template_items.find(item[:id])
-                ci.update!(position: idx + 1, content: item[:content], item_type: item[:item_type])
+                @template.checklist_template_items.find(item[:id]).update!(item_params(item, idx))
               else
-                @template.checklist_template_items.create!(
-                  position: idx + 1,
-                  content: item[:content],
-                  item_type: item[:item_type] || "check"
-                )
+                @template.checklist_template_items.create!(item_params(item, idx))
               end
             end
           end
@@ -88,7 +82,7 @@ module Api
 
         @template.reload
         render json: {
-          data: @template.as_json(include: { checklist_template_items: {} })
+          data: @template.as_json(include: { checklist_template_items: { only: ITEM_FIELDS } })
         }
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
@@ -114,16 +108,12 @@ module Api
         ActiveRecord::Base.transaction do
           new_template.save!
           @template.checklist_template_items.each do |item|
-            new_template.checklist_template_items.create!(
-              position: item.position,
-              content: item.content,
-              item_type: item.item_type
-            )
+            new_template.checklist_template_items.create!(item.attributes.slice("position", "content", "item_type").merge(item.criteria))
           end
         end
 
         render json: {
-          data: new_template.as_json(include: { checklist_template_items: {} })
+          data: new_template.as_json(include: { checklist_template_items: { only: ITEM_FIELDS } })
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
@@ -133,6 +123,15 @@ module Api
 
       def set_template
         @template = ChecklistTemplate.includes(:department, :checklist_template_items).find(params[:id])
+      end
+
+      # 項目の型と基準。選択肢は空欄を除き、測定値以外の種別では単位・許容範囲を持たない
+      def item_params(item, idx)
+        attrs = item.permit(:content, :item_type, :section, :criterion, :unit, :lower_limit, :upper_limit, :required, options: []).to_h
+        attrs["item_type"] = attrs["item_type"].presence || "check"
+        attrs["options"] = attrs["item_type"] == "choice" ? Array(attrs["options"]).map { |o| o.to_s.strip }.reject(&:empty?) : nil
+        attrs.merge!("unit" => nil, "lower_limit" => nil, "upper_limit" => nil) unless attrs["item_type"] == "measurement"
+        attrs.merge("position" => idx + 1)
       end
 
       def template_params

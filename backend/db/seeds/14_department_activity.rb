@@ -103,9 +103,8 @@ leaf_departments.each_with_index do |dept, idx|
         position: pos + 1,
         content: it[:content],
         item_type: it[:type],
-        checked: it[:type] == "check",
-        measured_value: it[:type] == "measurement" ? (10 + idx * 0.6 + pos * 1.1).round(1).to_s : nil,
-        has_defect: false
+        result: (%w[check measurement].include?(it[:type]) ? "good" : nil),
+        measured_value: it[:type] == "measurement" ? (10 + idx * 0.6 + pos * 1.1).round(1).to_s : nil
       )
     end
   end
@@ -185,9 +184,8 @@ non_leaf_departments.each_with_index do |dept, idx|
         position: pos + 1,
         content: it[:content],
         item_type: it[:type],
-        checked: it[:type] == "check",
-        measured_value: it[:type] == "measurement" ? (12 + idx * 0.5 + pos).round(1).to_s : nil,
-        has_defect: false
+        result: (%w[check measurement].include?(it[:type]) ? "good" : nil),
+        measured_value: it[:type] == "measurement" ? (12 + idx * 0.5 + pos).round(1).to_s : nil
       )
     end
   end

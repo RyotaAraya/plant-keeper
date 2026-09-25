@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_22_111025) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_25_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -59,6 +59,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_22_111025) do
     t.string "item_type", default: "check", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "section"
+    t.string "criterion"
+    t.string "unit"
+    t.decimal "lower_limit", precision: 14, scale: 4
+    t.decimal "upper_limit", precision: 14, scale: 4
+    t.jsonb "options"
+    t.boolean "required", default: false, null: false
     t.index ["checklist_template_id"], name: "index_checklist_template_items_on_checklist_template_id"
   end
 
@@ -165,6 +172,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_22_111025) do
     t.jsonb "calibration_data"
     t.string "calibration_result"
     t.bigint "equipment_id"
+    t.string "section"
+    t.string "criterion"
+    t.string "unit"
+    t.decimal "lower_limit", precision: 14, scale: 4
+    t.decimal "upper_limit", precision: 14, scale: 4
+    t.jsonb "options"
+    t.boolean "required", default: false, null: false
+    t.string "result"
     t.index ["checklist_template_item_id"], name: "index_inspection_items_on_checklist_template_item_id"
     t.index ["equipment_id"], name: "index_inspection_items_on_equipment_id"
     t.index ["inspection_id"], name: "index_inspection_items_on_inspection_id"

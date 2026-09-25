@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
 import { RESULT_COLOR, RESULT_LABEL, calibrationInputFrom } from '@/utils/calibration'
+import { RESULT_COLOR as ITEM_RESULT_COLOR, RESULT_LABEL as ITEM_RESULT_LABEL, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
 import { coveredEquipments } from '@/utils/equipment'
 
 const route = useRoute()
@@ -37,10 +38,6 @@ const statusColor: Record<string, string> = {
   draft: 'grey', submitted: 'info', approval_requested: 'warning', approved: 'success'
 }
 
-const itemTypeLabel: Record<string, string> = {
-  calibration: '5点校正',
-  check: 'チェック', measurement: '計測値', text: 'テキスト'
-}
 
 // 点検で見た設備。代表の設備が先頭（複数の設備をまとめて点検した記録は、2つ以上になる）
 const inspectionEquipments = computed(() => coveredEquipments(inspection.value))
@@ -192,16 +189,15 @@ onMounted(fetchInspection)
         <thead>
           <tr>
             <th width="40">#</th>
-            <th>内容</th>
-            <th width="100">種別</th>
-            <th width="120">結果</th>
-            <th width="80">不具合</th>
+            <th>項目・判定基準</th>
+            <th width="180">記録</th>
+            <th width="110">判定</th>
             <th width="120">計器</th>
           </tr>
         </thead>
         <tbody v-if="!inspection.inspection_items?.length">
           <tr>
-            <td colspan="6" class="text-center text-grey py-4">
+            <td colspan="5" class="text-center text-grey py-4">
               <template v-if="inspection.status === 'draft'">
                 点検項目が未入力です。
                 <a
@@ -215,17 +211,23 @@ onMounted(fetchInspection)
           </tr>
         </tbody>
         <tbody v-else>
-          <template v-for="item in inspection.inspection_items" :key="item.id">
+          <template v-for="(item, idx) in inspection.inspection_items" :key="item.id">
+            <tr v-if="startsSection(inspection.inspection_items, Number(idx))" class="pk-detail-section">
+              <th colspan="5">{{ item.section }}</th>
+            </tr>
             <tr :class="{ 'bg-red-lighten-5': item.has_defect }">
               <td>{{ item.position }}</td>
-              <td>{{ item.content }}</td>
-              <td>{{ itemTypeLabel[item.item_type] }}</td>
+              <td class="py-2">
+                <div>{{ item.content }}</div>
+                <div v-if="item.criterion || limitsText(item)" class="text-caption text-medium-emphasis">
+                  {{ item.criterion }}<span v-if="limitsText(item)" class="ml-2 text-no-wrap">（許容範囲 {{ limitsText(item) }}）</span>
+                </div>
+              </td>
               <td>
-                <template v-if="item.item_type === 'check'">
-                  <v-icon :color="item.checked ? 'success' : 'grey'">{{ item.checked ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
-                </template>
-                <template v-else-if="item.item_type === 'measurement'">
-                  {{ item.measured_value || '—' }}
+                <template v-if="item.item_type === 'measurement'">
+                  <span :class="{ 'text-error font-weight-bold': ['below', 'above'].includes(limitStatus(item, item.measured_value) ?? '') }">
+                    {{ item.measured_value ? `${item.measured_value}${item.unit ? ` ${item.unit}` : ''}` : '—' }}
+                  </span>
                 </template>
                 <template v-else-if="item.item_type === 'calibration'">
                   <v-chip v-if="item.calibration_result" :color="RESULT_COLOR[item.calibration_result as keyof typeof RESULT_COLOR]" size="x-small" label>
@@ -233,14 +235,16 @@ onMounted(fetchInspection)
                   </v-chip>
                   <template v-else>—</template>
                 </template>
+                <template v-else-if="item.item_type === 'check'">—</template>
                 <template v-else>
                   {{ item.text_value || '—' }}
                 </template>
               </td>
               <td>
-                <v-chip v-if="item.has_defect" color="error" size="x-small">
-                  <v-icon start size="x-small">mdi-alert</v-icon>あり
+                <v-chip v-if="item.result" :color="ITEM_RESULT_COLOR[item.result as ItemResult]" size="small" label variant="tonal">
+                  <v-icon v-if="item.result === 'defect'" start size="x-small">mdi-alert</v-icon>{{ item.result === 'na' ? '－（該当なし）' : ITEM_RESULT_LABEL[item.result as ItemResult] }}
                 </v-chip>
+                <span v-else-if="isJudgedType(item.item_type)" class="text-caption text-medium-emphasis">未判定</span>
               </td>
               <td>
                 <div>{{ item.instrument?.tag_number || '' }}</div>
@@ -249,7 +253,7 @@ onMounted(fetchInspection)
             </tr>
             <tr v-if="item.item_type === 'calibration' && item.calibration_data">
               <td />
-              <td colspan="5" class="py-2" style="overflow-x: auto">
+              <td colspan="4" class="py-2" style="overflow-x: auto">
                 <CalibrationTable readonly :model-value="calibrationInputFrom(item.calibration_data)" :snapshot="item.calibration_data.snapshot" />
               </td>
             </tr>
@@ -279,3 +283,7 @@ onMounted(fetchInspection)
     </template>
   </MainLayout>
 </template>
+
+<style scoped>
+.pk-detail-section th { background: var(--pk-mist); color: var(--pk-ink) !important; font-weight: 700; font-size: .8125rem; }
+</style>

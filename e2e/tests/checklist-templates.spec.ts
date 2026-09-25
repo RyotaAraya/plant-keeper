@@ -38,10 +38,10 @@ test('運転中の点検（伝送器の月次）には、制御を手動にし�
   await selectOption(page, '設備 *', '常圧蒸留装置')
   await selectOption(page, 'テンプレート（任意）', '伝送器 月次点検')
 
-  await expect(page.locator('input[value^="ゼロ点確認"]')).toBeVisible()
-  await expect(page.locator('input[value*="自動に戻したことを確認"]')).toBeVisible()
-  await expect(page.locator('input[value*="バイパス申請番号"]')).toBeVisible()
-  await expect(page.locator('input[value*="バイパスを解除し"]')).toBeVisible()
+  await expect(page.getByText(/^ゼロ点: 均圧/)).toBeVisible()
+  await expect(page.getByText('制御を自動に戻したことを確認')).toBeVisible()
+  await expect(page.getByText('バイパス申請番号', { exact: true })).toBeVisible()
+  await expect(page.getByText('バイパスを解除し、復帰後の動作を確認')).toBeVisible()
 })
 
 test('調節弁の年次点検では、ポジショナの5点校正の表が出る（調節弁の計器を選んだとき）', async ({ page }) => {
@@ -63,6 +63,6 @@ test('点検計画から「点検を実施」を開くと、計画のテンプ�
   await plan.getByRole('button', { name: '点検を実施' }).click()
 
   await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
-  await expect(page.locator('input[value*="吹出し圧力を記録"]')).toBeVisible()
-  await expect(page.locator('input[value*="吹止まり圧力を記録"]')).toBeVisible()
+  await expect(page.getByText('吹出し圧力', { exact: true })).toBeVisible()
+  await expect(page.getByText('吹止まり圧力', { exact: true })).toBeVisible()
 })

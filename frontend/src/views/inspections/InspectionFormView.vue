@@ -8,11 +8,13 @@ import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DefectAiAssist from '@/components/DefectAiAssist.vue'
 import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
+import ItemResultToggle from '@/components/ItemResultToggle.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import type { AiDefectDraft, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, snapshotFromInstrument } from '@/utils/calibration'
+import { ITEM_TYPE_OPTIONS, criteriaOf, isFilled, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
 import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
@@ -93,12 +95,41 @@ const inspectionTypeOptions = [
   { title: '運転チェック', value: 'operation_check' },
 ]
 
-const itemTypeOptions = [
-  { title: 'チェック', value: 'check' },
-  { title: '計測値', value: 'measurement' },
-  { title: 'テキスト', value: 'text' },
-  { title: '5点校正', value: 'calibration' },
-]
+const itemTypeOptions = ITEM_TYPE_OPTIONS
+
+// 不具合ありの判定の項目は、トラブルの入力欄を開く
+const isDefect = (item: any) => item.result === 'defect'
+
+// 提出の前に、未記入の必須の項目の数を示す（提出時にサーバーでも確認する）
+const missingRequired = computed(() => form.value.items.filter((item) => item.required && !isFilled(item)).length)
+
+// 測定値の許容範囲の外・数値でないときの案内
+function measurementMessage(item: any) {
+  const status = limitStatus(item, item.measured_value)
+  if (status === 'invalid') return '数値で入力してください'
+  if (status === 'below' || status === 'above') return `許容範囲外（${limitsText(item)}）`
+  return ''
+}
+
+const outOfRange = (item: any) => ['below', 'above'].includes(limitStatus(item, item.measured_value) ?? '')
+
+// 測定値から判定を自動で選ぶ（範囲内 → 良好、範囲外 → 不具合あり）。人が選んだ判定は、良好が範囲外になったときだけ変える
+function onMeasuredInput(item: any) {
+  const status = limitStatus(item, item.measured_value)
+  const auto = status === 'within' ? 'good' : status === 'below' || status === 'above' ? 'defect' : null
+  const replaceable = item.autoResult || !item.result || (item.result === 'good' && auto === 'defect')
+  if (auto && replaceable) {
+    setResult(item, auto)
+    item.autoResult = true
+  } else if (!auto && item.autoResult) {
+    setResult(item, null)
+  }
+}
+
+function onResultInput(item: any, value: ItemResult | null) {
+  item.autoResult = false
+  setResult(item, value)
+}
 
 // 5点校正の項目の入力欄。項目の種別を5点校正にしたときに用意する
 function ensureCalibration(item: any) {
@@ -182,10 +213,12 @@ async function onEquipmentChange() {
   await fetchInstruments()
 }
 
-// 複数の設備をまとめた点検で、不具合がどの設備のものかを決める（初期値は代表の設備）
-function onDefectToggle(item: any, on: boolean | null) {
+// 判定を変える。不具合ありにしたら、トラブルの入力欄を開き、複数の設備をまとめた点検では、どの設備の不具合かを決める（初期値は代表の設備）
+function setResult(item: any, value: ItemResult | null) {
+  item.result = value
+  if (value !== 'defect') return
   openedDefects.value.add(item)
-  if (on && multipleEquipments.value && !item.equipment_id) item.equipment_id = form.value.equipment_ids[0]
+  if (multipleEquipments.value && !item.equipment_id) item.equipment_id = form.value.equipment_ids[0]
 }
 
 function loadTemplate() {
@@ -197,10 +230,11 @@ function loadTemplate() {
     checklist_template_item_id: item.id,
     content: item.content,
     item_type: item.item_type,
-    checked: false,
+    ...criteriaOf(item),
+    result: null,
+    autoResult: false,
     measured_value: '',
     text_value: '',
-    has_defect: false,
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
@@ -216,10 +250,11 @@ function addItem() {
   form.value.items.push({
     content: '',
     item_type: 'check',
-    checked: false,
+    ...criteriaOf({ item_type: 'check' }),
+    result: null,
+    autoResult: false,
     measured_value: '',
     text_value: '',
-    has_defect: false,
     defect_title: '',
     defect_description: '',
     defect_priority: 'medium',
@@ -285,10 +320,11 @@ async function loadExisting() {
       checklist_template_item_id: item.checklist_template_item_id,
       content: item.content,
       item_type: item.item_type,
-      checked: item.checked,
+      ...criteriaOf(item),
+      result: item.result ?? null,
+      autoResult: false,
       measured_value: item.measured_value || '',
       text_value: item.text_value || '',
-      has_defect: item.has_defect,
       defect_title: '',
       defect_description: '',
       defect_priority: 'medium',
@@ -346,7 +382,7 @@ async function prefillFromPlana() {
     form.value.instrument_id = instruments.value.some((instrument) => instrument.id === instrumentId) ? instrumentId : null
     addItem()
     form.value.items[0].content = '不具合の確認'
-    form.value.items[0].has_defect = true
+    setResult(form.value.items[0], 'defect')
   } catch {
     errors.value = ['プラナで選んだ設備を読み込めませんでした。設備を選び直して入力できます。']
   }
@@ -495,107 +531,139 @@ onMounted(async () => {
         <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="addItem">項目追加</v-btn>
       </div>
 
-      <v-card v-for="(item, idx) in form.items" :key="itemKey(item)" class="mb-3" variant="outlined">
-        <v-card-text>
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-2">項目 {{ idx + 1 }}</span>
-            <v-spacer />
-            <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeItem(idx)" />
-          </div>
-          <v-row dense>
-            <v-col cols="12" md="6">
-              <v-text-field v-model="item.content" label="内容" density="compact" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-select v-model="item.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-select v-model="item.instrument_id" :items="instrumentsFor(item)" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
-            </v-col>
-          </v-row>
-          <v-row dense>
-            <v-col v-if="item.item_type === 'check'" cols="6" md="3">
-              <v-checkbox v-model="item.checked" label="OK" density="compact" hide-details />
-            </v-col>
-            <v-col v-if="item.item_type === 'measurement'" cols="6" md="3">
-              <v-text-field v-model="item.measured_value" label="計測値" density="compact" />
-            </v-col>
-            <v-col v-if="item.item_type === 'text'" cols="12" md="6">
-              <v-text-field v-model="item.text_value" label="テキスト" density="compact" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-checkbox v-model="item.has_defect" label="不具合あり" density="compact" hide-details color="error" @update:model-value="onDefectToggle(item, $event)" />
-            </v-col>
-          </v-row>
-          <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
-            <v-col cols="12">
-              <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
-            </v-col>
-          </v-row>
-          <v-expand-transition>
-            <div v-if="item.has_defect || openedDefects.has(item)" v-show="item.has_defect" class="mt-1">
-              <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
-              <div v-if="defectInstrumentFor(item)?.troubleshooting_checks?.length" class="pk-reference" data-testid="routine-checks">
-                <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器の一次点検の定型項目</h4>
-                <p class="pk-reference-meta">参考。手順書・保全基準の代わりではありません<template v-if="defectInstrumentFor(item)?.seal_fluid">／シール液: {{ defectInstrumentFor(item)?.seal_fluid }}</template></p>
-                <ul><li v-for="c in defectInstrumentFor(item)?.troubleshooting_checks" :key="c">{{ c }}</li></ul>
+      <template v-for="(item, idx) in form.items" :key="itemKey(item)">
+        <h3 v-if="startsSection(form.items, idx)" class="pk-item-section">{{ item.section }}</h3>
+        <v-card class="mb-3 pk-item" :class="{ 'pk-item--defect': isDefect(item) }" variant="outlined" :data-testid="`inspection-item-${idx + 1}`">
+          <v-card-text>
+            <div class="d-flex align-start ga-3 mb-2">
+              <span class="text-subtitle-2 text-no-wrap pk-item-number">項目 {{ idx + 1 }}</span>
+              <!-- テンプレートの項目は、内容と基準をそのまま示す（基準は現場で変えない） -->
+              <div v-if="item.checklist_template_item_id" class="flex-grow-1">
+                <div class="pk-item-content">
+                  <span>{{ item.content }}</span><span v-if="item.required" class="pk-item-required" title="必須">必須</span>
+                </div>
+                <div v-if="item.criterion || limitsText(item)" class="pk-item-criterion">
+                  <span class="pk-item-criterion__label">基準</span>{{ item.criterion }}
+                  <span v-if="limitsText(item)" class="pk-item-criterion__range">許容範囲 {{ limitsText(item) }}</span>
+                </div>
               </div>
-              <v-row v-if="multipleEquipments" dense>
-                <v-col cols="12" md="5">
-                  <v-select
-                    v-model="item.equipment_id"
-                    :items="selectedEquipments"
-                    item-title="name"
-                    item-value="id"
-                    label="不具合の設備 *"
-                    density="compact"
-                    color="error"
-                  />
-                </v-col>
-              </v-row>
-              <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
-                <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
-                  <h3 :id="`defect-draft-heading-${idx}`">メモをプラナに整理してもらう</h3>
-                  <p class="defect-workspace__hint">現場で見たことを入力してください。整理した内容と過去の事例を確認できます。</p>
-                  <DefectAiAssist
-                    :status="aiStatus"
-                    :equipment-id="item.equipment_id ?? form.equipment_id"
-                    :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
-                    :item-label="item.content"
-                    :has-existing="!!item.defect_title"
-                    @dirty="markMemo(item, $event)"
-                    @apply="applyAiDraft(item, $event)"
-                    @remaining="aiStatus.remaining_today = $event"
-                  />
-                </section>
-                <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
-                  <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
-                  <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
-                  <v-row dense>
-                    <v-col cols="12">
-                      <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
-                    </v-col>
-                    <v-col cols="12">
-                      <v-textarea v-model="item.defect_description" label="説明" rows="3" auto-grow density="compact" />
-                    </v-col>
-                    <v-col cols="12">
-                      <v-select
-                        v-model="item.defect_priority"
-                        :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
-                        item-title="title"
-                        item-value="value"
-                        label="優先度"
-                        density="compact"
-                      />
-                    </v-col>
-                  </v-row>
-                </section>
-              </div>
+              <v-spacer v-else />
+              <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeItem(idx)" />
             </div>
-          </v-expand-transition>
-        </v-card-text>
-      </v-card>
+            <v-row v-if="!item.checklist_template_item_id" dense>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="item.content" label="内容" density="compact" />
+              </v-col>
+              <v-col cols="6" md="3">
+                <v-select v-model="item.item_type" :items="itemTypeOptions.filter((o) => o.value !== 'choice')" item-title="title" item-value="value" label="種別" density="compact" @update:model-value="ensureCalibration(item)" />
+              </v-col>
+              <v-col v-if="item.item_type === 'measurement'" cols="6" md="3">
+                <v-text-field v-model="item.unit" label="単位（任意）" density="compact" />
+              </v-col>
+            </v-row>
+            <v-row dense align="center">
+              <v-col v-if="item.item_type === 'measurement'" cols="12" md="4">
+                <v-text-field
+                  v-model="item.measured_value"
+                  label="測定値"
+                  :suffix="item.unit || undefined"
+                  inputmode="decimal"
+                  density="compact"
+                  :error-messages="measurementMessage(item)"
+                  @update:model-value="onMeasuredInput(item)"
+                />
+              </v-col>
+              <v-col v-else-if="item.item_type === 'choice'" cols="12" md="4">
+                <v-select v-model="item.text_value" :items="item.options || []" label="選択" density="compact" clearable />
+              </v-col>
+              <v-col v-else-if="item.item_type === 'text'" cols="12" md="4">
+                <v-text-field v-model="item.text_value" label="記入" density="compact" />
+              </v-col>
+              <v-col cols="12" md class="pb-3">
+                <ItemResultToggle
+                  :model-value="item.result"
+                  :judged="isJudgedType(item.item_type)"
+                  :good-disabled="outOfRange(item)"
+                  @update:model-value="onResultInput(item, $event)"
+                />
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-select v-model="item.instrument_id" :items="instrumentsFor(item)" item-title="tag_number" item-value="id" label="計器" density="compact" clearable />
+              </v-col>
+            </v-row>
+            <v-row v-if="item.item_type === 'calibration' && item.calibration" dense class="mt-1">
+              <v-col cols="12">
+                <CalibrationTable v-model="item.calibration" :snapshot="snapshotFor(item)" />
+              </v-col>
+            </v-row>
+            <v-expand-transition>
+              <div v-if="isDefect(item) || openedDefects.has(item)" v-show="isDefect(item)" class="mt-1">
+                <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
+                <div v-if="defectInstrumentFor(item)?.troubleshooting_checks?.length" class="pk-reference" data-testid="routine-checks">
+                  <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器の一次点検の定型項目</h4>
+                  <p class="pk-reference-meta">参考。手順書・保全基準の代わりではありません<template v-if="defectInstrumentFor(item)?.seal_fluid">／シール液: {{ defectInstrumentFor(item)?.seal_fluid }}</template></p>
+                  <ul><li v-for="c in defectInstrumentFor(item)?.troubleshooting_checks" :key="c">{{ c }}</li></ul>
+                </div>
+                <v-row v-if="multipleEquipments" dense>
+                  <v-col cols="12" md="5">
+                    <v-select
+                      v-model="item.equipment_id"
+                      :items="selectedEquipments"
+                      item-title="name"
+                      item-value="id"
+                      label="不具合の設備 *"
+                      density="compact"
+                      color="error"
+                    />
+                  </v-col>
+                </v-row>
+                <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
+                  <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
+                    <h3 :id="`defect-draft-heading-${idx}`">メモをプラナに整理してもらう</h3>
+                    <p class="defect-workspace__hint">現場で見たことを入力してください。整理した内容と過去の事例を確認できます。</p>
+                    <DefectAiAssist
+                      :status="aiStatus"
+                      :equipment-id="item.equipment_id ?? form.equipment_id"
+                      :instrument-id="item.instrument_id ?? (multipleEquipments ? null : form.instrument_id)"
+                      :item-label="item.content"
+                      :has-existing="!!item.defect_title"
+                      @dirty="markMemo(item, $event)"
+                      @apply="applyAiDraft(item, $event)"
+                      @remaining="aiStatus.remaining_today = $event"
+                    />
+                  </section>
+                  <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
+                    <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
+                    <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
+                    <v-row dense>
+                      <v-col cols="12">
+                        <v-text-field v-model="item.defect_title" label="トラブルタイトル" density="compact" color="error" />
+                      </v-col>
+                      <v-col cols="12">
+                        <v-textarea v-model="item.defect_description" label="説明" rows="3" auto-grow density="compact" />
+                      </v-col>
+                      <v-col cols="12">
+                        <v-select
+                          v-model="item.defect_priority"
+                          :items="[{ title: '低', value: 'low' }, { title: '中', value: 'medium' }, { title: '高', value: 'high' }, { title: '緊急', value: 'critical' }]"
+                          item-title="title"
+                          item-value="value"
+                          label="優先度"
+                          density="compact"
+                        />
+                      </v-col>
+                    </v-row>
+                  </section>
+                </div>
+              </div>
+            </v-expand-transition>
+          </v-card-text>
+        </v-card>
+      </template>
 
+      <p v-if="missingRequired" class="text-body-2 text-medium-emphasis text-right mt-4 mb-0" data-testid="missing-required">
+        未記入の必須項目が {{ missingRequired }}件あります（下書きは保存できます）
+      </p>
       <div class="d-flex ga-3 mt-4">
         <v-btn @click="router.back()">キャンセル</v-btn>
         <v-spacer />
@@ -615,6 +683,14 @@ onMounted(async () => {
 .pk-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .pk-reference li { position: relative; padding-left: 15px; font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
 .pk-reference li::before { content: ''; position: absolute; left: 1px; top: .6em; width: 5px; height: 5px; background: var(--pk-steel); transform: rotate(45deg); }
+.pk-item-section { font-size: .875rem; font-weight: 700; color: var(--pk-ink); margin: 20px 0 8px; padding-left: 10px; border-left: 3px solid var(--pk-steel); }
+.pk-item--defect { border-color: rgb(var(--v-theme-error)) !important; }
+.pk-item-number { color: var(--pk-muted); padding-top: 2px; }
+.pk-item-content { font-weight: 600; line-height: 1.6; }
+.pk-item-required { white-space: nowrap; margin-left: 8px; font-size: .6875rem; font-weight: 700; color: var(--pk-amber); border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+.pk-item-criterion { font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); margin-top: 2px; }
+.pk-item-criterion__label { font-size: .6875rem; font-weight: 700; color: var(--pk-steel); background: var(--pk-soft-blue); border-radius: 4px; padding: 1px 6px; margin-right: 6px; }
+.pk-item-criterion__range { margin-left: 8px; font-family: var(--pk-font-mono); font-size: .75rem; color: var(--pk-ink); white-space: nowrap; }
 .defect-workspace { display: grid; gap: 24px; margin-top: 16px; }
 .defect-workspace h3 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
 .defect-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }

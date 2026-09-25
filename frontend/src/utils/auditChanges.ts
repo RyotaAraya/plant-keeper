@@ -25,6 +25,7 @@ const FIELD_LABELS: Record<string, string> = {
   response_type: '対応種別', used_materials: '使用資材',
   inspection_type: '点検種別', has_defect: '不具合', checked: '確認', content: '内容', item_type: '項目の種類',
   measured_value: '測定値', text_value: '入力内容', calibration_result: '校正の結果',
+  result: '判定', section: '区分', criterion: '判定基準', unit: '単位', lower_limit: '下限', upper_limit: '上限', options: '選択肢', required: '必須',
   planned_start_on: '予定開始日', planned_end_on: '予定終了日', actual_start_on: '実績開始日', actual_end_on: '実績終了日',
   completed_on: '完了日', accepted_on: '検収日', acceptance_result: '検収の結果', acceptance_notes: '検収の備考',
   tag_number: 'タグ番号', instrument_type: '計器の種類', seal_fluid: 'シール液',
@@ -61,7 +62,8 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   acceptance_result: ACCEPTANCE_RESULT_LABEL,
   kind: TASK_KIND_LABEL,
   response_type: { investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察' },
-  item_type: { check: 'チェック', measurement: '測定', text: '入力', calibration: '校正' },
+  item_type: { check: '確認', measurement: '測定値', choice: '選択式', text: '自由記述', calibration: '5点校正' },
+  result: { good: '良好', defect: '不具合あり', na: '該当なし' },
   category: { pressure: '圧力', electrical: '電気', temperature: '温度', other: 'その他' },
 }
 

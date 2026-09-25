@@ -43,7 +43,7 @@ wk_fcc = equip("和歌山製油所", "流動接触分解装置")
 sd_lk = equip("仙台製油所", "潤滑油製造装置")
 
 # insp2の不具合項目を取得
-insp2_defect = InspectionItem.joins(:inspection).where(has_defect: true, inspections: { inspection_type: "periodic" }).find_by!(content: "グランドパッキンからの漏れを確認")
+insp2_defect = InspectionItem.joins(:inspection).where(has_defect: true, inspections: { inspection_type: "periodic" }).find_by!(content: "外観とグランドの漏れ")
 
 Trouble.create!(inspection_item: insp2_defect, equipment: kw_cdu, instrument: inst("PV-201"), reported_by: sato, assigned_to: suzuki,
   title: "PV-201 グランドパッキン漏れ", description: "定期点検時にPV-201（CDU塔頂圧力制御弁）のグランドパッキンから微量の漏れを発見。弁棒付近からプロセス流体のにじみあり。増し締めでは改善せず、パッキン交換が必要。",

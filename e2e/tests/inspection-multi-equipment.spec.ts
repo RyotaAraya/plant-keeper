@@ -13,11 +13,11 @@ test('複数の設備をまとめて巡回点検を記録し、異常があっ�
 
   // 単独の計器ではなく、装置の巡回。指示値の確認の項目はない
   await expect(page.getByLabel('計器（任意）')).toHaveCount(0)
-  await expect(page.locator('input[value^="漏れ"]')).toBeVisible()
-  await expect(page.locator('input[value*="指示値"]')).toHaveCount(0)
+  await expect(page.getByText(/^漏れ（継手/)).toBeVisible()
+  await expect(page.locator('.pk-item-content', { hasText: '指示値' })).toHaveCount(0)
 
   // 異常のあった項目にだけ、不具合を付ける。どの設備の不具合かを選ぶ（初期値は代表の設備）
-  await page.getByRole('checkbox', { name: '不具合あり' }).first().check()
+  await page.getByRole('button', { name: '不具合あり' }).first().click()
   const defectEquipment = page.locator('.v-field', { has: page.getByLabel('不具合の設備 *') })
   await expect(defectEquipment).toContainText('常圧蒸留装置')
   await selectOption(page, '不具合の設備 *', '重油間接脱硫装置')
