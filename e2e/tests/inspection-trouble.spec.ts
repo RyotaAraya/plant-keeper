@@ -13,7 +13,7 @@ test('点検で不具合を報告すると、トラブル管理に登録され�
 
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
   await page.getByLabel('トラブルタイトル').fill(title)
 
   await page.getByRole('button', { name: '提出' }).click()

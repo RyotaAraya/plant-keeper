@@ -32,7 +32,7 @@ class ReplacePatrolTemplatesMigrationTest < ActiveSupport::TestCase
     assert_equal 1, patrol.count
     template = patrol.first
     assert_equal [ @operations, "routine", "patrol", true ], [ template.department, template.inspection_type, template.cycle, template.is_active ] # 巡回は運転部門のテンプレート
-    assert_equal ChecklistTemplateCatalog::PATROL, template.checklist_template_items.map { |i| [ i.content, i.item_type ] }
+    assert_equal ChecklistTemplateCatalog::PATROL.map { |content, item_type| [ content, item_type ] }, template.checklist_template_items.map { |i| [ i.content, i.item_type ] }
     assert_equal (1..template.checklist_template_items.size).to_a, template.checklist_template_items.map(&:position)
     assert_nil ChecklistTemplate.find_by(name: "根岸 巡回点検") # 根岸には計装保全課が無い
   end

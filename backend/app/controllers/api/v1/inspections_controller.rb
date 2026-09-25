@@ -101,7 +101,10 @@ module Api
             end
           end
           sync_reference_standards!(inspection)
-          inspection.check_reference_standards! unless inspection.draft?
+          unless inspection.draft?
+            inspection.check_required_items!
+            inspection.check_reference_standards!
+          end
         end
 
         inspection.reload
@@ -110,7 +113,7 @@ module Api
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
-      rescue Inspection::UnusableReferenceStandards => e
+      rescue Inspection::UnusableReferenceStandards, Inspection::IncompleteItems => e
         render json: { errors: e.problems }, status: :unprocessable_entity
       end
 
@@ -147,18 +150,7 @@ module Api
             params[:inspection][:items].each_with_index do |item, idx|
               if item[:id]
                 ii = @inspection.inspection_items.find(item[:id])
-                ii.update!(
-                  position: idx + 1,
-                  content: item[:content],
-                  item_type: item[:item_type],
-                  checked: item[:checked],
-                  measured_value: item[:measured_value],
-                  text_value: item[:text_value],
-                  has_defect: item[:has_defect],
-                  instrument_id: item[:instrument_id],
-                  equipment_id: item[:equipment_id].presence,
-                  calibration_input: calibration_input_for(item)
-                )
+                ii.update!(item_attributes(item, idx, ii))
                 record_audit_log("update", ii) if ii.saved_changes.except("updated_at").any?
                 create_trouble_for_defect!(@inspection, ii, item)
               else
@@ -167,6 +159,8 @@ module Api
             end
           end
           sync_reference_standards!(@inspection)
+          # 下書きを出るとき、または提出後に項目を変えたときに、必須の項目が記入されているかを確認する
+          @inspection.check_required_items! if !@inspection.draft? && (leaving_draft || params[:inspection].key?(:items))
           # 下書きを出るとき、または提出後に基準器を変えたときに、使った基準器が点検日に使えるかを確認する
           @inspection.check_reference_standards! if !@inspection.draft? && (leaving_draft || params[:inspection].key?(:reference_standards))
         end
@@ -177,7 +171,7 @@ module Api
         }
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: [ e.message ] }, status: :unprocessable_entity
-      rescue Inspection::UnusableReferenceStandards => e
+      rescue Inspection::UnusableReferenceStandards, Inspection::IncompleteItems => e
         render json: { errors: e.problems }, status: :unprocessable_entity
       end
 
@@ -210,23 +204,41 @@ module Api
       end
 
       def create_item!(inspection, item, idx)
-        ii = inspection.inspection_items.create!(
-          checklist_template_item_id: item[:checklist_template_item_id],
-          position: idx + 1,
-          content: item[:content],
-          item_type: item[:item_type] || "check",
-          checked: item[:checked] || false,
-          measured_value: item[:measured_value],
-          text_value: item[:text_value],
-          has_defect: item[:has_defect] || false,
-          instrument_id: item[:instrument_id],
-          equipment_id: item[:equipment_id].presence,
-          calibration_input: calibration_input_for(item)
-        )
+        ii = inspection.inspection_items.build(checklist_template_item_id: item[:checklist_template_item_id])
+        ii.assign_attributes(item_attributes(item, idx, ii))
+        ii.save!
         record_audit_log("create", ii)
         create_trouble_for_defect!(inspection, ii, item)
         ii
       end
+
+      # 点検の項目の入力。判定（result）は送られたときだけ変える。従来の has_defect / checked も受け付ける（result があればそちらを使う）。
+      # 基準（区分・判定基準・単位・許容範囲・選択肢・必須）は、テンプレートの項目から作ったものはサーバーが写すので、
+      # 画面から受け付けるのは、その場で追加した項目だけ
+      def item_attributes(item, idx, record)
+        attrs = {
+          position: idx + 1,
+          content: item[:content],
+          item_type: item[:item_type].presence || record.item_type || "check",
+          measured_value: item[:measured_value],
+          text_value: item[:text_value],
+          instrument_id: item[:instrument_id],
+          equipment_id: item[:equipment_id].presence,
+          calibration_input: calibration_input_for(item)
+        }
+        if item.key?(:result)
+          attrs[:result] = item[:result].presence
+        else
+          attrs[:has_defect] = boolean(item[:has_defect]) if item.key?(:has_defect)
+          attrs[:checked] = boolean(item[:checked]) if item.key?(:checked)
+        end
+        if record.checklist_template_item_id.nil?
+          attrs.merge!(item.permit(:section, :criterion, :unit, :lower_limit, :upper_limit, :required, options: []).to_h.symbolize_keys)
+        end
+        attrs
+      end
+
+      def boolean(value) = ActiveModel::Type::Boolean.new.cast(value) || false
 
       # 5点校正の項目の入力（送られていなければ nil で、記録は変えない）
       def calibration_input_for(item)
@@ -235,7 +247,7 @@ module Api
 
       # 不具合→トラブル自動作成（不具合タイトルがあり、まだトラブルが無い項目のみ）
       def create_trouble_for_defect!(inspection, ii, item)
-        return unless item[:has_defect] && item[:defect_title].present? && ii.trouble.nil?
+        return unless ii.has_defect? && item[:defect_title].present? && ii.trouble.nil?
 
         # 複数の設備をまとめて点検したときは、不具合の項目の設備（なければ代表の設備）のトラブルにする。
         # 点検の計器は代表の設備のものなので、別の設備のトラブルには引き継がない

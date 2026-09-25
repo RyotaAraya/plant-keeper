@@ -4,6 +4,7 @@ import api from '@/api/axios'
 import { TEMPLATE_CYCLE_LABEL } from '@/constants/maintenanceStatus'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { ITEM_TYPE_OPTIONS, criteriaOf } from '@/utils/checklistCriteria'
 
 const tab = ref('services')
 
@@ -118,12 +119,7 @@ const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
 }
 const cycleOptions = Object.entries(TEMPLATE_CYCLE_LABEL).map(([value, title]) => ({ title, value }))
-const itemTypeOptions = [
-  { title: 'チェック', value: 'check' },
-  { title: '計測値', value: 'measurement' },
-  { title: 'テキスト', value: 'text' },
-  { title: '5点校正', value: 'calibration' },
-]
+const itemTypeOptions = ITEM_TYPE_OPTIONS
 
 // 廃止したテンプレート（点検の選択肢から外したもの）も、ここでは一覧に出す（後ろに並べる）
 async function fetchTemplates() {
@@ -140,7 +136,7 @@ function openTemplateDialog(item?: any) {
       inspection_type: item.inspection_type,
       cycle: item.cycle ?? null,
       is_active: item.is_active,
-      items: (item.checklist_template_items || []).map((i: any) => ({ id: i.id, content: i.content, item_type: i.item_type }))
+      items: (item.checklist_template_items || []).map((i: any) => ({ id: i.id, content: i.content, item_type: i.item_type, ...criteriaOf(i) }))
     }
   } else {
     templateEditingId.value = null
@@ -151,7 +147,7 @@ function openTemplateDialog(item?: any) {
 }
 
 function addTemplateItem() {
-  templateForm.value.items.push({ content: '', item_type: 'check' })
+  templateForm.value.items.push({ content: '', item_type: 'check', ...criteriaOf({ item_type: 'check' }), required: true })
 }
 
 function removeTemplateItem(idx: number) {
@@ -414,7 +410,7 @@ onMounted(() => {
           </template>
         </v-data-table>
 
-        <v-dialog v-model="templateDialog" max-width="700" scrollable>
+        <v-dialog v-model="templateDialog" max-width="900" scrollable>
           <v-card>
             <v-card-title>{{ templateEditingId ? 'テンプレート編集' : 'テンプレート作成' }}</v-card-title>
             <v-card-text>
@@ -450,11 +446,40 @@ onMounted(() => {
                 <v-spacer />
                 <v-btn size="x-small" variant="outlined" prepend-icon="mdi-plus" @click="addTemplateItem">追加</v-btn>
               </div>
-              <div v-for="(ci, idx) in templateForm.items" :key="idx" class="d-flex align-center mb-2 ga-2">
-                <span class="text-body-2" style="min-width: 24px">{{ idx + 1 }}.</span>
-                <v-text-field v-model="ci.content" label="内容" density="compact" hide-details class="flex-grow-1" />
-                <v-select v-model="ci.item_type" :items="itemTypeOptions" item-title="title" item-value="value" density="compact" hide-details style="max-width: 140px" />
-                <v-btn icon="mdi-close" size="x-small" variant="text" @click="removeTemplateItem(idx)" />
+              <p class="text-caption text-medium-emphasis mb-3">
+                区分は「作業前・点検・復旧」などの見出しです。測定値は単位と許容範囲（片側だけでも可）を入れると、点検時に合否を自動で出します。
+                条件つきの項目（「インターロックに関わる計器のみ」など）は、判定基準に書いておくと、当てはまらない点検で「－」を付けられます。
+              </p>
+              <div v-for="(ci, idx) in templateForm.items" :key="idx" class="pk-template-item" :data-testid="`template-item-${idx + 1}`">
+                <div class="d-flex align-center ga-2">
+                  <span class="text-body-2" style="min-width: 24px">{{ idx + 1 }}.</span>
+                  <v-text-field v-model="ci.content" label="内容" density="compact" hide-details class="flex-grow-1" />
+                  <v-select v-model="ci.item_type" :items="itemTypeOptions" item-title="title" item-value="value" label="種別" density="compact" hide-details style="max-width: 130px" />
+                  <v-checkbox v-model="ci.required" label="必須" density="compact" hide-details class="flex-grow-0" />
+                  <v-btn icon="mdi-close" size="x-small" variant="text" :aria-label="`項目 ${idx + 1} を削除`" @click="removeTemplateItem(idx)" />
+                </div>
+                <v-row dense class="mt-1 pl-8">
+                  <v-col cols="12" sm="3">
+                    <v-text-field v-model="ci.section" label="区分" density="compact" hide-details />
+                  </v-col>
+                  <v-col cols="12" sm="9">
+                    <v-text-field v-model="ci.criterion" label="判定基準" density="compact" hide-details />
+                  </v-col>
+                  <template v-if="ci.item_type === 'measurement'">
+                    <v-col cols="4">
+                      <v-text-field v-model="ci.unit" label="単位" density="compact" hide-details />
+                    </v-col>
+                    <v-col cols="4">
+                      <v-text-field v-model="ci.lower_limit" label="下限" type="number" density="compact" hide-details />
+                    </v-col>
+                    <v-col cols="4">
+                      <v-text-field v-model="ci.upper_limit" label="上限" type="number" density="compact" hide-details />
+                    </v-col>
+                  </template>
+                  <v-col v-if="ci.item_type === 'choice'" cols="12">
+                    <v-combobox v-model="ci.options" label="選択肢（入力して Enter）" multiple chips closable-chips density="compact" hide-details />
+                  </v-col>
+                </v-row>
               </div>
             </v-card-text>
             <v-card-actions>
@@ -548,3 +573,7 @@ onMounted(() => {
     </v-window>
   </MainLayout>
 </template>
+
+<style scoped>
+.pk-template-item { padding: 10px 0 12px; border-bottom: 1px solid var(--pk-line); }
+</style>

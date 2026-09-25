@@ -64,7 +64,7 @@ test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合�
   await page.getByRole('button', { name: '不具合の記録を始める' }).click()
   await expect(page).toHaveURL(/\/inspections\/new\?plana=defect-draft/)
   await expect(page.getByTestId('from-plana')).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toBeChecked()
+  await expect(page.getByRole('button', { name: '不具合あり' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('combobox', { name: '計器（任意）', exact: true })).toHaveValue(selectedTag)
   await expect(page.getByLabel('トラブルタイトル')).toBeVisible()
 })
@@ -82,7 +82,7 @@ test('協力会社はURLで他拠点の設備を指定しても点検対象に�
   await page.goto(`/inspections/new?plana=defect-draft&equipment_id=${otherSiteEquipmentId}`)
   await expect(page.getByText('所属拠点の設備を選んでください。')).toBeVisible()
   await expect(page.getByRole('combobox', { name: '設備 *' })).toHaveValue('')
-  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '不具合あり' })).toHaveCount(0)
 })
 
 test('トラブルを探して対応記録の入力を直接開ける', async ({ page }) => {

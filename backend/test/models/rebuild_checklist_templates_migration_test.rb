@@ -32,7 +32,7 @@ class RebuildChecklistTemplatesMigrationTest < ActiveSupport::TestCase
     assert_equal kawasaki.size, ChecklistTemplate.count
     template = ChecklistTemplate.find_by!(name: "遮断弁・インターロック 年次点検")
     assert_equal [ @section, "periodic", true ], [ template.department, template.inspection_type, template.is_active ]
-    assert_equal ChecklistTemplateCatalog::TEMPLATES.find { |t| t[:name] == template.name }[:items],
+    assert_equal ChecklistTemplateCatalog::TEMPLATES.find { |t| t[:name] == template.name }[:items].map { |content, item_type| [ content, item_type ] },
                  template.checklist_template_items.map { |i| [ i.content, i.item_type ] }
     assert_equal (1..template.checklist_template_items.size).to_a, template.checklist_template_items.map(&:position)
     assert_nil ChecklistTemplate.find_by(name: "根岸 巡回点検")

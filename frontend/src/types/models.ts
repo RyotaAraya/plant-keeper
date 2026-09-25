@@ -242,6 +242,14 @@ export interface ChecklistTemplateItem {
   position: number
   content: string
   item_type: string
+  // 項目の型と基準（utils/checklistCriteria.ts）。decimal は文字列で返る
+  section: string | null
+  criterion: string | null
+  unit: string | null
+  lower_limit: string | null
+  upper_limit: string | null
+  options: string[] | null
+  required: boolean
   created_at: string
   updated_at: string
 }
@@ -294,7 +302,18 @@ export interface InspectionItem {
   position: number
   content: string
   item_type: string
-  checked: boolean
+  // 判定: good=良好 / defect=不具合あり / na=該当なし。未判定は null。has_defect は判定から決まる
+  result: 'good' | 'defect' | 'na' | null
+  // 点検した時点の基準（テンプレートの項目からの写し）
+  section: string | null
+  criterion: string | null
+  unit: string | null
+  lower_limit: string | null
+  upper_limit: string | null
+  options: string[] | null
+  required: boolean
+  // 測定値と許容範囲の関係（測定値の項目だけ）
+  measurement_status?: 'within' | 'below' | 'above' | 'invalid' | null
   measured_value: string | null
   text_value: string | null
   has_defect: boolean

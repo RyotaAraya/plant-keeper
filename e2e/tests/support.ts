@@ -52,6 +52,18 @@ export async function selectOption(page: Page, label: string, optionName: string
 // トラブル管理の先頭行から詳細画面を開く。一覧は初期表示の再取得で行が差し替わることがあり、
 // クリックが空振りしうるため、詳細画面に遷移するまでクリックをリトライする。
 // 「詳細画面に到達していないのに、ボタンがないことの確認だけ通る」状態を防ぐため、到達も検証する
+// 点検フォームの項目に、すべて判定を付ける（良好を付けられる項目は良好、選択式・自由記述は該当なし）。必須の項目が未記入だと提出できないため
+export async function judgeAllItems(page: Page) {
+  const items = page.locator('[data-testid^="inspection-item-"]')
+  for (let i = 0; i < (await items.count()); i++) {
+    const item = items.nth(i)
+    const good = item.getByRole('button', { name: '良好', exact: true })
+    if (await good.count()) await good.click()
+    else await item.getByRole('button', { name: '該当なし', exact: true }).click()
+  }
+  await expect(page.getByTestId('missing-required')).toHaveCount(0)
+}
+
 // 一覧（ページ分けされた表）から、名前に title を含む行を探して開く。繰り返し実行して「E2E 」の行が溜まっても、後ろのページまで探す。
 // 作成直後は一覧の再取得が終わるまで行が出ないため、最初のページから探し直しながら待つ
 export async function openListRow(page: Page, title: string) {

@@ -1,4 +1,4 @@
-import { test, expect, openListRow, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, openListRow, judgeAllItems, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
 import type { Page } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
@@ -58,7 +58,8 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
     await expect(page.getByTestId('from-maintenance-task')).toBeVisible()
     await expect(page.locator('.v-field', { has: page.getByLabel('計器（任意）', { exact: true }) })).toContainText('FT-701')
-    await expect(page.locator('input[value="5点校正（全数）"]')).toBeVisible() // 伝送器 定修点検のチェックリストの項目
+    await expect(page.getByText('5点校正（全数）', { exact: true })).toBeVisible() // 伝送器 定修点検のチェックリストの項目
+    await judgeAllItems(page)
     if ((await page.locator('.v-field', { has: page.getByLabel('部署 *', { exact: true }) }).innerText()).trim() === '部署 *') await selectFirstOption(page, '部署 *')
     await page.getByRole('button', { name: '提出' }).click()
     await expect(page).toHaveURL(/\/inspections$/)

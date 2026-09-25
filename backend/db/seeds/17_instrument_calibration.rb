@@ -41,21 +41,21 @@ calibration_input = {
     "as_left" => stage.call([ 0.02, 0.05, 0.05, 0.08, 0.1 ], [ 0.03, 0.06, 0.08, 0.1, 0.12 ])
   }
 }
-# テンプレートの項目どおりに、確認済み・記入済みの記録を作る
-text_for = lambda do |content|
-  case content
-  when /調整/ then "スパンを調整（100%点で+0.7%の偏差を補正）。"
-  when /バイパス申請番号/ then "該当なし（インターロックに関わらない計器）"
-  else ""
+# テンプレートの項目どおりに、判定・記入済みの記録を作る（FT-301 はインターロックに関わらないため、バイパスの項目は「－」）
+values_for = lambda do |item|
+  case item.content
+  when /バイパス/ then { result: "na" }
+  when "特記事項" then { text_value: "100%点で+0.7%の偏差。スパンを調整して全点が許容内。" }
+  else
+    case item.item_type
+    when "calibration" then { instrument: ft301, calibration_input: calibration_input }
+    when "choice" then { text_value: "スパンを調整" }
+    when "check" then { result: "good" }
+    else {}
+    end
   end
 end
 template.checklist_template_items.each do |item|
-  values =
-    case item.item_type
-    when "calibration" then { instrument: ft301, calibration_input: calibration_input }
-    when "check" then { checked: true }
-    else { text_value: text_for.call(item.content) }
-    end
   InspectionItem.create!(inspection: calibration, checklist_template_item: item, position: item.position, content: item.content,
-                         item_type: item.item_type, has_defect: false, **values)
+                         item_type: item.item_type, **values_for.call(item))
 end

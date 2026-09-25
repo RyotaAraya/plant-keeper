@@ -41,7 +41,7 @@ test('点検フォームの不具合入力から、現場メモで過去の類�
   await selectFirstOption(page, '部署 *')
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
 
   const button = page.getByTestId('ai-similar-button')
   await expect(button).toBeDisabled()
