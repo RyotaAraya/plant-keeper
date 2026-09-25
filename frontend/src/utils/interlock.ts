@@ -15,6 +15,8 @@ export const BYPASS_STATUS_COLOR: Record<InterlockBypassStatus, string> = {
 export const BYPASS_STATE_OPTIONS = [
   { title: '復帰期限超過', value: 'overdue' },
   { title: 'バイパス中', value: 'bypassed' },
+  { title: '復帰確認待ち', value: 'restored' },
+  { title: '承認待ち', value: 'requested' },
   { title: '終わっていないバイパスあり', value: 'open' },
   { title: 'バイパスなし', value: 'none' },
 ]

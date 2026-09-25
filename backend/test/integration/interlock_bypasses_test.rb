@@ -171,10 +171,28 @@ class InterlockBypassesTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal [ "XV-701" ], json["data"]["instruments"].map { |i| i["tag_number"] }
 
+    # 設備は登録のときだけ決まり、更新では変わらない
+    other_equipment = create_equipment(site: @site, name: "給水設備")
+    patch "/api/v1/interlocks/#{json['data']['id']}", headers: auth_headers_for(@manager), as: :json, params: { interlock: { equipment_id: other_equipment.id } }
+    assert_equal @boiler.id, json["data"]["equipment_id"]
+
     elsewhere = Instrument.create!(equipment: create_equipment(site: @site, name: "発電設備"), tag_number: "PT-751", instrument_type: "pressure_transmitter")
     patch "/api/v1/interlocks/#{json['data']['id']}", headers: auth_headers_for(@manager), as: :json, params: { interlock: { instrument_ids: [ @valve.id, elsewhere.id ] } }
     assert_response :unprocessable_entity
     assert_includes json["errors"].first, "PT-751"
+  end
+
+  test "台帳はバイパスの状態（復帰確認待ち・承認待ち）で絞り込める" do
+    InterlockBypass.create!(interlock: @interlock, requested_by: @member, requested_at: 1.hour.ago, reason: "校正", compensatory_measure: "監視",
+                            planned_restore_at: 3.hours.from_now, status: "restored", restored_by: @worker, restored_at: 10.minutes.ago)
+    other = Interlock.create!(equipment: @boiler, tag_number: "I-702", name: "ドラム圧力 高高")
+    InterlockBypass.create!(interlock: other, requested_by: @member, requested_at: 1.hour.ago, reason: "校正", compensatory_measure: "監視",
+                            planned_restore_at: 3.hours.from_now)
+
+    { "restored" => [ "I-701" ], "requested" => [ "I-702" ], "open" => [ "I-701", "I-702" ] }.each do |state, tags|
+      get "/api/v1/interlocks", headers: auth_headers_for(@worker), params: { bypass_state: state }
+      assert_equal tags, json["data"].map { |i| i["tag_number"] }.sort, state
+    end
   end
 
   test "台帳は関係する計器のタグ番号でも探せ、計器で絞り込める" do

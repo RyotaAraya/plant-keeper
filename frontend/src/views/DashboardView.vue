@@ -31,8 +31,8 @@ const maintenanceStats = computed(() => dashboard.value ? [
 const bypassStats = computed(() => dashboard.value ? [
   { label: '復帰期限超過', value: dashboard.value.interlock_bypasses.overdue, state: 'overdue', alert: true },
   { label: 'バイパス中', value: dashboard.value.interlock_bypasses.bypassed, state: 'bypassed', alert: false },
-  { label: '復帰確認待ち', value: dashboard.value.interlock_bypasses.awaiting_confirmation, state: 'open', alert: false },
-  { label: '承認待ち', value: dashboard.value.interlock_bypasses.pending_approval, state: 'open', alert: false },
+  { label: '復帰確認待ち', value: dashboard.value.interlock_bypasses.awaiting_confirmation, state: 'restored', alert: false },
+  { label: '承認待ち', value: dashboard.value.interlock_bypasses.pending_approval, state: 'requested', alert: false },
 ] : [])
 
 async function fetchDashboard() {

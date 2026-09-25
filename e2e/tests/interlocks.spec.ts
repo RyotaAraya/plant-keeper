@@ -51,7 +51,9 @@ test('ダッシュボードと台帳で、復帰期限を過ぎたバイパス�
   await section.getByRole('link', { name: '復帰期限超過', exact: true }).click()
   await expect(page).toHaveURL(/\/interlocks\?.*bypass_state=overdue/)
   await expect(page.getByTestId('interlock-overdue-alert')).toBeVisible()
-  await expect(page.locator('tbody tr')).toHaveCount(1)
+  // 件数は決め打ちしない（シードの予定の復帰は投入時からの相対時間のため、stg では時間がたつと I-751 も期限を過ぎる）
+  await expect(page.locator('tbody tr', { hasText: 'I-701' })).toBeVisible()
+  for (const row of await page.locator('tbody tr').all()) await expect(row).toContainText('復帰期限超過')
 
   await page.locator('tbody tr', { hasText: 'I-701' }).click()
   const current = page.getByTestId('current-bypass')

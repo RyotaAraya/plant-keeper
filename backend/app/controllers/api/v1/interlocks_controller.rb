@@ -7,7 +7,7 @@ module Api
       before_action :set_interlock, only: [ :show, :update ]
 
       # GET /api/v1/interlocks
-      # bypass_state: bypassed=バイパス中 / overdue=復帰期限超過 / open=終わっていないバイパスあり / none=なし
+      # bypass_state: overdue=復帰期限超過 / bypassed=バイパス中 / restored=復帰確認待ち / requested=承認待ち / open=終わっていないバイパスあり / none=なし
       def index
         authorize Interlock
         interlocks = Interlock.includes(:instruments, equipment: :site).joins(:equipment)
@@ -44,7 +44,7 @@ module Api
 
       # POST /api/v1/interlocks
       def create
-        interlock = Interlock.new(interlock_params)
+        interlock = Interlock.new(interlock_params.merge(params.require(:interlock).permit(:equipment_id)))
         authorize interlock
         save_interlock(interlock, "create", :created)
       end
@@ -87,6 +87,8 @@ module Api
       def filter_by_bypass_state(interlocks, state)
         case state
         when "bypassed" then interlocks.where(id: InterlockBypass.status_bypassed.select(:interlock_id))
+        when "restored" then interlocks.where(id: InterlockBypass.status_restored.select(:interlock_id))
+        when "requested" then interlocks.where(id: InterlockBypass.status_requested.select(:interlock_id))
         when "overdue" then interlocks.where(id: InterlockBypass.overdue.select(:interlock_id))
         when "open" then interlocks.where(id: InterlockBypass.open.select(:interlock_id))
         when "none" then interlocks.where.not(id: InterlockBypass.open.select(:interlock_id))
@@ -94,8 +96,9 @@ module Api
         end
       end
 
+      # 設備は登録のときだけ（あとから変えると、関係する計器やバイパスの記録と設備が食い違うため）
       def interlock_params
-        params.require(:interlock).permit(:equipment_id, :tag_number, :name, :trip_action, :notes, :is_active)
+        params.require(:interlock).permit(:tag_number, :name, :trip_action, :notes, :is_active)
       end
     end
   end

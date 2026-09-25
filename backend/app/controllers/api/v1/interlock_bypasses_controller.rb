@@ -47,6 +47,9 @@ module Api
         render json: { data: bypass_json(bypass) }, status: :created
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
+      rescue ActiveRecord::RecordNotUnique
+        # 同じインターロックへの申請が同時に来た（検証をすり抜けて、終わっていないバイパスを1件にする一意制約に当たった）
+        render json: { errors: [ "同じインターロックに、同時に別の申請がありました。画面を開き直して確認してください" ] }, status: :unprocessable_entity
       end
 
       # POST /api/v1/interlock_bypasses/:id/approve など
