@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_25_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_26_010100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -283,6 +283,63 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_25_020000) do
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"
     t.index ["service_id"], name: "index_instruments_on_service_id"
     t.index ["tag_number"], name: "index_instruments_on_tag_number"
+  end
+
+  create_table "interlock_bypasses", force: :cascade do |t|
+    t.bigint "interlock_id", null: false
+    t.string "request_number", null: false
+    t.string "status", default: "requested", null: false
+    t.text "reason", null: false
+    t.text "compensatory_measure", null: false
+    t.datetime "planned_restore_at", null: false
+    t.bigint "requested_by_id", null: false
+    t.datetime "requested_at", null: false
+    t.bigint "approved_by_id"
+    t.datetime "approved_at"
+    t.bigint "bypassed_by_id"
+    t.datetime "bypassed_at"
+    t.bigint "restored_by_id"
+    t.datetime "restored_at"
+    t.bigint "confirmed_by_id"
+    t.datetime "confirmed_at"
+    t.bigint "closed_by_id"
+    t.datetime "closed_at"
+    t.text "closed_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["approved_by_id"], name: "index_interlock_bypasses_on_approved_by_id"
+    t.index ["bypassed_by_id"], name: "index_interlock_bypasses_on_bypassed_by_id"
+    t.index ["closed_by_id"], name: "index_interlock_bypasses_on_closed_by_id"
+    t.index ["confirmed_by_id"], name: "index_interlock_bypasses_on_confirmed_by_id"
+    t.index ["interlock_id"], name: "index_interlock_bypasses_on_interlock_id"
+    t.index ["interlock_id"], name: "index_interlock_bypasses_one_open", unique: true, where: "((status)::text = ANY ((ARRAY['requested'::character varying, 'approved'::character varying, 'bypassed'::character varying, 'restored'::character varying])::text[]))"
+    t.index ["request_number"], name: "index_interlock_bypasses_on_request_number", unique: true
+    t.index ["requested_by_id"], name: "index_interlock_bypasses_on_requested_by_id"
+    t.index ["restored_by_id"], name: "index_interlock_bypasses_on_restored_by_id"
+    t.index ["status"], name: "index_interlock_bypasses_on_status"
+  end
+
+  create_table "interlock_instruments", force: :cascade do |t|
+    t.bigint "interlock_id", null: false
+    t.bigint "instrument_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["instrument_id"], name: "index_interlock_instruments_on_instrument_id"
+    t.index ["interlock_id", "instrument_id"], name: "index_interlock_instruments_on_interlock_id_and_instrument_id", unique: true
+    t.index ["interlock_id"], name: "index_interlock_instruments_on_interlock_id"
+  end
+
+  create_table "interlocks", force: :cascade do |t|
+    t.bigint "equipment_id", null: false
+    t.string "tag_number", null: false
+    t.string "name", null: false
+    t.text "trip_action"
+    t.text "notes"
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["equipment_id", "tag_number"], name: "index_interlocks_on_equipment_id_and_tag_number", unique: true
+    t.index ["equipment_id"], name: "index_interlocks_on_equipment_id"
   end
 
   create_table "jwt_denylists", force: :cascade do |t|
@@ -704,6 +761,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_25_020000) do
   add_foreign_key "instruments", "equipments"
   add_foreign_key "instruments", "line_classes"
   add_foreign_key "instruments", "services"
+  add_foreign_key "interlock_bypasses", "interlocks"
+  add_foreign_key "interlock_bypasses", "users", column: "approved_by_id"
+  add_foreign_key "interlock_bypasses", "users", column: "bypassed_by_id"
+  add_foreign_key "interlock_bypasses", "users", column: "closed_by_id"
+  add_foreign_key "interlock_bypasses", "users", column: "confirmed_by_id"
+  add_foreign_key "interlock_bypasses", "users", column: "requested_by_id"
+  add_foreign_key "interlock_bypasses", "users", column: "restored_by_id"
+  add_foreign_key "interlock_instruments", "instruments"
+  add_foreign_key "interlock_instruments", "interlocks"
+  add_foreign_key "interlocks", "equipments"
   add_foreign_key "maintenance_assignments", "scheduled_maintenances"
   add_foreign_key "maintenance_assignments", "users"
   add_foreign_key "maintenance_series", "sites"

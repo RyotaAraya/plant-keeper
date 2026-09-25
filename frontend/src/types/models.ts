@@ -608,10 +608,66 @@ export interface DepartmentTreeNode {
   children: DepartmentTreeNode[]
 }
 
+// インターロックのバイパス。requested=申請中 / approved=承認済 / bypassed=バイパス中 / restored=復帰確認待ち / completed=完了 / rejected=却下 / cancelled=取消
+export type InterlockBypassStatus = 'requested' | 'approved' | 'bypassed' | 'restored' | 'completed' | 'rejected' | 'cancelled'
+
+type UserRef = { id: number; name: string } | null
+
+export interface InterlockBypass {
+  id: number
+  interlock_id: number
+  request_number: string
+  status: InterlockBypassStatus
+  reason: string
+  compensatory_measure: string
+  planned_restore_at: string
+  requested_by: UserRef
+  requested_at: string
+  approved_by: UserRef
+  approved_at: string | null
+  bypassed_by: UserRef
+  bypassed_at: string | null
+  restored_by: UserRef
+  restored_at: string | null
+  confirmed_by: UserRef
+  confirmed_at: string | null
+  closed_by: UserRef
+  closed_at: string | null
+  closed_reason: string | null
+  // 予定の復帰日時を過ぎてもバイパス中
+  overdue: boolean
+  // バイパスしてからの時間（バイパス中のときだけ）
+  bypassed_hours: number | null
+  interlock: { id: number; tag_number: string; name: string; equipment: { id: number; name: string; site: { id: number; name: string } } }
+}
+
+export interface Interlock {
+  id: number
+  equipment_id: number
+  tag_number: string
+  name: string
+  trip_action: string | null
+  notes: string | null
+  is_active: boolean
+  equipment: { id: number; name: string; site: { id: number; name: string } }
+  instruments: { id: number; tag_number: string; instrument_type: string | null }[]
+  // 終わっていない（申請中〜復帰確認待ち）バイパス
+  open_bypass: InterlockBypass | null
+  // 詳細だけ。新しい順
+  bypasses?: InterlockBypass[]
+}
+
 export interface DashboardSummary {
   scope: { site_name: string | null; department_name: string | null }
   troubles: { open: number; in_progress: number; critical: number }
   inspections: { pending_approval: number }
+  interlock_bypasses: {
+    bypassed: number
+    overdue: number
+    awaiting_confirmation: number
+    pending_approval: number
+    bypassed_list: InterlockBypass[]
+  }
   maintenances: {
     planned: number
     in_progress: number

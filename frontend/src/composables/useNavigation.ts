@@ -28,6 +28,7 @@ export function useNavigation() {
         { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },
         { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
         { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },
+        { title: 'インターロック', icon: 'mdi-shield-alert-outline', to: '/interlocks' },
         { title: '定期整備', icon: 'mdi-wrench-outline', to: '/maintenances' },
       ],
     },

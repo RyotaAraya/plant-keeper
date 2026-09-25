@@ -6,6 +6,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
+import InterlockChips from '@/components/InterlockChips.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import {
   CHARACTERISTIC_LABEL,
@@ -129,6 +130,7 @@ onMounted(fetchInstrument)
             </v-col>
           </v-row>
           <p v-if="instrument.notes" class="mt-3"><strong>備考:</strong> {{ instrument.notes }}</p>
+          <InterlockChips :instrument-id="instrument.id" class="mt-3" />
           <div v-if="instrument.troubleshooting_checks?.length" class="mt-3" data-testid="troubleshooting-checks">
             <strong>一次点検の定型項目（参考。手順書・保全基準の代わりではありません）:</strong>
             <ul class="ml-5">

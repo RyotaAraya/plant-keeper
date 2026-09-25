@@ -8,6 +8,7 @@ import { latestGuard } from '@/utils/latestGuard'
 import { useAuthStore } from '@/stores/auth'
 import { siteIdsToQuery } from '@/utils/listQuery'
 import type { DashboardScope, DashboardSummary } from '@/types/models'
+import { bypassColor, bypassLabel, formatHours, restoreDueLabel } from '@/utils/interlock'
 
 const authStore = useAuthStore()
 const dashboard = ref<DashboardSummary | null>(null)
@@ -24,6 +25,14 @@ const maintenanceStats = computed(() => dashboard.value ? [
   { label: '計画・準備中', value: dashboard.value.maintenances.planned, icon: 'mdi-calendar-outline' },
   { label: '実施・検収中', value: dashboard.value.maintenances.in_progress, icon: 'mdi-wrench-outline' },
   { label: '30日以内に開始', value: dashboard.value.maintenances.upcoming_count, icon: 'mdi-calendar-clock-outline' },
+] : [])
+
+// インターロックのバイパスは安全に関わるため、拠点全体で見る（部署の選択を適用しない）
+const bypassStats = computed(() => dashboard.value ? [
+  { label: '復帰期限超過', value: dashboard.value.interlock_bypasses.overdue, state: 'overdue', alert: true },
+  { label: 'バイパス中', value: dashboard.value.interlock_bypasses.bypassed, state: 'bypassed', alert: false },
+  { label: '復帰確認待ち', value: dashboard.value.interlock_bypasses.awaiting_confirmation, state: 'open', alert: false },
+  { label: '承認待ち', value: dashboard.value.interlock_bypasses.pending_approval, state: 'open', alert: false },
 ] : [])
 
 async function fetchDashboard() {
@@ -104,6 +113,45 @@ watch(scope, fetchDashboard, { deep: true, immediate: true })
           <p class="pk-scope-note">選択した組織と配下を集計。トラブルは報告者・担当者の所属、点検は記録の部署が対象です。</p>
         </section>
 
+        <section class="pk-panel pk-bypass" aria-labelledby="site-bypass-title" data-testid="dashboard-bypass">
+          <header class="pk-panel__header">
+            <div>
+              <h2 id="site-bypass-title">インターロックのバイパス</h2>
+              <p>{{ scope.siteId ? `${siteName}全体` : '全拠点' }}で、インターロックが外れているものと、操作を待っているものです。</p>
+            </div>
+            <v-btn variant="text" color="primary" size="small" :to="listLink('/interlocks', { bypass_state: 'open' }, false)" append-icon="mdi-chevron-right">バイパスの一覧</v-btn>
+          </header>
+          <div class="pk-panel__body">
+            <dl class="pk-panel__stats">
+              <div v-for="stat in bypassStats" :key="stat.label">
+                <dt>
+                  <router-link :to="listLink('/interlocks', { bypass_state: stat.state }, false)" :class="{ 'pk-bypass__alert': stat.alert && stat.value }">{{ stat.label }}</router-link>
+                </dt>
+                <dd :class="{ 'pk-bypass__alert': stat.alert && stat.value }">{{ stat.value }}<small>件</small></dd>
+              </div>
+            </dl>
+            <div class="pk-panel__list">
+              <h3>バイパス中（予定の復帰が近い順）</h3>
+              <ul v-if="dashboard.interlock_bypasses.bypassed_list.length" class="pk-panel-items">
+                <li v-for="bypass in dashboard.interlock_bypasses.bypassed_list" :key="bypass.id">
+                  <router-link :to="`/interlocks/${bypass.interlock.id}`">
+                    <v-chip :color="bypassColor(bypass)" size="small" label variant="flat">{{ bypassLabel(bypass) }}</v-chip>
+                    <span class="pk-panel-items__copy">
+                      <strong>{{ bypass.interlock.tag_number }} {{ bypass.interlock.name }}</strong>
+                      <span>{{ bypass.interlock.equipment.name }} ／ {{ formatHours(bypass.bypassed_hours) }}経過 ／ 予定の復帰まで{{ restoreDueLabel(bypass) }}</span>
+                    </span>
+                    <v-icon size="18" aria-hidden="true">mdi-chevron-right</v-icon>
+                  </router-link>
+                </li>
+              </ul>
+              <div v-else class="pk-panel-empty">
+                <v-icon size="24" aria-hidden="true">mdi-shield-check-outline</v-icon>
+                <p>バイパスされているインターロックはありません。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="pk-maintenance" aria-labelledby="site-maintenance-title">
           <header class="pk-maintenance__header">
             <div>
@@ -165,50 +213,54 @@ h2 { font-family: var(--pk-font-display); font-size: 1.125rem; line-height: 1.5;
 .pk-kpi__value { font-size: 2rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .pk-kpi small { margin-left: 8px; color: var(--pk-muted); font-size: 0.75rem; }
 .pk-scope-note { margin: 10px 0 0; color: var(--pk-muted); font-size: 0.75rem; line-height: 1.6; text-wrap: pretty; }
-.pk-maintenance { overflow: hidden; border: 1px solid var(--pk-line); border-radius: 16px; background: #fff; }
-.pk-maintenance__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--pk-line); }
-.pk-maintenance__header p { margin-top: 4px; color: var(--pk-muted); font-size: 0.8125rem; line-height: 1.6; text-wrap: pretty; }
-.pk-maintenance__header > .v-btn { flex: none; }
-.pk-maintenance__body { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
-.pk-maintenance__stats { display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 28px 24px; background: var(--pk-soft-blue); }
-.pk-maintenance__stats > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.pk-maintenance__stats dt { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--pk-steel-dark); }
-.pk-maintenance__stats dd { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pk-maintenance__stats small { margin-left: 4px; font-size: 0.6875rem; font-weight: 400; color: var(--pk-muted); }
-.pk-maintenance__schedule { min-width: 0; padding: 20px 24px 12px; }
-.pk-maintenance__schedule h3 { margin-bottom: 8px; font-size: 0.8125rem; color: var(--pk-muted); }
-.pk-schedule { padding: 0; list-style: none; }
-.pk-schedule li + li { border-top: 1px solid var(--pk-line); }
-.pk-schedule a { display: flex; align-items: center; gap: 16px; padding: 14px 0; color: var(--pk-ink); text-decoration: none; }
-.pk-schedule a:hover strong { color: var(--pk-steel); text-decoration: underline; }
+.pk-bypass { margin-bottom: 20px; }
+.pk-bypass .pk-panel__stats a { color: inherit; text-decoration: none; }
+.pk-bypass .pk-panel__stats a:hover { text-decoration: underline; }
+.pk-bypass__alert { color: rgb(var(--v-theme-error)) !important; font-weight: 700; }
+.pk-maintenance, .pk-panel { overflow: hidden; border: 1px solid var(--pk-line); border-radius: 16px; background: #fff; }
+.pk-maintenance__header, .pk-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--pk-line); }
+.pk-maintenance__header p, .pk-panel__header p { margin-top: 4px; color: var(--pk-muted); font-size: 0.8125rem; line-height: 1.6; text-wrap: pretty; }
+.pk-maintenance__header > .v-btn, .pk-panel__header > .v-btn { flex: none; }
+.pk-maintenance__body, .pk-panel__body { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+.pk-maintenance__stats, .pk-panel__stats { display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 28px 24px; background: var(--pk-soft-blue); }
+.pk-maintenance__stats > div, .pk-panel__stats > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pk-maintenance__stats dt, .pk-panel__stats dt { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--pk-steel-dark); }
+.pk-maintenance__stats dd, .pk-panel__stats dd { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pk-maintenance__stats small, .pk-panel__stats small { margin-left: 4px; font-size: 0.6875rem; font-weight: 400; color: var(--pk-muted); }
+.pk-maintenance__schedule, .pk-panel__list { min-width: 0; padding: 20px 24px 12px; }
+.pk-maintenance__schedule h3, .pk-panel__list h3 { margin-bottom: 8px; font-size: 0.8125rem; color: var(--pk-muted); }
+.pk-schedule, .pk-panel-items { padding: 0; list-style: none; }
+.pk-schedule li + li, .pk-panel-items li + li { border-top: 1px solid var(--pk-line); }
+.pk-schedule a, .pk-panel-items a { display: flex; align-items: center; gap: 16px; padding: 14px 0; color: var(--pk-ink); text-decoration: none; }
+.pk-schedule a:hover strong, .pk-panel-items a:hover strong { color: var(--pk-steel); text-decoration: underline; }
 .pk-schedule time { min-width: 52px; color: var(--pk-steel-dark); font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pk-schedule time small { display: block; margin-top: 2px; color: var(--pk-muted); font-size: 0.625rem; font-weight: 400; }
-.pk-schedule__copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
-.pk-schedule__copy strong { font-size: 0.875rem; font-weight: 500; overflow-wrap: anywhere; }
-.pk-schedule__copy > span { color: var(--pk-muted); font-size: 0.75rem; }
-.pk-schedule a > .v-icon { color: var(--pk-muted); flex: none; }
-.pk-schedule-empty { padding-block: 20px; color: var(--pk-muted); font-size: 0.875rem; line-height: 1.8; }
-.pk-schedule-empty a { color: var(--pk-steel); }
+.pk-schedule__copy, .pk-panel-items__copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.pk-schedule__copy strong, .pk-panel-items__copy strong { font-size: 0.875rem; font-weight: 500; overflow-wrap: anywhere; }
+.pk-schedule__copy > span, .pk-panel-items__copy > span { color: var(--pk-muted); font-size: 0.75rem; }
+.pk-schedule a > .v-icon, .pk-panel-items a > .v-icon { color: var(--pk-muted); flex: none; }
+.pk-schedule-empty, .pk-panel-empty { padding-block: 20px; color: var(--pk-muted); font-size: 0.875rem; line-height: 1.8; }
+.pk-schedule-empty a, .pk-panel-empty a { color: var(--pk-steel); }
 a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 4px; }
 @media (max-width: 960px) {
   .pk-attention__grid { grid-template-columns: 1fr; gap: 8px; }
   .pk-kpi { display: flex; justify-content: space-between; align-items: center; padding: 16px; gap: 12px; }
   .pk-kpi__bottom { gap: 16px; }
-  .pk-maintenance__body { grid-template-columns: 1fr; }
-  .pk-maintenance__stats { flex-direction: row; padding: 20px; gap: 16px; justify-content: space-between; }
-  .pk-maintenance__stats > div { flex-direction: column; align-items: start; gap: 8px; }
+  .pk-maintenance__body, .pk-panel__body { grid-template-columns: 1fr; }
+  .pk-maintenance__stats, .pk-panel__stats { flex-direction: row; padding: 20px; gap: 16px; justify-content: space-between; }
+  .pk-maintenance__stats > div, .pk-panel__stats > div { flex-direction: column; align-items: start; gap: 8px; }
   .pk-kpi { padding: 16px; }
 }
 @media (max-width: 600px) {
   .pk-attention { margin-block: 24px; }
   .pk-kpi__value { font-size: 1.5rem; }
   .pk-kpi__top { gap: 8px; font-size: 0.8125rem; }
-  .pk-maintenance__header { padding: 16px; align-items: start; flex-wrap: wrap; gap: 8px; }
-  .pk-maintenance__header > .v-btn { margin-left: -8px; }
-  .pk-maintenance__stats { padding: 16px; gap: 8px; }
-  .pk-maintenance__stats dt { gap: 4px; font-size: 0.6875rem; }
-  .pk-maintenance__stats dt .v-icon { display: none; }
-  .pk-maintenance__schedule { padding: 16px; }
-  .pk-schedule a { gap: 12px; }
+  .pk-maintenance__header, .pk-panel__header { padding: 16px; align-items: start; flex-wrap: wrap; gap: 8px; }
+  .pk-maintenance__header > .v-btn, .pk-panel__header > .v-btn { margin-left: -8px; }
+  .pk-maintenance__stats, .pk-panel__stats { padding: 16px; gap: 8px; }
+  .pk-maintenance__stats dt, .pk-panel__stats dt { gap: 4px; font-size: 0.6875rem; }
+  .pk-maintenance__stats dt .v-icon, .pk-panel__stats dt .v-icon { display: none; }
+  .pk-maintenance__schedule, .pk-panel__list { padding: 16px; }
+  .pk-schedule a, .pk-panel-items a { gap: 12px; }
 }
 </style>
