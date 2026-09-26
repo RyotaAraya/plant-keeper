@@ -6,3 +6,4 @@ export const priorityColor: Record<string, string> = { low: 'success', medium: '
 export const inspectionTypeLabel: Record<string, string> = { routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック' }
 export const inspectionStatusLabel: Record<string, string> = { draft: '下書き', submitted: '提出済', approval_requested: '承認待ち', approved: '承認済' }
 export const inspectionStatusColor: Record<string, string> = { draft: 'grey', submitted: 'info', approval_requested: 'warning', approved: 'success' }
+export const responseTypeLabel: Record<string, string> = { investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察' }

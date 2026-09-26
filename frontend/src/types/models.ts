@@ -774,6 +774,42 @@ export interface MeetingBoardTrouble {
   assigned_to: NamedRef | null
 }
 
+// 夕会の実績（点検日が今日の点検は、下書きのままのものを含む。画面で積み残しに分ける）
+export interface MeetingBoardInspection {
+  id: number
+  status: 'draft' | 'submitted' | 'approval_requested' | 'approved'
+  inspection_type: string
+  inspected_at: string
+  equipment_id: number
+  equipment: NamedRef
+  equipments: NamedRef[]
+  instrument: { id: number; tag_number: string } | null
+  user: NamedRef
+  department: NamedRef
+  checklist_template: NamedRef | null
+}
+
+export interface MeetingBoardResponse {
+  id: number
+  response_type: string
+  description: string
+  responded_at: string
+  user: NamedRef
+  trouble: { id: number; title: string; status: string; equipment: NamedRef; instrument: { id: number; tag_number: string } | null }
+}
+
+export interface MeetingBoardCompletedTask {
+  id: number
+  title: string
+  kind: MeetingBoardTask['kind']
+  completed_on: string
+  scheduled_maintenance: { id: number; title: string }
+  department: NamedRef | null
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
 export interface MeetingBoard {
   today: string
   tomorrow: string
@@ -782,4 +818,5 @@ export interface MeetingBoard {
   maintenances: MeetingBoardMaintenance[]
   troubles: { total_count: number; items: MeetingBoardTrouble[] }
   interlock_bypasses: InterlockBypass[]
+  results: { inspections: MeetingBoardInspection[]; trouble_responses: MeetingBoardResponse[]; completed_tasks: MeetingBoardCompletedTask[] }
 }

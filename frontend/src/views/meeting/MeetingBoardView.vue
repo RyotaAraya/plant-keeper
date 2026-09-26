@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -11,12 +12,15 @@ import { siteIdsToQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
 import { inspectionFromPlan, referenceStandardFromPlan } from '@/utils/inspectionPlan'
 import { bypassColor, bypassLabel, formatHours, restoreDueLabel } from '@/utils/interlock'
-import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
+import { inspectionStatusColor, inspectionStatusLabel, priorityColor, priorityLabel, responseTypeLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import { TASK_KIND_LABEL, TASK_STATUS_COLOR, TASK_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
-import type { DashboardScope, MeetingBoard, MeetingBoardPlan } from '@/types/models'
+import type { DashboardScope, MeetingBoard, MeetingBoardInspection, MeetingBoardPlan } from '@/types/models'
 
 // 朝会・夕会ボード: 今日・明日の予定を、拠点・部署で絞って1枚にまとめる（要求仕様書 2.8）。
-// 範囲の選び方はダッシュボードと同じ（初期値は本人の所属。部署のない人は拠点全体）
+// 範囲の選び方はダッシュボードと同じ（初期値は本人の所属。部署のない人は拠点全体）。
+// 朝会（今日・明日の予定）と夕会（今日の実績と積み残し）は、URLの ?mode=evening で切り替える（再読み込み・印刷でも保つ）
+const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const { canManageReferenceStandard } = usePermissions()
 const board = ref<MeetingBoard | null>(null)
@@ -36,11 +40,44 @@ const planGroups = computed(() => {
   const plans = board.value?.inspection_plans ?? []
   return [
     { key: 'overdue', label: '期限超過', plans: plans.filter((p) => p.days_until_due < 0) },
-    { key: 'today', label: '今日が期限', plans: plans.filter((p) => p.days_until_due === 0) },
+    { key: 'today', label: evening.value ? '今日が期限（未実施）' : '今日が期限', plans: plans.filter((p) => p.days_until_due === 0) },
     { key: 'tomorrow', label: '明日が期限', plans: plans.filter((p) => p.days_until_due === 1) },
   ]
 })
 const openTaskCount = computed(() => board.value?.maintenances.reduce((sum, m) => sum + m.open_tasks.length, 0) ?? 0)
+
+type Mode = 'morning' | 'evening'
+const mode = computed<Mode>(() => (route.query.mode === 'evening' ? 'evening' : 'morning'))
+const evening = computed(() => mode.value === 'evening')
+function setMode(value: Mode) {
+  void router.replace({ query: { ...route.query, mode: value === 'evening' ? 'evening' : undefined } })
+}
+
+// 夕会: 点検日が今日の点検を、提出したもの（実績）と下書きのまま（積み残し）に分ける
+const submittedInspections = computed(() => board.value?.results.inspections.filter((i) => i.status !== 'draft') ?? [])
+const draftInspections = computed(() => board.value?.results.inspections.filter((i) => i.status === 'draft') ?? [])
+
+function inspectionTarget(inspection: MeetingBoardInspection) {
+  const names = equipmentNames(inspection)
+  return inspection.instrument ? `${names} ／ ${inspection.instrument.tag_number}` : names
+}
+
+// 「14:05」
+function timeLabel(value: string) {
+  return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+}
+
+// 紙に出した時刻（印刷のときだけ見せる。いつ時点の内容かを紙で分かるように）。
+// ボタンだけでなくブラウザの印刷（Ctrl+P）でも入るよう、beforeprint で決める
+const printedAt = ref('')
+function stampPrintedAt() {
+  printedAt.value = new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+}
+onMounted(() => window.addEventListener('beforeprint', stampPrintedAt))
+onUnmounted(() => window.removeEventListener('beforeprint', stampPrintedAt))
+function printBoard() {
+  window.print()
+}
 
 async function fetchBoard() {
   const isLatest = fetchGuard()
@@ -95,8 +132,24 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
 <template>
   <MainLayout>
     <div class="pk-board">
-      <PageHeader title="朝会・夕会ボード" description="今日・明日の予定と、進んでいる作業を1枚で確認します。" />
-      <DashboardOrganizationScope v-model="scope" />
+      <PageHeader title="朝会・夕会ボード" description="今日・明日の予定と、進んでいる作業を1枚で確認します。夕会では、今日の実績と積み残しを出します。">
+        <v-btn class="pk-no-print" variant="outlined" prepend-icon="mdi-printer-outline" :disabled="!board" data-testid="board-print" @click="printBoard">印刷</v-btn>
+      </PageHeader>
+      <v-btn-toggle
+        :model-value="mode"
+        class="pk-board__modes pk-no-print"
+        color="primary"
+        variant="outlined"
+        density="comfortable"
+        mandatory
+        divided
+        aria-label="朝会と夕会の切り替え"
+        @update:model-value="setMode"
+      >
+        <v-btn value="morning" data-testid="board-mode-morning">朝会（今日・明日の予定）</v-btn>
+        <v-btn value="evening" data-testid="board-mode-evening">夕会（今日の実績と積み残し）</v-btn>
+      </v-btn-toggle>
+      <DashboardOrganizationScope v-model="scope" class="pk-no-print" />
 
       <div v-if="error" class="mt-5">
         <v-alert type="error" variant="tonal" role="alert">{{ error }}</v-alert>
@@ -107,10 +160,12 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
       </div>
       <template v-else-if="board">
         <div class="pk-board__day" data-testid="board-day">
+          <p class="pk-board__mode"><strong>{{ evening ? '夕会' : '朝会' }}</strong></p>
           <p><span>今日</span><strong>{{ dayLabel(board.today) }}</strong></p>
           <p><span>明日</span><strong>{{ dayLabel(board.tomorrow) }}</strong></p>
-          <p class="pk-board__scope"><span>範囲</span><strong>{{ scopeName }}</strong></p>
+          <p class="pk-board__scope"><span>範囲</span><strong>{{ board.scope.site_name ?? '全拠点' }} {{ scopeName }}</strong></p>
           <v-progress-circular v-if="loading" indeterminate size="18" width="2" color="primary" aria-label="更新中" />
+          <p class="pk-board__printed"><span>出力</span><strong>{{ printedAt }}</strong></p>
         </div>
 
         <!-- 安全に関わるため先頭。部署で絞らず拠点全体 -->
@@ -118,7 +173,7 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
           <header class="pk-board-section__header">
             <div>
               <h2 id="board-bypass-title">インターロックのバイパス<small>{{ board.interlock_bypasses.length }}件</small></h2>
-              <p>{{ siteName }}の、バイパス中と復帰確認待ちです。安全に関わるため、部署の選択にかかわらず表示します。</p>
+              <p>{{ siteName }}の、バイパス中と復帰確認待ちです。安全に関わるため、部署の選択にかかわらず表示します。<template v-if="evening">戻していないものは、次の直へ引き継ぎます。</template></p>
             </div>
             <v-btn variant="text" color="primary" size="small" :to="listLink('/interlocks', { bypass_state: 'open' }, false)" append-icon="mdi-chevron-right">台帳を開く</v-btn>
           </header>
@@ -138,10 +193,74 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
           <p v-else class="pk-board-empty">バイパス中・復帰確認待ちのインターロックはありません。</p>
         </section>
 
+        <!-- 夕会: 今日の実績。下書きのままの点検は積み残しとして分ける -->
+        <section v-if="evening" class="pk-board-section" aria-labelledby="board-result-title" data-testid="board-results">
+          <header class="pk-board-section__header">
+            <div>
+              <h2 id="board-result-title">今日の実績<small>{{ submittedInspections.length + board.results.trouble_responses.length + board.results.completed_tasks.length }}件</small></h2>
+              <p>点検日が今日で提出した点検（提出した日時は記録していないため、点検日で数えます）、今日記録された対応記録、今日完了した定期整備の作業です。点検は記録の部署、対応記録は記録した人の所属（どちらも配下を含む）、作業は作業の部署（上位の部署を含む）で絞ります。</p>
+            </div>
+          </header>
+          <div class="pk-board-plans">
+            <div class="pk-board-plans__group" data-testid="board-results-inspections">
+              <h3>提出した点検<small>{{ submittedInspections.length }}件</small></h3>
+              <ul v-if="submittedInspections.length" class="pk-board-plans__items">
+                <li v-for="inspection in submittedInspections" :key="inspection.id" :data-testid="`board-result-inspection-${inspection.id}`">
+                  <div class="pk-board-plans__copy">
+                    <strong><router-link :to="`/inspections/${inspection.id}`">{{ inspection.checklist_template?.name ?? '点検' }}</router-link></strong>
+                    <span>{{ inspectionTarget(inspection) }}</span>
+                    <span>{{ inspection.user.name }} ／ {{ inspection.department.name }} ／ {{ timeLabel(inspection.inspected_at) }}</span>
+                  </div>
+                  <v-chip :color="inspectionStatusColor[inspection.status]" size="small" label variant="tonal">{{ inspectionStatusLabel[inspection.status] }}</v-chip>
+                </li>
+              </ul>
+              <p v-else class="pk-board-empty">ありません。</p>
+            </div>
+            <div class="pk-board-plans__group" data-testid="board-results-responses">
+              <h3>記録した対応<small>{{ board.results.trouble_responses.length }}件</small></h3>
+              <ul v-if="board.results.trouble_responses.length" class="pk-board-plans__items">
+                <li v-for="response in board.results.trouble_responses" :key="response.id" :data-testid="`board-result-response-${response.id}`">
+                  <div class="pk-board-plans__copy">
+                    <strong><router-link :to="`/troubles/${response.trouble.id}`">{{ response.trouble.title }}</router-link></strong>
+                    <span>{{ responseTypeLabel[response.response_type] ?? response.response_type }}：{{ response.description }}</span>
+                    <span>{{ response.user.name }} ／ {{ timeLabel(response.responded_at) }} ／ トラブルは{{ troubleStatusLabel[response.trouble.status] }}</span>
+                  </div>
+                </li>
+              </ul>
+              <p v-else class="pk-board-empty">ありません。</p>
+            </div>
+            <div class="pk-board-plans__group" data-testid="board-results-tasks">
+              <h3>完了した作業<small>{{ board.results.completed_tasks.length }}件</small></h3>
+              <ul v-if="board.results.completed_tasks.length" class="pk-board-plans__items">
+                <li v-for="task in board.results.completed_tasks" :key="task.id" :data-testid="`board-result-task-${task.id}`">
+                  <div class="pk-board-plans__copy">
+                    <strong>{{ task.title }}</strong>
+                    <span><router-link :to="`/maintenances/${task.scheduled_maintenance.id}`">{{ task.scheduled_maintenance.title }}</router-link></span>
+                    <span>{{ task.department?.name ?? '部署未定' }} ／ {{ task.assigned_to?.name ?? '担当未定' }}</span>
+                  </div>
+                </li>
+              </ul>
+              <p v-else class="pk-board-empty">ありません。</p>
+            </div>
+          </div>
+          <div v-if="draftInspections.length" class="pk-board-drafts" data-testid="board-results-drafts">
+            <h3><v-icon size="18" aria-hidden="true">mdi-alert-outline</v-icon>提出していない点検（下書きのまま）<small>{{ draftInspections.length }}件</small></h3>
+            <ul class="pk-board-plans__items">
+              <li v-for="inspection in draftInspections" :key="inspection.id" :data-testid="`board-draft-inspection-${inspection.id}`">
+                <div class="pk-board-plans__copy">
+                  <strong>{{ inspection.checklist_template?.name ?? '点検' }}</strong>
+                  <span>{{ inspectionTarget(inspection) }} ／ {{ inspection.user.name }} ／ {{ inspection.department.name }}</span>
+                </div>
+                <v-btn size="small" variant="outlined" :to="`/inspections/${inspection.id}/edit`">開く</v-btn>
+              </li>
+            </ul>
+          </div>
+        </section>
+
         <section class="pk-board-section" aria-labelledby="board-plan-title" data-testid="board-plans">
           <header class="pk-board-section__header">
             <div>
-              <h2 id="board-plan-title">点検計画<small>{{ board.inspection_plans.length }}件</small></h2>
+              <h2 id="board-plan-title">{{ evening ? '点検計画（積み残しと明日の予定）' : '点検計画' }}<small>{{ board.inspection_plans.length }}件</small></h2>
               <p>期限を過ぎたものと、今日・明日が期限のものです。部署はチェックリストの部署で、上位の部署（課・部）のものも含みます。</p>
             </div>
             <v-btn variant="text" color="primary" size="small" :to="listLink('/inspection-plans', {}, false)" append-icon="mdi-chevron-right">計画の一覧</v-btn>
@@ -170,7 +289,7 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
         <section class="pk-board-section" aria-labelledby="board-task-title" data-testid="board-maintenances">
           <header class="pk-board-section__header">
             <div>
-              <h2 id="board-task-title">実施中の定期整備の作業<small>残り{{ openTaskCount }}件</small></h2>
+              <h2 id="board-task-title">{{ evening ? '積み残しの作業（実施中の定期整備）' : '実施中の定期整備の作業' }}<small>残り{{ openTaskCount }}件</small></h2>
               <p>未着手・実施中の作業です。進み具合は、範囲の作業（見送りを除く）のうち完了した数です。部署は作業の部署で、上位の部署のものも含みます。部署を選ぶと、部署が未定の作業は出ません。</p>
             </div>
             <v-btn variant="text" color="primary" size="small" :to="listLink('/maintenances', { status: 'in_progress' }, false)" append-icon="mdi-chevron-right">定期整備の一覧</v-btn>
@@ -210,7 +329,7 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
         <section class="pk-board-section" aria-labelledby="board-trouble-title" data-testid="board-troubles">
           <header class="pk-board-section__header">
             <div>
-              <h2 id="board-trouble-title">未対応・対応中のトラブル<small>{{ board.troubles.total_count }}件</small></h2>
+              <h2 id="board-trouble-title">{{ evening ? '積み残しのトラブル（未対応・対応中）' : '未対応・対応中のトラブル' }}<small>{{ board.troubles.total_count }}件</small></h2>
               <p>緊急を先頭に優先度の順、同じ優先度は報告の古い順です。部署は報告者・担当者の所属で、配下を含みます。</p>
             </div>
             <v-btn variant="text" color="primary" size="small" :to="listLink('/troubles', { status: 'open,in_progress' })" append-icon="mdi-chevron-right">トラブルの一覧</v-btn>
@@ -245,11 +364,18 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
 <style scoped>
 .pk-board { max-width: 1240px; margin-inline: auto; }
 .pk-board-loading { margin-top: 28px; min-height: 240px; }
+.pk-board__modes { margin-bottom: 16px; flex-wrap: wrap; height: auto !important; }
+.pk-board__mode strong { padding: 2px 10px; border-radius: 6px; background: var(--pk-soft-blue); color: var(--pk-steel-dark); font-size: 0.9375rem !important; }
+.pk-board-drafts { margin: 0 20px 16px; padding: 12px 16px 4px; border: 1px solid rgb(var(--v-theme-warning)); border-radius: 12px; background: rgba(var(--v-theme-warning), 0.06); }
+.pk-board-drafts h3 { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--pk-ink); }
+.pk-board-drafts .v-icon { color: rgb(var(--v-theme-warning)); }
+.pk-board-plans__copy a { color: var(--pk-ink); }
 .pk-board__day { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; margin: 20px 0 16px; }
 .pk-board__day p { display: flex; align-items: baseline; gap: 8px; }
 .pk-board__day span { color: var(--pk-muted); font-size: 0.75rem; }
 .pk-board__day strong { font-family: var(--pk-font-display); font-size: 1.125rem; font-variant-numeric: tabular-nums; }
 .pk-board__scope strong { font-size: 0.9375rem; }
+.pk-board__printed { display: none !important; }
 .pk-board-section { margin-bottom: 20px; overflow: hidden; border: 1px solid var(--pk-line); border-radius: 16px; background: #fff; }
 .pk-board-section__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--pk-line); }
 .pk-board-section__header > .v-btn { flex: none; }
@@ -293,6 +419,30 @@ h2 small, h3 small { margin-left: 8px; color: var(--pk-muted); font-size: 0.75re
 .pk-board-table a { color: var(--pk-steel); }
 .pk-board-table__notes { min-width: 200px; color: var(--pk-muted); }
 a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 2px; }
+/* 印刷（会議で紙に出す）: 操作と長い説明を消し、行の途中でページを分けない。表は横スクロールさせず紙の幅に収める */
+@media print {
+  .pk-board { max-width: none; }
+  .pk-board :deep(.pk-page-header__desc), .pk-board-section__header p, .pk-board-section__header > .v-btn,
+  .pk-board-plans__items .v-btn, .pk-board-drafts .v-btn, .pk-board-list a > .v-icon { display: none !important; }
+  .pk-board__day { margin: 0 0 8px; }
+  .pk-board__printed { display: flex !important; }
+  /* 紙の幅（A4）では画面の狭い幅の1列になるため、3列に戻して紙を節約する */
+  .pk-board-plans { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .pk-board-plans__group + .pk-board-plans__group { border-top: 0 !important; border-left: 1px solid var(--pk-line) !important; }
+  .pk-board-section { margin-bottom: 10px; border-radius: 6px; break-inside: auto; }
+  .pk-board-section__header { padding: 6px 12px; break-after: avoid; }
+  .pk-board-list, .pk-board-empty, .pk-board-more { padding-inline: 12px; }
+  .pk-board-list a { padding: 4px 0; }
+  .pk-board-plans__group { padding: 6px 12px 4px; }
+  .pk-board-plans__items li { padding: 4px 0; }
+  .pk-board-maintenance__head { padding: 6px 12px 2px; }
+  .pk-board-table { overflow: visible; padding: 0 4px 4px; }
+  .pk-board-table :deep(table) { min-width: 0; }
+  .pk-board-table :deep(td), .pk-board-table :deep(th) { height: auto !important; padding: 3px 6px !important; font-size: 0.75rem; }
+  .pk-board-table__notes { min-width: 0; }
+  li, tr, .pk-board-maintenance__head { break-inside: avoid; }
+  a { color: inherit !important; text-decoration: none !important; }
+}
 @media (max-width: 960px) {
   .pk-board-plans { grid-template-columns: 1fr; }
   .pk-board-plans__group + .pk-board-plans__group { border-left: 0; border-top: 1px solid var(--pk-line); }

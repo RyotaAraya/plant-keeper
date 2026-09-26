@@ -160,6 +160,55 @@ class MeetingBoardTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "夕会の実績は、点検日が今日の点検（下書きを含む）・今日の対応記録・今日完了した作業で、昨日のものと他拠点は含めない" do
+    create_inspection = lambda do |status, at, department: @team_a, equipment: @equipment|
+      Inspection.create!(equipment: equipment, user: @member, department: department, status: status, inspection_type: "routine", inspected_at: at)
+    end
+    submitted = create_inspection.call("submitted", Time.current.beginning_of_day + 9.hours)
+    draft = create_inspection.call("draft", Time.current.beginning_of_day + 10.hours)
+    create_inspection.call("submitted", 1.day.ago.end_of_day - 1.hour)
+    create_inspection.call("submitted", Time.current.beginning_of_day + 9.hours, department: create_department(site: @other_site), equipment: @other_equipment)
+
+    trouble = create_trouble("調査中", priority: "high")
+    trouble.trouble_responses.create!(user: @member, response_type: "investigation", description: "今日の対応", responded_at: Time.current.beginning_of_day + 11.hours)
+    trouble.trouble_responses.create!(user: @member, response_type: "investigation", description: "昨日の対応", responded_at: 1.day.ago.end_of_day - 1.hour)
+
+    doing = create_maintenance("実施中の整備")
+    done_today = create_task(doing, "今日完了", status: "completed", department: @section)
+    create_task(doing, "昨日完了", status: "completed", department: @section).update_columns(completed_on: @today - 1)
+    finished = create_maintenance("検収中の整備", status: "in_progress")
+    create_task(finished, "検収前に今日完了", status: "completed", department: @team_a)
+    finished.update!(status: "acceptance")
+
+    results = board(site_ids: [ @site.id ])["results"]
+    assert_equal [ [ submitted.id, "submitted" ], [ draft.id, "draft" ] ], results["inspections"].map { |i| i.values_at("id", "status") }
+    assert_equal [ "今日の対応" ], results["trouble_responses"].pluck("description")
+    assert_equal [ trouble.title ], results["trouble_responses"].map { |r| r["trouble"]["title"] }
+    assert_equal [ "今日完了", "検収前に今日完了" ], results["completed_tasks"].pluck("title").sort
+    assert_equal done_today.id, results["completed_tasks"].find { |t| t["title"] == "今日完了" }["id"]
+  end
+
+  test "夕会の実績の部署: 点検は記録の部署、対応記録は記録した人の所属（配下を含む）、完了した作業は上位の部署も含む" do
+    operator = create_user(company: @owner, site: @site, department: @operation)
+    Inspection.create!(equipment: @equipment, user: @member, department: @team_a, status: "submitted", inspection_type: "routine", inspected_at: Time.current)
+    Inspection.create!(equipment: @equipment, user: operator, department: @operation, status: "submitted", inspection_type: "routine", inspected_at: Time.current)
+    trouble = create_trouble("対応中", priority: "high")
+    trouble.trouble_responses.create!(user: @member, response_type: "repair", description: "チームの対応", responded_at: Time.current)
+    trouble.trouble_responses.create!(user: operator, response_type: "observation", description: "製造部の対応", responded_at: Time.current)
+    doing = create_maintenance("実施中の整備")
+    create_task(doing, "課の完了", status: "completed", department: @section)
+    create_task(doing, "製造部の完了", status: "completed", department: @operation)
+
+    results = board(site_ids: [ @site.id ], department_id: @team_a.id)["results"]
+    assert_equal [ "計器Aチーム" ], results["inspections"].map { |i| i["department"]["name"] }
+    assert_equal [ "チームの対応" ], results["trouble_responses"].pluck("description")
+    assert_equal [ "課の完了" ], results["completed_tasks"].pluck("title")
+
+    # 点検は、点検一覧（記録の部署・配下を含む）と同じ範囲（このテストの点検はすべて今日）
+    get "/api/v1/inspections", headers: auth_headers_for(@member), params: { site_ids: [ @site.id ], department_id: @section.id }
+    assert_equal json["meta"]["total_count"], board(site_ids: [ @site.id ], department_id: @section.id)["results"]["inspections"].size
+  end
+
   test "協力会社の技能員も見られる" do
     worker = create_user(system_role: "worker", company: create_company(company_type: "contractor", name: "協力会社"), site: @site)
     data = board(user: worker, site_ids: [ @site.id ])
