@@ -252,5 +252,10 @@ class ScheduledMaintenancesTest < ActionDispatch::IntegrationTest
     move_to(maintenance, "completed", accepted_on: @today.to_s, acceptance_result: "passed")
     assert_response :unprocessable_entity
     assert_includes json["errors"].join, "I-701（バイパス中）"
+
+    # 完了した定期整備（過去の記録）には、いまのバイパスを出さない
+    maintenance.update_columns(status: "completed")
+    get "/api/v1/scheduled_maintenances/#{maintenance.id}", headers: auth_headers_for(@worker)
+    assert_equal [], json["data"]["interlock_bypasses"]
   end
 end

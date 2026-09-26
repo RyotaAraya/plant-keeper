@@ -332,7 +332,7 @@ onMounted(fetchMaintenance)
         </v-card-text>
       </v-card>
 
-      <!-- 作業（部署ごと） -->
+      <!-- 対象設備のインターロックのバイパス（完了した定期整備では出さない） -->
       <v-card v-if="bypasses.length" class="mb-4" data-testid="maintenance-bypasses">
         <v-card-title class="d-flex align-center text-subtitle-1">
           <v-icon class="mr-2" :color="blockingBypasses.length ? 'error' : undefined">mdi-shield-alert-outline</v-icon>
@@ -356,6 +356,7 @@ onMounted(fetchMaintenance)
         </v-card-text>
       </v-card>
 
+      <!-- 作業（部署ごと） -->
       <v-card class="mb-4" data-testid="tasks-card">
         <v-card-title class="d-flex align-center text-subtitle-1">
           作業

@@ -53,9 +53,7 @@ module Api
           data: @maintenance.as_json(include: MAINTENANCE_INCLUDE).merge(
             "maintenance_tasks" => tasks.map { |task| MaintenanceTasksController.task_json(task) },
             "tasks_summary" => tasks_summaries([ @maintenance.id ])[@maintenance.id] || { "total" => 0, "completed" => 0 },
-            # 対象設備のインターロックの、終わっていないバイパス（バイパス中・復帰確認待ちが残っていると検収へ進めない）
-            "interlock_bypasses" => InterlockBypass.open.for_equipments(@maintenance.equipment_ids).includes(*BYPASS_INCLUDES)
-                                                   .order(:request_number).map { |bypass| bypass_json(bypass) }
+            "interlock_bypasses" => open_bypasses(@maintenance)
           )
         }
       end
@@ -128,6 +126,14 @@ module Api
       end
 
       private
+
+      # 対象設備のインターロックの、終わっていないバイパス（バイパス中・復帰確認待ちが残っていると検収へ進めない）。
+      # いまのバイパスは、完了した定期整備（過去の記録）とは関係がないため返さない
+      def open_bypasses(maintenance)
+        return [] if maintenance.completed?
+
+        InterlockBypass.open.for_equipments(maintenance.equipment_ids).includes(*BYPASS_INCLUDES).order(:request_number).map { |bypass| bypass_json(bypass) }
+      end
 
       def set_maintenance
         @maintenance = ScheduledMaintenance.includes(:site, :equipments, :accepted_by, maintenance_assignments: :user).find(params[:id])
