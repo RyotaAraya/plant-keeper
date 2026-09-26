@@ -153,3 +153,80 @@ test('実施中の定期整備の作業は、自分のチームと上位の課�
     expect(completed.ok()).toBeTruthy()
   }
 })
+
+test('夕会に切り替えると、今日の下書きの点検は積み残しに、提出すると実績に出て、今日の対応記録も実績に出る', async ({ page }) => {
+  const { api, headers, get, me } = await apiSession(page.request, ACCOUNTS.member)
+  const equipment = (await get(`/equipments?per_page=1000&site_ids[]=${me.site_id}`)).data[0]
+  const stamp = `E2E ${Date.now()}`
+  // 点検は消せないため、提出したまま残る（点検一覧の E2E の記録と同じ扱い）
+  const inspection = await page.request.post(`${api}/inspections`, {
+    headers,
+    data: { inspection: { equipment_id: equipment.id, department_id: me.department_id, inspection_type: 'routine', status: 'draft',
+                          inspected_at: new Date().toISOString(), notes: `${stamp} 夕会の確認` } },
+  })
+  expect(inspection.ok()).toBeTruthy()
+  const inspectionId = (await inspection.json()).data.id
+  const trouble = await page.request.post(`${api}/troubles`, {
+    headers, data: { trouble: { equipment_id: equipment.id, title: `${stamp} 夕会の対応記録`, description: '夕会の確認', priority: 'low', reported_at: new Date().toISOString() } },
+  })
+  expect(trouble.ok()).toBeTruthy()
+  const troubleId = (await trouble.json()).data.id
+
+  try {
+    await login(page, ACCOUNTS.member)
+    await page.goto('/meeting-board')
+    await expect(page.getByTestId('board-results')).toHaveCount(0) // 朝会には実績を出さない
+    await page.getByTestId('board-mode-evening').click()
+    await expect(page).toHaveURL(/mode=evening/)
+    await expect(page.getByTestId('board-day')).toContainText('夕会')
+    await expect(page.getByTestId(`board-draft-inspection-${inspectionId}`)).toBeVisible()
+    await expect(page.getByTestId(`board-result-inspection-${inspectionId}`)).toHaveCount(0)
+    // 「開く」は詳細へ（編集画面は作成者本人と管理者・マネージャーのものなので、ボードからは開かない）
+    await page.getByTestId(`board-draft-inspection-${inspectionId}`).getByRole('link', { name: '開く' }).click()
+    await expect(page).toHaveURL(new RegExp(`/inspections/${inspectionId}$`))
+    await page.goBack()
+    await expect(page).toHaveURL(/mode=evening/)
+
+    // 提出し、対応を記録すると、再読み込み（夕会のまま）で実績に移る
+    expect((await page.request.patch(`${api}/inspections/${inspectionId}`, { headers, data: { inspection: { status: 'submitted' } } })).ok()).toBeTruthy()
+    const response = await page.request.post(`${api}/trouble_responses`, {
+      headers, data: { trouble_response: { trouble_id: troubleId, response_type: 'investigation', description: `${stamp} 導圧管をブローした`, responded_at: new Date().toISOString() } },
+    })
+    expect(response.ok()).toBeTruthy()
+    const responseId = (await response.json()).data.id
+    await page.reload()
+    await expect(page).toHaveURL(/mode=evening/)
+    await expect(page.getByTestId(`board-draft-inspection-${inspectionId}`)).toHaveCount(0)
+    await expect(page.getByTestId(`board-result-inspection-${inspectionId}`).locator('.v-chip')).toHaveText('提出済')
+    const responseRow = page.getByTestId(`board-result-response-${responseId}`)
+    await expect(responseRow.getByRole('link')).toHaveText(`${stamp} 夕会の対応記録`)
+    await expect(responseRow).toContainText(`調査：${stamp} 導圧管をブローした`)
+
+    await page.getByTestId('board-mode-morning').click()
+    await expect(page).not.toHaveURL(/mode=evening/)
+    await expect(page.getByTestId('board-results')).toHaveCount(0)
+  } finally {
+    const manager = await apiSession(page.request, MANAGER)
+    expect((await page.request.patch(`${api}/troubles/${troubleId}`, { headers: manager.headers, data: { trouble: { status: 'closed' } } })).ok()).toBeTruthy()
+  }
+})
+
+test('印刷ボタンで印刷でき、印刷ではメニュー・組織の選択・操作ボタンを出さず、紙の幅に収まる', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.goto('/meeting-board?mode=evening')
+  await expect(page.getByTestId('board-results')).toBeVisible()
+
+  // 印刷のダイアログは開かず、呼ばれたことだけを確かめる
+  await page.evaluate(() => { (window as any).__printed = 0; window.print = () => { (window as any).__printed += 1 } })
+  await page.getByTestId('board-print').click()
+  expect(await page.evaluate(() => (window as any).__printed)).toBe(1)
+
+  await page.emulateMedia({ media: 'print' })
+  await page.setViewportSize({ width: 718, height: 1000 }) // A4 の幅（余白を除く）
+  for (const selector of ['.v-navigation-drawer', '.v-app-bar', '.pk-organization-scope', '[data-testid="board-print"]', '[data-testid="board-mode-evening"]']) {
+    await expect(page.locator(selector).first(), selector).toBeHidden()
+  }
+  await expect(page.getByTestId('board-plans').getByRole('link', { name: '点検を実施' })).toHaveCount(0)
+  await expect(page.getByTestId('board-results')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
+})

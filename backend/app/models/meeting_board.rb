@@ -7,6 +7,8 @@
 #   部署のない計画（基準器の校正）・部署が未定の作業は、部署を選んだときは出さない
 # - トラブルは、ダッシュボード・一覧と同じく、報告者・担当者の所属が選んだ部署と配下のもの（Trouble.for_departments）
 # - インターロックのバイパスは安全に関わるため、部署で絞らず拠点全体
+# - 夕会の実績: 点検は点検一覧と同じく記録の部署（配下を含む）、対応記録は記録した人の所属（配下を含む）、
+#   完了した作業は未完了の作業と同じ（上位の部署を含む）
 class MeetingBoard
   PRIORITY_ORDER = %w[critical high medium low].freeze
   OPEN_TROUBLE_STATUSES = %w[open in_progress].freeze
@@ -61,6 +63,31 @@ class MeetingBoard
       rank = if bypass.overdue?(@now) then 0 elsif bypass.status_bypassed? then 1 else 2 end
       [ rank, bypass.planned_restore_at, bypass.id ]
     end
+  end
+
+  # 夕会の実績: 点検日が今日の点検（提出済みは実績、下書きのままは積み残し）。
+  # 提出した日時は記録していないため、「今日提出した」は「点検日が今日で、下書きを出た」で表す
+  def todays_inspections
+    scope = Inspection.where(inspected_at: today.all_day).joins(:equipment)
+    scope = scope.where(equipments: { site_id: site_ids }) if site_ids
+    scope = scope.where(department_id: Department.subtree_ids(department.id)) if department
+    scope.includes(:equipment, :equipments, :instrument, :user, :department, :checklist_template).order(:inspected_at, :id)
+  end
+
+  # 夕会の実績: 今日記録された対応記録
+  def todays_responses
+    scope = TroubleResponse.where(responded_at: today.all_day).joins(trouble: :equipment)
+    scope = scope.where(equipments: { site_id: site_ids }) if site_ids
+    scope = scope.where(user_id: User.where(department_id: Department.subtree_ids(department.id)).select(:id)) if department
+    scope.includes(:user, trouble: [ :equipment, :instrument ]).order(:responded_at, :id)
+  end
+
+  # 夕会の実績: 今日完了した定期整備の作業（整備の状態は問わない）
+  def completed_tasks
+    scope = MaintenanceTask.where(status: "completed", completed_on: today).joins(:scheduled_maintenance)
+    scope = scope.where(scheduled_maintenances: { site_id: site_ids }) if site_ids
+    scope = scope.where(department_id: work_department_ids) if department
+    scope.includes(:scheduled_maintenance, :department, :equipment, :instrument, :assigned_to).order(:department_id, :id)
   end
 
   private
