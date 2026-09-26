@@ -122,6 +122,43 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # ---- 修理の更新と在庫の状態 ----
+
+  def update_repair(repair, **attrs)
+    patch "/api/v1/repairs/#{repair.id}", params: { repair: attrs }, headers: @headers, as: :json
+    assert_response :ok
+  end
+
+  test "修理の状態を変えると在庫の状態が合わせて変わり、在庫の変更も監査ログに残る" do
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+
+    { "shipped" => "under_repair", "completed" => "available" }.each do |status, stock_status|
+      assert_difference -> { AuditLog.where(auditable: single).count }, 1 do
+        update_repair(repair, status: status)
+      end
+      assert_equal stock_status, single.reload.status, status
+    end
+  end
+
+  test "状態を変えない修理の更新（備考・費用だけ）では、あとで変えた在庫の状態を上書きしない" do
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+    update_repair(repair, status: "shipped")
+    update_repair(repair, status: "completed")
+    assert_equal "available", single.reload.status
+
+    # 完了して戻ってきた在庫を、そのあと取り付けた（使用中）
+    single.update!(status: "in_use")
+    assert_no_difference -> { AuditLog.where(auditable: single).count } do
+      update_repair(repair, notes: "修理報告書を受領", repair_cost: 12_000)
+    end
+    assert_equal "in_use", single.reload.status
+    assert_equal "修理報告書を受領", repair.reload.notes
+  end
+
   test "受領は発注の行をロックして更新する（二重受領による在庫の二重加算の防止）" do
     order = create_order
     sql = []

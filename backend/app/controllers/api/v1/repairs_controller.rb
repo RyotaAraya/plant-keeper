@@ -81,6 +81,9 @@ module Api
       end
 
       # PATCH /api/v1/repairs/:id
+      # 修理の状態 => 修理対象の在庫の状態（依頼中は、作成時に修理待ちにしてある）
+      STOCK_STATUS_FOR = { "shipped" => "under_repair", "completed" => "available", "disposed" => "disposed" }.freeze
+
       def update
         authorize @repair
 
@@ -89,10 +92,11 @@ module Api
           @repair.lock!
           @repair.update!(update_params)
           record_audit_log("update", @repair)
-          case @repair.status
-          when "shipped" then @repair.stock.update!(status: "under_repair")
-          when "completed" then @repair.stock.update!(status: "available")
-          when "disposed" then @repair.stock.update!(status: "disposed")
+          # 在庫を合わせるのは、修理の状態が変わったときだけ。備考・費用だけの更新で、そのあと入出庫で変えた在庫の状態を戻さない
+          stock_status = STOCK_STATUS_FOR[@repair.status] if @repair.saved_change_to_status?
+          if stock_status
+            @repair.stock.update!(status: stock_status)
+            record_audit_log("update", @repair.stock) # 在庫の状態は入出庫と修理を通して変えるため、修理で変えたことも残す
           end
         end
 
