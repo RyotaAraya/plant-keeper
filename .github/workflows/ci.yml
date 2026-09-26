@@ -1,9 +1,18 @@
 name: CI
 
+# ドキュメント（Markdown）・エージェント向けの設定だけの変更では動かさない（アプリの動作に関わらないため）
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - ".claude/**"
+      - ".agents/**"
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - "**/*.md"
+      - ".claude/**"
+      - ".agents/**"
 
 jobs:
   backend_scan_ruby:
