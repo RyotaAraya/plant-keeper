@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
+import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -13,6 +14,7 @@ import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
 import { coveredEquipments, equipmentNames } from '@/utils/equipment'
 import { intervalLabel } from '@/utils/interval'
+import { REVIEW_COLOR, REVIEW_FILTER_OPTIONS, REVIEW_LABEL } from '@/utils/intervalReview'
 import { regulationColor } from '@/utils/regulation'
 import type { RegulationInspection } from '@/types/models'
 import { siteIdsFromQuery } from '@/utils/listQuery'
@@ -34,14 +36,17 @@ const filters = ref({
   site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
   equipment_ids: [] as number[],
   overdue: route.query.overdue === 'true',
+  // 周期の見直しの候補（5点校正の記録から。any / extend / shorten）
+  interval_review: (typeof route.query.interval_review === 'string' ? route.query.interval_review : null) as string | null,
 })
 
 const headers = [
   { title: '期限', key: 'next_due_on', width: '190px' },
-  { title: '点検計画', key: 'name' },
+  { title: '点検計画', key: 'name', minWidth: '240px' },
   { title: '設備・基準器', key: 'equipment.name', width: '180px' },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
   { title: '周期', key: 'interval_days', width: '110px' },
+  { title: '見直し', key: 'interval_review', sortable: false, width: '120px' },
   { title: '前回実施', key: 'last_inspected_on', width: '120px' },
   { title: '', key: 'actions', sortable: false, width: '130px' },
 ]
@@ -76,6 +81,7 @@ async function fetchPlans() {
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
     if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
     if (filters.value.overdue) params.overdue = 'true'
+    if (filters.value.interval_review) params.interval_review = filters.value.interval_review
     const res = await api.get('/inspection_plans', { params })
     if (!isLatest()) return
     plans.value = res.data.data
@@ -99,6 +105,15 @@ function changeSite(siteIds: number[]) {
   const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
   filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment }
   loadSiteOptions(siteIds)
+}
+
+// --- 周期の見直しの候補 ---
+const reviewDialog = ref(false)
+const reviewing = ref<InspectionPlan | null>(null)
+
+function openReview(plan: InspectionPlan) {
+  reviewing.value = plan
+  reviewDialog.value = true
 }
 
 // 基準器の校正計画は、点検ではなく基準器の画面で校正を記録する（記録できるのは管理者・マネージャー）
@@ -219,6 +234,16 @@ watch(filters, fetchPlans, { deep: true })
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
+      <v-select
+        v-model="filters.interval_review"
+        :items="REVIEW_FILTER_OPTIONS"
+        label="周期の見直し"
+        density="compact"
+        hide-details
+        clearable
+        style="min-width: 220px; max-width: 240px"
+        data-testid="interval-review-filter"
+      />
     </div>
 
     <v-data-table
@@ -239,6 +264,20 @@ watch(filters, fetchPlans, { deep: true })
         <template v-else>{{ equipmentNames(item) }}</template>
       </template>
       <template #item.interval_days="{ item }"><span class="text-no-wrap">{{ item.interval_days }}日ごと</span></template>
+      <template #item.interval_review="{ item }">
+        <v-chip
+          v-if="item.interval_review"
+          :color="REVIEW_COLOR[item.interval_review.kind]"
+          size="small"
+          label
+          variant="flat"
+          append-icon="mdi-chevron-right"
+          :data-testid="`interval-review-${item.id}`"
+          @click="openReview(item)"
+        >
+          {{ REVIEW_LABEL[item.interval_review.kind] }}
+        </v-chip>
+      </template>
       <template #item.last_inspected_on="{ item }">{{ item.last_inspected_on ?? '未実施' }}</template>
       <template #item.actions="{ item }">
         <v-btn v-if="item.reference_standard" size="small" variant="outlined" @click="openReferenceStandard(item)">
@@ -247,6 +286,8 @@ watch(filters, fetchPlans, { deep: true })
         <v-btn v-else size="small" variant="outlined" @click="startInspection(item)">点検を実施</v-btn>
       </template>
     </v-data-table>
+
+    <IntervalReviewDialog v-model="reviewDialog" :plan="reviewing" @saved="fetchPlans" />
 
     <v-dialog v-model="dialog" max-width="560">
       <v-card>

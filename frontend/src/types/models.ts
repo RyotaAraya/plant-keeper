@@ -272,6 +272,18 @@ export interface Inspection {
   equipments?: { id: number; name: string }[]
 }
 
+// 5点校正のある点検計画の、周期の見直しの候補（ルールで判定。決めるのは人）
+export interface IntervalReview {
+  kind: 'extend' | 'shorten'
+  reasons: string[]
+  // 延長するときの注意（インターロックに関わる計器など）
+  cautions: string[]
+  suggested_interval_days: number
+  tolerance_percent: number | null
+  // 根拠にした直近の校正（古い順）
+  evidence: { inspection_id: number; inspected_at: string; adjusted: boolean; as_found: { result: string; max_error: number | null } }[]
+}
+
 export interface InspectionPlan {
   id: number
   name: string
@@ -293,6 +305,7 @@ export interface InspectionPlan {
   reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
+  interval_review?: IntervalReview | null
 }
 
 export interface InspectionItem {
