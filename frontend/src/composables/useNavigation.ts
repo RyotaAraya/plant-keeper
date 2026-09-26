@@ -25,6 +25,7 @@ export function useNavigation() {
     {
       label: '日々の保全',
       items: [
+        { title: '朝会・夕会ボード', icon: 'mdi-clipboard-text-clock-outline', to: '/meeting-board' },
         { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },
         { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
         { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },

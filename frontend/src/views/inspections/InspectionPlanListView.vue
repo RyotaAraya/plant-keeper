@@ -12,7 +12,8 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan } from '@/types/models'
 import { todayForInput } from '@/utils/datetime'
-import { coveredEquipments, equipmentNames } from '@/utils/equipment'
+import { inspectionFromPlan, referenceStandardFromPlan } from '@/utils/inspectionPlan'
+import { equipmentNames } from '@/utils/equipment'
 import { intervalLabel } from '@/utils/interval'
 import { REVIEW_COLOR, REVIEW_FILTER_OPTIONS, REVIEW_LABEL } from '@/utils/intervalReview'
 import { regulationColor } from '@/utils/regulation'
@@ -116,22 +117,12 @@ function openReview(plan: InspectionPlan) {
   reviewDialog.value = true
 }
 
-// 基準器の校正計画は、点検ではなく基準器の画面で校正を記録する（記録できるのは管理者・マネージャー）
 function openReferenceStandard(plan: InspectionPlan) {
-  router.push({ path: `/reference-standards/${plan.reference_standard_id}`, query: canManageReferenceStandard.value ? { record: '1' } : {} })
+  router.push(referenceStandardFromPlan(plan, canManageReferenceStandard.value))
 }
 
 function startInspection(plan: InspectionPlan) {
-  const query: Record<string, string> = {
-    inspection_plan_id: String(plan.id),
-    equipment_id: String(plan.equipment_id ?? ''),
-    // 複数の設備をまとめた計画は、その設備すべてを点検に引き継ぐ（先頭が代表の設備）
-    equipment_ids: coveredEquipments(plan).map((e) => e.id).join(','),
-    inspection_type: plan.inspection_type,
-  }
-  if (plan.instrument_id) query.instrument_id = String(plan.instrument_id)
-  if (plan.checklist_template_id) query.checklist_template_id = String(plan.checklist_template_id)
-  router.push({ path: '/inspections/new', query })
+  router.push(inspectionFromPlan(plan))
 }
 
 // 計画の登録ダイアログ

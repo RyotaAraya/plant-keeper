@@ -77,6 +77,7 @@ Rails.application.routes.draw do
 
       # Phase 5: ダッシュボード
       get :dashboard, to: "dashboard#show"
+      get :meeting_board, to: "meeting_boards#show"
 
       # Phase 6: 監査ログ
       resources :audit_logs, only: [ :index ]
