@@ -129,6 +129,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ### ブランチ運用
 - `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
+  - `develop` → `main` の PR は `.github/workflows/release-pr.yml` が自動で作る（`develop` への push のたびに、開いている PR がなければ作り、あれば本文の変更の一覧を更新する。マージは手動で、**マージコミットで行う**（squash・rebase だと develop のコミットが main の祖先にならず、次のリリース PR に同じ変更が並び続ける）。手動で動かすときは Actions の workflow_dispatch）。リポジトリの設定「Allow GitHub Actions to create and approve pull requests」が必要。GITHUB_TOKEN で作った PR では pull_request の CI は動かないが、同じコミットの `develop` への push の CI の結果が PR に出る
 - `main` に push/マージすると即本番に自動デプロイされる（GitHub連携によるauto-deploy）。直接 push しない
 - 依存関係の更新は Renovate（`.github/renovate.json5`）。更新PRは `develop` 向け。設定ファイル自体は既定ブランチ `main` から読まれる
   - patch: 公開3日後、CI成功で `develop` へ自動マージ（`main` へのリリースは手動PR）
