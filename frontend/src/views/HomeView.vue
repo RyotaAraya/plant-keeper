@@ -210,7 +210,7 @@ const story = [
           <div>
             <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
             <h2 id="plana-title">プラナ</h2>
-            <p class="landing-plana-lead">点検や対応のメモを入力すると、トラブル報告や対応記録の文に整えます。似た過去のトラブルも探せます。</p>
+            <p class="landing-plana-lead">不具合が起きたときのフォローをします。使い方は、下の例をご覧ください。</p>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
