@@ -92,6 +92,9 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     unit = Repair.last.stock
     assert_not_equal lot, unit
     assert_equal [ 1, "awaiting_repair", lot.warehouse, lot.purchased_on ], [ unit.quantity, unit.status, unit.warehouse, unit.purchased_on ]
+    # 元のロットの数量の変更と、切り出した在庫の作成が監査ログに残る
+    assert_equal [ 3, 2 ], AuditLog.find_by!(auditable: lot, action: "update").changes_json["quantity"]
+    assert AuditLog.exists?(auditable: unit, action: "create")
   end
 
   test "数量1の在庫はそのまま修理待ちになる（行は増えない）" do
@@ -104,6 +107,7 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal single, Repair.last.stock
     assert_equal "awaiting_repair", single.reload.status
+    assert_equal [ "in_use", "awaiting_repair" ], AuditLog.find_by!(auditable: single, action: "update").changes_json["status"]
   end
 
   test "修理中・廃棄済・数量0の在庫には修理を依頼できない" do
