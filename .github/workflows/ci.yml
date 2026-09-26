@@ -122,6 +122,8 @@ jobs:
         env:
           # AI支援のE2Eは、APIを呼ばないダミーのAIで行う（費用・外部通信・結果のぶれを避ける）
           AI_PROVIDER: fake
+          # E2Eを2並列で流すため、既定の3スレッドより増やす（各ブラウザが一覧・集計のAPIを並行して呼ぶ）
+          RAILS_MAX_THREADS: 6
         run: |
           nohup bin/rails server -b 0.0.0.0 -p 3000 > "$RUNNER_TEMP/rails.log" 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3000/up > /dev/null && exit 0; sleep 2; done
