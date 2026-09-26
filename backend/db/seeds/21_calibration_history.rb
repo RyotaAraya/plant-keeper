@@ -20,3 +20,12 @@ CalibrationHistoryCatalog::RECORDS.each do |record|
   )
   raise "#{record[:tag]}（#{record[:days_ago]}日前）の校正の結果が定義と違います: #{item.calibration_result}" if item.calibration_result != record[:result]
 end
+
+# 年次校正の点検計画（周期の見直しの候補を出す対象）
+template = ChecklistTemplate.find_by!(name: CalibrationHistoryCatalog::PLAN_TEMPLATE)
+CalibrationHistoryCatalog::PLANS.each do |plan|
+  instrument = Instrument.joins(:equipment).find_by!(tag_number: plan[:tag], equipments: { site_id: Site.find_by!(name: plan[:site]).id })
+  last = InspectionPlan.today - plan[:last_days_ago]
+  InspectionPlan.create!(name: plan[:name], equipment: instrument.equipment, instrument: instrument, checklist_template: template,
+                         inspection_type: "periodic", interval_days: plan[:interval_days], last_inspected_on: last, next_due_on: last + plan[:interval_days])
+end

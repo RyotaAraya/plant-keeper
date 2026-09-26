@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # 過去の年次校正（5点校正）のデモ用データ。紙の校正記録から移行した、という想定で、校正の項目だけを持つ点検記録にする。
-# シード（db/seeds/21_calibration_history.rb）と、既存環境への反映マイグレーション（SeedCalibrationHistory）で共有する。
+# シード（db/seeds/21_calibration_history.rb）と、既存環境への反映マイグレーション（SeedCalibrationHistory・SeedCalibrationPlans）で共有する。
 # 計器ごとに傾向が違うように作る:
 # - FT-301: 年々ずれが大きくなる（最新の年次校正は、調整前が不合格。db/seeds/17_instrument_calibration.rb）→ 周期の短縮・原因の調査の候補
 # - PT-701: 5年間ずっと、調整前が許容差の3割以下で調整不要 → 周期の延長の候補
@@ -36,6 +36,14 @@ module CalibrationHistoryCatalog
       up: [ -0.08, 0.12, 0.18, 0.20, 0.22 ], down: [ -0.07, 0.13, 0.17, 0.21, 0.22 ] },
     { site: "川崎製油所", tag: "TV-101", days_ago: 30, user: "inoue@example.com", result: "pass",
       up: [ 0.04, 0.09, 0.14, 0.17, 0.20 ], down: [ 0.05, 0.10, 0.15, 0.18, 0.20 ] }
+  ].freeze
+
+  # 5点校正を回す年次校正の点検計画（周期の見直しの候補を出す対象。#80）。前回実施は最新の校正の日（days_ago）
+  PLAN_TEMPLATE = "伝送器 年次点検"
+  PLANS = [
+    { site: "川崎製油所", tag: "FT-301", name: "FT-301 流量伝送器 年次校正", interval_days: 365, last_days_ago: 20 },
+    { site: "川崎製油所", tag: "PT-701", name: "PT-701 ドラム圧力伝送器 年次校正", interval_days: 365, last_days_ago: 25 },
+    { site: "川崎製油所", tag: "TV-101", name: "TV-101 加熱炉出口温度伝送器 年次校正", interval_days: 365, last_days_ago: 30 }
   ].freeze
 
   # 校正条件（CalibrationSheet.snapshot_for と同じ形）の各点の期待値（出力mA・DCS表示）。
