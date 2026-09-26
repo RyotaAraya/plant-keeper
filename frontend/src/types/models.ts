@@ -723,3 +723,63 @@ export interface AiResponseDraft {
   check_points: string[]
   remaining_today: number
 }
+
+// 朝会・夕会ボード（GET /meeting_board）。今日・明日の予定を拠点・部署で絞って1枚にまとめる
+type NamedRef = { id: number; name: string }
+
+export interface MeetingBoardPlan extends Pick<InspectionPlan,
+  'id' | 'name' | 'next_due_on' | 'days_until_due' | 'interval_days' | 'inspection_type' | 'equipment_id' | 'instrument_id' | 'checklist_template_id' | 'reference_standard_id'> {
+  equipment: NamedRef | null
+  equipments: NamedRef[]
+  instrument: { id: number; tag_number: string } | null
+  reference_standard: NamedRef | null
+  checklist_template: (NamedRef & { department: NamedRef }) | null
+}
+
+export interface MeetingBoardTask {
+  id: number
+  title: string
+  kind: 'inspection' | 'overhaul' | 'replacement' | 'work'
+  status: 'not_started' | 'in_progress'
+  notes: string | null
+  checklist_template_id: number | null
+  department: NamedRef | null
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
+export interface MeetingBoardMaintenance {
+  id: number
+  title: string
+  status: string
+  planned_start_on: string
+  planned_end_on: string | null
+  actual_start_on: string | null
+  site: NamedRef
+  // 範囲の作業（見送りを除く）の数と、そのうち完了した数
+  task_count: number
+  completed_count: number
+  open_tasks: MeetingBoardTask[]
+}
+
+export interface MeetingBoardTrouble {
+  id: number
+  title: string
+  status: 'open' | 'in_progress'
+  priority: string
+  reported_at: string
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
+export interface MeetingBoard {
+  today: string
+  tomorrow: string
+  scope: { site_name: string | null; department_name: string | null }
+  inspection_plans: MeetingBoardPlan[]
+  maintenances: MeetingBoardMaintenance[]
+  troubles: { total_count: number; items: MeetingBoardTrouble[] }
+  interlock_bypasses: InterlockBypass[]
+}

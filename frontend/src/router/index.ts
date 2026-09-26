@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/meeting-board',
+      name: 'MeetingBoard',
+      component: () => import('@/views/meeting/MeetingBoardView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/plana',
       name: 'Plana',
       component: () => import('@/views/plana/PlanaView.vue'),

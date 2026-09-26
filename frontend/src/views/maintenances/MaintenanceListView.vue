@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { siteIdsFromQuery } from '@/utils/listQuery'
+import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import api from '@/api/axios'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -30,7 +30,8 @@ const errors = ref<string[]>([])
 const filters = ref({
   site_ids: siteIdsFromQuery(route.query.site_ids, authStore.user?.site_id ? [authStore.user.site_id] : []),
   equipment_ids: [] as number[],
-  statuses: [] as string[],
+  // 朝会ボードなどから、状態の絞り込み（?status=in_progress）を引き継ぐ
+  statuses: listFromQuery(route.query.status),
 })
 
 const form = ref({
@@ -113,10 +114,10 @@ onMounted(() => {
   fetchMaintenances()
 })
 watch(filters, fetchMaintenances, { deep: true })
-watch(() => route.query.site_ids, (value) => {
+watch(() => [route.query.site_ids, route.query.status], ([value, status]) => {
   if (route.path !== '/maintenances') return
   const siteIds = siteIdsFromQuery(value, authStore.user?.site_id ? [authStore.user.site_id] : [])
-  filters.value = { site_ids: siteIds, equipment_ids: [], statuses: [] }
+  filters.value = { site_ids: siteIds, equipment_ids: [], statuses: listFromQuery(status) }
   loadSiteOptions(siteIds)
 })
 </script>
