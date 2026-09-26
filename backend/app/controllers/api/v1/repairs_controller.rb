@@ -67,7 +67,7 @@ module Api
         ActiveRecord::Base.transaction do
           source = Stock.lock.find_by(id: repair.stock_id)
           if source && !repairable?(source)
-            repair.errors.add(:stock, "は修理を依頼できる状態ではありません（在庫あり・使用中のみ）")
+            repair.errors.add(:base, "この在庫は修理を依頼できる状態ではありません（利用可・使用中のみ）")
             raise ActiveRecord::RecordInvalid, repair
           end
 
@@ -96,6 +96,11 @@ module Api
           stock_status = STOCK_STATUS_FOR[@repair.status] if @repair.saved_change_to_status?
           if stock_status
             @repair.stock.lock! # 入出庫と同じく、在庫の行をロックしてから変える
+            # 在庫がまだ修理の状態であることを確かめる（修理の外で廃棄・移動された在庫を「在庫あり」に戻さない）
+            unless @repair.stock.awaiting_repair? || @repair.stock.under_repair?
+              @repair.errors.add(:base, "在庫が修理待ち・修理中ではないため、修理の状態を変えられません")
+              raise ActiveRecord::RecordInvalid, @repair
+            end
             @repair.stock.update!(status: stock_status)
             record_audit_log("update", @repair.stock) # 在庫の状態は入出庫と修理を通して変えるため、修理で変えたことも残す
           end
