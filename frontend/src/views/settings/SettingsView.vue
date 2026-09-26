@@ -277,7 +277,9 @@ onMounted(() => {
 
 <template>
   <MainLayout>
-    <PageHeader title="設定" description="他の画面の選択肢になるマスタ（流体・ラインクラス・チェックリスト・メーカー・倉庫）を管理します。" />
+    <PageHeader title="設定" description="他の画面の選択肢になるマスタ（流体・ラインクラス・チェックリスト・メーカー・倉庫）を管理します。">
+      <v-btn variant="outlined" prepend-icon="mdi-connection" to="/settings/integrations">外部連携</v-btn>
+    </PageHeader>
 
 
     <v-tabs v-model="tab" class="mb-4">

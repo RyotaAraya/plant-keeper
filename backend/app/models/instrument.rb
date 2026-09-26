@@ -8,6 +8,8 @@ class Instrument < ApplicationRecord
   has_many :troubles, dependent: :restrict_with_error
   has_many :interlock_instruments, dependent: :restrict_with_error
   has_many :interlocks, through: :interlock_instruments
+  # 機器の自己診断（NAMUR NE 107）の状態が変わった記録。いまの状態は diagnostic_status に持つ
+  has_many :instrument_diagnostics, dependent: :destroy
 
   # 校正の種類。伝送器（種別が *_transmitter）は出力（4-20mA）とDCS表示、調節弁はポジショナの開度を校正する
   CONTROL_VALVE_TYPES = %w[pressure_valve level_valve flow_valve temperature_valve].freeze

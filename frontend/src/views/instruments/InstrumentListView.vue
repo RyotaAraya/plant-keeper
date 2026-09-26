@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DiagnosticChip from '@/components/DiagnosticChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -11,8 +12,11 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
 import { latestGuard } from '@/utils/latestGuard'
+import { listFromQuery } from '@/utils/listQuery'
+import { DIAGNOSTIC_FILTER_OPTIONS } from '@/constants/diagnostics'
 
 const router = useRouter()
+const route = useRoute()
 const { canManageEquipment } = usePermissions()
 const authStore = useAuthStore()
 
@@ -30,6 +34,8 @@ const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.
 const selectedEquipmentIds = ref<number[]>([])
 const selectedServiceIds = ref<number[]>([])
 const selectedLineClassIds = ref<number[]>([])
+// 機器の自己診断（NAMUR NE 107）の状態。?diagnostic_status=failure,out_of_specification で開ける
+const selectedDiagnosticStatuses = ref<string[]>(listFromQuery(route.query.diagnostic_status))
 
 // 拠点で絞り込んだ設備リスト
 const filteredEquipments = computed(() => {
@@ -61,6 +67,7 @@ const headers = [
   { title: 'ラインクラス', key: 'line_class.code' },
   { title: '設置場所', key: 'location' },
   { title: '区分', key: 'flags', sortable: false },
+  { title: '診断', key: 'diagnostic_status', sortable: false },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
@@ -76,6 +83,7 @@ async function fetchInstruments() {
     if (selectedEquipmentIds.value.length) params.equipment_ids = selectedEquipmentIds.value
     if (selectedServiceIds.value.length) params.service_ids = selectedServiceIds.value
     if (selectedLineClassIds.value.length) params.line_class_ids = selectedLineClassIds.value
+    if (selectedDiagnosticStatuses.value.length) params.diagnostic_statuses = selectedDiagnosticStatuses.value
     const res = await api.get('/instruments', { params })
     if (!isLatest()) return
     instruments.value = res.data.data
@@ -161,7 +169,7 @@ watch(selectedSiteIds, (newIds) => {
   }
   fetchInstruments()
 }, { deep: true })
-watch([selectedEquipmentIds, selectedServiceIds, selectedLineClassIds], () => {
+watch([selectedEquipmentIds, selectedServiceIds, selectedLineClassIds, selectedDiagnosticStatuses], () => {
   fetchInstruments()
 }, { deep: true })
 
@@ -194,6 +202,7 @@ onMounted(() => {
       <FilterSelect v-model="selectedEquipmentIds" :items="filteredEquipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <FilterSelect v-model="selectedServiceIds" :items="services" item-title="name" item-value="id" label="サービス・流体" searchable style="max-width: 240px" />
       <FilterSelect v-model="selectedLineClassIds" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" searchable style="max-width: 240px" />
+      <FilterSelect v-model="selectedDiagnosticStatuses" :items="DIAGNOSTIC_FILTER_OPTIONS" label="機器の診断" style="max-width: 220px" data-testid="diagnostic-filter" />
     </div>
 
     <!-- 件数表示 -->
@@ -211,6 +220,9 @@ onMounted(() => {
       <template #item.flags="{ item }">
         <v-chip v-if="item.telemetry" size="x-small" label color="indigo" variant="tonal" class="mr-1">テレメータ</v-chip>
         <v-chip v-if="item.custody_transfer" size="x-small" label color="brown" variant="tonal" class="mr-1">取引用</v-chip>
+      </template>
+      <template #item.diagnostic_status="{ item }">
+        <DiagnosticChip :status="item.diagnostic_status" size="x-small" />
       </template>
       <template #item.actions="{ item }">
         <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />

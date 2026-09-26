@@ -222,6 +222,12 @@ const router = createRouter({
     },
     // デモデータの再投入。メニューやリンクには出さず、URLを直接開く
     {
+      path: '/settings/integrations',
+      name: 'Integrations',
+      component: () => import('@/views/settings/IntegrationsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/settings/reseed',
       name: 'SettingsReseed',
       component: () => import('@/views/settings/ReseedView.vue'),

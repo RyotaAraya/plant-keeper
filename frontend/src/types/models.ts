@@ -67,8 +67,39 @@ export interface Instrument {
   custody_transfer?: boolean
   calibration_kind?: 'transmitter' | 'positioner' | null
   calibratable?: boolean
+  // 機器の自己診断（NAMUR NE 107）のいまの状態。未受信は null
+  diagnostic_status?: import('@/constants/diagnostics').DiagnosticStatus | null
+  diagnostic_since?: string | null
+  diagnostic_received_at?: string | null
+  // 詳細だけ: 状態が変わった記録（新しい順に20件）
+  diagnostics?: InstrumentDiagnostic[]
   created_at: string
   updated_at: string
+}
+
+export interface InstrumentDiagnostic {
+  id: number
+  status: import('@/constants/diagnostics').DiagnosticStatus
+  code: string | null
+  message: string | null
+  occurred_at: string
+  created_at: string
+  // 送ってきた連携（トークン）の名前
+  source: string | null
+}
+
+// 連携用のトークン（機器管理システムなど）。平文の token は発行したときの応答にだけ入る
+export interface IntegrationToken {
+  id: number
+  name: string
+  token_hint: string
+  last_used_at: string | null
+  revoked_at: string | null
+  created_at: string
+  site: { id: number; name: string }
+  created_by: { id: number; name: string }
+  revoked_by: { id: number; name: string } | null
+  token?: string
 }
 
 // 5点校正。校正の条件（snapshot）は点検時に計器の設定から凍結して保存したもの

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_26_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_26_060100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -255,6 +255,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_050000) do
     t.index ["user_id"], name: "index_inspections_on_user_id"
   end
 
+  create_table "instrument_diagnostics", force: :cascade do |t|
+    t.bigint "instrument_id", null: false
+    t.string "status", null: false
+    t.string "code"
+    t.text "message"
+    t.datetime "occurred_at", null: false
+    t.bigint "integration_token_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["instrument_id", "occurred_at"], name: "index_instrument_diagnostics_on_instrument_id_and_occurred_at"
+    t.index ["instrument_id"], name: "index_instrument_diagnostics_on_instrument_id"
+    t.index ["integration_token_id"], name: "index_instrument_diagnostics_on_integration_token_id"
+    t.check_constraint "status::text = ANY (ARRAY['good'::character varying, 'failure'::character varying, 'function_check'::character varying, 'out_of_specification'::character varying, 'maintenance_required'::character varying]::text[])", name: "instrument_diagnostics_status"
+  end
+
   create_table "instruments", force: :cascade do |t|
     t.string "tag_number", null: false
     t.string "instrument_type"
@@ -278,11 +293,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_050000) do
     t.boolean "telemetry", default: false, null: false
     t.boolean "custody_transfer", default: false, null: false
     t.string "seal_fluid"
+    t.string "diagnostic_status"
+    t.datetime "diagnostic_since"
+    t.datetime "diagnostic_received_at"
+    t.index ["diagnostic_status"], name: "index_instruments_on_diagnostic_status"
     t.index ["equipment_id", "tag_number"], name: "index_instruments_on_equipment_id_and_tag_number", unique: true
     t.index ["equipment_id"], name: "index_instruments_on_equipment_id"
     t.index ["line_class_id"], name: "index_instruments_on_line_class_id"
     t.index ["service_id"], name: "index_instruments_on_service_id"
     t.index ["tag_number"], name: "index_instruments_on_tag_number"
+  end
+
+  create_table "integration_tokens", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "site_id", null: false
+    t.string "token_digest", null: false
+    t.string "token_hint", null: false
+    t.bigint "created_by_id", null: false
+    t.datetime "last_used_at"
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_integration_tokens_on_created_by_id"
+    t.index ["revoked_by_id"], name: "index_integration_tokens_on_revoked_by_id"
+    t.index ["site_id"], name: "index_integration_tokens_on_site_id"
+    t.index ["token_digest"], name: "index_integration_tokens_on_token_digest", unique: true
   end
 
   create_table "interlock_bypasses", force: :cascade do |t|
@@ -758,9 +794,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_050000) do
   add_foreign_key "inspections", "instruments"
   add_foreign_key "inspections", "maintenance_tasks"
   add_foreign_key "inspections", "users"
+  add_foreign_key "instrument_diagnostics", "instruments"
+  add_foreign_key "instrument_diagnostics", "integration_tokens"
   add_foreign_key "instruments", "equipments"
   add_foreign_key "instruments", "line_classes"
   add_foreign_key "instruments", "services"
+  add_foreign_key "integration_tokens", "sites"
+  add_foreign_key "integration_tokens", "users", column: "created_by_id"
+  add_foreign_key "integration_tokens", "users", column: "revoked_by_id"
   add_foreign_key "interlock_bypasses", "interlocks"
   add_foreign_key "interlock_bypasses", "users", column: "approved_by_id"
   add_foreign_key "interlock_bypasses", "users", column: "bypassed_by_id"
