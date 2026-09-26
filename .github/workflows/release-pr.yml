@@ -1,12 +1,14 @@
 name: Release PR
 
 # develop に push（PR のマージ）されたら、develop → main のリリース用 PR を作る。
-# すでに開いている PR があれば、本文（含まれる変更の一覧）だけ更新する。マージは手動。
+# すでに開いている PR があれば、本文（含まれる変更の一覧）だけ更新する。マージは手動で、マージコミットで行う
+# （squash・rebase だと develop のコミットが main の祖先にならず、次の PR に同じ変更が並び続ける）。
 # GITHUB_TOKEN で作った PR では pull_request の CI は動かないが、同じコミットの develop への push の CI の結果が PR に出る。
 # リポジトリの設定「Allow GitHub Actions to create and approve pull requests」が必要。
 on:
   push:
     branches: [ develop ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -51,7 +53,8 @@ jobs:
 
           number=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number')
           if [ -n "$number" ]; then
-            gh pr edit "$number" --body-file body.md
+            # gh pr edit は Projects (classic) の廃止で失敗する版があるため、REST で本文だけ更新する
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/pulls/${number}" -F body=@body.md --silent
             echo "PR #$number を更新した"
           else
             gh pr create --base main --head develop --title "Release: develop → main" --body-file body.md
