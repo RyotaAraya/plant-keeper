@@ -34,6 +34,7 @@ const nextDueOn = computed(() => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 })
 
+const RESULT_LABEL: Record<string, string> = { pass: '合格', fail: '不合格', incomplete: '未記入あり' }
 const formatDate = (value: string) => new Date(value).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
 async function save() {
@@ -72,7 +73,7 @@ async function save() {
             <tr v-for="row in review.evidence" :key="row.inspection_id">
               <td class="text-no-wrap">{{ formatDate(row.inspected_at) }}</td>
               <td>{{ row.as_found.max_error?.toFixed(2) ?? '—' }}%</td>
-              <td>{{ row.as_found.result === 'fail' ? '不合格' : '合格' }}</td>
+              <td>{{ RESULT_LABEL[row.as_found.result] ?? row.as_found.result }}</td>
               <td>{{ row.adjusted ? '調整あり' : '調整なし' }}</td>
             </tr>
           </tbody>

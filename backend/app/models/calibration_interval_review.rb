@@ -46,7 +46,8 @@ class CalibrationIntervalReview
       "kind" => kind, "reasons" => reasons, "cautions" => cautions,
       "suggested_interval_days" => suggested_interval_days(kind),
       "tolerance_percent" => rows.last&.dig("tolerance_percent"),
-      "evidence" => rows.last(REVIEW_COUNT + 1).map { |row| row.slice("inspection_id", "inspected_at", "adjusted").merge("as_found" => row["as_found"].slice("result", "max_error")) }
+      # 根拠は判定に使った直近の校正（理由の「直近3回」と同じ範囲）
+      "evidence" => rows.last(REVIEW_COUNT).map { |row| row.slice("inspection_id", "inspected_at", "adjusted").merge("as_found" => row["as_found"].slice("result", "max_error")) }
     }
   end
 

@@ -60,7 +60,7 @@ class CalibrationIntervalReviewTest < ActionDispatch::IntegrationTest
     assert_equal 2, shorten["reasons"].size
     assert_includes shorten["reasons"].first, "調整前が許容差を超えていました（0.30% / ±0.25%）"
     assert_includes shorten["reasons"].last, "0.12 → 0.20 → 0.30%"
-    assert_equal 4, shorten["evidence"].size
+    assert_equal [ 0.12, 0.2, 0.3 ], shorten["evidence"].map { |row| row.dig("as_found", "max_error") }
 
     extend = result["PT-200 年次校正"]
     assert_equal [ "extend", 730, [] ], [ extend["kind"], extend["suggested_interval_days"], extend["cautions"] ]
