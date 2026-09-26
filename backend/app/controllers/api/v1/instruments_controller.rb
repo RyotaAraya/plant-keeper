@@ -65,7 +65,7 @@ module Api
               service: {},
               line_class: {}
             }
-          )
+          ).merge("calibration_history" => CalibrationTrend.new(@instrument).rows)
         }
       end
 

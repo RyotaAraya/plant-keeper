@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
+import CalibrationTrendChart from '@/components/CalibrationTrendChart.vue'
 import InterlockChips from '@/components/InterlockChips.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import {
@@ -16,6 +17,7 @@ import {
   emptyCalibrationFields,
   type CalibrationFields,
 } from '@/utils/calibration'
+import type { CalibrationHistoryRow } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -90,6 +92,14 @@ async function fetchInstrument() {
   }
 }
 
+// 5点校正の記録（古い順）。表は新しい順に出す
+const calibrationHistory = computed<CalibrationHistoryRow[]>(() => instrument.value?.calibration_history ?? [])
+const calibrationRowsNewestFirst = computed(() => [...calibrationHistory.value].reverse())
+const STAGE_RESULT_LABEL: Record<string, string> = { pass: '合格', fail: '不合格', incomplete: '未記入あり', empty: '—' }
+const STAGE_RESULT_COLOR: Record<string, string> = { pass: 'success', fail: 'error', incomplete: 'warning', empty: 'grey' }
+const formatError = (value: number | null | undefined) => (value == null ? '—' : `${value.toFixed(2)}%`)
+const formatDate = (value: string) => new Date(value).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
+
 onMounted(fetchInstrument)
 </script>
 
@@ -155,6 +165,7 @@ onMounted(fetchInstrument)
       <v-tabs v-model="tab" class="mb-4">
         <v-tab value="troubles">トラブル履歴</v-tab>
         <v-tab value="inspections">点検履歴</v-tab>
+        <v-tab v-if="instrument.calibratable || calibrationHistory.length" value="calibration">校正の傾向</v-tab>
         <v-tab value="history">変更履歴</v-tab>
       </v-tabs>
 
@@ -165,6 +176,42 @@ onMounted(fetchInstrument)
 
         <v-window-item value="inspections">
           <InstrumentHistoryList kind="inspections" :instrument-id="instrument.id" />
+        </v-window-item>
+
+        <v-window-item value="calibration" data-testid="calibration-trend">
+          <p v-if="!calibrationHistory.length" class="text-body-2 text-medium-emphasis ml-4">5点校正の記録はまだありません。</p>
+          <template v-else>
+            <p class="text-body-2 mb-2">
+              調整前（as found）の最大誤差の推移です。前回の校正からどれだけずれたかを表し、ずれが年々大きくなる計器は周期の短縮や原因の調査を、
+              調整の要らない状態が続く計器は周期の延長を検討する材料になります。
+            </p>
+            <CalibrationTrendChart :rows="calibrationHistory" class="mb-2" />
+            <p class="text-caption text-medium-emphasis mb-4">●調整前（赤は不合格） ／ ○調整後（調整した回だけ） ／ 点線は許容差</p>
+            <v-table density="compact">
+              <thead>
+                <tr class="text-no-wrap">
+                  <th>点検日</th>
+                  <th>調整前の最大誤差</th>
+                  <th>調整前の結果</th>
+                  <th>調整</th>
+                  <th>調整後の最大誤差</th>
+                  <th>ヒステリシス（最大）</th>
+                  <th>許容差</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in calibrationRowsNewestFirst" :key="row.inspection_id" style="cursor: pointer" @click="router.push(`/inspections/${row.inspection_id}`)">
+                  <td class="text-no-wrap">{{ formatDate(row.inspected_at) }}</td>
+                  <td>{{ formatError(row.as_found.max_error) }}</td>
+                  <td><v-chip :color="STAGE_RESULT_COLOR[row.as_found.result]" size="x-small" label variant="tonal">{{ STAGE_RESULT_LABEL[row.as_found.result] }}</v-chip></td>
+                  <td>{{ row.adjusted ? 'あり' : 'なし' }}</td>
+                  <td>{{ row.as_left ? formatError(row.as_left.max_error) : '—' }}</td>
+                  <td>{{ formatError(row.as_left?.max_hysteresis ?? row.as_found.max_hysteresis) }}</td>
+                  <td>±{{ row.tolerance_percent }}%</td>
+                </tr>
+              </tbody>
+            </v-table>
+          </template>
         </v-window-item>
 
         <v-window-item value="history">
