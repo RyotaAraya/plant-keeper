@@ -136,7 +136,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - 更新は stg で動作確認してから `main` へ
 - 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。バックエンドのテスト（`test/integration/authentication_test.rb`）がこれを検証するが、フロント経由の動作は別途 stg で確認する
   - 実例: devise 5.0.4 で `respond_to_on_destroy` がキーワード引数付きで呼ばれるようになり、`SessionsController` のオーバーライドが ArgumentError → ログアウトが500になりJWTが失効しなかった（`respond_to_on_destroy(**)` で修正）
-- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行。ジョブは5つ:
+- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行。ただし、変更が Markdown（`**/*.md`）・`.claude/`・`.agents/` だけのときは動かない（`paths-ignore`。コードから参照している Markdown はない。ブランチ保護で CI を必須のチェックにしていないため、動かなくてもマージは止まらない）。ジョブは5つ:
   - `backend_scan_ruby`（Brakeman）/ `backend_lint`（RuboCop）
   - `backend_test`（Minitest。Postgres 16 のサービスコンテナ）
   - `e2e`（Playwright。シード済みDB + APIサーバー + ビルド済みフロントの `vite preview`。失敗時はレポートを artifact に保存）
