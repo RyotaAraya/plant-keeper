@@ -54,6 +54,15 @@ class DeviceDiagnosticsTest < ActionDispatch::IntegrationTest
     assert_equal "failure", @instrument.reload.diagnostic_status
   end
 
+  test "未来の日時の診断は受け付けない（あとから届く正しい診断が古い扱いにならないように）" do
+    send_diagnostics([ diagnostic("F", 1.hour.from_now), diagnostic("M", 3.minutes.from_now) ])
+    assert_equal %w[error changed], json["data"]["results"].pluck("result")
+    assert_match "未来", json["data"]["results"].first["errors"].first
+    send_diagnostics([ diagnostic("N", 4.minutes.from_now) ])
+    assert_equal [ "changed" ], json["data"]["results"].pluck("result")
+    assert_equal "good", @instrument.reload.diagnostic_status
+  end
+
   test "1件ずつ結果を返し、誤りのある件（別拠点・不明なタグ・状態・日時）があっても、ほかの件は反映する" do
     other_token, other_raw = IntegrationToken.issue!(name: "別拠点のAMS", site: @other_site, created_by: @admin)
     Instrument.create!(equipment: @elsewhere.equipment, tag_number: "LT-900", instrument_type: "level_transmitter")

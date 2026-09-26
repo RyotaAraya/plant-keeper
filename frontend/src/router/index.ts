@@ -220,13 +220,14 @@ const router = createRouter({
       component: () => import('@/views/settings/SettingsView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
-    // デモデータの再投入。メニューやリンクには出さず、URLを直接開く
+    // 外部連携（連携用のトークン）。設定画面からリンクする
     {
       path: '/settings/integrations',
       name: 'Integrations',
       component: () => import('@/views/settings/IntegrationsView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    // デモデータの再投入。メニューやリンクには出さず、URLを直接開く
     {
       path: '/settings/reseed',
       name: 'SettingsReseed',

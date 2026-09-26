@@ -2,8 +2,10 @@
 # - 計器はトークンの拠点のタグ番号で探す（別の拠点の計器は受け付けない）
 # - 状態・コード・内容がいまと同じなら、履歴は増やさず、最後に受け取った日時だけ更新する（定期的に同じ状態が送られてくるため）
 # - いまの状態より古い日時の診断は、順番が入れ替わって届いたものとして反映しない
+# - 未来の日時（時計のずれの許容を超えるもの）は受け付けない（反映すると、それより前の正しい診断がすべて古い扱いになるため）
 class DeviceDiagnosticIntake
   Result = Data.define(:tag_number, :result, :errors)
+  CLOCK_SKEW = 5.minutes
 
   def initialize(token, now: Time.current)
     @token = token
@@ -19,7 +21,11 @@ class DeviceDiagnosticIntake
     status = InstrumentDiagnostic.normalize_status(item["status"])
     errors << "状態 #{item['status'].inspect} は分かりません（N/F/C/S/M か good/failure/function_check/out_of_specification/maintenance_required）" unless status
     occurred_at = parse_time(item["occurred_at"])
-    errors << "発生日時 #{item['occurred_at'].inspect} を読めません（ISO 8601 で送ってください）" unless occurred_at
+    if occurred_at.nil?
+      errors << "発生日時 #{item['occurred_at'].inspect} を読めません（ISO 8601 で送ってください）"
+    elsif occurred_at > @now + CLOCK_SKEW
+      errors << "発生日時 #{item['occurred_at']} が未来です（送る側の時計・タイムゾーンを確かめてください）"
+    end
     return Result.new(tag, "error", errors) if errors.any?
 
     apply(instrument, status, item["code"].presence&.to_s&.strip, item["message"].presence&.to_s&.strip, occurred_at)

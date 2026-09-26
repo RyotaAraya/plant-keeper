@@ -157,7 +157,7 @@ onMounted(fetchTokens)
         <p>
           <code>POST {{ endpoint }}</code>（ヘッダー <code>X-Integration-Token</code> に発行したトークン）。
           計器は、トークンの拠点のタグ番号で探します。状態は NE 107 の記号（N 正常 / F 故障 / C 機能点検中 / S 仕様外 / M 保守要求）で送ります。
-          いまと同じ状態を受け取り続けても記録は増えず、いまより古い日時の診断は反映しません。一度に500件まで送れます。
+          いまと同じ状態を受け取り続けても記録は増えず、いまより古い日時の診断は反映せず、未来の日時（5分を超えるもの）は誤りになります。一度に500件まで送れます。
         </p>
         <pre class="pk-integration__example">{{ example }}</pre>
       </v-card-text>
