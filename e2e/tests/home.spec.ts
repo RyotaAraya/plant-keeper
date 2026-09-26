@@ -20,7 +20,6 @@ test('保全業務の流れ・プラナの紹介・1件のトラブルの流れ�
   expect([...order].sort((a, b) => a - b)).toEqual(order)
 
   await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
-  await expect(page.locator('#plana')).toContainText('運転を続けてよいかの判断は出しません')
 
   // 本体の機能（ルールで動く）とプラナ（記録を読んで働くAI）の境目を、章の見出し・色の帯・対比の1文で示す
   await expect(page.locator('#features .landing-eyebrow')).toHaveText('PlantKeeperの機能')

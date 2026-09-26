@@ -41,11 +41,6 @@ const calibrationPoints = [
   { icon: 'mdi-calendar-sync-outline', title: '周期の見直しの候補', text: '決まったルールで出します（AIは使いません）。法令で周期が決まる計器は、延長の候補にしません。' },
 ]
 const diagnosticStates: DiagnosticStatus[] = ['failure', 'function_check', 'out_of_specification', 'maintenance_required']
-const planaPrinciples = [
-  'プラナは案を出すだけです。保存するかは人が決めます',
-  '応急処置の手順や、運転を続けてよいかの判断は出しません',
-  'プラナの案をもとにした記録は、監査ログで分かります',
-]
 
 // 3つの仕事を、同じ1件のトラブル（FT-301の指示低下）の流れで見せる。架空のメモ・記録による表示例。
 // 1の routineChecks は backend/app/models/instrument_troubleshooting_catalog.rb の
@@ -217,7 +212,6 @@ const story = [
             <h2 id="plana-title">プラナ</h2>
             <p class="landing-plana-tagline">報告を書く手間と、過去の事例を探す手間を減らします。</p>
             <p class="landing-plana-lead">ここまでの機能は、決まったルールで判定し、記録します。プラナはAIで、その記録を読んで、不具合報告や対応記録の文章を整え、似た過去のトラブルを探します。</p>
-            <ul class="landing-principles"><li v-for="p in planaPrinciples" :key="p"><v-icon size="16" color="primary" aria-hidden="true">mdi-check</v-icon>{{ p }}</li></ul>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
@@ -371,9 +365,6 @@ const story = [
 .landing-plana h2 { font-family: var(--pk-font-display); font-size: clamp(2.25rem, 5vw, 3.25rem); font-weight: 900; color: var(--pk-plana-navy); line-height: 1.2; margin-top: 4px; }
 .landing-plana-tagline { font-family: var(--pk-font-display); font-size: 1.25rem; font-weight: 700; color: var(--pk-plana-navy); margin-top: 8px; }
 .landing-plana-lead { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 12px; max-width: 36em; word-break: auto-phrase; }
-.landing-principles { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 8px; }
-.landing-principles li { display: flex; align-items: flex-start; gap: 8px; font-size: .875rem; line-height: 1.7; }
-.landing-principles .v-icon { margin-top: 3px; }
 
 /* 1件のトラブルの流れ。番号の縦線で、3つの場面が続いていることを示す */
 .landing-story-steps { list-style: none; margin: 0; padding: 0; }
