@@ -3,8 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
-import { canTransactStock } from '@/constants/stock'
 import { usePermissions } from '@/composables/usePermissions'
+import { canTransactStock } from '@/constants/stock'
 import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()

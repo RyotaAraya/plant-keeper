@@ -214,6 +214,7 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     %w[completed disposed].each do |status|
       patch "/api/v1/repairs/#{repair.id}", params: { repair: { status: status } }, headers: @headers, as: :json
       assert_response :unprocessable_entity
+      assert_equal [ "在庫が修理待ち・修理中ではないため、修理の状態を変えられません" ], response.parsed_body["errors"]
       assert_equal "shipped", repair.reload.status
       assert_equal "disposed", single.reload.status
     end
