@@ -4,6 +4,7 @@
 // （名前は履歴の元の画面で見られる。ID そのものが要る管理者は、監査ログの画面で見る）。
 // 知らないカラムは、情報を失わないよう、カラム名のまま出す
 import { inspectionStatusLabel, inspectionTypeLabel, priorityLabel, troubleStatusLabel } from '@/constants/recordLabels'
+import { BYPASS_STATUS_LABEL } from '@/utils/interlock'
 import { ACCEPTANCE_RESULT_LABEL, MAINTENANCE_STATUS_LABEL, TASK_KIND_LABEL, TASK_STATUS_LABEL } from '@/constants/maintenanceStatus'
 
 export interface AuditChange {
@@ -45,6 +46,12 @@ const FIELD_LABELS: Record<string, string> = {
   inspection_item_id: '点検の項目', inspection_id: '点検',
   equipment_ids: '対象設備', regulation_ids: '適用法規', intervals: '周期',
   ai_suggestion_id: 'プラナの整理案',
+  // インターロック・バイパス
+  trip_action: 'トリップ時の動作', instrument_ids: '関係する計器', interlock_id: 'インターロック',
+  request_number: '申請番号', reason: '理由', compensatory_measure: '代替措置', planned_restore_at: '予定の復帰日時',
+  requested_by_id: '申請者', requested_at: '申請日時', approved_by_id: '承認者', approved_at: '承認日時',
+  bypassed_by_id: 'バイパスした人', bypassed_at: 'バイパス日時', restored_by_id: '復帰した人', restored_at: '復帰日時',
+  confirmed_by_id: '復帰を確認した人', confirmed_at: '確認日時', closed_by_id: '却下・取消した人', closed_at: '却下・取消日時', closed_reason: '却下・取消の理由',
 }
 
 const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
@@ -53,6 +60,7 @@ const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
   ScheduledMaintenance: MAINTENANCE_STATUS_LABEL,
   MaintenanceTask: TASK_STATUS_LABEL,
   ReferenceStandard: { usable: '使用可', in_calibration: '校正中', retired: '使用停止' },
+  InterlockBypass: BYPASS_STATUS_LABEL,
 }
 
 // 対象に依らない、カラム名ごとの値の呼び方

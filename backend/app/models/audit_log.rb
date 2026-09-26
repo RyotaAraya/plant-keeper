@@ -22,6 +22,8 @@ class AuditLog < ApplicationRecord
     when ScheduledMaintenance, MaintenanceSeries then resource.site_id
     when MaintenanceTask then resource.scheduled_maintenance&.site_id
     when EquipmentAssignment, Instrument, Inspection, Trouble, AiSuggestion then resource.equipment&.site_id
+    when Interlock then resource.equipment&.site_id
+    when InterlockBypass then resource.interlock&.equipment&.site_id
     when InspectionItem then resource.inspection&.equipment&.site_id
     when TroubleResponse then resource.trouble&.equipment&.site_id
     when MaintenanceAssignment then resource.scheduled_maintenance&.site_id

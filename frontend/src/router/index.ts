@@ -65,6 +65,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/interlocks',
+      name: 'Interlocks',
+      component: () => import('@/views/interlocks/InterlockListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/interlocks/:id',
+      name: 'InterlockDetail',
+      component: () => import('@/views/interlocks/InterlockDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/reference-standards',
       name: 'ReferenceStandards',
       component: () => import('@/views/standards/ReferenceStandardListView.vue'),

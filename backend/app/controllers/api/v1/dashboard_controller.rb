@@ -1,6 +1,8 @@
 module Api
   module V1
     class DashboardController < BaseController
+      include InterlockBypassJson
+
       # GET /api/v1/dashboard?site_id=1&department_id=2
       # ダッシュボードは日々の判断を優先するため、選んだ部署とその配下に関係する記録へ絞れる。
       def show
@@ -13,6 +15,9 @@ module Api
 
         inspections_scope = Inspection.joins(:equipment)
         inspections_scope = inspections_scope.where(equipments: { site_id: site_ids }) if site_ids
+
+        bypasses_scope = InterlockBypass.all
+        bypasses_scope = bypasses_scope.for_sites(site_ids) if site_ids
 
         maintenances_scope = ScheduledMaintenance.all
         maintenances_scope = maintenances_scope.where(site_id: site_ids) if site_ids
@@ -71,6 +76,15 @@ module Api
               overdue_list: plans_scope.merge(InspectionPlan.overdue).includes(:equipment, :equipments, :instrument, :reference_standard).order(:next_due_on).limit(5)
                 .as_json(methods: [ :days_until_due ], include: { equipment: { only: [ :id, :name ] }, equipments: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] },
                                                                    reference_standard: { only: [ :id, :name ] } })
+            },
+            # インターロックのバイパスは安全に関わるため拠点全体で見る。部署による絞り込みを適用しない。
+            # 一覧は、復帰期限超過 → バイパス中（予定の復帰が近い順）
+            interlock_bypasses: {
+              bypassed: bypasses_scope.status_bypassed.count,
+              overdue: bypasses_scope.overdue.count,
+              awaiting_confirmation: bypasses_scope.status_restored.count,
+              pending_approval: bypasses_scope.status_requested.count,
+              bypassed_list: bypasses_scope.status_bypassed.includes(*BYPASS_INCLUDES).order(:planned_restore_at).limit(5).map { |bypass| bypass_json(bypass) }
             },
             # 設備停止の見通しは拠点全体。部署による絞り込みを適用しない。
             maintenances: {

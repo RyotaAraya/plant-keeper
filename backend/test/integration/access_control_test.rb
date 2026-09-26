@@ -3,7 +3,7 @@ require "test_helper"
 # 認可の網羅性と、ロールごとに返す情報の範囲
 class AccessControlTest < ActionDispatch::IntegrationTest
   INDEX_PATHS = %w[
-    sites equipments instruments equipment_assignments services line_classes departments companies regulations reference_standards
+    sites equipments instruments equipment_assignments services line_classes departments companies regulations reference_standards interlocks interlock_bypasses
     checklist_templates inspection_plans inspections troubles scheduled_maintenances manufacturers materials warehouses
     stocks repairs orders users dashboard audit_logs
   ].freeze
@@ -40,15 +40,15 @@ class AccessControlTest < ActionDispatch::IntegrationTest
     worker = create_user(system_role: "worker", company: @contractor)
     get "/api/v1/dashboard", headers: auth_headers_for(worker)
     assert_response :ok
-    assert_equal %w[inspection_plans inspections maintenances scope troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections interlock_bypasses maintenances scope troubles], json["data"].keys.sort
 
     member = create_user(system_role: "member", company: @owner)
     get "/api/v1/dashboard", headers: auth_headers_for(member)
-    assert_equal %w[inspection_plans inspections maintenances scope stock_alerts troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections interlock_bypasses maintenances scope stock_alerts troubles], json["data"].keys.sort
 
     manager = create_user(system_role: "manager", company: @owner)
     get "/api/v1/dashboard", headers: auth_headers_for(manager)
-    assert_equal %w[inspection_plans inspections maintenances orders repairs scope stock_alerts troubles], json["data"].keys.sort
+    assert_equal %w[inspection_plans inspections interlock_bypasses maintenances orders repairs scope stock_alerts troubles], json["data"].keys.sort
   end
 
   test "協力会社（業務管理者・技能員）は拠点を見られず、自社ユーザは見られる" do

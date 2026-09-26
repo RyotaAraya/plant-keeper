@@ -3,7 +3,7 @@ module Api
     class AuditLogsController < BaseController
       # 詳細画面の「変更履歴」を持つリソース。この種類のリソース指定の履歴だけ、全認証済みユーザーが参照できる
       # （ユーザーなど、変更内容に個人情報や認証情報を含み得る種類は管理者だけ）
-      RESOURCE_HISTORY_TYPES = %w[Trouble Equipment Instrument ScheduledMaintenance].freeze
+      RESOURCE_HISTORY_TYPES = %w[Trouble Equipment Instrument ScheduledMaintenance Interlock].freeze
 
       # GET /api/v1/audit_logs
       def index

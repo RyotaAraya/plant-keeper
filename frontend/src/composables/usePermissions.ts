@@ -48,6 +48,12 @@ export function permissionsFor({ role, companyType }: RoleContext) {
     canManageSite: isAdmin,
     canManageEquipment: canManageCore,
     canManageReferenceStandard: canManageCore,
+    // インターロック（InterlockPolicy / InterlockBypassPolicy）。台帳の登録とバイパスの承認は管理者・自社のマネージャー、
+    // 申請は技能員以外、復帰の確認は自社のユーザ。バイパスの実施・復帰は誰でも（現場で操作するのは作業員のため）
+    canManageInterlock: canManageCore,
+    canRequestBypass: !isWorker,
+    canApproveBypass: canManageCore,
+    canConfirmBypass: isOwnerCompany,
     canManageInspectionPlan: canManageCore,
     // バックエンドの InspectionPolicy#approve? に対応（承認・差し戻しは管理者/マネージャー）
     canApproveInspection: isAdmin || isManager,

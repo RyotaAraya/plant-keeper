@@ -6,6 +6,8 @@ class Instrument < ApplicationRecord
   has_many :inspections, dependent: :restrict_with_error
   has_many :inspection_items, dependent: :restrict_with_error
   has_many :troubles, dependent: :restrict_with_error
+  has_many :interlock_instruments, dependent: :restrict_with_error
+  has_many :interlocks, through: :interlock_instruments
 
   # 校正の種類。伝送器（種別が *_transmitter）は出力（4-20mA）とDCS表示、調節弁はポジショナの開度を校正する
   CONTROL_VALVE_TYPES = %w[pressure_valve level_valve flow_valve temperature_valve].freeze

@@ -17,6 +17,17 @@ Rails.application.routes.draw do
       resources :reference_standards, only: [ :index, :show, :create, :update ] do
         resources :calibrations, only: [ :create, :update ], controller: "reference_standard_calibrations"
       end
+      resources :interlocks, only: [ :index, :show, :create, :update ]
+      resources :interlock_bypasses, only: [ :index, :show, :create ] do
+        member do
+          post :approve
+          post :reject
+          post :start
+          post :restore
+          post :confirm
+          post :cancel
+        end
+      end
       resources :services, only: [ :index, :create, :update ]
       resources :line_classes, only: [ :index, :create, :update ]
       resources :departments, only: [ :index, :show, :create, :update ]

@@ -184,7 +184,7 @@ record!(insp21, valve_annual("3.2", "3.5", "フルストローク正常。弁体
 
 # 仙台 HDS PT-D201 月次点検（ゼロ点のずれ。インターロックに関わる計器のため、バイパス申請のうえ点検）
 insp26 = Inspection.create!(checklist_template: monthly_inst, user: sd_inst1, equipment: sd_hds, instrument: inst("PT-D201"), department: sd_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 3.days.ago, notes: "反応器圧力伝送器にゼロ点ドリフト確認。トラブル起票。")
-record!(insp26, "バイパス申請番号" => { text_value: "BP-SD-2026-0917" },
+record!(insp26, "バイパス申請番号" => { text_value: "BP-#{Time.current.year}-0917" },
                 "ゼロ点: 均圧（大気開放）時の出力" => { measured_value: "4.21", instrument: inst("PT-D201") },
                 "DCSの指示値と現場の指示の差" => { measured_value: "1.3" },
                 "特記事項" => { text_value: "ゼロ点が+0.21mA（+1.3%）ずれている。ドリフトの原因を調査する。" })
