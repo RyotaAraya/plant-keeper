@@ -3,13 +3,18 @@ import { useAuthStore } from '@/stores/auth'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
 import bypassScreenshot from '@/assets/screenshots/interlock-bypass.png'
+import calibrationScreenshot from '@/assets/screenshots/calibration-trend.png'
+import meetingBoardScreenshot from '@/assets/screenshots/meeting-board.png'
+import diagnosticsScreenshot from '@/assets/screenshots/device-diagnostics.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
+import DiagnosticChip from '@/components/DiagnosticChip.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
+import type { DiagnosticStatus } from '@/constants/diagnostics'
 
 const auth = useAuthStore()
 
-// 上から「PlantKeeperとは何か」（保全の記録の流れ・インターロックのバイパス）→「その記録の上で働くプラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる
+// 上から「PlantKeeperとは何か」（保全の記録の流れ・インターロックのバイパス・校正と周期の見直し・日々の確認）→「その記録の上で働くプラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる
 
 // 保全業務でデータがつながる順。説明は、実装済みの動作だけを書く
 const flowSteps = [
@@ -23,7 +28,7 @@ const flowSteps = [
 ]
 const foundations = [
   { title: '設備と記録をつなぐ', description: '設備台帳・計器・点検・トラブルをひとつにつなぎ、過去の記録をたどれます。', icon: 'mdi-factory' },
-  { title: '保全の仕事を進める', description: '点検計画から承認、定期整備まで。現場と管理者が同じ記録を見ながら進められます。', icon: 'mdi-clipboard-check-outline' },
+  { title: '保全の仕事を進める', description: '点検計画から承認、定期整備まで。判定基準のあるチェックリストで、現場と管理者が同じ記録を見ながら進められます。', icon: 'mdi-clipboard-check-outline' },
   { title: '資材まで見渡す', description: '型番・在庫・修理・発注を管理。必要な資材を、拠点をまたいで確認できます。', icon: 'mdi-package-variant-closed' },
 ]
 // インターロックのバイパス: 申請から復帰の確認まで。本人以外が承認・確認する段階を示す
@@ -38,6 +43,19 @@ const bypassGuards = [
   { icon: 'mdi-clock-alert-outline', text: '予定の復帰を過ぎても戻っていないものは「復帰期限超過」として、ダッシュボードと台帳で目立たせます。' },
   { icon: 'mdi-wrench-clock', text: '定期整備は、対象設備のバイパスがすべて戻り、確認が済むまで検収へ進めません（運転を再開する前の確認）。' },
 ]
+// 5点校正 → 校正の傾向 → 周期の見直し。見直しはルールで出し、AIは使わない（要求仕様書 2.3）
+const calibrationPoints = [
+  { icon: 'mdi-tune-vertical', title: '5点校正', text: '0・25・50・75・100%の5点で、上昇・下降の出力とDCSの表示を記録すると、誤差・合否・ヒステリシスをアプリが計算します。使った基準器が校正の有効期限内かも、提出のときに確かめます。' },
+  { icon: 'mdi-chart-line', title: '校正の傾向', text: '調整前（as found）の最大誤差の推移を、許容差の線つきのグラフと表で示します。前回の校正からどれだけずれたかが、年ごとに分かります。' },
+  { icon: 'mdi-calendar-sync-outline', title: '周期の見直しの候補', text: '直近3回とも調整が要らず、誤差が許容差の半分以下なら延長。調整前が不合格、または誤差が回を追って大きくなっているなら短縮。候補はルールで出し（AIは使いません）、周期を変えるのは人です。法令で周期が決まる計器は、延長の候補にしません。' },
+]
+// 朝会・夕会ボード（要求仕様書 2.8）と機器の自己診断（2.9）
+const boardPoints = [
+  'インターロックのバイパスを先頭に。安全に関わるため、部署を選んでも拠点全体を出します。',
+  '夕会に切り替えると、今日の点検・対応記録・完了した作業を実績に、下書きのままの点検を積み残しに分けます。',
+  '印刷すると、メニューや操作ボタンを消したA4のレイアウトに。出力した時刻も載せます。',
+]
+const diagnosticStates: DiagnosticStatus[] = ['failure', 'function_check', 'out_of_specification', 'maintenance_required']
 const planaPrinciples = [
   'プラナは提案まで。記録に反映・保存するかは、人が決めます',
   '応急処置の手順や、運転を続けてよいかの判断は出しません',
@@ -120,7 +138,7 @@ const story = [
         <div class="landing-hero-copy">
           <h1 id="hero-title" class="landing-hero-brand">PlantKeeper</h1>
           <p class="landing-hero-tagline">設備保全に必要な情報を、ひとつの場所へ。</p>
-          <p class="landing-lead">石油プラントの保全業務のためのWebアプリです。設備・点検・トラブル・修理・資材・在庫・発注までを、ひとつの記録としてつなぎます。</p>
+          <p class="landing-lead">石油プラントの保全業務のためのWebアプリです。設備・点検・トラブル・修理・資材・在庫・発注までを、ひとつの記録としてつなぎます。インターロックのバイパス、校正の周期の見直し、朝会・夕会の資料も、同じ記録から。</p>
           <a href="#plana" class="landing-hero-plana">
             <PlanaAvatar :size="30" />
             <span><strong>AIアシスタント「プラナ」</strong>記録をもとに、現場の報告と調べものを手伝います</span>
@@ -139,7 +157,7 @@ const story = [
     </section>
 
     <section id="features" class="landing-section" aria-labelledby="features-title">
-      <div class="landing-section-heading"><h2 id="features-title">保全の記録が、ひとつの流れでつながる。</h2><p>設備から発注まで、保全の仕事で生まれる記録を順にたどれます。</p></div>
+      <div class="landing-section-heading"><p class="landing-eyebrow">PlantKeeperの機能</p><h2 id="features-title">保全の記録が、ひとつの流れでつながる。</h2><p>設備から発注まで、保全の仕事で生まれる記録を順にたどれます。</p></div>
       <ol class="landing-flow" aria-label="PlantKeeperで管理する保全業務の流れ">
         <li v-for="step in flowSteps" :key="step.title">
           <v-icon size="22" color="primary" aria-hidden="true">{{ step.icon }}</v-icon>
@@ -150,7 +168,7 @@ const story = [
       <div class="landing-foundation-grid"><article v-for="item in foundations" :key="item.title"><v-icon size="24" color="primary" aria-hidden="true">{{ item.icon }}</v-icon><h3>{{ item.title }}</h3><p>{{ item.description }}</p></article></div>
     </section>
 
-    <section id="safety" class="landing-section landing-safety" aria-labelledby="safety-title">
+    <section id="safety" class="landing-section landing-divided landing-safety" aria-labelledby="safety-title">
       <div class="landing-section-heading">
         <h2 id="safety-title">インターロックのバイパスを、戻し忘れない。</h2>
         <p>点検や故障のときに一時的に外す安全計装（インターロック）を、申請から復帰の確認まで記録します。外れている間は、プラントを守る仕組みがひとつ欠けているからです。</p>
@@ -171,82 +189,132 @@ const story = [
       </div>
     </section>
 
-    <!-- 2. プラナとは -->
-    <section id="plana" class="landing-plana" aria-labelledby="plana-title">
-      <div class="landing-plana-inner">
-        <figure class="landing-character">
-          <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
+    <section id="calibration" class="landing-section landing-divided" aria-labelledby="calibration-title">
+      <div class="landing-section-heading">
+        <h2 id="calibration-title">校正の記録から、点検の周期を見直す。</h2>
+        <p>計器の5点校正を点検で記録し、たまった記録から誤差の傾向を見ます。ずれが大きくなってきた計器は早めに、安定している計器は間隔を空けて。周期を決める根拠を、記録から示します。</p>
+      </div>
+      <div class="landing-feature-body">
+        <figure class="landing-hero-shot">
+          <a :href="calibrationScreenshot" target="_blank" rel="noopener" aria-label="校正の傾向の画面を拡大する（新しいタブ）"><img :src="calibrationScreenshot" width="1120" height="633" alt="計器FT-301の校正の傾向。調整前の最大誤差が0.12、0.25、0.41と年々大きくなり、2026年に0.72%で許容差0.5%を超えて不合格になり、調整後は0.12%に戻っている。" /></a>
+          <figcaption>デモデータの実際の画面。FT-301の調整前の誤差が年々大きくなり、今年は許容差を超えました。点検計画では、周期の短縮の候補として出ます。</figcaption>
+        </figure>
+        <ul class="landing-points">
+          <li v-for="point in calibrationPoints" :key="point.title"><v-icon size="22" color="primary" aria-hidden="true">{{ point.icon }}</v-icon><div><h3>{{ point.title }}</h3><p>{{ point.text }}</p></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="daily" class="landing-section landing-divided" aria-labelledby="daily-title">
+      <div class="landing-section-heading">
+        <h2 id="daily-title">毎日の確認を、転記せずに。</h2>
+        <p>朝会・夕会の資料は、すでにある記録から1枚に。機器が自分で出す異常は、機器管理システムから受け取って計器に。Excelへの転記や、別のシステムを見に行く手間を減らします。</p>
+      </div>
+      <div class="landing-feature-body">
+        <figure class="landing-hero-shot">
+          <a :href="meetingBoardScreenshot" target="_blank" rel="noopener" aria-label="朝会・夕会ボードの画面を拡大する（新しいタブ）"><img :src="meetingBoardScreenshot" width="1120" height="1022" alt="朝会・夕会ボードの朝会の画面。川崎製油所 計装保全課の、インターロックのバイパス3件、期限超過・今日・明日が期限の点検計画、実施中の定期整備の作業と進み具合が1枚に並ぶ。" /></a>
+          <figcaption>デモデータの実際の朝会の画面（川崎製油所 計装保全課）。</figcaption>
         </figure>
         <div>
-          <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
-          <h2 id="plana-title">プラナ</h2>
-          <p class="landing-plana-tagline">記録をもとに、現場の判断を支える。</p>
-          <p class="landing-plana-lead">PlantKeeperに蓄積された設備・計器・トラブルの記録をもとに、不具合報告の整理、過去の類似トラブルの検索、対応記録の整理を手伝います。判断するのは人です。</p>
-          <ul class="landing-principles"><li v-for="p in planaPrinciples" :key="p"><v-icon size="16" color="primary" aria-hidden="true">mdi-check</v-icon>{{ p }}</li></ul>
+          <h3 class="landing-feature-title">朝会・夕会ボード</h3>
+          <p class="landing-feature-lead">点検計画・実施中の定期整備の作業・トラブル・インターロックのバイパスを、拠点・部署ごとに1枚にまとめます。</p>
+          <ul class="landing-checks"><li v-for="point in boardPoints" :key="point"><v-icon size="18" color="primary" aria-hidden="true">mdi-check</v-icon><span>{{ point }}</span></li></ul>
+        </div>
+      </div>
+      <div class="landing-feature-body landing-feature-body-sub">
+        <figure class="landing-hero-shot">
+          <a :href="diagnosticsScreenshot" target="_blank" rel="noopener" aria-label="機器の診断で絞り込んだ計器一覧の画面を拡大する（新しいタブ）"><img :src="diagnosticsScreenshot" width="1120" height="427" alt="計器の一覧を機器の診断で絞り込んだ画面。LT-701が仕様外、PT-502が保守要求、TV-602が故障として並ぶ。" /></a>
+          <figcaption>デモデータの実際の画面。診断で絞り込むと、異常を出している計器だけが並びます。</figcaption>
+        </figure>
+        <div>
+          <h3 class="landing-feature-title">機器の自己診断（NAMUR NE 107）</h3>
+          <p class="landing-feature-lead">スマート機器の自己診断を、機器管理システム（AMS Device Manager など）から受け取り、計器の一覧・詳細に表示します。人が見つけて報告するトラブルに加えて、機器が自分で出す異常も同じ台帳で見られます。</p>
+          <ul class="landing-diagnostic-states" aria-label="NE 107の状態">
+            <li v-for="state in diagnosticStates" :key="state"><DiagnosticChip :status="state" /></li>
+          </ul>
+          <p class="landing-feature-note">状態が変わったときだけ履歴に残します。受け取りには、管理者が拠点ごとに発行する連携用のトークンが必要です。</p>
         </div>
       </div>
     </section>
 
-    <!-- 3. 1件のトラブルでたどるプラナの仕事 -->
-    <section id="plana-work" class="landing-section" aria-labelledby="plana-work-title">
-      <div class="landing-section-heading">
-        <h2 id="plana-work-title">1件のトラブルで見る、プラナの仕事。</h2>
-        <p>流量計FT-301の指示が低い。気づいてから対応を記録するまでに、プラナが手伝う3つの場面です。<span class="landing-note-inline">架空のメモ・記録による表示例</span></p>
-      </div>
-      <ol class="landing-story-steps">
-        <li v-for="(step, index) in story" :key="step.key" class="landing-step" :data-task="step.key">
-          <div class="landing-step-marker" aria-hidden="true">{{ index + 1 }}</div>
-          <div class="landing-step-body">
-            <header class="landing-step-header">
-              <p class="landing-step-task">{{ step.task }}</p>
-              <h3>{{ step.scene }}</h3>
-              <p>{{ step.lead }}</p>
-            </header>
-            <div class="landing-comparison">
-              <div class="landing-input">
-                <h4>{{ step.input }}</h4>
-                <p>{{ step.memo }}</p>
-              </div>
-              <div>
-                <div v-if="step.routineChecks" class="pk-reference">
-                  <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器（流量伝送器）の一次点検の定型項目</h4>
-                  <p class="pk-reference-meta">参考。計器種別ごとにアプリが確定的に表示</p>
-                  <ul><li v-for="c in step.routineChecks" :key="c">{{ c }}</li></ul>
-                </div>
-                <div class="pk-plana-card">
-                  <div class="pk-plana-card-body">
-                    <PlanaNote>{{ step.planaNote }}</PlanaNote>
-                    <div class="pk-plana-card-title-row">
-                      <p class="pk-plana-card-title">{{ step.title }}</p>
-                      <span class="pk-plana-card-meta">{{ step.meta }}</span>
-                    </div>
-                    <p v-if="step.detail">{{ step.detail }}</p>
-                    <p v-if="step.similarity"><strong>似ている点:</strong> {{ step.similarity }}</p>
-                    <p v-if="step.howHandled"><strong>過去の対応:</strong> {{ step.howHandled }}</p>
-                    <p v-if="step.usedMaterials"><strong>使用資材:</strong> {{ step.usedMaterials }}</p>
-                    <div v-if="step.possibleCauses || step.checkPoint" class="pk-plana-card-grid" :class="{ 'pk-plana-card-grid-single': !step.possibleCauses || !step.checkPoint }">
-                      <div v-if="step.possibleCauses">
-                        <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
-                        <ul><li v-for="c in step.possibleCauses" :key="c">{{ c }}</li></ul>
-                      </div>
-                      <div v-if="step.checkPoint">
-                        <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
-                        <p>{{ step.checkPoint }}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="pk-plana-card-caption">{{ step.caption }}</p>
-                </div>
-              </div>
-            </div>
-            <footer class="landing-step-footer">
-              <p>{{ step.result }}</p>
-              <v-btn :to="step.to" variant="outlined" color="primary">{{ step.task }}を試す</v-btn>
-            </footer>
+    <!-- 2. プラナとは。紹介と仕事を1つの色の帯にまとめ、ここからがプラナだと分かるようにする -->
+    <div class="landing-plana-zone">
+      <section id="plana" class="landing-plana" aria-labelledby="plana-title">
+        <div class="landing-plana-inner">
+          <div>
+            <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
+            <h2 id="plana-title">プラナ</h2>
+            <p class="landing-plana-tagline">記録をもとに、現場の判断を支える。</p>
+            <p class="landing-plana-lead">ここまでの機能は、決まったルールで判定し、記録します。プラナは、その記録を読んで働くAIです。蓄積された設備・計器・トラブルの記録をもとに、不具合報告の整理、過去の類似トラブルの検索、対応記録の整理を手伝います。判断するのは人です。</p>
+            <ul class="landing-principles"><li v-for="p in planaPrinciples" :key="p"><v-icon size="16" color="primary" aria-hidden="true">mdi-check</v-icon>{{ p }}</li></ul>
           </div>
-        </li>
-      </ol>
-    </section>
+          <figure class="landing-character">
+            <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
+          </figure>
+        </div>
+      </section>
+
+      <!-- 3. 1件のトラブルでたどるプラナの仕事 -->
+      <section id="plana-work" class="landing-section" aria-labelledby="plana-work-title">
+        <div class="landing-section-heading">
+          <h2 id="plana-work-title">1件のトラブルで見る、プラナの仕事。</h2>
+          <p>流量計FT-301の指示が低い。気づいてから対応を記録するまでに、プラナが手伝う3つの場面です。<span class="landing-note-inline">架空のメモ・記録による表示例</span></p>
+        </div>
+        <ol class="landing-story-steps">
+          <li v-for="(step, index) in story" :key="step.key" class="landing-step" :data-task="step.key">
+            <div class="landing-step-marker" aria-hidden="true">{{ index + 1 }}</div>
+            <div class="landing-step-body">
+              <header class="landing-step-header">
+                <p class="landing-step-task">{{ step.task }}</p>
+                <h3>{{ step.scene }}</h3>
+                <p>{{ step.lead }}</p>
+              </header>
+              <div class="landing-comparison">
+                <div class="landing-input">
+                  <h4>{{ step.input }}</h4>
+                  <p>{{ step.memo }}</p>
+                </div>
+                <div>
+                  <div v-if="step.routineChecks" class="pk-reference">
+                    <h4><v-icon size="16" aria-hidden="true">mdi-clipboard-text-outline</v-icon>この計器（流量伝送器）の一次点検の定型項目</h4>
+                    <p class="pk-reference-meta">参考。計器種別ごとにアプリが確定的に表示</p>
+                    <ul><li v-for="c in step.routineChecks" :key="c">{{ c }}</li></ul>
+                  </div>
+                  <div class="pk-plana-card">
+                    <div class="pk-plana-card-body">
+                      <PlanaNote>{{ step.planaNote }}</PlanaNote>
+                      <div class="pk-plana-card-title-row">
+                        <p class="pk-plana-card-title">{{ step.title }}</p>
+                        <span class="pk-plana-card-meta">{{ step.meta }}</span>
+                      </div>
+                      <p v-if="step.detail">{{ step.detail }}</p>
+                      <p v-if="step.similarity"><strong>似ている点:</strong> {{ step.similarity }}</p>
+                      <p v-if="step.howHandled"><strong>過去の対応:</strong> {{ step.howHandled }}</p>
+                      <p v-if="step.usedMaterials"><strong>使用資材:</strong> {{ step.usedMaterials }}</p>
+                      <div v-if="step.possibleCauses || step.checkPoint" class="pk-plana-card-grid" :class="{ 'pk-plana-card-grid-single': !step.possibleCauses || !step.checkPoint }">
+                        <div v-if="step.possibleCauses">
+                          <h5><v-icon size="15" aria-hidden="true">mdi-lightbulb-on-outline</v-icon>見立て</h5>
+                          <ul><li v-for="c in step.possibleCauses" :key="c">{{ c }}</li></ul>
+                        </div>
+                        <div v-if="step.checkPoint">
+                          <h5><v-icon size="15" aria-hidden="true">mdi-help-circle-outline</v-icon>確認したい点</h5>
+                          <p>{{ step.checkPoint }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="pk-plana-card-caption">{{ step.caption }}</p>
+                  </div>
+                </div>
+              </div>
+              <footer class="landing-step-footer">
+                <p>{{ step.result }}</p>
+                <v-btn :to="step.to" variant="outlined" color="primary">{{ step.task }}を試す</v-btn>
+              </footer>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </div>
 
     <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
       <h2 id="try-title">体験を始めるには</h2>
@@ -294,6 +362,7 @@ const story = [
 
 .landing-section { max-width: 1200px; margin-inline: auto; padding: 64px 32px; }
 .landing-section-heading { margin-bottom: 32px; }
+.landing-divided { border-top: 1px solid var(--pk-line); }
 .landing-section h2 { font-size: 1.875rem; line-height: 1.5; text-wrap: balance; word-break: auto-phrase; }
 .landing-section-heading p { font-size: .9375rem; color: var(--pk-muted); margin-top: 12px; line-height: 1.9; }
 .landing-note-inline { display: inline-block; margin-left: 8px; padding: 0 8px; font-size: .75rem; border: 1px solid var(--pk-line); border-radius: 999px; }
@@ -305,7 +374,7 @@ const story = [
 .landing-flow li:not(:last-child)::after { content: ''; position: absolute; top: 20px; right: -6px; z-index: 1; width: 11px; height: 11px; background: #fff; border-top: 1px solid var(--pk-steel); border-right: 1px solid var(--pk-steel); transform: rotate(45deg); }
 .landing-flow strong { font-family: var(--pk-font-display); font-size: .9375rem; }
 .landing-flow span { font-size: .75rem; line-height: 1.55; color: var(--pk-muted); word-break: auto-phrase; }
-.landing-safety-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.landing-safety-body, .landing-feature-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; align-items: start; }
 .landing-bypass-steps { margin: 0 0 24px; padding: 0; list-style: none; counter-reset: bypass; }
 .landing-bypass-steps li { counter-increment: bypass; display: grid; grid-template-columns: 2em 6.5em minmax(0, 1fr); align-items: baseline; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--pk-line); }
 .landing-bypass-steps li::before { content: counter(bypass); color: var(--pk-steel); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -313,13 +382,27 @@ const story = [
 .landing-bypass-steps span { font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
 .landing-bypass-guards { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
 .landing-bypass-guards li { display: flex; gap: 10px; align-items: flex-start; font-size: .875rem; line-height: 1.8; }
+.landing-feature-body-sub { margin-top: 56px; padding-top: 48px; border-top: 1px solid var(--pk-line); }
+.landing-points { margin: 0; padding: 0; list-style: none; display: grid; gap: 24px; }
+.landing-points li { display: flex; gap: 14px; align-items: flex-start; }
+.landing-points h3 { font-size: 1rem; margin-bottom: 4px; }
+.landing-points p, .landing-feature-lead, .landing-feature-note { font-size: .875rem; line-height: 1.8; color: var(--pk-muted); }
+.landing-feature-title { font-size: 1.125rem; margin-bottom: 8px; }
+.landing-feature-note { margin-top: 16px; font-size: .8125rem; }
+.landing-checks { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.landing-checks li { display: flex; gap: 8px; align-items: flex-start; font-size: .875rem; line-height: 1.8; }
+.landing-checks .v-icon { margin-top: 4px; }
+.landing-diagnostic-states { margin: 16px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
 .landing-foundation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
 .landing-foundation-grid h3 { font-size: 1.125rem; margin: 16px 0 12px; }
 .landing-foundation-grid p { font-size: .875rem; line-height: 1.9; color: var(--pk-muted); }
 
-/* プラナとは */
+/* プラナとは。表示は左向きなので、画像を右に置いて文章のほうを向かせる */
+.landing-plana-zone { background: var(--pk-soft-blue); }
 .landing-plana { background: #dfeefd; overflow: hidden; }
-.landing-plana-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 56px; align-items: end; padding: 40px 32px 0; }
+/* 帯の上では、メモと定型項目の面を白にして背景と分ける */
+.landing-plana-zone .landing-input, .landing-plana-zone .pk-reference { background: #fff; }
+.landing-plana-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 56px; align-items: end; padding: 40px 32px 0; }
 .landing-plana-inner > div { align-self: center; padding-bottom: 40px; }
 .landing-character { margin: 0; }
 .landing-character :deep(.pk-plana-full) { display: block; width: 100%; max-width: 320px; transform: scaleX(-1); }
@@ -388,11 +471,11 @@ const story = [
 .landing-story p { color: var(--pk-muted); line-height: 2; margin-bottom: 16px; font-size: .9375rem; }
 .landing-story a { color: var(--pk-steel); font-size: .875rem; }
 .landing-footer { border-top: 1px solid var(--pk-line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; font-size: .75rem; color: var(--pk-muted); }
-#plana, #plana-work, #features { scroll-margin-top: 64px; }
+#plana, #plana-work, #features, #safety, #calibration, #daily { scroll-margin-top: 64px; }
 
 @media (max-width: 900px) {
   .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; }
-  .landing-safety-body { grid-template-columns: 1fr; gap: 24px; }
+  .landing-safety-body, .landing-feature-body { grid-template-columns: 1fr; gap: 24px; }
   .landing-flow { grid-template-columns: 1fr; }
   .landing-flow li { flex-direction: row; align-items: baseline; gap: 12px; padding: 10px 16px; border-left: none; border-top: 1px solid var(--pk-line); }
   .landing-flow li:first-child { border-top: none; }
@@ -405,7 +488,6 @@ const story = [
   .landing-hero-inner { padding: 40px 16px; }
   .landing-section { padding: 40px 16px; }
   .landing-plana-inner { grid-template-columns: 1fr; gap: 16px; padding: 32px 16px 0; }
-  .landing-character { order: 2; }
   .landing-character :deep(.pk-plana-full) { width: 200px; margin-inline: auto; }
   .landing-plana-inner > div { padding-bottom: 0; }
   .landing-foundation-grid, .landing-story, .pk-plana-card-grid { grid-template-columns: 1fr; gap: 24px; }

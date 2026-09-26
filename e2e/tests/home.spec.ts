@@ -16,12 +16,18 @@ test('保全業務の流れ・プラナの紹介・1件のトラブルの流れ�
   await expect(page.locator('.landing-flow strong')).toHaveText(['設備', '点検', 'トラブル', '修理', '資材', '在庫', '発注'])
   await expect(page.locator('.landing-foundation-grid h3')).toHaveText(['設備と記録をつなぐ', '保全の仕事を進める', '資材まで見渡す'])
 
-  const order = await page.evaluate(() => ['#features', '#safety', '#plana', '#plana-work', '#try-guide', '#permissions']
+  const order = await page.evaluate(() => ['#features', '#safety', '#calibration', '#daily', '#plana', '#plana-work', '#try-guide', '#permissions']
     .map((selector) => document.querySelector(selector)!.getBoundingClientRect().top))
   expect([...order].sort((a, b) => a - b)).toEqual(order)
 
   await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
   await expect(page.locator('#plana')).toContainText('運転を続けてよいかの判断は出しません')
+
+  // 本体の機能（ルールで動く）とプラナ（記録を読んで働くAI）の境目を、章の見出し・色の帯・対比の1文で示す
+  await expect(page.locator('#features .landing-eyebrow')).toHaveText('PlantKeeperの機能')
+  await expect(page.locator('#plana')).toContainText('ここまでの機能は、決まったルールで判定し、記録します。')
+  await expect(page.locator('.landing-plana-zone').locator('#plana, #plana-work')).toHaveCount(2)
+  await expect(page.locator('#calibration')).toContainText('AIは使いません')
 })
 
 test('インターロックのバイパスの節で、申請から復帰の確認までの流れと、戻し忘れを防ぐ仕組みを実際の画面つきで示す', async ({ page }) => {
@@ -35,6 +41,31 @@ test('インターロックのバイパスの節で、申請から復帰の確�
   const img = safety.getByRole('img')
   await expect(img).toBeVisible()
   expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+})
+
+test('校正の節で、5点校正 → 校正の傾向 → 周期の見直しを、FT-301の実際の画面つきで示す', async ({ page }) => {
+  await page.goto('/')
+  const section = page.locator('#calibration')
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText('校正の記録から、点検の周期を見直す。')
+  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['5点校正', '校正の傾向', '周期の見直しの候補'])
+  await expect(section).toContainText('法令で周期が決まる計器は、延長の候補にしません')
+  const img = section.getByRole('img')
+  await expect(img).toBeVisible()
+  expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+})
+
+test('日々の確認の節で、朝会・夕会ボードと機器の自己診断（NE 107の4つの状態）を実際の画面つきで示す', async ({ page }) => {
+  await page.goto('/')
+  const section = page.locator('#daily')
+  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['朝会・夕会ボード', '機器の自己診断（NAMUR NE 107）'])
+  await expect(section).toContainText('積み残し')
+  await expect(section.getByTestId('diagnostic-chip')).toHaveText(['F 故障', 'C 機能点検中', 'S 仕様外', 'M 保守要求'])
+  const imgs = section.getByRole('img')
+  await expect(imgs).toHaveCount(2)
+  for (const img of await imgs.all()) {
+    await img.scrollIntoViewIfNeeded()
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+  }
 })
 
 test('ヒーローのプラナの入口から、プラナの紹介へ移る', async ({ page }) => {
