@@ -25,6 +25,8 @@ import {
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { todayForInput } from '@/utils/datetime'
+import type { InterlockBypass } from '@/types/models'
+import { bypassColor, bypassLabel, formatDateTime, restoreDueLabel } from '@/utils/interlock'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,6 +43,10 @@ const canComplete = computed(() => {
   const m = maintenance.value
   return !!m?.accepted_on && !!m?.accepted_by && !!m?.acceptance_result && m.acceptance_result !== 'rework_required'
 })
+// 対象設備のインターロックの、終わっていないバイパス。バイパス中・復帰確認待ちが残っていると、運転を再開できないため検収・完了へ進めない
+const bypasses = computed<InterlockBypass[]>(() => maintenance.value?.interlock_bypasses ?? [])
+const blockingBypasses = computed(() => bypasses.value.filter((b) => b.status === 'bypassed' || b.status === 'restored'))
+const blockedByBypass = (status: string) => ['acceptance', 'completed'].includes(status) && blockingBypasses.value.length > 0
 const showAcceptance = computed(() => ['acceptance', 'completed'].includes(maintenance.value?.status) || !!maintenance.value?.acceptance_result)
 
 // --- 作業（部署ごと） ---
@@ -270,11 +276,14 @@ onMounted(fetchMaintenance)
           size="small"
           :color="status === 'completed' ? 'success' : 'primary'"
           :variant="MAINTENANCE_STATUS_FLOW.indexOf(status as any) < MAINTENANCE_STATUS_FLOW.indexOf(maintenance.status) ? 'outlined' : 'flat'"
-          :disabled="status === 'completed' && !canComplete"
+          :disabled="(status === 'completed' && !canComplete) || blockedByBypass(status)"
           @click="changeStatus(status)"
         >
           {{ transitionLabel(maintenance.status, status) }}
         </v-btn>
+        <span v-if="nextStatuses.some(blockedByBypass)" class="text-caption text-error" data-testid="bypass-blocking-note">
+          対象設備のインターロックに、戻っていないバイパスが{{ blockingBypasses.length }}件あります（復帰と、別の人の確認を済ませてから進んでください）
+        </span>
         <span v-if="nextStatuses.includes('completed') && !canComplete" class="text-caption text-medium-emphasis">
           完了にするには、検収を記録してください（結果が「手直しあり」のときは、実施中に戻して手直しします）
         </span>
@@ -324,6 +333,29 @@ onMounted(fetchMaintenance)
       </v-card>
 
       <!-- 作業（部署ごと） -->
+      <v-card v-if="bypasses.length" class="mb-4" data-testid="maintenance-bypasses">
+        <v-card-title class="d-flex align-center text-subtitle-1">
+          <v-icon class="mr-2" :color="blockingBypasses.length ? 'error' : undefined">mdi-shield-alert-outline</v-icon>
+          対象設備のインターロックのバイパス
+        </v-card-title>
+        <v-card-subtitle>運転を再開する前に、バイパス中・復帰確認待ちのものをすべて戻し、別の人が確認します（残っていると検収へ進めません）</v-card-subtitle>
+        <v-card-text>
+          <v-table density="compact">
+            <tbody>
+              <tr v-for="b in bypasses" :key="b.id" style="cursor: pointer" @click="router.push(`/interlocks/${b.interlock.id}`)">
+                <td class="text-no-wrap"><v-chip :color="bypassColor(b)" size="small" label variant="flat">{{ bypassLabel(b) }}</v-chip></td>
+                <td class="text-no-wrap">{{ b.interlock.tag_number }} {{ b.interlock.name }}</td>
+                <td class="text-no-wrap">{{ b.interlock.equipment.name }}</td>
+                <td>{{ b.reason }}</td>
+                <td class="text-no-wrap text-caption">
+                  予定の復帰 {{ formatDateTime(b.planned_restore_at) }}<template v-if="b.status === 'bypassed'">（{{ restoreDueLabel(b) }}）</template>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+      </v-card>
+
       <v-card class="mb-4" data-testid="tasks-card">
         <v-card-title class="d-flex align-center text-subtitle-1">
           作業

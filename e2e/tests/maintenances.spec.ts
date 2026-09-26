@@ -6,7 +6,8 @@ const WORKER = { email: 'honda@example.com', password: 'password' }
 // 定期整備は「親」: 関連設備をまとめて対象にし、計画中 → 準備中 → 実施中 → 検収 → 完了 と進める。検収を記録して完了にする。
 // このテストは定期整備を1件作る（名前が「E2E 」で始まる。繰り返し実行すると一覧に溜まる）
 test('複数の設備を対象にした定期整備を作り、検収を記録して完了まで進められる', async ({ page }) => {
-  const title = `E2E ${Date.now()} A号ボイラー整備`
+  // インターロックのない設備で行う（ボイラー設備はデモのバイパスが残っていて、検収へ進めないため）
+  const title = `E2E ${Date.now()} 改質・減圧蒸留整備`
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '定期整備', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '定期整備' })).toBeVisible()
@@ -17,8 +18,8 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
     await dialog.getByLabel('名称 *', { exact: false }).fill(title)
     await dialog.getByLabel('予定 開始日 *').fill(todayForInput())
     await dialog.locator('.v-field', { has: page.getByLabel('対象設備 *') }).click()
-    await page.getByRole('option', { name: 'ボイラー設備' }).click()
-    await page.getByRole('option', { name: '常圧蒸留装置' }).click()
+    await page.getByRole('option', { name: '接触改質装置' }).click()
+    await page.getByRole('option', { name: '減圧蒸留装置' }).click()
     await page.keyboard.press('Escape') // 選択肢のメニューを閉じる（ダイアログは閉じない）
     await dialog.getByRole('button', { name: '作成' }).click()
     await expect(dialog).toBeHidden()
@@ -26,8 +27,8 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
 
   await test.step('一覧に、対象設備が複数並ぶ', async () => {
     const row = page.getByRole('row', { name: new RegExp(title) })
-    await expect(row).toContainText('ボイラー設備')
-    await expect(row).toContainText('常圧蒸留装置')
+    await expect(row).toContainText('接触改質装置')
+    await expect(row).toContainText('減圧蒸留装置')
     await expect(row).toContainText('計画中')
     await row.click()
   })

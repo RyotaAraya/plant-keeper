@@ -216,4 +216,41 @@ class ScheduledMaintenancesTest < ActionDispatch::IntegrationTest
     assert_not @boiler.destroy
     assert_equal 2, maintenance.reload.equipments.count
   end
+  test "対象設備のインターロックにバイパス中・復帰確認待ちが残っていると、検収・完了へ進めない（承認だけのものは妨げない）" do
+    trip = Interlock.create!(equipment: @generator, tag_number: "I-751", name: "タービン入口蒸気圧力 低低")
+    level = Interlock.create!(equipment: @boiler, tag_number: "I-701", name: "ドラム液位 低低")
+    elsewhere = Interlock.create!(equipment: @other_site_equipment, tag_number: "I-999", name: "対象外の設備")
+    bypass = InterlockBypass.create!(interlock: trip, requested_by: @member, requested_at: 2.hours.ago, reason: "校正", compensatory_measure: "監視",
+                                     planned_restore_at: 2.hours.from_now, status: "bypassed", bypassed_by: @worker, bypassed_at: 1.hour.ago)
+    InterlockBypass.create!(interlock: level, requested_by: @member, requested_at: 1.hour.ago, reason: "調査", compensatory_measure: "監視",
+                            planned_restore_at: 3.hours.from_now, status: "approved", approved_by: @manager, approved_at: 30.minutes.ago)
+    InterlockBypass.create!(interlock: elsewhere, requested_by: @member, requested_at: 1.hour.ago, reason: "調査", compensatory_measure: "監視",
+                            planned_restore_at: 3.hours.from_now, status: "bypassed", bypassed_by: @worker, bypassed_at: 30.minutes.ago)
+    maintenance = create_maintenance
+    maintenance.update!(status: "preparing")
+    maintenance.update!(status: "in_progress")
+
+    get "/api/v1/scheduled_maintenances/#{maintenance.id}", headers: auth_headers_for(@worker)
+    assert_equal [ [ "I-701", "approved" ], [ "I-751", "bypassed" ] ],
+                 json["data"]["interlock_bypasses"].map { |b| [ b["interlock"]["tag_number"], b["status"] ] }.sort
+
+    move_to(maintenance, "acceptance")
+    assert_response :unprocessable_entity
+    assert_includes json["errors"].join, "I-751（バイパス中）"
+    assert_not_includes json["errors"].join, "I-701"
+
+    bypass.update!(status: "restored", restored_by: @worker, restored_at: Time.current)
+    move_to(maintenance, "acceptance")
+    assert_includes json["errors"].join, "I-751（復帰確認待ち）"
+
+    bypass.update!(status: "completed", confirmed_by: @member, confirmed_at: Time.current)
+    move_to(maintenance, "acceptance")
+    assert_response :ok
+
+    # 検収中に新しくバイパスしたものも、完了の前に戻す
+    InterlockBypass.where(interlock: level).first.update!(status: "bypassed", bypassed_by: @worker, bypassed_at: Time.current)
+    move_to(maintenance, "completed", accepted_on: @today.to_s, acceptance_result: "passed")
+    assert_response :unprocessable_entity
+    assert_includes json["errors"].join, "I-701（バイパス中）"
+  end
 end
