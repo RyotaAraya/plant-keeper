@@ -133,7 +133,6 @@ const story = [
         </div>
         <figure class="landing-hero-shot">
           <a :href="troubleScreenshot" target="_blank" rel="noopener" aria-label="トラブル詳細の画面を拡大する（新しいタブ）"><img :src="troubleScreenshot" width="1144" height="584" alt="トラブル詳細画面。対象設備の常圧蒸留装置、計器PV-201、発生元点検と最近の点検履歴を同じ画面で確認できる。" /></a>
-          <figcaption>トラブル詳細。設備・計器・元の点検・過去の点検履歴を1画面で確認できます。このページの画面は、すべてデモデータを表示した実物です。</figcaption>
         </figure>
       </div>
     </section>
@@ -157,7 +156,6 @@ const story = [
       <div class="landing-safety-body">
         <figure class="landing-hero-shot">
           <a :href="bypassScreenshot" target="_blank" rel="noopener" aria-label="インターロックの詳細の画面を拡大する（新しいタブ）"><img :src="bypassScreenshot" width="1144" height="423" alt="インターロックI-701の詳細画面。予定の復帰を過ぎたバイパスが赤く表示され、理由・代替措置と、申請・承認・バイパス実施の担当者と日時が並ぶ。" /></a>
-          <figcaption>LT-701の調査でバイパスしたまま、予定の復帰を過ぎたI-701。</figcaption>
         </figure>
         <div>
           <ol class="landing-bypass-steps" aria-label="バイパスの流れ">
@@ -193,7 +191,6 @@ const story = [
         <article>
           <figure class="landing-hero-shot">
             <a :href="meetingBoardScreenshot" target="_blank" rel="noopener" aria-label="朝会・夕会ボードの画面を拡大する（新しいタブ）"><img :src="meetingBoardScreenshot" width="1120" height="1022" alt="朝会・夕会ボードの朝会の画面。川崎製油所 計装保全課の、インターロックのバイパス3件、期限超過・今日・明日が期限の点検計画、実施中の定期整備の作業と進み具合が1枚に並ぶ。" /></a>
-            <figcaption>川崎製油所 計装保全課の朝会。</figcaption>
           </figure>
           <h3 class="landing-feature-title">朝会・夕会ボード</h3>
           <p class="landing-body-text">点検計画、実施中の定期整備の作業、トラブル、インターロックのバイパスを、部署ごとに1枚で出します。夕会では、今日の実績と、下書きのまま残った点検（積み残し）を分けて出します。A4でそのまま印刷できます。</p>
@@ -201,7 +198,6 @@ const story = [
         <article>
           <figure class="landing-hero-shot">
             <a :href="diagnosticsScreenshot" target="_blank" rel="noopener" aria-label="機器の診断で絞り込んだ計器一覧の画面を拡大する（新しいタブ）"><img :src="diagnosticsScreenshot" width="1120" height="427" alt="計器の一覧を機器の診断で絞り込んだ画面。LT-701が仕様外、PT-502が保守要求、TV-602が故障として並ぶ。" /></a>
-            <figcaption>診断で絞り込んだ計器の一覧。</figcaption>
           </figure>
           <h3 class="landing-feature-title">機器の自己診断（NAMUR NE 107）</h3>
           <p class="landing-body-text">スマート機器の自己診断を、機器管理システム（AMS Device Manager など）から受け取り、計器の一覧と詳細に出します。</p>
@@ -305,7 +301,7 @@ const story = [
       <div><p>石油プラントの計装保全を10年担当していました。紙やExcelに散らばっていた保全の情報を、1か所で扱えるように作ったのがPlantKeeperです。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
     </section>
     <section class="landing-section landing-final" aria-labelledby="final-title">
-      <div><h2 id="final-title">デモを試す</h2><p>ログイン画面でデモアカウントを選ぶと、すぐに使えます。</p></div>
+      <div><h2 id="final-title">デモを試す</h2></div>
       <v-btn to="/plana" color="primary" size="large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで始める' }}</v-btn>
     </section>
     <footer class="landing-footer"><span>PlantKeeper</span><span>Developed by Ryota Araya</span></footer>
@@ -432,7 +428,6 @@ const story = [
 .landing-permissions[open] { padding-bottom: 24px; }
 .landing-final { border-top: 1px solid var(--pk-line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
 .landing-final h2 { font-size: 1.5rem; }
-.landing-final p { margin-top: 12px; color: var(--pk-muted); font-size: .875rem; }
 .landing-story { display: grid; grid-template-columns: 1fr 1.5fr; gap: 48px; border-top: 1px solid var(--pk-line); }
 .landing-story p { color: var(--pk-muted); line-height: 2; margin-bottom: 16px; font-size: .9375rem; }
 .landing-story a { color: var(--pk-steel); font-size: .875rem; }
