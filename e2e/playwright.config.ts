@@ -20,9 +20,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // ローカルのdevサーバー（vite dev）は再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがあるため1回リトライする
   retries: 1,
-  // CI（GitHub Actions の4コア。Postgres・API・vite preview も同じマシン）は2並列。1並列では全件で10分かかっていた。
-  // テストはそれぞれ自分用のデータを作るか、シードを読むだけなので、並列でも互いに壊さない（ローカルは既定の並列数で流している）
-  workers: process.env.CI ? 2 : undefined,
+  // CIは1並列。ランナー（非公開リポジトリは2コア）の中で並列にしても、ブラウザ・API・DBがCPUを取り合って短くならなかった
+  // （2並列 9.7分・7.9分、APIを2プロセスにしても10.3分）。CIでは、ジョブを分けて（--shard）別のマシンで流す（ci.yml）
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL,
