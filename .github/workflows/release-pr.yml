@@ -1,0 +1,58 @@
+name: Release PR
+
+# develop に push（PR のマージ）されたら、develop → main のリリース用 PR を作る。
+# すでに開いている PR があれば、本文（含まれる変更の一覧）だけ更新する。マージは手動。
+# GITHUB_TOKEN で作った PR では pull_request の CI は動かないが、同じコミットの develop への push の CI の結果が PR に出る。
+# リポジトリの設定「Allow GitHub Actions to create and approve pull requests」が必要。
+on:
+  push:
+    branches: [ develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: release-pr
+  cancel-in-progress: true
+
+jobs:
+  release_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Create or update the release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(git rev-list --count origin/main..origin/develop)" -eq 0 ]; then
+            echo "main との差分がないため、PR は作らない"
+            exit 0
+          fi
+
+          # develop に入った変更（マージした PR は番号だけにすると、GitHub がタイトル付きで表示する）
+          {
+            echo "develop の変更を main（本番）へリリースします。stg で動作確認してからマージしてください。"
+            echo
+            echo "## 含まれる変更"
+            git log --first-parent --format='%s' origin/main..origin/develop | while IFS= read -r subject; do
+              if [[ "$subject" =~ ^Merge\ pull\ request\ (#[0-9]+) ]]; then
+                echo "- ${BASH_REMATCH[1]}"
+              else
+                echo "- $subject"
+              fi
+            done
+            echo
+            echo "_この PR は develop への push のたびに自動で更新されます（release-pr.yml）。_"
+          } > body.md
+
+          number=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --body-file body.md
+            echo "PR #$number を更新した"
+          else
+            gh pr create --base main --head develop --title "Release: develop → main" --body-file body.md
+          fi
