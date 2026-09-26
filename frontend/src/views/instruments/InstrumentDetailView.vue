@@ -9,6 +9,9 @@ import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import CalibrationTrendChart from '@/components/CalibrationTrendChart.vue'
 import InterlockChips from '@/components/InterlockChips.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import DiagnosticChip from '@/components/DiagnosticChip.vue'
+import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
+import { formatDateTime } from '@/utils/interlock'
 import {
   CHARACTERISTIC_LABEL,
   TOLERANCE_BASIS_LABEL,
@@ -17,7 +20,7 @@ import {
   emptyCalibrationFields,
   type CalibrationFields,
 } from '@/utils/calibration'
-import type { CalibrationHistoryRow } from '@/types/models'
+import type { CalibrationHistoryRow, InstrumentDiagnostic } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -94,6 +97,8 @@ async function fetchInstrument() {
 
 // 5点校正の記録（古い順）。表は新しい順に出す
 const calibrationHistory = computed<CalibrationHistoryRow[]>(() => instrument.value?.calibration_history ?? [])
+// 機器の自己診断（NAMUR NE 107）の状態が変わった記録（新しい順）
+const diagnostics = computed<InstrumentDiagnostic[]>(() => instrument.value?.diagnostics ?? [])
 const calibrationRowsNewestFirst = computed(() => [...calibrationHistory.value].reverse())
 const STAGE_RESULT_LABEL: Record<string, string> = { pass: '合格', fail: '不合格', incomplete: '未記入あり', empty: '—' }
 const STAGE_RESULT_COLOR: Record<string, string> = { pass: 'success', fail: 'error', incomplete: 'warning', empty: 'grey' }
@@ -141,6 +146,16 @@ onMounted(fetchInstrument)
           </v-row>
           <p v-if="instrument.notes" class="mt-3"><strong>備考:</strong> {{ instrument.notes }}</p>
           <InterlockChips :instrument-id="instrument.id" class="mt-3" />
+          <div class="mt-3 d-flex flex-wrap align-center ga-2" data-testid="diagnostic-current">
+            <strong>機器の診断（NAMUR NE 107）:</strong>
+            <DiagnosticChip :status="instrument.diagnostic_status" />
+            <span v-if="instrument.diagnostic_status" class="text-body-2 text-medium-emphasis">
+              {{ formatDateTime(instrument.diagnostic_since) }} から ／ 最後に受け取った日時 {{ formatDateTime(instrument.diagnostic_received_at) }}
+            </span>
+            <span v-if="instrument.diagnostic_status && instrument.diagnostic_status !== 'good'" class="text-body-2">
+              — {{ DIAGNOSTIC_STATUS[instrument.diagnostic_status as keyof typeof DIAGNOSTIC_STATUS].hint }}
+            </span>
+          </div>
           <div v-if="instrument.troubleshooting_checks?.length" class="mt-3" data-testid="troubleshooting-checks">
             <strong>一次点検の定型項目（参考。手順書・保全基準の代わりではありません）:</strong>
             <ul class="ml-5">
@@ -166,6 +181,7 @@ onMounted(fetchInstrument)
         <v-tab value="troubles">トラブル履歴</v-tab>
         <v-tab value="inspections">点検履歴</v-tab>
         <v-tab v-if="instrument.calibratable || calibrationHistory.length" value="calibration">校正の傾向</v-tab>
+        <v-tab v-if="diagnostics.length" value="diagnostics">機器の診断</v-tab>
         <v-tab value="history">変更履歴</v-tab>
       </v-tabs>
 
@@ -212,6 +228,24 @@ onMounted(fetchInstrument)
               </tbody>
             </v-table>
           </template>
+        </v-window-item>
+
+        <v-window-item value="diagnostics" data-testid="diagnostic-history">
+          <p class="text-body-2 mb-2">機器管理システムから受け取った、機器の自己診断の状態が変わった記録です（新しい順に20件）。同じ状態を受け取り続けても、記録は増えません。</p>
+          <v-table density="compact">
+            <thead>
+              <tr class="text-no-wrap"><th>発生日時</th><th>状態</th><th>コード</th><th>内容</th><th>送ってきた連携</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="d in diagnostics" :key="d.id">
+                <td class="text-no-wrap">{{ formatDateTime(d.occurred_at) }}</td>
+                <td><DiagnosticChip :status="d.status" size="x-small" /></td>
+                <td class="text-no-wrap">{{ d.code ?? '—' }}</td>
+                <td>{{ d.message ?? '—' }}</td>
+                <td class="text-no-wrap">{{ d.source ?? '—' }}</td>
+              </tr>
+            </tbody>
+          </v-table>
         </v-window-item>
 
         <v-window-item value="history">

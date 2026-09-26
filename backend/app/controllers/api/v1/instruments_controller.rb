@@ -31,6 +31,14 @@ module Api
           instruments = instruments.where(line_class_id: params[:line_class_id])
         end
 
+        # 機器の自己診断（NAMUR NE 107）の状態（複数可）。none は未受信
+        if (statuses = value_list_param(:diagnostic_statuses, :diagnostic_status))
+          known = statuses & InstrumentDiagnostic::STATUSES
+          condition = Instrument.where(diagnostic_status: known)
+          condition = condition.or(Instrument.where(diagnostic_status: nil)) if statuses.include?("none")
+          instruments = instruments.merge(condition)
+        end
+
         if params[:q].present?
           q = "%#{params[:q]}%"
           instruments = instruments.where("tag_number ILIKE ? OR instrument_type ILIKE ? OR location ILIKE ?", q, q, q)
@@ -65,7 +73,10 @@ module Api
               service: {},
               line_class: {}
             }
-          ).merge("calibration_history" => CalibrationTrend.new(@instrument).rows)
+          ).merge("calibration_history" => CalibrationTrend.new(@instrument).rows,
+                  # 機器の自己診断の状態が変わった記録（新しい順に20件）と、送ってきた連携の名前
+                  "diagnostics" => @instrument.instrument_diagnostics.includes(:integration_token).order(occurred_at: :desc, id: :desc).limit(20)
+                                              .map { |d| d.as_json(only: [ :id, :status, :code, :message, :occurred_at, :created_at ]).merge("source" => d.integration_token&.name) })
         }
       end
 

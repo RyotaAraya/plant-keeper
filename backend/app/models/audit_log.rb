@@ -16,7 +16,7 @@ class AuditLog < ApplicationRecord
     when Site then resource.id
     when User, Equipment, Warehouse, Department then resource.site_id
     when DepartmentHistory, ChecklistTemplate then resource.department&.site_id
-    when ReferenceStandard then resource.site_id
+    when ReferenceStandard, IntegrationToken then resource.site_id
     when ReferenceStandardCalibration then resource.reference_standard&.site_id
     when InspectionPlan then resource.equipment&.site_id || resource.reference_standard&.site_id
     when ScheduledMaintenance, MaintenanceSeries then resource.site_id
