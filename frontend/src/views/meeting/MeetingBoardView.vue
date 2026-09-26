@@ -251,7 +251,8 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
                   <strong>{{ inspection.checklist_template?.name ?? '点検' }}</strong>
                   <span>{{ inspectionTarget(inspection) }} ／ {{ inspection.user.name }} ／ {{ inspection.department.name }}</span>
                 </div>
-                <v-btn size="small" variant="outlined" :to="`/inspections/${inspection.id}/edit`">開く</v-btn>
+                <!-- 編集できるのは作成者本人と管理者・マネージャーだけのため、誰でも見られる詳細へ（編集・提出のボタンは詳細が権限で出し分ける） -->
+                <v-btn size="small" variant="outlined" :to="`/inspections/${inspection.id}`">開く</v-btn>
               </li>
             </ul>
           </div>

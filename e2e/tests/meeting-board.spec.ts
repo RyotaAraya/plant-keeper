@@ -181,6 +181,11 @@ test('夕会に切り替えると、今日の下書きの点検は積み残し�
     await expect(page.getByTestId('board-day')).toContainText('夕会')
     await expect(page.getByTestId(`board-draft-inspection-${inspectionId}`)).toBeVisible()
     await expect(page.getByTestId(`board-result-inspection-${inspectionId}`)).toHaveCount(0)
+    // 「開く」は詳細へ（編集画面は作成者本人と管理者・マネージャーのものなので、ボードからは開かない）
+    await page.getByTestId(`board-draft-inspection-${inspectionId}`).getByRole('link', { name: '開く' }).click()
+    await expect(page).toHaveURL(new RegExp(`/inspections/${inspectionId}$`))
+    await page.goBack()
+    await expect(page).toHaveURL(/mode=evening/)
 
     // 提出し、対応を記録すると、再読み込み（夕会のまま）で実績に移る
     expect((await page.request.patch(`${api}/inspections/${inspectionId}`, { headers, data: { inspection: { status: 'submitted' } } })).ok()).toBeTruthy()
