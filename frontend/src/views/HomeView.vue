@@ -210,8 +210,8 @@ const story = [
           <div>
             <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
             <h2 id="plana-title">プラナ</h2>
-            <p class="landing-plana-tagline">報告を書く手間と、過去の事例を探す手間を減らします。</p>
-            <p class="landing-plana-lead">ここまでの機能は、決まったルールで判定し、記録します。プラナはAIで、その記録を読んで、不具合報告や対応記録の文章を整え、似た過去のトラブルを探します。</p>
+            <p class="landing-plana-tagline">メモを報告にまとめ、似た過去のトラブルを探すAI</p>
+            <p class="landing-plana-lead">ここまでの機能はルールどおりに動きます。プラナだけがAIで、たまった記録を読んで手伝います。</p>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
