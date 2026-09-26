@@ -21,7 +21,7 @@ export function apiBaseUrl(): string {
 // ダッシュボードへ移って取得を始め、消した直後にトークンなしの401になり、未捕捉の例外として検出される）
 export async function resetSession(page: Page) {
   await page.context().clearCookies()
-  await page.goto('/vite.svg')
+  await page.goto('/favicon.svg')
   await page.evaluate(() => localStorage.clear())
 }
 

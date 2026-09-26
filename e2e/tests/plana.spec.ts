@@ -47,7 +47,7 @@ test('外部URLや存在しない画面を認証後の復帰先に使わない',
 })
 
 test('期限切れのトークンでログイン画面を開いても復帰先を保ってログインできる', async ({ page }) => {
-  await page.goto('/vite.svg')
+  await page.goto('/favicon.svg')
   await page.evaluate(() => localStorage.setItem('jwt', 'expired.token.value'))
   await page.goto('/login?redirect=%2Fplana%3Ftask%3Ddefect-draft')
   await expect(page.getByLabel('メールアドレス')).toBeVisible()
