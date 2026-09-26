@@ -14,20 +14,23 @@ test('ヒーローで、PlantKeeperが何を一元管理するシステムかを
 test('保全業務の流れ・プラナの紹介・1件のトラブルの流れの順に並ぶ', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.landing-flow strong')).toHaveText(['設備', '点検', 'トラブル', '修理', '資材', '在庫', '発注'])
-  await expect(page.locator('.landing-foundation-grid h3')).toHaveText(['設備と記録をつなぐ', '保全の仕事を進める', '資材まで見渡す'])
 
-  const order = await page.evaluate(() => ['#features', '#safety', '#plana', '#plana-work', '#try-guide', '#permissions']
+  const order = await page.evaluate(() => ['#features', '#safety', '#calibration', '#daily', '#plana', '#plana-work', '#try-guide', '#permissions']
     .map((selector) => document.querySelector(selector)!.getBoundingClientRect().top))
   expect([...order].sort((a, b) => a - b)).toEqual(order)
 
   await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
-  await expect(page.locator('#plana')).toContainText('運転を続けてよいかの判断は出しません')
+
+  // 本体の機能とプラナ（AI）の境目を、章の見出しと色の帯で示す
+  await expect(page.locator('#features .landing-eyebrow')).toHaveText('PlantKeeperの機能')
+  await expect(page.locator('.landing-plana-zone').locator('#plana, #plana-work')).toHaveCount(2)
+  await expect(page.locator('#calibration')).toContainText('AIは使いません')
 })
 
 test('インターロックのバイパスの節で、申請から復帰の確認までの流れと、戻し忘れを防ぐ仕組みを実際の画面つきで示す', async ({ page }) => {
   await page.goto('/')
   const safety = page.locator('#safety')
-  await expect(safety.getByRole('heading', { level: 2 })).toHaveText('インターロックのバイパスを、戻し忘れない。')
+  await expect(safety.getByRole('heading', { level: 2 })).toHaveText('インターロックのバイパス管理')
   await expect(safety.locator('.landing-bypass-steps strong')).toHaveText(['申請', '承認', 'バイパス', '復帰', '復帰の確認'])
   await expect(safety).toContainText('代替措置')
   await expect(safety).toContainText('復帰期限超過')
@@ -35,6 +38,31 @@ test('インターロックのバイパスの節で、申請から復帰の確�
   const img = safety.getByRole('img')
   await expect(img).toBeVisible()
   expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+})
+
+test('校正の節で、5点校正 → 校正の傾向 → 周期の見直しを、FT-301の実際の画面つきで示す', async ({ page }) => {
+  await page.goto('/')
+  const section = page.locator('#calibration')
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText('校正の記録と点検周期の見直し')
+  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['5点校正', '校正の傾向', '周期の見直しの候補'])
+  await expect(section).toContainText('法令で周期が決まる計器は、延長の候補にしません')
+  const img = section.getByRole('img')
+  await expect(img).toBeVisible()
+  expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+})
+
+test('日々の確認の節で、朝会・夕会ボードと機器の自己診断（NE 107の4つの状態）を実際の画面つきで示す', async ({ page }) => {
+  await page.goto('/')
+  const section = page.locator('#daily')
+  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['朝会・夕会ボード', '機器の自己診断（NAMUR NE 107）'])
+  await expect(section).toContainText('積み残し')
+  await expect(section.getByTestId('diagnostic-chip')).toHaveText(['F 故障', 'C 機能点検中', 'S 仕様外', 'M 保守要求'])
+  const imgs = section.getByRole('img')
+  await expect(imgs).toHaveCount(2)
+  for (const img of await imgs.all()) {
+    await img.scrollIntoViewIfNeeded()
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
+  }
 })
 
 test('ヒーローのプラナの入口から、プラナの紹介へ移る', async ({ page }) => {
@@ -112,9 +140,9 @@ test('トップページは、スマホの幅でも横にはみ出さない', as
 
 test('体験条件を案内し、詳細権限は必要なときに開ける', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('#try-guide')).toContainText('上の表示例は自動入力されません')
+  await expect(page.locator('#try-guide')).toContainText('上の例は自動では入りません')
   await expect(page.locator('#try-guide')).toContainText('1日の利用上限')
-  await expect(page.getByRole('heading', { name: '自社も協力会社も、同じ記録で。' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '他の拠点の社員も、協力会社の人も使えます' })).toBeVisible()
   await expect(page.locator('#permissions')).toContainText('技能員')
   const matrix = page.locator('#permissions table')
   await expect(matrix).toBeHidden()
