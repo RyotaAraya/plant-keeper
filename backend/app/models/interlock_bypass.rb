@@ -7,6 +7,8 @@ class InterlockBypass < ApplicationRecord
   STATUSES = %w[requested approved bypassed restored completed rejected cancelled].freeze
   # 終わっていない状態（1つのインターロックに1件だけ）
   OPEN_STATUSES = %w[requested approved bypassed restored].freeze
+  # 運転を再開する前（定期整備の検収・完了）に残っていてはいけない状態。バイパス中と、復帰したが確認していないもの
+  RESTART_BLOCKING_STATUSES = %w[bypassed restored].freeze
   STATUS_LABELS = {
     "requested" => "申請中", "approved" => "承認済", "bypassed" => "バイパス中", "restored" => "復帰確認待ち",
     "completed" => "完了", "rejected" => "却下", "cancelled" => "取消"
@@ -33,6 +35,8 @@ class InterlockBypass < ApplicationRecord
 
   scope :open, -> { where(status: OPEN_STATUSES) }
   scope :overdue, ->(now = Time.current) { status_bypassed.where(planned_restore_at: ...now) }
+  scope :blocking_restart, -> { where(status: RESTART_BLOCKING_STATUSES) }
+  scope :for_equipments, ->(equipment_ids) { joins(:interlock).where(interlocks: { equipment_id: equipment_ids }) }
   scope :for_sites, ->(site_ids) { joins(interlock: :equipment).where(equipments: { site_id: site_ids }) }
 
   class TransitionError < StandardError; end

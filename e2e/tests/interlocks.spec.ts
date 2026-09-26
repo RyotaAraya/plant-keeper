@@ -1,4 +1,5 @@
 import { test, expect, login, resetSession, apiBaseUrl, ACCOUNTS } from './support'
+import { todayForInput } from '../../frontend/src/utils/datetime'
 import type { APIRequestContext, Page } from '@playwright/test'
 
 const MANAGER = { email: 'suzuki@example.com', password: 'password' }
@@ -101,4 +102,34 @@ test('バイパスは申請 → 承認 → 実施 → 復帰 → 別の人の確
   await expect(current).toContainText('終わっていないバイパスはありません')
   // 履歴は新しい順（実行のたびに完了の記録が1件ずつ増える）
   await expect(page.getByRole('row', { name: /E2E TV-751 の年次校正のため/ }).first()).toContainText('完了')
+})
+
+// 定期整備のあとは運転を再開するため、対象設備のインターロックにバイパス中・復帰確認待ちが残っていると検収へ進めない。
+// シードの I-701（ボイラー設備。復帰期限超過のままバイパス中）を使う。このテストは定期整備を1件作る（名前が「E2E 」で始まる）
+test('対象設備にバイパスが残っている定期整備は、検収へ進めず、残っているバイパスが一覧で分かる', async ({ page }) => {
+  const admin = await apiToken(page.request, ACCOUNTS.admin)
+  const headers = { Authorization: admin }
+  const me = (await (await page.request.get(`${apiBaseUrl()}/current_user`, { headers })).json()).user
+  const equipments = (await (await page.request.get(`${apiBaseUrl()}/equipments`, { headers, params: { per_page: 1000 } })).json()).data
+  const boiler = equipments.find((e: any) => e.name === 'ボイラー設備' && e.site_id === me.site_id)
+  const created = await page.request.post(`${apiBaseUrl()}/scheduled_maintenances`, {
+    headers,
+    data: { scheduled_maintenance: { title: `E2E ${Date.now()} ボイラー整備（バイパス）`, site_id: me.site_id, planned_start_on: todayForInput(), equipment_ids: [boiler.id] } },
+  })
+  expect(created.ok()).toBeTruthy()
+  const maintenance = (await created.json()).data
+  for (const status of ['preparing', 'in_progress']) {
+    const res = await page.request.patch(`${apiBaseUrl()}/scheduled_maintenances/${maintenance.id}`, { headers, data: { scheduled_maintenance: { status } } })
+    expect(res.ok()).toBeTruthy()
+  }
+
+  await login(page, ACCOUNTS.admin)
+  await page.goto(`/maintenances/${maintenance.id}`)
+  const card = page.getByTestId('maintenance-bypasses')
+  await expect(card.getByRole('row', { name: /I-701 ボイラードラム液位 低低/ })).toContainText('復帰期限超過')
+  await expect(page.getByRole('button', { name: '検収へ進む' })).toBeDisabled()
+  await expect(page.getByTestId('bypass-blocking-note')).toContainText('戻っていないバイパス')
+
+  await card.getByRole('row', { name: /I-701/ }).click()
+  await expect(page).toHaveURL(/\/interlocks\/\d+$/)
 })

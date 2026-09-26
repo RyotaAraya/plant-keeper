@@ -33,6 +33,7 @@ class ScheduledMaintenance < ApplicationRecord
   validate :series_is_in_site
   validate :task_equipments_remain, on: :update
   validate :tasks_are_finished_for_acceptance
+  validate :bypasses_are_restored_for_restart
   validate :acceptance_is_recorded_to_complete
 
   before_save :stamp_actual_dates, if: :status_changed?
@@ -66,6 +67,18 @@ class ScheduledMaintenance < ApplicationRecord
 
     unfinished = maintenance_tasks.where(status: %w[not_started in_progress]).count
     errors.add(:base, "未完了の作業が#{unfinished}件あります（完了か見送りにしてから、検収へ進んでください）") if unfinished.positive?
+  end
+
+  # 検収・完了へ進めるのは、対象設備のインターロックに、バイパス中・復帰確認待ちのバイパスがないとき。
+  # 定期整備のあとは運転を再開するため、その前にバイパスが全部戻り、復帰を確認していることを確かめる
+  def bypasses_are_restored_for_restart
+    return unless status_changed?(to: "acceptance") || status_changed?(to: "completed")
+
+    remaining = InterlockBypass.blocking_restart.for_equipments(equipment_ids).includes(:interlock).order(:request_number)
+    return if remaining.empty?
+
+    list = remaining.map { |bypass| "#{bypass.interlock.tag_number}（#{InterlockBypass::STATUS_LABELS[bypass.status]}）" }.join("、")
+    errors.add(:base, "対象設備のインターロックに、戻っていないバイパスがあります: #{list}（復帰と、別の人の確認を済ませてから進んでください）")
   end
 
   def series_is_in_site
