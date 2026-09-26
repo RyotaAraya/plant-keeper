@@ -210,8 +210,7 @@ const story = [
           <div>
             <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
             <h2 id="plana-title">プラナ</h2>
-            <p class="landing-plana-tagline">メモを報告にまとめ、似た過去のトラブルを探すAI</p>
-            <p class="landing-plana-lead">ここまでの機能はルールどおりに動きます。プラナだけがAIで、たまった記録を読んで手伝います。</p>
+            <p class="landing-plana-lead">点検や対応のメモを入力すると、トラブル報告や対応記録の文に整えます。似た過去のトラブルも探せます。</p>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
@@ -363,7 +362,6 @@ const story = [
 .landing-character :deep(.pk-plana-full) { display: block; width: 100%; max-width: 320px; transform: scaleX(-1); }
 .landing-eyebrow { font-size: .8125rem; color: var(--pk-steel-dark); font-weight: 600; }
 .landing-plana h2 { font-family: var(--pk-font-display); font-size: clamp(2.25rem, 5vw, 3.25rem); font-weight: 900; color: var(--pk-plana-navy); line-height: 1.2; margin-top: 4px; }
-.landing-plana-tagline { font-family: var(--pk-font-display); font-size: 1.25rem; font-weight: 700; color: var(--pk-plana-navy); margin-top: 8px; }
 .landing-plana-lead { font-size: .9375rem; line-height: 1.9; color: var(--pk-muted); margin-top: 12px; max-width: 36em; word-break: auto-phrase; }
 
 /* 1件のトラブルの流れ。番号の縦線で、3つの場面が続いていることを示す */

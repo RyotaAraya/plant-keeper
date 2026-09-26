@@ -21,9 +21,8 @@ test('保全業務の流れ・プラナの紹介・1件のトラブルの流れ�
 
   await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
 
-  // 本体の機能（ルールで動く）とプラナ（記録を読んで働くAI）の境目を、章の見出し・色の帯・対比の1文で示す
+  // 本体の機能とプラナ（AI）の境目を、章の見出しと色の帯で示す
   await expect(page.locator('#features .landing-eyebrow')).toHaveText('PlantKeeperの機能')
-  await expect(page.locator('#plana')).toContainText('プラナだけがAI')
   await expect(page.locator('.landing-plana-zone').locator('#plana, #plana-work')).toHaveCount(2)
   await expect(page.locator('#calibration')).toContainText('AIは使いません')
 })
