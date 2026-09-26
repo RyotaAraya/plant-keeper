@@ -41,6 +41,9 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://plant-keeper-api.onrender.com/api/v1
+      # タブの favicon を環境ごとに変える（frontend/vite.config.ts。未設定はローカル用）
+      - key: VITE_APP_ENV
+        value: production
     routes:
       - type: rewrite
         source: /*
@@ -86,6 +89,9 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://plant-keeper-api-stg.onrender.com/api/v1
+      # タブの favicon を環境ごとに変える（frontend/vite.config.ts。未設定はローカル用）
+      - key: VITE_APP_ENV
+        value: stg
     routes:
       - type: rewrite
         source: /*

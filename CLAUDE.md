@@ -123,6 +123,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ## デプロイ（Render）
 
 - 設定ファイル: `render.yaml`（Blueprint）。本番・stg の両サービスをこの1ファイルで定義
+- タブの favicon は環境ごとに色を変えている（本番=ネイビー `favicon.svg`・stg=橙 `favicon-stg.svg`・ローカルなど未設定=緑 `favicon-dev.svg`）。ビルド時の `VITE_APP_ENV`（`render.yaml` で `production` / `stg`）を見て、`vite.config.ts` が `index.html` の href を差し替える。3つとも `frontend/public/` にあり、どの環境にも配信される（E2E の `resetSession` は、アプリを起動しない静的ファイルとして `/favicon.svg` を開く）
 - 無料プランのため、アクセスが一定時間ない場合スリープする（初回アクセス時に起動待ちで数十秒かかることがある）
 - `admin/reseed`（管理者によるデモデータの全削除→再投入）は環境変数 `ALLOW_DEMO_RESEED=true` のサーバでだけ動く。`render.yaml` で stg のAPIにだけ設定しており、**本番は既定で無効**（デモ管理者のパスワードが公開されているため、誰でも本番の全データを消せる状態にしない）。本番で必要なときだけRenderダッシュボードで一時的に設定する
 - 再投入は数分（stgのNeonで約4分）かかるため、**非同期**: `POST /admin/reseed` はバックグラウンドのスレッドで始めて202ですぐ返し（`DemoReseed`。実行中の再実行は409）、状態（idle/running/succeeded/failed）は `GET /admin/reseed` で返す。**状態の確認はログイン不要**（再投入中は users も空になり、認証が通らないため。返すのは状態だけ）。状態はプロセス内に持つので、実行中にサーバが再起動すると失われる（画面は失敗として扱う）。**stgへデプロイ（developへのpush）すると、実行中の再投入は止まる**。**画面は `/settings/reseed`（管理者のみ）で、設定画面・メニューにはリンクを出さない**（危険な操作を目につく場所に置かないため。画面を隠すだけでは防御にならず、サーバ側の `ALLOW_DEMO_RESEED` が本体）。`ALLOW_DEMO_RESEED` が無効なサーバでは、実行の操作を出さず無効である旨を案内する。実行中は進捗を出して閉じても続き、完了・失敗をページに表示する。再実行を押してしまう心配はない
