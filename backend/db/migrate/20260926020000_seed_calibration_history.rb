@@ -12,6 +12,8 @@ class SeedCalibrationHistory < ActiveRecord::Migration[8.0]
         JOIN sites ON sites.id = equipments.site_id WHERE sites.name = #{quote(site)} AND instruments.tag_number = #{quote(tag)}
       SQL
       next unless instrument && instrument["range_lower"] && instrument["tolerance_percent"]
+      # 定義の読みの計算は伝送器（出力 4-20mA）のもの。ほかの種類（調節弁のポジショナなど）には作らない
+      next unless instrument["instrument_type"].to_s.end_with?("_transmitter")
       next if select_value("SELECT 1 FROM inspections WHERE instrument_id = #{quote(instrument['id'])} AND notes = #{quote(CalibrationHistoryCatalog::NOTE)}")
 
       department_id = select_value("SELECT id FROM departments WHERE name = '計装保全課' AND site_id = #{quote(instrument['site_id'])}")
