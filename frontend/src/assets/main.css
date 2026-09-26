@@ -183,3 +183,13 @@ h1, h2, h3,
   .v-data-table .v-data-table-footer { justify-content: flex-start; padding: 8px; }
   .v-data-table-footer__items-per-page { margin-inline-end: 0; }
 }
+
+/* 印刷: ナビゲーション・ヘッダー・操作（.pk-no-print）を出さず、本文だけを白い紙に。状態の色（チップなど）は残す */
+@page { size: A4; margin: 10mm; }
+@media print {
+  .v-navigation-drawer, .v-app-bar, .pk-no-print { display: none !important; }
+  html, body, .v-application, .v-main { background: #fff !important; }
+  .v-main { padding: 0 !important; }
+  .pk-workspace { max-width: none !important; padding: 0 !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

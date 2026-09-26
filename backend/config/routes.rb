@@ -17,6 +17,17 @@ Rails.application.routes.draw do
       resources :reference_standards, only: [ :index, :show, :create, :update ] do
         resources :calibrations, only: [ :create, :update ], controller: "reference_standard_calibrations"
       end
+      resources :interlocks, only: [ :index, :show, :create, :update ]
+      resources :interlock_bypasses, only: [ :index, :show, :create ] do
+        member do
+          post :approve
+          post :reject
+          post :start
+          post :restore
+          post :confirm
+          post :cancel
+        end
+      end
       resources :services, only: [ :index, :create, :update ]
       resources :line_classes, only: [ :index, :create, :update ]
       resources :departments, only: [ :index, :show, :create, :update ]
@@ -66,6 +77,14 @@ Rails.application.routes.draw do
 
       # Phase 5: ダッシュボード
       get :dashboard, to: "dashboard#show"
+      get :meeting_board, to: "meeting_boards#show"
+      # 外部のシステム（機器管理システム）からの受け口。ユーザのログインではなく、連携用のトークンで認証する
+      namespace :integrations do
+        post :device_diagnostics, to: "device_diagnostics#create"
+      end
+      resources :integration_tokens, only: [ :index, :create ] do
+        member { post :revoke }
+      end
 
       # Phase 6: 監査ログ
       resources :audit_logs, only: [ :index ]

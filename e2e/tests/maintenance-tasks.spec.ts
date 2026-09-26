@@ -1,4 +1,4 @@
-import { test, expect, openListRow, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, openListRow, judgeAllItems, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
 import type { Page } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
@@ -14,17 +14,18 @@ async function pickOption(page: Page, dialogOrPage: ReturnType<Page['getByRole']
 // このテストは定期整備を2件・点検を1件作る（名前が「E2E 」で始まる。繰り返し実行すると一覧に溜まる）
 test('計器を一括追加し、作業から点検を実施して完了にし、残りを見送りにして検収へ進み、次回に作業を引き継ぐ', async ({ page }) => {
   const stamp = Date.now()
-  const title = `E2E ${stamp} ボイラー整備（作業）`
+  const title = `E2E ${stamp} FCC整備（作業）`
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '定期整備', exact: true }).click()
 
-  await test.step('ボイラー設備の定期整備を作る', async () => {
+  // インターロックのない設備で行う（ボイラー設備はデモのバイパスが残っていて、検収へ進めないため）
+  await test.step('流動接触分解装置の定期整備を作る', async () => {
     await page.getByRole('button', { name: '新規作成' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('名称 *', { exact: false }).fill(title)
     await dialog.getByLabel('予定 開始日 *').fill(todayForInput())
     await dialog.locator('.v-field', { has: page.getByLabel('対象設備 *') }).click()
-    await page.getByRole('option', { name: 'ボイラー設備' }).click()
+    await page.getByRole('option', { name: '流動接触分解装置' }).click()
     await page.keyboard.press('Escape')
     await dialog.getByRole('button', { name: '作成' }).click()
     await expect(dialog).toBeHidden()
@@ -42,7 +43,7 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await expect(dialog.getByTestId('bulk-result')).toContainText(/\d+件を追加しました/)
     await dialog.getByRole('button', { name: '閉じる' }).click()
     await expect(tasks.getByTestId('tasks-progress')).toContainText(/完了 0 \/ \d+/)
-    await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検')).toContainText('伝送器 定修点検')
+    await expect(tasks.getByTestId('task-FT-601 伝送器 定修点検')).toContainText('伝送器 定修点検')
     await expect(tasks).toContainText('計装保全課')
   })
 
@@ -54,11 +55,12 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
   })
 
   await test.step('作業から点検を実施すると、設備・計器・チェックリストが引き継がれ、提出すると作業が完了になる', async () => {
-    await tasks.getByTestId('task-FT-701 伝送器 定修点検').getByRole('button', { name: '点検を実施' }).click()
+    await tasks.getByTestId('task-FT-601 伝送器 定修点検').getByRole('button', { name: '点検を実施' }).click()
     await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
     await expect(page.getByTestId('from-maintenance-task')).toBeVisible()
-    await expect(page.locator('.v-field', { has: page.getByLabel('計器（任意）', { exact: true }) })).toContainText('FT-701')
-    await expect(page.locator('input[value="5点校正（全数）"]')).toBeVisible() // 伝送器 定修点検のチェックリストの項目
+    await expect(page.locator('.v-field', { has: page.getByLabel('計器（任意）', { exact: true }) })).toContainText('FT-601')
+    await expect(page.getByText('5点校正（全数）', { exact: true })).toBeVisible() // 伝送器 定修点検のチェックリストの項目
+    await judgeAllItems(page)
     if ((await page.locator('.v-field', { has: page.getByLabel('部署 *', { exact: true }) }).innerText()).trim() === '部署 *') await selectFirstOption(page, '部署 *')
     await page.getByRole('button', { name: '提出' }).click()
     await expect(page).toHaveURL(/\/inspections$/)
@@ -67,8 +69,8 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await page.getByRole('link', { name: '定期整備', exact: true }).click()
     await openListRow(page, title)
     await expect(tasks.getByTestId('tasks-progress')).toContainText(/完了 1 \/ \d+/)
-    await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検')).toContainText(todayForInput())
-    await expect(tasks.getByTestId('task-FT-701 伝送器 定修点検').getByRole('button', { name: '点検記録' })).toBeVisible()
+    await expect(tasks.getByTestId('task-FT-601 伝送器 定修点検')).toContainText(todayForInput())
+    await expect(tasks.getByTestId('task-FT-601 伝送器 定修点検').getByRole('button', { name: '点検記録' })).toBeVisible()
   })
 
   await test.step('残りの作業を見送りにすると、検収へ進める（見送りは進捗に数えない）', async () => {
@@ -76,7 +78,7 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     const count = await rows.count()
     for (let i = 0; i < count; i++) {
       const row = rows.nth(i)
-      if ((await row.getAttribute('data-testid')) === 'task-FT-701 伝送器 定修点検') continue
+      if ((await row.getAttribute('data-testid')) === 'task-FT-601 伝送器 定修点検') continue
       await row.locator('.v-select .v-field').click()
       await page.getByRole('option', { name: '見送り' }).click()
       await expect(row.locator('.v-select')).toContainText('見送り')

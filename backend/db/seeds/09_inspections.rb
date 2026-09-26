@@ -33,8 +33,8 @@ templates = ChecklistTemplateCatalog::TEMPLATES.to_h do |attrs|
     name: attrs[:name], inspection_type: attrs[:inspection_type], cycle: attrs[:cycle],
     department: dept(attrs[:site], *attrs[:dept_path])
   )
-  attrs[:items].each_with_index do |(content, item_type), index|
-    ChecklistTemplateItem.create!(checklist_template: template, position: index + 1, content: content, item_type: item_type)
+  attrs[:items].each_with_index do |entry, index|
+    ChecklistTemplateItem.create!(checklist_template: template, position: index + 1, **ChecklistTemplateCatalog.item_attributes(entry))
   end
   [ attrs[:name], template ]
 end
@@ -50,7 +50,7 @@ patrol_sk = templates.fetch("堺 巡回点検")
 puts "点検記録を作成中..."
 
 # 巡回点検: 運転員が、いくつかの装置をまとめて1件で記録する（計器ごとの点検ではない）。
-# 異常がなければ項目にOKを付けるだけで、異常があった項目にだけ不具合（と、その設備のトラブル）を記録する
+# 異常がなければ項目に良好を付けるだけで、異常があった項目にだけ不具合（と、その設備のトラブル）を記録する
 def operators(site_name)
   User.joins(department: :site).where(sites: { name: site_name }, departments: { department_type: "operation" }, is_active: true).order(:id).to_a
 end
@@ -67,8 +67,8 @@ def patrol!(template, site:, equipments:, at:, operator: 0, status: "approved", 
     flagged = abnormal.present? && abnormal[:item] == index
     item = InspectionItem.create!(
       inspection: inspection, checklist_template_item: template_item, position: index + 1, content: template_item.content,
-      item_type: template_item.item_type, checked: template_item.item_type == "check" && !flagged,
-      text_value: (notes if template_item.item_type == "text"), has_defect: flagged,
+      item_type: template_item.item_type, result: (flagged ? "defect" : ("good" if template_item.item_type == "check")),
+      text_value: (notes if template_item.item_type == "text"),
       equipment: (abnormal[:equipment] if flagged), instrument: (abnormal[:instrument] if flagged)
     )
     next unless flagged
@@ -133,52 +133,70 @@ patrol!(patrol_kw, site: "仙台製油所", operator: 1, equipments: [ sd_hds, s
                     description: "巡回中に微小な振動を確認。今のところ運転に支障はないが、悪化するようなら保全へ相談。" })
 
 # --- 計器の点検（計装保全課） ---
-# 川崎 CDU PV-201 定期点検（不具合あり）
+# テンプレートの項目どおりに記録を作る。values は 項目の内容 => 属性。指定のない確認の項目は良好、ほかは未記入
+def record!(inspection, values = {})
+  inspection.checklist_template.checklist_template_items.each do |template_item|
+    attrs = values.fetch(template_item.content) { template_item.check? ? { result: "good" } : {} }
+    InspectionItem.create!(inspection: inspection, checklist_template_item: template_item, position: template_item.position,
+                           content: template_item.content, item_type: template_item.item_type, **attrs)
+  end
+end
+
+na = { result: "na" }.freeze
+# 月次点検: インターロックに関わらず、制御を手動にしない計器（バイパス・自動復帰の項目は「－」）
+monthly_no_interlock = {
+  "バイパス申請番号" => na, "制御を自動に戻したことを確認" => na, "バイパスを解除し、復帰後の動作を確認" => na
+}.freeze
+# 温度の伝送器は均圧のゼロ点・導圧管がない（温度用のテンプレートは今後分ける）
+monthly_temperature = monthly_no_interlock.merge("ゼロ点: 均圧（大気開放）時の出力" => na, "導圧管・ベント・ドレンの詰まり" => na).freeze
+def valve_annual(close_sec, open_sec, notes, **values)
+  { "ポジショナの5点校正（0/25/50/75/100%・上昇/下降）" => { result: "good" },
+    "開→閉 応答時間" => { measured_value: close_sec }, "閉→開 応答時間" => { measured_value: open_sec },
+    "特記事項" => { text_value: notes } }.merge(values)
+end
+
+# 川崎 CDU PV-201 年次点検（グランドの漏れ → トラブル起票）
 insp2 = Inspection.create!(checklist_template: periodic_valve, user: sato, equipment: kw_cdu, instrument: inst("PV-201"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 7.days.ago, notes: "グランドパッキンからの微量漏れを発見。トラブル起票済み。")
-InspectionItem.create!(inspection: insp2, position: 2, content: "グランドパッキンからの漏れを確認", item_type: "check", checked: false, has_defect: true, instrument: inst("PV-201"))
+record!(insp2, valve_annual("3.4", "3.8", "グランドパッキンから微量の漏れ（にじみ程度）。次回の停止時にパッキン交換。",
+                            "外観とグランドの漏れ" => { result: "defect", instrument: inst("PV-201") }))
 
-# 根岸 HDS 月次点検
+# 根岸 HDS 月次点検（温度）
 insp8 = Inspection.create!(checklist_template: monthly_inst, user: ogata, equipment: ng_hds, instrument: inst("TV-N501"), department: ng_inst_sec, inspection_type: "periodic", status: "submitted", inspected_at: 2.days.ago, notes: "反応温度の偏差が+1℃。経過観察。")
-InspectionItem.create!(inspection: insp8, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp8, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "13.1", has_defect: false)
+record!(insp8, monthly_temperature.merge("DCSの指示値と現場の指示の差" => { measured_value: "0.4" },
+                                         "特記事項" => { text_value: "反応温度の偏差が+1℃（許容内）。経過観察。" }))
 
-# 堺 CRF 月次点検（承認待ち）
+# 堺 CRF 月次点検（温度。承認待ち）
 insp11 = Inspection.create!(checklist_template: monthly_inst, user: tanabe, equipment: sk_crf, instrument: inst("TV-S601"), department: sk_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 1.day.ago, notes: "CRF反応温度やや上昇傾向。触媒寿命を確認予定。")
-InspectionItem.create!(inspection: insp11, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp11, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "18.6", has_defect: false)
-InspectionItem.create!(inspection: insp11, position: 7, content: "特記事項", item_type: "text", text_value: "反応温度がやや上昇傾向。次回触媒交換時期を確認予定。", has_defect: false)
+record!(insp11, monthly_temperature.merge("DCSの指示値と現場の指示の差" => { measured_value: "0.8" },
+                                          "特記事項" => { text_value: "反応温度がやや上昇傾向。次回触媒交換時期を確認予定。" }))
 
-# 川崎 CDU PV-201 前回の定期点検
+# 川崎 CDU PV-201 前回の年次点検
 insp15 = Inspection.create!(checklist_template: periodic_valve, user: sato, equipment: kw_cdu, instrument: inst("PV-201"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 60.days.ago, notes: "前回定期点検。異常なし。")
-InspectionItem.create!(inspection: insp15, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp15, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "55.0", has_defect: false)
-InspectionItem.create!(inspection: insp15, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
+record!(insp15, valve_annual("3.3", "3.6", "異常なし。"))
 
-# 川崎 VDU 定期点検
+# 川崎 VDU 年次点検（承認待ち）
 insp17 = Inspection.create!(checklist_template: periodic_valve, user: nishimura, equipment: kw_vdu, instrument: inst("PV-901"), department: kw_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 1.day.ago, notes: "弁体に若干の漏れ傾向あり。要監視。")
-InspectionItem.create!(inspection: insp17, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp17, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "52.3", has_defect: false)
-InspectionItem.create!(inspection: insp17, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
+record!(insp17, valve_annual("4.1", "4.4", "全閉時に弁体から若干の漏れ傾向。次回定修でシートを確認する。"))
 
-# 根岸 CDU PV-N201 定期点検
+# 根岸 CDU PV-N201 年次点検
 insp21 = Inspection.create!(checklist_template: periodic_valve, user: imai, equipment: ng_cdu, instrument: inst("PV-N201"), department: ng_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 10.days.ago, notes: "フルストローク正常。弁体シール問題なし。")
-InspectionItem.create!(inspection: insp21, position: 1, content: "弁体の外観確認（腐食・損傷）", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp21, position: 3, content: "ポジショナー指示値を確認（%）", item_type: "measurement", measured_value: "48.5", has_defect: false)
-InspectionItem.create!(inspection: insp21, position: 4, content: "フルストロークテスト実施", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp21, position: 5, content: "開→閉 応答時間（秒）", item_type: "measurement", measured_value: "3.2", has_defect: false)
-InspectionItem.create!(inspection: insp21, position: 6, content: "閉→開 応答時間（秒）", item_type: "measurement", measured_value: "3.5", has_defect: false)
+record!(insp21, valve_annual("3.2", "3.5", "フルストローク正常。弁体シール問題なし。"))
 
-# 仙台 HDS PT-D201 月次点検（不具合検出）
+# 仙台 HDS PT-D201 月次点検（ゼロ点のずれ。インターロックに関わる計器のため、バイパス申請のうえ点検）
 insp26 = Inspection.create!(checklist_template: monthly_inst, user: sd_inst1, equipment: sd_hds, instrument: inst("PT-D201"), department: sd_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 3.days.ago, notes: "反応器圧力伝送器にゼロ点ドリフト確認。トラブル起票。")
-InspectionItem.create!(inspection: insp26, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: false, has_defect: true, instrument: inst("PT-D201"))
+record!(insp26, "バイパス申請番号" => { text_value: "BP-#{Time.current.year}-0917" },
+                "ゼロ点: 均圧（大気開放）時の出力" => { measured_value: "4.21", instrument: inst("PT-D201") },
+                "DCSの指示値と現場の指示の差" => { measured_value: "1.3" },
+                "特記事項" => { text_value: "ゼロ点が+0.21mA（+1.3%）ずれている。ドリフトの原因を調査する。" })
 
 # 川崎 タンク LT-1001 月次点検
 insp27 = Inspection.create!(checklist_template: monthly_inst, user: okada, equipment: kw_tank, instrument: inst("LT-1001"), department: kw_inst_sec, inspection_type: "periodic", status: "approved", inspected_at: 30.days.ago, notes: "月次点検。液位指示正常。")
-InspectionItem.create!(inspection: insp27, position: 1, content: "伝送器の指示値を確認", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp27, position: 2, content: "伝送器の指示値を記録（mA）", item_type: "measurement", measured_value: "11.2", has_defect: false)
+record!(insp27, monthly_no_interlock.merge("ゼロ点: 均圧（大気開放）時の出力" => { measured_value: "4.02" },
+                                           "DCSの指示値と現場の指示の差" => { measured_value: "-0.3" },
+                                           "特記事項" => { text_value: "液位指示正常。" }))
 
 # 川崎 電気設備 日常点検
 insp28 = Inspection.create!(user: watanabe, equipment: kw_boiler, department: kw_elec_sec, inspection_type: "routine", status: "approved", inspected_at: 3.days.ago, notes: "モーター正常。絶縁抵抗良好。")
-InspectionItem.create!(inspection: insp28, position: 1, content: "モーター回転方向を確認", item_type: "check", checked: true, has_defect: false)
-InspectionItem.create!(inspection: insp28, position: 2, content: "絶縁抵抗値（MΩ）", item_type: "measurement", measured_value: "500", has_defect: false)
-InspectionItem.create!(inspection: insp28, position: 3, content: "ベアリング温度（℃）", item_type: "measurement", measured_value: "42.5", has_defect: false)
+InspectionItem.create!(inspection: insp28, position: 1, content: "モーター回転方向を確認", item_type: "check", result: "good")
+InspectionItem.create!(inspection: insp28, position: 2, content: "絶縁抵抗値", item_type: "measurement", unit: "MΩ", lower_limit: 1, criterion: "1MΩ以上", measured_value: "500")
+InspectionItem.create!(inspection: insp28, position: 3, content: "ベアリング温度", item_type: "measurement", unit: "℃", upper_limit: 80, criterion: "80℃以下", measured_value: "42.5")

@@ -4,6 +4,7 @@
 // （名前は履歴の元の画面で見られる。ID そのものが要る管理者は、監査ログの画面で見る）。
 // 知らないカラムは、情報を失わないよう、カラム名のまま出す
 import { inspectionStatusLabel, inspectionTypeLabel, priorityLabel, troubleStatusLabel } from '@/constants/recordLabels'
+import { BYPASS_STATUS_LABEL } from '@/utils/interlock'
 import { ACCEPTANCE_RESULT_LABEL, MAINTENANCE_STATUS_LABEL, TASK_KIND_LABEL, TASK_STATUS_LABEL } from '@/constants/maintenanceStatus'
 
 export interface AuditChange {
@@ -25,6 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
   response_type: '対応種別', used_materials: '使用資材',
   inspection_type: '点検種別', has_defect: '不具合', checked: '確認', content: '内容', item_type: '項目の種類',
   measured_value: '測定値', text_value: '入力内容', calibration_result: '校正の結果',
+  result: '判定', section: '区分', criterion: '判定基準', unit: '単位', lower_limit: '下限', upper_limit: '上限', options: '選択肢', required: '必須',
   planned_start_on: '予定開始日', planned_end_on: '予定終了日', actual_start_on: '実績開始日', actual_end_on: '実績終了日',
   completed_on: '完了日', accepted_on: '検収日', acceptance_result: '検収の結果', acceptance_notes: '検収の備考',
   tag_number: 'タグ番号', instrument_type: '計器の種類', seal_fluid: 'シール液',
@@ -44,6 +46,12 @@ const FIELD_LABELS: Record<string, string> = {
   inspection_item_id: '点検の項目', inspection_id: '点検',
   equipment_ids: '対象設備', regulation_ids: '適用法規', intervals: '周期',
   ai_suggestion_id: 'プラナの整理案',
+  // インターロック・バイパス
+  trip_action: 'トリップ時の動作', instrument_ids: '関係する計器', interlock_id: 'インターロック',
+  request_number: '申請番号', reason: '理由', compensatory_measure: '代替措置', planned_restore_at: '予定の復帰日時',
+  requested_by_id: '申請者', requested_at: '申請日時', approved_by_id: '承認者', approved_at: '承認日時',
+  bypassed_by_id: 'バイパスした人', bypassed_at: 'バイパス日時', restored_by_id: '復帰した人', restored_at: '復帰日時',
+  confirmed_by_id: '復帰を確認した人', confirmed_at: '確認日時', closed_by_id: '却下・取消した人', closed_at: '却下・取消日時', closed_reason: '却下・取消の理由',
 }
 
 const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
@@ -52,6 +60,7 @@ const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
   ScheduledMaintenance: MAINTENANCE_STATUS_LABEL,
   MaintenanceTask: TASK_STATUS_LABEL,
   ReferenceStandard: { usable: '使用可', in_calibration: '校正中', retired: '使用停止' },
+  InterlockBypass: BYPASS_STATUS_LABEL,
 }
 
 // 対象に依らない、カラム名ごとの値の呼び方
@@ -61,7 +70,8 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   acceptance_result: ACCEPTANCE_RESULT_LABEL,
   kind: TASK_KIND_LABEL,
   response_type: { investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察' },
-  item_type: { check: 'チェック', measurement: '測定', text: '入力', calibration: '校正' },
+  item_type: { check: '確認', measurement: '測定値', choice: '選択式', text: '自由記述', calibration: '5点校正' },
+  result: { good: '良好', defect: '不具合あり', na: '該当なし' },
   category: { pressure: '圧力', electrical: '電気', temperature: '温度', other: 'その他' },
 }
 

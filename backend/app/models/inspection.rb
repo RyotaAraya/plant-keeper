@@ -29,6 +29,16 @@ class Inspection < ApplicationRecord
     end
   end
 
+  # 必須の項目に記入がないまま提出しようとした。problems に項目ごとの理由を積む
+  class IncompleteItems < StandardError
+    attr_reader :problems
+
+    def initialize(problems)
+      @problems = problems
+      super(problems.join(" / "))
+    end
+  end
+
   has_many_attached :attachments
 
   enum :inspection_type, { routine: "routine", periodic: "periodic", telemetry: "telemetry", operation_check: "operation_check" }
@@ -60,6 +70,12 @@ class Inspection < ApplicationRecord
   def check_reference_standards!
     problems = reference_standard_problems
     raise UnusableReferenceStandards, problems if problems.any?
+  end
+
+  # 提出（下書きを出る）ときに、必須の項目がすべて記入されているかを確認する（下書きの間は止めない）
+  def check_required_items!
+    missing = inspection_items.reload.select { |item| item.required? && !item.filled? }
+    raise IncompleteItems, missing.map { |item| "必須の項目「#{item.content}」が未記入です（判定、または該当なしを付けてください）" } if missing.any?
   end
 
   def reference_standard_problems

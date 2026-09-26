@@ -67,8 +67,39 @@ export interface Instrument {
   custody_transfer?: boolean
   calibration_kind?: 'transmitter' | 'positioner' | null
   calibratable?: boolean
+  // 機器の自己診断（NAMUR NE 107）のいまの状態。未受信は null
+  diagnostic_status?: import('@/constants/diagnostics').DiagnosticStatus | null
+  diagnostic_since?: string | null
+  diagnostic_received_at?: string | null
+  // 詳細だけ: 状態が変わった記録（新しい順に20件）
+  diagnostics?: InstrumentDiagnostic[]
   created_at: string
   updated_at: string
+}
+
+export interface InstrumentDiagnostic {
+  id: number
+  status: import('@/constants/diagnostics').DiagnosticStatus
+  code: string | null
+  message: string | null
+  occurred_at: string
+  created_at: string
+  // 送ってきた連携（トークン）の名前
+  source: string | null
+}
+
+// 連携用のトークン（機器管理システムなど）。平文の token は発行したときの応答にだけ入る
+export interface IntegrationToken {
+  id: number
+  name: string
+  token_hint: string
+  last_used_at: string | null
+  revoked_at: string | null
+  created_at: string
+  site: { id: number; name: string }
+  created_by: { id: number; name: string }
+  revoked_by: { id: number; name: string } | null
+  token?: string
 }
 
 // 5点校正。校正の条件（snapshot）は点検時に計器の設定から凍結して保存したもの
@@ -242,6 +273,14 @@ export interface ChecklistTemplateItem {
   position: number
   content: string
   item_type: string
+  // 項目の型と基準（utils/checklistCriteria.ts）。decimal は文字列で返る
+  section: string | null
+  criterion: string | null
+  unit: string | null
+  lower_limit: string | null
+  upper_limit: string | null
+  options: string[] | null
+  required: boolean
   created_at: string
   updated_at: string
 }
@@ -262,6 +301,18 @@ export interface Inspection {
   updated_at: string
   // 点検で見た設備（代表の設備 equipment_id を含む。複数の設備をまとめた点検は2つ以上）
   equipments?: { id: number; name: string }[]
+}
+
+// 5点校正のある点検計画の、周期の見直しの候補（ルールで判定。決めるのは人）
+export interface IntervalReview {
+  kind: 'extend' | 'shorten'
+  reasons: string[]
+  // 延長するときの注意（インターロックに関わる計器など）
+  cautions: string[]
+  suggested_interval_days: number
+  tolerance_percent: number | null
+  // 根拠にした直近の校正（古い順）
+  evidence: { inspection_id: number; inspected_at: string; adjusted: boolean; as_found: { result: string; max_error: number | null } }[]
 }
 
 export interface InspectionPlan {
@@ -285,6 +336,7 @@ export interface InspectionPlan {
   reference_standard?: { id: number; name: string; management_number: string; site_id: number } | null
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
+  interval_review?: IntervalReview | null
 }
 
 export interface InspectionItem {
@@ -294,7 +346,18 @@ export interface InspectionItem {
   position: number
   content: string
   item_type: string
-  checked: boolean
+  // 判定: good=良好 / defect=不具合あり / na=該当なし。未判定は null。has_defect は判定から決まる
+  result: 'good' | 'defect' | 'na' | null
+  // 点検した時点の基準（テンプレートの項目からの写し）
+  section: string | null
+  criterion: string | null
+  unit: string | null
+  lower_limit: string | null
+  upper_limit: string | null
+  options: string[] | null
+  required: boolean
+  // 測定値と許容範囲の関係（測定値の項目だけ）
+  measurement_status?: 'within' | 'below' | 'above' | 'invalid' | null
   measured_value: string | null
   text_value: string | null
   has_defect: boolean
@@ -589,10 +652,84 @@ export interface DepartmentTreeNode {
   children: DepartmentTreeNode[]
 }
 
+// 計器の5点校正の1回分（校正の傾向。古い順）。max_error は出力・DCS表示の誤差の絶対値の最大（%スパン）
+export interface CalibrationStageSummary {
+  result: 'pass' | 'fail' | 'incomplete' | 'empty'
+  max_error: number | null
+  max_hysteresis: number | null
+}
+
+export interface CalibrationHistoryRow {
+  inspection_id: number
+  inspected_at: string
+  status: string
+  tolerance_percent: number
+  adjusted: boolean
+  as_found: CalibrationStageSummary
+  as_left: CalibrationStageSummary | null
+  result: string | null
+}
+
+// インターロックのバイパス。requested=申請中 / approved=承認済 / bypassed=バイパス中 / restored=復帰確認待ち / completed=完了 / rejected=却下 / cancelled=取消
+export type InterlockBypassStatus = 'requested' | 'approved' | 'bypassed' | 'restored' | 'completed' | 'rejected' | 'cancelled'
+
+type UserRef = { id: number; name: string } | null
+
+export interface InterlockBypass {
+  id: number
+  interlock_id: number
+  request_number: string
+  status: InterlockBypassStatus
+  reason: string
+  compensatory_measure: string
+  planned_restore_at: string
+  requested_by: UserRef
+  requested_at: string
+  approved_by: UserRef
+  approved_at: string | null
+  bypassed_by: UserRef
+  bypassed_at: string | null
+  restored_by: UserRef
+  restored_at: string | null
+  confirmed_by: UserRef
+  confirmed_at: string | null
+  closed_by: UserRef
+  closed_at: string | null
+  closed_reason: string | null
+  // 予定の復帰日時を過ぎてもバイパス中
+  overdue: boolean
+  // バイパスしてからの時間（バイパス中のときだけ）
+  bypassed_hours: number | null
+  interlock: { id: number; tag_number: string; name: string; equipment: { id: number; name: string; site: { id: number; name: string } } }
+}
+
+export interface Interlock {
+  id: number
+  equipment_id: number
+  tag_number: string
+  name: string
+  trip_action: string | null
+  notes: string | null
+  is_active: boolean
+  equipment: { id: number; name: string; site: { id: number; name: string } }
+  instruments: { id: number; tag_number: string; instrument_type: string | null }[]
+  // 終わっていない（申請中〜復帰確認待ち）バイパス
+  open_bypass: InterlockBypass | null
+  // 詳細だけ。新しい順
+  bypasses?: InterlockBypass[]
+}
+
 export interface DashboardSummary {
   scope: { site_name: string | null; department_name: string | null }
   troubles: { open: number; in_progress: number; critical: number }
   inspections: { pending_approval: number }
+  interlock_bypasses: {
+    bypassed: number
+    overdue: number
+    awaiting_confirmation: number
+    pending_approval: number
+    bypassed_list: InterlockBypass[]
+  }
   maintenances: {
     planned: number
     in_progress: number
@@ -616,4 +753,101 @@ export interface AiResponseDraft {
   used_materials: string
   check_points: string[]
   remaining_today: number
+}
+
+// 朝会・夕会ボード（GET /meeting_board）。今日・明日の予定を拠点・部署で絞って1枚にまとめる
+type NamedRef = { id: number; name: string }
+
+export interface MeetingBoardPlan extends Pick<InspectionPlan,
+  'id' | 'name' | 'next_due_on' | 'days_until_due' | 'interval_days' | 'inspection_type' | 'equipment_id' | 'instrument_id' | 'checklist_template_id' | 'reference_standard_id'> {
+  equipment: NamedRef | null
+  equipments: NamedRef[]
+  instrument: { id: number; tag_number: string } | null
+  reference_standard: NamedRef | null
+  checklist_template: (NamedRef & { department: NamedRef }) | null
+}
+
+export interface MeetingBoardTask {
+  id: number
+  title: string
+  kind: 'inspection' | 'overhaul' | 'replacement' | 'work'
+  status: 'not_started' | 'in_progress'
+  notes: string | null
+  checklist_template_id: number | null
+  department: NamedRef | null
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
+export interface MeetingBoardMaintenance {
+  id: number
+  title: string
+  status: string
+  planned_start_on: string
+  planned_end_on: string | null
+  actual_start_on: string | null
+  site: NamedRef
+  // 範囲の作業（見送りを除く）の数と、そのうち完了した数
+  task_count: number
+  completed_count: number
+  open_tasks: MeetingBoardTask[]
+}
+
+export interface MeetingBoardTrouble {
+  id: number
+  title: string
+  status: 'open' | 'in_progress'
+  priority: string
+  reported_at: string
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
+// 夕会の実績（点検日が今日の点検は、下書きのままのものを含む。画面で積み残しに分ける）
+export interface MeetingBoardInspection {
+  id: number
+  status: 'draft' | 'submitted' | 'approval_requested' | 'approved'
+  inspection_type: string
+  inspected_at: string
+  equipment_id: number
+  equipment: NamedRef
+  equipments: NamedRef[]
+  instrument: { id: number; tag_number: string } | null
+  user: NamedRef
+  department: NamedRef
+  checklist_template: NamedRef | null
+}
+
+export interface MeetingBoardResponse {
+  id: number
+  response_type: string
+  description: string
+  responded_at: string
+  user: NamedRef
+  trouble: { id: number; title: string; status: string; equipment: NamedRef; instrument: { id: number; tag_number: string } | null }
+}
+
+export interface MeetingBoardCompletedTask {
+  id: number
+  title: string
+  kind: MeetingBoardTask['kind']
+  completed_on: string
+  scheduled_maintenance: { id: number; title: string }
+  department: NamedRef | null
+  equipment: NamedRef
+  instrument: { id: number; tag_number: string } | null
+  assigned_to: NamedRef | null
+}
+
+export interface MeetingBoard {
+  today: string
+  tomorrow: string
+  scope: { site_name: string | null; department_name: string | null }
+  inspection_plans: MeetingBoardPlan[]
+  maintenances: MeetingBoardMaintenance[]
+  troubles: { total_count: number; items: MeetingBoardTrouble[] }
+  interlock_bypasses: InterlockBypass[]
+  results: { inspections: MeetingBoardInspection[]; trouble_responses: MeetingBoardResponse[]; completed_tasks: MeetingBoardCompletedTask[] }
 }

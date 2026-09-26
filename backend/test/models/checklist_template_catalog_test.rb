@@ -15,7 +15,7 @@ class ChecklistTemplateCatalogTest < ActiveSupport::TestCase
     TEMPLATES.each do |template|
       assert ChecklistTemplate.inspection_types.key?(template[:inspection_type]), template[:name]
       assert template[:items].all? { |content, type| content.present? && ChecklistTemplateItem.item_types.key?(type) }, template[:name]
-      assert_equal [ "特記事項", "text" ], template[:items].last, template[:name]
+      assert_equal [ "特記事項", "text" ], template[:items].last.first(2), template[:name]
       # 点検が過剰にならないよう、1テンプレートは12項目まで
       assert_operator template[:items].size, :<=, 12, template[:name]
       assert_operator template[:items].size, :>=, 4, template[:name]
@@ -78,5 +78,40 @@ class ChecklistTemplateCatalogTest < ActiveSupport::TestCase
     assert_equal kawasaki, BY_NAME.fetch("根岸 巡回点検")[:items]
     assert_equal kawasaki, BY_NAME.fetch("堺 巡回点検")[:items]
     assert_equal [ "根岸製油所", "堺製油所" ], [ BY_NAME.fetch("根岸 巡回点検")[:site], BY_NAME.fetch("堺 巡回点検")[:site] ]
+  end
+
+  test "項目の基準は、テンプレートの項目として有効（選択式は選択肢2つ以上、許容範囲は下限≦上限、測定値以外に単位・範囲なし）" do
+    TEMPLATES.each do |template|
+      template[:items].each_with_index do |entry, index|
+        item = ChecklistTemplateItem.new(checklist_template: ChecklistTemplate.new, position: index + 1, **ChecklistTemplateCatalog.item_attributes(entry))
+        assert item.valid?, "#{template[:name]} / #{item.content}: #{item.errors.full_messages.join(', ')}"
+        assert item.criterion.present?, "判定基準がない: #{template[:name]} / #{item.content}" unless item.text? && item.content == "特記事項"
+        assert item.unit.present?, "許容範囲があるのに単位がない: #{item.content}" if item.limits?
+        assert_nil item.unit, "測定値以外の単位: #{item.content}" unless item.measurement?
+      end
+    end
+  end
+
+  test "必須は、自由記述以外が既定。特記事項は必須にしない" do
+    TEMPLATES.flat_map { |t| t[:items] }.each do |entry|
+      attrs = ChecklistTemplateCatalog.item_attributes(entry)
+      expected = entry[1] != "text" || entry[2]&.dig(:required) == true
+      assert_equal expected, attrs[:required], entry[0]
+    end
+  end
+
+  test "区分は 作業前 → 点検 → 復旧 の順に並ぶ（区分のない特記事項は最後）" do
+    order = [ "作業前", "点検", "復旧" ]
+    TEMPLATES.each do |template|
+      sections = template[:items].filter_map { |entry| entry[2]&.dig(:section) }
+      assert_equal sections, sections.sort_by { |section| order.index(section) }, template[:name]
+    end
+  end
+
+  test "許容範囲を持つ測定値の例: 伝送器のゼロ点は 4.00±0.08mA" do
+    zero = BY_NAME.fetch("伝送器 月次点検")[:items].find { |content, _| content.start_with?("ゼロ点") }
+    attrs = ChecklistTemplateCatalog.item_attributes(zero)
+
+    assert_equal [ "measurement", "mA", 3.92, 4.08 ], attrs.values_at(:item_type, :unit, :lower_limit, :upper_limit)
   end
 end

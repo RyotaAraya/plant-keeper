@@ -15,6 +15,7 @@ const detailLabel = computed(() => {
   if (route.name === 'InspectionNew') return '新規点検'
   if (route.name === 'InspectionEdit') return '点検の編集'
   if (route.name === 'SettingsReseed') return 'デモデータの再投入'
+  if (route.name === 'Integrations') return '外部連携'
   return '詳細'
 })
 

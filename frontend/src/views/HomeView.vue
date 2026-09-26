@@ -2,13 +2,14 @@
 import { useAuthStore } from '@/stores/auth'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
+import bypassScreenshot from '@/assets/screenshots/interlock-bypass.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
 
 const auth = useAuthStore()
 
-// 上から「PlantKeeperとは何か」→「その記録の上で働くプラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる
+// 上から「PlantKeeperとは何か」（保全の記録の流れ・インターロックのバイパス）→「その記録の上で働くプラナとは何か」→「1件のトラブルでのプラナの仕事」の順に見せる
 
 // 保全業務でデータがつながる順。説明は、実装済みの動作だけを書く
 const flowSteps = [
@@ -24,6 +25,18 @@ const foundations = [
   { title: '設備と記録をつなぐ', description: '設備台帳・計器・点検・トラブルをひとつにつなぎ、過去の記録をたどれます。', icon: 'mdi-factory' },
   { title: '保全の仕事を進める', description: '点検計画から承認、定期整備まで。現場と管理者が同じ記録を見ながら進められます。', icon: 'mdi-clipboard-check-outline' },
   { title: '資材まで見渡す', description: '型番・在庫・修理・発注を管理。必要な資材を、拠点をまたいで確認できます。', icon: 'mdi-package-variant-closed' },
+]
+// インターロックのバイパス: 申請から復帰の確認まで。本人以外が承認・確認する段階を示す
+const bypassSteps = [
+  { title: '申請', note: '理由と、バイパス中の代替措置（誰が何を見て、どうなったら止めるか）' },
+  { title: '承認', note: '申請した本人以外' },
+  { title: 'バイパス', note: '現場で実施した人と日時' },
+  { title: '復帰', note: '作業のあとで戻す' },
+  { title: '復帰の確認', note: '復帰した本人以外' },
+]
+const bypassGuards = [
+  { icon: 'mdi-clock-alert-outline', text: '予定の復帰を過ぎても戻っていないものは「復帰期限超過」として、ダッシュボードと台帳で目立たせます。' },
+  { icon: 'mdi-wrench-clock', text: '定期整備は、対象設備のバイパスがすべて戻り、確認が済むまで検収へ進めません（運転を再開する前の確認）。' },
 ]
 const planaPrinciples = [
   'プラナは提案まで。記録に反映・保存するかは、人が決めます',
@@ -135,6 +148,27 @@ const story = [
         </li>
       </ol>
       <div class="landing-foundation-grid"><article v-for="item in foundations" :key="item.title"><v-icon size="24" color="primary" aria-hidden="true">{{ item.icon }}</v-icon><h3>{{ item.title }}</h3><p>{{ item.description }}</p></article></div>
+    </section>
+
+    <section id="safety" class="landing-section landing-safety" aria-labelledby="safety-title">
+      <div class="landing-section-heading">
+        <h2 id="safety-title">インターロックのバイパスを、戻し忘れない。</h2>
+        <p>点検や故障のときに一時的に外す安全計装（インターロック）を、申請から復帰の確認まで記録します。外れている間は、プラントを守る仕組みがひとつ欠けているからです。</p>
+      </div>
+      <div class="landing-safety-body">
+        <figure class="landing-hero-shot">
+          <a :href="bypassScreenshot" target="_blank" rel="noopener" aria-label="インターロックの詳細の画面を拡大する（新しいタブ）"><img :src="bypassScreenshot" width="1144" height="423" alt="インターロックI-701の詳細画面。予定の復帰を過ぎたバイパスが赤く表示され、理由・代替措置と、申請・承認・バイパス実施の担当者と日時が並ぶ。" /></a>
+          <figcaption>デモデータの実際の画面。LT-701の調査でバイパスしたまま、予定の復帰を過ぎたI-701です。</figcaption>
+        </figure>
+        <div>
+          <ol class="landing-bypass-steps" aria-label="バイパスの流れ">
+            <li v-for="step in bypassSteps" :key="step.title"><strong>{{ step.title }}</strong><span>{{ step.note }}</span></li>
+          </ol>
+          <ul class="landing-bypass-guards">
+            <li v-for="guard in bypassGuards" :key="guard.icon"><v-icon size="20" color="error" aria-hidden="true">{{ guard.icon }}</v-icon><span>{{ guard.text }}</span></li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <!-- 2. プラナとは -->
@@ -271,6 +305,14 @@ const story = [
 .landing-flow li:not(:last-child)::after { content: ''; position: absolute; top: 20px; right: -6px; z-index: 1; width: 11px; height: 11px; background: #fff; border-top: 1px solid var(--pk-steel); border-right: 1px solid var(--pk-steel); transform: rotate(45deg); }
 .landing-flow strong { font-family: var(--pk-font-display); font-size: .9375rem; }
 .landing-flow span { font-size: .75rem; line-height: 1.55; color: var(--pk-muted); word-break: auto-phrase; }
+.landing-safety-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.landing-bypass-steps { margin: 0 0 24px; padding: 0; list-style: none; counter-reset: bypass; }
+.landing-bypass-steps li { counter-increment: bypass; display: grid; grid-template-columns: 2em 6.5em minmax(0, 1fr); align-items: baseline; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--pk-line); }
+.landing-bypass-steps li::before { content: counter(bypass); color: var(--pk-steel); font-weight: 700; font-variant-numeric: tabular-nums; }
+.landing-bypass-steps strong { font-family: var(--pk-font-display); font-size: .9375rem; }
+.landing-bypass-steps span { font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
+.landing-bypass-guards { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.landing-bypass-guards li { display: flex; gap: 10px; align-items: flex-start; font-size: .875rem; line-height: 1.8; }
 .landing-foundation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
 .landing-foundation-grid h3 { font-size: 1.125rem; margin: 16px 0 12px; }
 .landing-foundation-grid p { font-size: .875rem; line-height: 1.9; color: var(--pk-muted); }
@@ -350,6 +392,7 @@ const story = [
 
 @media (max-width: 900px) {
   .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; }
+  .landing-safety-body { grid-template-columns: 1fr; gap: 24px; }
   .landing-flow { grid-template-columns: 1fr; }
   .landing-flow li { flex-direction: row; align-items: baseline; gap: 12px; padding: 10px 16px; border-left: none; border-top: 1px solid var(--pk-line); }
   .landing-flow li:first-child { border-top: none; }
@@ -366,6 +409,7 @@ const story = [
   .landing-character :deep(.pk-plana-full) { width: 200px; margin-inline: auto; }
   .landing-plana-inner > div { padding-bottom: 0; }
   .landing-foundation-grid, .landing-story, .pk-plana-card-grid { grid-template-columns: 1fr; gap: 24px; }
+  .landing-bypass-steps li { grid-template-columns: 1.5em 5.5em minmax(0, 1fr); }
   .landing-step { grid-template-columns: 1fr; gap: 12px; }
   .landing-step:not(:last-child)::before { display: none; }
   .landing-step-marker { width: 32px; height: 32px; }

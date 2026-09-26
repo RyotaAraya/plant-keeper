@@ -9,6 +9,7 @@ import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL } from '@/constants/
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
 import RegulationChip from '@/components/RegulationChip.vue'
+import InterlockChips from '@/components/InterlockChips.vue'
 import RegulationSelect from '@/components/RegulationSelect.vue'
 import type { Regulation } from '@/types/models'
 
@@ -137,6 +138,7 @@ onMounted(fetchEquipment)
           <div v-if="equipment.regulations?.length" class="mt-2">
             <RegulationChip v-for="regulation in equipment.regulations" :key="regulation.id" :regulation="regulation" class="mr-1" />
           </div>
+          <InterlockChips :equipment-id="equipment.id" class="mt-2" />
           <v-row class="mt-2">
             <v-col cols="6" md="3">
               <v-card variant="tonal" class="text-center pa-3">

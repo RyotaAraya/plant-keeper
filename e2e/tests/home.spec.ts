@@ -16,12 +16,25 @@ test('保全業務の流れ・プラナの紹介・1件のトラブルの流れ�
   await expect(page.locator('.landing-flow strong')).toHaveText(['設備', '点検', 'トラブル', '修理', '資材', '在庫', '発注'])
   await expect(page.locator('.landing-foundation-grid h3')).toHaveText(['設備と記録をつなぐ', '保全の仕事を進める', '資材まで見渡す'])
 
-  const order = await page.evaluate(() => ['#features', '#plana', '#plana-work', '#try-guide', '#permissions']
+  const order = await page.evaluate(() => ['#features', '#safety', '#plana', '#plana-work', '#try-guide', '#permissions']
     .map((selector) => document.querySelector(selector)!.getBoundingClientRect().top))
   expect([...order].sort((a, b) => a - b)).toEqual(order)
 
   await expect(page.locator('#plana').getByRole('heading', { level: 2 })).toHaveText('プラナ')
   await expect(page.locator('#plana')).toContainText('運転を続けてよいかの判断は出しません')
+})
+
+test('インターロックのバイパスの節で、申請から復帰の確認までの流れと、戻し忘れを防ぐ仕組みを実際の画面つきで示す', async ({ page }) => {
+  await page.goto('/')
+  const safety = page.locator('#safety')
+  await expect(safety.getByRole('heading', { level: 2 })).toHaveText('インターロックのバイパスを、戻し忘れない。')
+  await expect(safety.locator('.landing-bypass-steps strong')).toHaveText(['申請', '承認', 'バイパス', '復帰', '復帰の確認'])
+  await expect(safety).toContainText('代替措置')
+  await expect(safety).toContainText('復帰期限超過')
+  await expect(safety).toContainText('検収へ進めません')
+  const img = safety.getByRole('img')
+  await expect(img).toBeVisible()
+  expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
 })
 
 test('ヒーローのプラナの入口から、プラナの紹介へ移る', async ({ page }) => {

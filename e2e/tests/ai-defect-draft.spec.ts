@@ -8,7 +8,7 @@ test('選んだ計器の種別に応じた一次点検の定型項目を、不�
   await selectOption(page, '設備 *', '常圧蒸留装置')
   await selectOption(page, '計器（任意）', 'FT-301')
   await page.getByRole('button', { name: '項目追加' }).click()
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
 
   const routine = page.getByTestId('routine-checks')
   await expect(routine).toBeVisible()
@@ -28,7 +28,7 @@ test('AI無効でも、一次点検の定型項目は表示される（AIとは�
   await selectOption(page, '設備 *', '常圧蒸留装置')
   await selectOption(page, '計器（任意）', 'FT-301')
   await page.getByRole('button', { name: '項目追加' }).click()
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
 
   await expect(page.getByTestId('ai-assist')).toHaveCount(0)
   const routine = page.getByTestId('routine-checks')
@@ -56,7 +56,7 @@ test('プラナホームから現場メモを入力してAIの下書きを作り
   await selectFirstOption(page, '対象の設備')
   await page.getByRole('button', { name: '不具合の記録を始める' }).click()
   await expect(page.getByTestId('from-plana')).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: '不具合あり' })).toBeChecked()
+  await expect(page.getByRole('button', { name: '不具合あり' })).toHaveAttribute('aria-pressed', 'true')
   await selectFirstOption(page, '部署 *')
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
 
@@ -108,7 +108,7 @@ test('設備を変えると、前の設備についての下書きは消える',
   await selectFirstOption(page, '部署 *')
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
   await page.getByLabel('現場メモ').fill('PT-101の指示値が数秒おきに上下している。')
   await page.getByTestId('ai-draft-button').click()
   await expect(page.getByTestId('ai-draft')).toBeVisible()
@@ -132,7 +132,7 @@ test('下書きを作っている間に設備を変えると、あとから返�
   await selectFirstOption(page, '部署 *')
   await page.getByRole('button', { name: '項目追加' }).click()
   await page.getByLabel('内容', { exact: true }).fill('圧力指示値の確認')
-  await page.getByRole('checkbox', { name: '不具合あり' }).check()
+  await page.getByRole('button', { name: '不具合あり' }).click()
   await page.getByLabel('現場メモ').fill('PT-101の指示値が数秒おきに上下している。')
 
   // 下書きのAPIの応答を、設備を変えるまで止めておく

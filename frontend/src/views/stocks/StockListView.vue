@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { canTransactStock } from '@/constants/stock'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
@@ -163,7 +164,7 @@ watch(filters, fetchStocks, { deep: true })
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="canManageStockTransaction" size="x-small" variant="outlined" @click.stop="openTx(item)">入出庫</v-btn>
+        <v-btn v-if="canManageStockTransaction && canTransactStock(item.status)" size="x-small" variant="outlined" @click.stop="openTx(item)">入出庫</v-btn>
       </template>
     </v-data-table>
 

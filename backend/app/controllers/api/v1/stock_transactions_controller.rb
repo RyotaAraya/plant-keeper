@@ -10,6 +10,10 @@ module Api
         ActiveRecord::Base.transaction do
           # 同時に入出庫されても数量が狂わないよう、在庫行を先にロックしてから読む
           stock = Stock.lock.find_by(id: transaction.stock_id)
+          # 修理待ち・修理中・廃棄済みの在庫は入出庫で変えない（修理中の在庫は修理管理の操作だけで変える）
+          if stock && !Stock::TRANSACTABLE_STATUSES.include?(stock.status)
+            raise ActiveRecord::RecordInvalid.new(stock), "入出庫できるのは「利用可」「使用中」の在庫のみです（修理待ち・修理中は修理管理で扱います）"
+          end
           transaction.stock = stock
           transaction.from_warehouse_id = stock&.warehouse_id if transaction.transfer?
           transaction.save!

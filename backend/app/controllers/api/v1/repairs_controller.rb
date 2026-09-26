@@ -1,6 +1,9 @@
 module Api
   module V1
     class RepairsController < BaseController
+      # 修理の状態 => 修理対象の在庫の状態（依頼中は、作成時に修理待ちにしてある）
+      STOCK_STATUS_FOR = { "shipped" => "under_repair", "completed" => "available", "disposed" => "disposed" }.freeze
+
       before_action :set_repair, only: [ :show, :update ]
 
       # GET /api/v1/repairs
@@ -64,7 +67,7 @@ module Api
         ActiveRecord::Base.transaction do
           source = Stock.lock.find_by(id: repair.stock_id)
           if source && !repairable?(source)
-            repair.errors.add(:stock, "は修理を依頼できる状態ではありません（在庫あり・使用中のみ）")
+            repair.errors.add(:base, "この在庫は修理を依頼できる状態ではありません（利用可・使用中のみ）")
             raise ActiveRecord::RecordInvalid, repair
           end
 
@@ -89,10 +92,17 @@ module Api
           @repair.lock!
           @repair.update!(update_params)
           record_audit_log("update", @repair)
-          case @repair.status
-          when "shipped" then @repair.stock.update!(status: "under_repair")
-          when "completed" then @repair.stock.update!(status: "available")
-          when "disposed" then @repair.stock.update!(status: "disposed")
+          # 在庫を合わせるのは、修理の状態が変わったときだけ。備考・費用だけの更新で、そのあと入出庫で変えた在庫の状態を戻さない
+          stock_status = STOCK_STATUS_FOR[@repair.status] if @repair.saved_change_to_status?
+          if stock_status
+            @repair.stock.lock! # 入出庫と同じく、在庫の行をロックしてから変える
+            # 在庫がまだ修理の状態であることを確かめる（修理の外で廃棄・移動された在庫を「在庫あり」に戻さない）
+            unless @repair.stock.awaiting_repair? || @repair.stock.under_repair?
+              @repair.errors.add(:base, "在庫が修理待ち・修理中ではないため、修理の状態を変えられません")
+              raise ActiveRecord::RecordInvalid, @repair
+            end
+            @repair.stock.update!(status: stock_status)
+            record_audit_log("update", @repair.stock) # 在庫の状態は入出庫と修理を通して変えるため、修理で変えたことも残す
           end
         end
 
@@ -108,16 +118,21 @@ module Api
       end
 
       # 数量1ならその在庫自体を修理待ちにし、2以上なら1個を別行に切り出す。修理対象の在庫を返す
+      # 在庫の変更は監査ログにも残す（在庫は入出庫と修理を通して変えるため）
       def detach_one_unit(source)
         if source.quantity == 1
           source.update!(status: "awaiting_repair")
+          record_audit_log("update", source)
           source
         else
           source.update!(quantity: source.quantity - 1)
-          Stock.create!(
+          record_audit_log("update", source)
+          detached = Stock.create!(
             material_id: source.material_id, warehouse_id: source.warehouse_id, quantity: 1,
             purchased_on: source.purchased_on, status: "awaiting_repair", notes: source.notes
           )
+          record_audit_log("create", detached)
+          detached
         end
       end
 

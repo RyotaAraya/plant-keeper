@@ -92,6 +92,9 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     unit = Repair.last.stock
     assert_not_equal lot, unit
     assert_equal [ 1, "awaiting_repair", lot.warehouse, lot.purchased_on ], [ unit.quantity, unit.status, unit.warehouse, unit.purchased_on ]
+    # 元のロットの数量の変更と、切り出した在庫の作成が監査ログに残る
+    assert_equal [ 3, 2 ], AuditLog.find_by!(auditable: lot, action: "update").changes_json["quantity"]
+    assert AuditLog.exists?(auditable: unit, action: "create")
   end
 
   test "数量1の在庫はそのまま修理待ちになる（行は増えない）" do
@@ -104,6 +107,7 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal single, Repair.last.stock
     assert_equal "awaiting_repair", single.reload.status
+    assert_equal [ "in_use", "awaiting_repair" ], AuditLog.find_by!(auditable: single, action: "update").changes_json["status"]
   end
 
   test "修理中・廃棄済・数量0の在庫には修理を依頼できない" do
@@ -120,6 +124,100 @@ class OrderReceiptAndRepairTest < ActionDispatch::IntegrationTest
       create_repair_for(empty)
     end
     assert_response :unprocessable_entity
+  end
+
+  # ---- 修理の更新と在庫の状態 ----
+
+  def update_repair(repair, **attrs)
+    patch "/api/v1/repairs/#{repair.id}", params: { repair: attrs }, headers: @headers, as: :json
+    assert_response :ok
+  end
+
+  test "修理の状態を変えると在庫の状態が合わせて変わり、在庫の変更も監査ログに残る" do
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+
+    { "shipped" => "under_repair", "completed" => "available" }.each do |status, stock_status|
+      assert_difference -> { AuditLog.where(auditable: single).count }, 1 do
+        update_repair(repair, status: status)
+      end
+      assert_equal stock_status, single.reload.status, status
+    end
+  end
+
+  test "状態を変えない修理の更新（備考・費用だけ）では、あとで変えた在庫の状態を上書きしない" do
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+    update_repair(repair, status: "shipped")
+    update_repair(repair, status: "completed")
+    assert_equal "available", single.reload.status
+
+    # 完了して戻ってきた在庫を、そのあと取り付けた（使用中）
+    single.update!(status: "in_use")
+    assert_no_difference -> { AuditLog.where(auditable: single).count } do
+      update_repair(repair, notes: "修理報告書を受領", repair_cost: 12_000)
+    end
+    assert_equal "in_use", single.reload.status
+    assert_equal "修理報告書を受領", repair.reload.notes
+  end
+
+  def post_transaction(stock, **attrs)
+    post "/api/v1/stock_transactions", headers: @headers, as: :json, params: {
+      stock_transaction: { stock_id: stock.id, quantity: 1, transacted_at: Time.current, **attrs }
+    }
+  end
+
+  test "修理待ち・修理中の在庫は、入出庫（出庫・廃棄・移動・入庫）できず、在庫も台帳も変わらない" do
+    other_warehouse = Warehouse.create!(name: "第二倉庫", site: @warehouse.site)
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+    assert_transactions_rejected(single, other_warehouse)
+    assert_equal "awaiting_repair", single.reload.status
+
+    update_repair(repair, status: "shipped")
+    assert_transactions_rejected(single, other_warehouse)
+    assert_equal "under_repair", single.reload.status
+  end
+
+  def assert_transactions_rejected(stock, other_warehouse)
+    [ { transaction_type: "outgoing" }, { transaction_type: "disposal" },
+      { transaction_type: "transfer", to_warehouse_id: other_warehouse.id }, { transaction_type: "incoming" } ].each do |attrs|
+      assert_no_difference [ "StockTransaction.count", "Stock.count" ] do
+        post_transaction(stock, **attrs)
+      end
+      assert_response :unprocessable_entity
+      assert_equal [ 1, @warehouse ], [ stock.reload.quantity, stock.warehouse ], attrs[:transaction_type]
+    end
+  end
+
+  test "廃棄済みの在庫は入出庫できない" do
+    disposed = Stock.create!(material: @material, warehouse: @warehouse, quantity: 0, status: "disposed")
+
+    assert_no_difference "StockTransaction.count" do
+      post_transaction(disposed, transaction_type: "incoming")
+    end
+    assert_response :unprocessable_entity
+    assert_equal [ 0, "disposed" ], [ disposed.reload.quantity, disposed.status ]
+  end
+
+  test "在庫が修理の状態でなければ、修理を完了・廃棄にできない（廃棄済みの在庫を「利用可」に戻さない）" do
+    single = Stock.create!(material: @material, warehouse: @warehouse, quantity: 1, status: "in_use")
+    create_repair_for(single)
+    repair = Repair.last
+    update_repair(repair, status: "shipped")
+    # 入出庫を通さずに在庫が廃棄された（旧データ・データの直接修正などで食い違った）場合
+    single.update!(quantity: 0, status: "disposed")
+
+    %w[completed disposed].each do |status|
+      patch "/api/v1/repairs/#{repair.id}", params: { repair: { status: status } }, headers: @headers, as: :json
+      assert_response :unprocessable_entity
+      assert_equal [ "在庫が修理待ち・修理中ではないため、修理の状態を変えられません" ], response.parsed_body["errors"]
+      assert_equal "shipped", repair.reload.status
+      assert_equal "disposed", single.reload.status
+    end
   end
 
   test "受領は発注の行をロックして更新する（二重受領による在庫の二重加算の防止）" do

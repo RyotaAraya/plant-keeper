@@ -9,7 +9,7 @@ module Api
       # overdue=true で期限超過のみ、due_within=N で N日以内に期限が来るもの。既定は有効な計画のみ（is_active=false で無効も）
       def index
         authorize InspectionPlan
-        plans = InspectionPlan.includes(:equipment, :equipments, :reference_standard, :instrument, :checklist_template)
+        plans = InspectionPlan.includes(:equipment, :equipments, :reference_standard, { instrument: :interlocks }, { checklist_template: :checklist_template_items })
         plans = plans.where(is_active: params[:is_active] == "false" ? false : true)
         if (site_ids = id_list_param(:site_ids, :site_id))
           plans = plans.for_sites(site_ids)
@@ -22,8 +22,18 @@ module Api
         plans = plans.due_within(params[:due_within].to_i) if params[:due_within].present?
 
         plans = plans.order(:next_due_on, :id)
-        total_count = plans.count
 
+        # 周期の見直しの候補（interval_review=extend|shorten|any）で絞るときは、候補を求めてから数える（ルールがRubyのため）
+        if (review = params[:interval_review]).present?
+          reviewed = plans.to_a.filter_map { |plan| [ plan, CalibrationIntervalReview.new(plan).result ] }
+                          .select { |_plan, result| result && (review == "any" || result["kind"] == review) }
+          page, per_page = pagination_params
+          rows = reviewed.slice((page - 1) * per_page, per_page) || []
+          render json: { data: rows.map { |plan, result| plan_json(plan, review: result) }, meta: { total_count: reviewed.size, page: page, per_page: per_page } }
+          return
+        end
+
+        total_count = plans.count
         page, per_page = pagination_params
         plans = plans.limit(per_page).offset((page - 1) * per_page)
 
@@ -63,7 +73,9 @@ module Api
         @plan = InspectionPlan.find(params[:id])
       end
 
-      def plan_json(plan)
+      # interval_review は、5点校正のある計画の周期の見直しの候補（なければ nil）
+      def plan_json(plan, review: :compute)
+        review = CalibrationIntervalReview.new(plan).result if review == :compute
         plan.as_json(
           methods: [ :overdue, :days_until_due ],
           include: {
@@ -73,7 +85,7 @@ module Api
             instrument: { only: [ :id, :tag_number ] },
             checklist_template: { only: [ :id, :name ] }
           }
-        )
+        ).merge("interval_review" => review)
       end
 
       def plan_params
