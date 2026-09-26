@@ -608,6 +608,24 @@ export interface DepartmentTreeNode {
   children: DepartmentTreeNode[]
 }
 
+// 計器の5点校正の1回分（校正の傾向。古い順）。max_error は出力・DCS表示の誤差の絶対値の最大（%スパン）
+export interface CalibrationStageSummary {
+  result: 'pass' | 'fail' | 'incomplete' | 'empty'
+  max_error: number | null
+  max_hysteresis: number | null
+}
+
+export interface CalibrationHistoryRow {
+  inspection_id: number
+  inspected_at: string
+  status: string
+  tolerance_percent: number
+  adjusted: boolean
+  as_found: CalibrationStageSummary
+  as_left: CalibrationStageSummary | null
+  result: string | null
+}
+
 // インターロックのバイパス。requested=申請中 / approved=承認済 / bypassed=バイパス中 / restored=復帰確認待ち / completed=完了 / rejected=却下 / cancelled=取消
 export type InterlockBypassStatus = 'requested' | 'approved' | 'bypassed' | 'restored' | 'completed' | 'rejected' | 'cancelled'
 

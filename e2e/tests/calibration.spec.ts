@@ -104,3 +104,29 @@ test('承認済みの5点校正の記録に、調整前（不合格）と調整�
   await expect(page.getByText('NG')).toHaveCount(0)
   await expect(page.locator('.pk-calibration tbody tr').filter({ hasText: '100%' }).first()).toContainText('OK')
 })
+
+// 校正の傾向: シードの FT-301 は、紙の校正記録から移行した過去3回（0.12 → 0.25 → 0.41%）と、最新の年次校正（調整前 0.72% で不合格、調整後 0.12%）。
+// ほかのテストが記録を足すことがあるため、件数は決め打ちしない
+test('計器の「校正の傾向」に、調整前の最大誤差の推移のグラフと、各回の結果・調整の有無が並ぶ', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.getByRole('link', { name: '装置・計器', exact: true }).click()
+  await page.getByRole('textbox', { name: 'タグ番号・種別・設置場所' }).fill('FT-301')
+  await page.locator('tbody tr', { hasText: 'FT-301' }).first().click()
+  await page.getByRole('tab', { name: '校正の傾向' }).click()
+
+  const trend = page.getByTestId('calibration-trend')
+  await expect(trend.getByRole('img', { name: /調整前の最大誤差の推移（許容差 ±0.5%）/ })).toBeVisible()
+  // 列: 点検日・調整前の最大誤差・調整前の結果・調整・調整後の最大誤差
+  const row = (error: string) => trend.locator('tbody tr').filter({ has: page.locator('td:nth-child(2)', { hasText: error }) }).first()
+  await expect(row('0.72%').locator('td').nth(2)).toHaveText('不合格')
+  await expect(row('0.72%').locator('td').nth(3)).toHaveText('あり')
+  await expect(row('0.72%').locator('td').nth(4)).toHaveText('0.12%')
+  for (const error of ['0.12%', '0.25%', '0.41%']) {
+    await expect(row(error).locator('td').nth(2)).toHaveText('合格')
+    await expect(row(error).locator('td').nth(3)).toHaveText('なし')
+  }
+
+  // 行から点検記録へ移れる
+  await row('0.72%').click()
+  await expect(page).toHaveURL(/\/inspections\/\d+$/)
+})
