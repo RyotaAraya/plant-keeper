@@ -142,7 +142,7 @@ test('体験条件を案内し、詳細権限は必要なときに開ける', as
   await page.goto('/')
   await expect(page.locator('#try-guide')).toContainText('上の例は自動では入りません')
   await expect(page.locator('#try-guide')).toContainText('1日の利用上限')
-  await expect(page.getByRole('heading', { name: '自社と協力会社の権限' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '他の拠点の社員も、協力会社の人も使えます' })).toBeVisible()
   await expect(page.locator('#permissions')).toContainText('技能員')
   const matrix = page.locator('#permissions table')
   await expect(matrix).toBeHidden()

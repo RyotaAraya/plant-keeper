@@ -286,7 +286,7 @@ const story = [
     </section>
 
     <section id="permissions" class="landing-section" aria-labelledby="permission-title">
-      <div class="landing-section-heading"><h2 id="permission-title">自社と協力会社の権限</h2><p>所属と権限によって、見られる情報とできる操作が変わります。デモアカウントは5つの権限に1人ずつあります。対応記録の整理は、協力会社の技能員は使えません。</p></div>
+      <div class="landing-section-heading"><h2 id="permission-title">他の拠点の社員も、協力会社の人も使えます</h2><p>所属や役割に合わせて、人ごとに権限を付けられます。デモアカウントは、5つの権限に1人ずつ用意しています。</p></div>
       <details class="landing-permissions"><summary>業務機能の詳しい権限を見る</summary><PermissionMatrix /></details>
     </section>
     <section class="landing-story landing-section">
