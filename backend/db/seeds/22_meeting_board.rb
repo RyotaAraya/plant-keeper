@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-puts "朝会・夕会ボードのデモ（実施中の定期整備・今日と明日が期限の点検計画）を作成中..."
+puts "朝会・夕会ボードのデモ（実施中の定期整備・今日と明日が期限の点検計画・今日の点検と対応記録）を作成中..."
 
 # 定義は db/data/meeting_board.rb（既存環境へは SeedMeetingBoardDemo マイグレーションで反映する）
 require Rails.root.join("db/data/meeting_board")
@@ -22,6 +22,22 @@ MeetingBoardCatalog::TASKS.each do |task|
     assigned_to: task[:assigned] && User.find_by!(email: task[:assigned]),
     completed_on: task[:completed_days] && today + task[:completed_days]
   )
+end
+
+# 夕会の場面: 今日の点検（作業から実施）と、今日の対応記録
+now = Time.current
+MeetingBoardCatalog::INSPECTIONS.each do |spec|
+  task = maintenance.maintenance_tasks.joins(:instrument).find_by!(instruments: { tag_number: spec[:task_tag] })
+  Inspection.create!(
+    user: User.find_by!(email: spec[:user]), department: Department.find_by!(site: site, name: spec[:department]),
+    equipment: equipment, instrument: task.instrument, checklist_template: task.checklist_template, maintenance_task: task,
+    inspection_type: "periodic", status: spec[:status], inspected_at: MeetingBoardCatalog.today_at(now, spec[:hours_ago]), notes: spec[:notes]
+  )
+end
+MeetingBoardCatalog::RESPONSES.each do |spec|
+  trouble = Trouble.joins(:equipment).find_by!(title: spec[:trouble], equipments: { site_id: Site.find_by!(name: spec[:site]).id })
+  trouble.trouble_responses.create!(user: User.find_by!(email: spec[:user]), response_type: spec[:response_type], description: spec[:description],
+                                    responded_at: MeetingBoardCatalog.today_at(now, spec[:hours_ago]))
 end
 
 MeetingBoardCatalog::PLANS.each do |plan|

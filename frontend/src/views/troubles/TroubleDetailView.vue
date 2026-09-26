@@ -10,7 +10,7 @@ import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
-import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
+import { priorityColor, priorityLabel, responseTypeLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
@@ -67,10 +67,6 @@ function closeSimilar() {
 const similar = useSimilarTroubles((count) => {
   if (aiStatus.value) aiStatus.value.remaining_today = count
 })
-
-const responseTypeLabel: Record<string, string> = {
-  investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察'
-}
 
 const statusOptions = [
   { title: '未対応', value: 'open' },

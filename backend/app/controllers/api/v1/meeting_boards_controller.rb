@@ -28,7 +28,13 @@ module Api
             total_count: troubles.count,
             items: troubles.includes(:equipment, :instrument, :assigned_to).limit(MeetingBoard::TROUBLE_LIMIT).map { |trouble| trouble_json(trouble) }
           },
-          interlock_bypasses: board.interlock_bypasses.map { |bypass| bypass_json(bypass) }
+          interlock_bypasses: board.interlock_bypasses.map { |bypass| bypass_json(bypass) },
+          # 夕会: 今日の実績（下書きのままの点検は、画面で積み残しとして分ける）
+          results: {
+            inspections: board.todays_inspections.map { |inspection| inspection_json(inspection) },
+            trouble_responses: board.todays_responses.map { |response| response_json(response) },
+            completed_tasks: board.completed_tasks.map { |task| completed_task_json(task) }
+          }
         } }
       end
 
@@ -65,6 +71,27 @@ module Api
                                     instrument: { only: [ :id, :tag_number ] }, assigned_to: { only: [ :id, :name ] } })
           end
         )
+      end
+
+      def inspection_json(inspection)
+        inspection.as_json(only: [ :id, :status, :inspection_type, :inspected_at, :equipment_id ],
+                           include: { equipment: { only: [ :id, :name ] }, equipments: { only: [ :id, :name ] },
+                                      instrument: { only: [ :id, :tag_number ] }, user: { only: [ :id, :name ] },
+                                      department: { only: [ :id, :name ] }, checklist_template: { only: [ :id, :name ] } })
+      end
+
+      def response_json(response)
+        response.as_json(only: [ :id, :response_type, :description, :responded_at ],
+                         include: { user: { only: [ :id, :name ] },
+                                    trouble: { only: [ :id, :title, :status ],
+                                               include: { equipment: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] } } } })
+      end
+
+      def completed_task_json(task)
+        task.as_json(only: [ :id, :title, :kind, :completed_on ],
+                     include: { scheduled_maintenance: { only: [ :id, :title ] }, department: { only: [ :id, :name ] },
+                                equipment: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] },
+                                assigned_to: { only: [ :id, :name ] } })
       end
 
       def trouble_json(trouble)
