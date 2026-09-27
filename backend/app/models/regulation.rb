@@ -3,6 +3,7 @@ class Regulation < ApplicationRecord
   has_many :regulation_inspections, -> { order(:interval_days) }, dependent: :destroy
   has_many :equipment_regulations, dependent: :restrict_with_error
   has_many :equipments, through: :equipment_regulations
+  has_many :inspection_plan_groups, dependent: :restrict_with_error
 
   # 法規が掛かる単位。計器単位のもの（取引メータ）は設備には付けられない
   enum :target, { equipment: "equipment", instrument: "instrument" }, prefix: true

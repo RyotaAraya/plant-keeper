@@ -19,7 +19,7 @@ class AuditLog < ApplicationRecord
     when ReferenceStandard, IntegrationToken then resource.site_id
     when ReferenceStandardCalibration then resource.reference_standard&.site_id
     when InspectionPlan then resource.equipment&.site_id || resource.reference_standard&.site_id
-    when ScheduledMaintenance, MaintenanceSeries then resource.site_id
+    when ScheduledMaintenance, MaintenanceSeries, InspectionPlanGroup then resource.site_id
     when MaintenanceTask then resource.scheduled_maintenance&.site_id
     when EquipmentAssignment, Instrument, Inspection, Trouble, AiSuggestion then resource.equipment&.site_id
     when Interlock then resource.equipment&.site_id
