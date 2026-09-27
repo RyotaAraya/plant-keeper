@@ -130,7 +130,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 
 ### ブランチ運用
 - `develop` に push → stg に自動デプロイ。動作確認後、`develop` → `main` の PR をマージして本番リリース
-  - `develop` → `main` の PR は `.github/workflows/release-pr.yml` が自動で作る（`develop` への push のたびに、開いている PR がなければ作り、あれば本文の変更の一覧を更新する。マージは手動で、**マージコミットで行う**（squash・rebase だと develop のコミットが main の祖先にならず、次のリリース PR に同じ変更が並び続ける）。手動で動かすときは Actions の workflow_dispatch）。リポジトリの設定「Allow GitHub Actions to create and approve pull requests」が必要。GITHUB_TOKEN で作った PR では pull_request の CI は動かないが、同じコミットの `develop` への push の CI の結果が PR に出る
+  - `develop` → `main` の PR は `.github/workflows/release-pr.yml` が自動で作る（`develop` への push のたびに、開いている PR がなければ作り、あれば本文の変更の一覧を更新する。マージは手動で、**マージコミットで行う**（squash・rebase だと develop のコミットが main の祖先にならず、次のリリース PR に同じ変更が並び続ける）。手動で動かすときは Actions の workflow_dispatch）。リポジトリの設定「Allow GitHub Actions to create and approve pull requests」が必要。リリース PR では pull_request の CI は動かさないが（`ci.yml` の `branches-ignore`）、同じコミットの `develop` への push の CI の結果が PR に出る
 - `main` に push/マージすると即本番に自動デプロイされる（GitHub連携によるauto-deploy）。直接 push しない
 - 依存関係の更新は Renovate（`.github/renovate.json5`）。更新PRは `develop` 向け。設定ファイル自体は既定ブランチ `main` から読まれる
   - patch: 公開3日後、CI成功で `develop` へ自動マージ（`main` へのリリースは手動PR）
@@ -138,7 +138,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - 更新は stg で動作確認してから `main` へ
 - 認証まわり（devise / jwt / warden-jwt_auth / rack 等）の更新では、ログインだけでなく「認証付きAPI → ログアウト（204）→ 失効済みトークンの再利用（401）」まで確認する。バックエンドのテスト（`test/integration/authentication_test.rb`）がこれを検証するが、フロント経由の動作は別途 stg で確認する
   - 実例: devise 5.0.4 で `respond_to_on_destroy` がキーワード引数付きで呼ばれるようになり、`SessionsController` のオーバーライドが ArgumentError → ログアウトが500になりJWTが失効しなかった（`respond_to_on_destroy(**)` で修正）
-- CI（`.github/workflows/ci.yml`）は PR と `main`/`develop` への push で実行。ただし、変更が Markdown（`**/*.md`）・`.claude/`・`.agents/` だけのときは動かない（`paths-ignore`。コードから参照している Markdown はない。ブランチ保護で CI を必須のチェックにしていないため、動かなくてもマージは止まらない）。ジョブは5つ:
+- CI（`.github/workflows/ci.yml`）は PR と `develop` への push で実行。同じコミットで何度も動かさないよう、**main 向けの PR（リリース PR）と `main` への push では動かさない**（main に入るのは develop で CI を通したコミットとマージコミットだけ。リリース PR には develop への push の結果が出る。Render の自動デプロイは CI を待たない）。同じブランチに続けて push すると、古いコミットの CI は止まる（`concurrency`）。ただし、変更が Markdown（`**/*.md`）・`.claude/`・`.agents/` だけのときは動かない（`paths-ignore`。コードから参照している Markdown はない。ブランチ保護で CI を必須のチェックにしていないため、動かなくてもマージは止まらない）。ジョブは5つ:
   - `backend_scan_ruby`（Brakeman）/ `backend_lint`（RuboCop）
   - `backend_test`（Minitest。Postgres 16 のサービスコンテナ）
   - `e2e`（Playwright。シード済みDB + APIサーバー + ビルド済みフロントの `vite preview`。失敗時はレポートを artifact に保存）
