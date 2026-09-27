@@ -66,3 +66,19 @@ test('詳細と新規点検からヘッダーの一覧リンクで戻れる', as
   await location.getByRole('link', { name: '点検・作業記録の一覧へ戻る' }).click()
   await expect(page).toHaveURL(/\/inspections$/)
 })
+
+// サイドバーは仕事の流れ（ホーム → 記録する → 計画する）のあとに台帳・資材・組織を並べ、プラナの入口は最後。
+// 見える項目のないグループは、見出しも出さない
+for (const [label, account, groups] of [
+  ['システム管理者', ACCOUNTS.admin, ['記録する', '計画する', '設備の台帳', '資材と調達', '組織と設定']],
+  ['協力会社の技能員', { email: 'honda@example.com', password: 'password' }, ['記録する', '計画する', '設備の台帳']],
+] as const) {
+  test(`${label}のサイドバーは、ホーム → 記録する → 計画する → 台帳の順で、プラナの入口が最後にある`, async ({ page }) => {
+    await login(page, account)
+    const drawer = page.locator('.v-navigation-drawer')
+    await expect(drawer.locator('.pk-sidenav__group')).toHaveText([...groups])
+    const links = await drawer.locator('a[href^="/"]').evaluateAll((els) => els.map((e) => e.getAttribute('href')))
+    expect(links.slice(0, 5)).toEqual(['/home', '/inspections', '/troubles', '/interlocks', '/plans'])
+    expect(links.at(-1)).toBe('/plana')
+  })
+}
