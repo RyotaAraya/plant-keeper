@@ -60,6 +60,14 @@ class AiDefectDraftsTest < ActionDispatch::IntegrationTest
     assert log.changes_json.values.none? { |v| v.is_a?(Hash) }
   end
 
+  test "現場メモはRailsのログ（リクエストのパラメータ）に出さない" do
+    post_draft(memo: "PT-101の指示値が上下にふらついている", item_label: "指示値の確認")
+
+    assert_response :ok
+    assert_equal "[FILTERED]", request.filtered_parameters["memo"]
+    assert_equal "指示値の確認", request.filtered_parameters["item_label"]
+  end
+
   test "AIには設備・計器・サービスの情報とメモを渡し、ユーザの個人情報は渡さない" do
     post_draft(memo: "指示値がふらつく", item_label: "指示値の確認")
 
