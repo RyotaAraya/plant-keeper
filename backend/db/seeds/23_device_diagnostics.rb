@@ -20,3 +20,18 @@ DeviceDiagnosticCatalog::HISTORIES.each do |tag, history|
   instrument.update_columns(diagnostic_status: history.last[:status], diagnostic_since: now - history.last[:hours_ago].hours,
                             diagnostic_received_at: now - DeviceDiagnosticCatalog::RECEIVED_HOURS_AGO.hours)
 end
+
+# 診断のある計器の点検計画（前倒しの候補・自動のトラブルの担当部署のデモ）
+today = InspectionPlan.today
+DeviceDiagnosticCatalog::PLANS.each do |spec|
+  instrument = Instrument.joins(:equipment).find_by!(tag_number: spec[:tag], equipments: { site_id: site.id })
+  last = today - spec[:last_days_ago]
+  InspectionPlan.create!(name: spec[:name], equipment: instrument.equipment, instrument: instrument,
+                         checklist_template: ChecklistTemplate.find_by!(name: spec[:template]), inspection_type: "periodic",
+                         interval_days: spec[:interval], last_inspected_on: last, next_due_on: last + spec[:interval])
+end
+
+# いま故障の計器（TV-602）は、受け口と同じく診断からトラブルを作る
+Instrument.where(diagnostic_status: "failure").find_each do |instrument|
+  DiagnosticTrouble.create_for(instrument.instrument_diagnostics.order(occurred_at: :desc, id: :desc).first)
+end

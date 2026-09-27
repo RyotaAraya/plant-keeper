@@ -3,8 +3,11 @@
 # - 状態・コード・内容がいまと同じなら、履歴は増やさず、最後に受け取った日時だけ更新する（定期的に同じ状態が送られてくるため）
 # - いまの状態より古い日時の診断は、順番が入れ替わって届いたものとして反映しない
 # - 未来の日時（時計のずれの許容を超えるもの）は受け付けない（反映すると、それより前の正しい診断がすべて古い扱いになるため）
+# - 故障（F）になったら、その計器のトラブルを作る（DiagnosticTrouble。作ったときは trouble_id を返す）
 class DeviceDiagnosticIntake
-  Result = Data.define(:tag_number, :result, :errors)
+  Result = Data.define(:tag_number, :result, :errors, :trouble_id) do
+    def initialize(tag_number:, result:, errors:, trouble_id: nil) = super
+  end
   CLOCK_SKEW = 5.minutes
 
   def initialize(token, now: Time.current)
@@ -47,7 +50,8 @@ class DeviceDiagnosticIntake
       next Result.new(instrument.tag_number, "error", diagnostic.errors.full_messages) unless diagnostic.save
 
       instrument.update_columns(diagnostic_status: status, diagnostic_since: occurred_at, diagnostic_received_at: @now)
-      Result.new(instrument.tag_number, "changed", [])
+      trouble = DiagnosticTrouble.create_for(diagnostic)
+      Result.new(instrument.tag_number, "changed", [], trouble&.id)
     end
   end
 

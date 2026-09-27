@@ -34,6 +34,7 @@ module Api
           kind: board.kind,
           site: board.site.as_json(only: [ :id, :name ]),
           interlock_bypasses: board.interlock_bypasses.map { |bypass| bypass_json(bypass) },
+          diagnostic_troubles: board.unrouted_diagnostic_troubles.map { |trouble| trouble_json(trouble) },
           areas: board.area_departments.map { |department| area_json(board, department) }
         }
         if board.kind == "manager"
@@ -103,7 +104,7 @@ module Api
       end
 
       def trouble_json(trouble)
-        trouble.as_json(only: [ :id, :title, :status, :priority, :reported_at ],
+        trouble.as_json(only: [ :id, :title, :status, :priority, :reported_at, :source ],
                         include: { equipment: { only: [ :id, :name ] }, instrument: { only: [ :id, :tag_number ] },
                                    assigned_to: { only: [ :id, :name ] } })
       end

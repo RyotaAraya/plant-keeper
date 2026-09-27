@@ -195,7 +195,7 @@ const story = [
             <a :href="diagnosticsScreenshot" target="_blank" rel="noopener" aria-label="機器の診断で絞り込んだ計器一覧の画面を拡大する（新しいタブ）"><img :src="diagnosticsScreenshot" width="1120" height="427" alt="計器の一覧を機器の診断で絞り込んだ画面。LT-701が仕様外、PT-502が保守要求、TV-602が故障として並ぶ。" /></a>
           </figure>
           <h3 class="landing-feature-title">機器の自己診断（NAMUR NE 107）</h3>
-          <p class="landing-body-text">スマート機器の自己診断を、機器管理システム（AMS Device Manager など）から受け取り、計器の一覧と詳細に出します。</p>
+          <p class="landing-body-text">スマート機器の自己診断を、機器管理システム（AMS Device Manager など）から受け取り、計器の一覧と詳細に出します。故障はトラブルに自動で登録し、保守要求・仕様外は点検計画の期限を前倒しする候補にします（AIは使いません）。</p>
           <ul class="landing-diagnostic-states" aria-label="NE 107の状態">
             <li v-for="state in diagnosticStates" :key="state"><DiagnosticChip :status="state" /></li>
           </ul>

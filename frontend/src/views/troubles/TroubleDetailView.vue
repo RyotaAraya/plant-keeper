@@ -6,6 +6,7 @@ import AiAvailability from '@/components/AiAvailability.vue'
 import { useAiAvailability } from '@/composables/useAiAvailability'
 import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
+import DiagnosticChip from '@/components/DiagnosticChip.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -28,6 +29,13 @@ const router = useRouter()
 
 const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers, canManageMaintenance } = usePermissions()
 const trouble = ref<any>(null)
+// 機器の診断から自動で作ったトラブルの報告者は、人ではなく連携（報告者の列には連携用のトークンを発行した人が入っている）
+const reporterLabel = computed(() => {
+  const t = trouble.value
+  if (t?.source !== 'device_diagnostic') return t?.reported_by?.name ?? ''
+  const connection = t.instrument_diagnostic?.integration_token?.name
+  return connection ? `機器の診断（${connection}）` : '機器の診断'
+})
 // 詳細の中身は「概要 → タブ」（この計器の履歴は、計器があるときだけ）
 const tab = useDetailTab(() => ['responses', ...(trouble.value?.instrument ? ['history'] : []), 'changes'])
 const loading = ref(true)
@@ -267,7 +275,7 @@ watch(() => route.params.id, (id, previous) => {
         </template>
         <template #meta>
           {{ trouble.equipment?.name }}<template v-if="trouble.instrument"> ／ {{ trouble.instrument.tag_number }}</template>
-          ・ {{ trouble.reported_by?.name }}が{{ formatDate(trouble.reported_at) }}に報告
+          ・ {{ reporterLabel }}が{{ formatDate(trouble.reported_at) }}に報告
         </template>
         <template #actions>
           <v-btn v-if="canDefer" color="deep-purple" variant="tonal" prepend-icon="mdi-wrench-clock" @click="deferDialog = true">定期整備に回す</v-btn>
@@ -285,10 +293,22 @@ watch(() => route.params.id, (id, previous) => {
               <dt>計器</dt>
               <dd><router-link v-if="trouble.instrument" class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link><template v-else>—</template></dd>
             </div>
-            <div><dt>報告者</dt><dd>{{ trouble.reported_by?.name }}</dd></div>
+            <div><dt>報告者</dt><dd>{{ reporterLabel }}</dd></div>
             <div><dt>担当者</dt><dd>{{ trouble.assigned_to?.name || '未割当' }}</dd></div>
             <div><dt>報告日時</dt><dd>{{ formatDate(trouble.reported_at) }}</dd></div>
             <div><dt>解決日時</dt><dd>{{ trouble.resolved_at ? formatDate(trouble.resolved_at) : '—' }}</dd></div>
+            <div v-if="trouble.instrument_diagnostic" class="pk-summary__wide" data-testid="trouble-diagnostic-source">
+              <dt>発生元の診断</dt>
+              <dd class="d-flex flex-wrap align-center ga-2">
+                <DiagnosticChip :status="trouble.instrument_diagnostic.status" size="x-small" />
+                <span>
+                  {{ formatDate(trouble.instrument_diagnostic.occurred_at) }}
+                  <template v-if="trouble.instrument_diagnostic.message"> ／ {{ trouble.instrument_diagnostic.message }}</template>
+                  <template v-if="trouble.instrument_diagnostic.code">（{{ trouble.instrument_diagnostic.code }}）</template>
+                  ／ 自動で登録
+                </span>
+              </dd>
+            </div>
             <div v-if="trouble.inspection_item" class="pk-summary__wide">
               <dt>発生元点検</dt>
               <dd>

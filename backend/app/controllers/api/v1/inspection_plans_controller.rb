@@ -7,6 +7,7 @@ module Api
 
       # GET /api/v1/inspection_plans
       # overdue=true で期限超過のみ、due_within=N で N日以内に期限が来るもの。既定は有効な計画のみ（is_active=false で無効も）
+      # diagnostic_advance=true で、機器の診断（保守要求・仕様外）で次回期限を前倒しする候補だけ
       def index
         authorize InspectionPlan
         plans = InspectionPlan.includes(:equipment, :equipments, :reference_standard, { instrument: :interlocks }, { checklist_template: :checklist_template_items },
@@ -31,6 +32,7 @@ module Api
         end
         plans = plans.overdue if params[:overdue] == "true"
         plans = plans.due_within(params[:due_within].to_i) if params[:due_within].present?
+        plans = plans.where(id: InspectionPlan.diagnostic_advance_candidates.select(:id)) if params[:diagnostic_advance] == "true"
 
         plans = plans.order(:next_due_on, :id)
 
@@ -84,7 +86,8 @@ module Api
         @plan = InspectionPlan.find(params[:id])
       end
 
-      # interval_review は、5点校正のある計画の周期の見直しの候補（なければ nil）
+      # interval_review は、5点校正のある計画の周期の見直しの候補（なければ nil）。
+      # diagnostic_advance は、機器の診断で次回期限を前倒しする候補のときの、計器のいまの診断（なければ nil）
       def plan_json(plan, review: :compute)
         review = CalibrationIntervalReview.new(plan).result if review == :compute
         plan.as_json(
@@ -97,7 +100,15 @@ module Api
             checklist_template: { only: [ :id, :name ] },
             inspection_plan_group: { only: [ :id, :name ], include: { department: { only: [ :id, :name ] }, regulation: { only: [ :id, :code, :name ] } } }
           }
-        ).merge("interval_review" => review)
+        ).merge("interval_review" => review, "diagnostic_advance" => diagnostic_advance_json(plan))
+      end
+
+      def diagnostic_advance_json(plan)
+        return unless plan.diagnostic_advance?
+
+        plan.instrument.slice(:diagnostic_status, :diagnostic_since).merge(
+          plan.instrument.instrument_diagnostics.order(occurred_at: :desc, id: :desc).first&.slice(:code, :message) || {}
+        )
       end
 
       def plan_params
