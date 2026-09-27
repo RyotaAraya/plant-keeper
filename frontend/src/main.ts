@@ -15,6 +15,7 @@ import vuetify from '@/plugins/vuetify'
 import pinia from '@/plugins/pinia'
 import router from '@/router'
 import App from '@/App.vue'
+import { installDialogFocusReturn } from '@/utils/dialogFocusReturn'
 
 // アイコンフォントの取得を早めにブラウザへ指示し、初回表示でアイコンが
 // 一瞬表示されない/レイアウトが揺れる問題を軽減する
@@ -33,3 +34,6 @@ app.use(router)
 app.use(vuetify)
 
 app.mount('#app')
+
+// ダイアログを閉じたら、開いたボタンへフォーカスを戻す（すべてのダイアログに効く）
+installDialogFocusReturn()

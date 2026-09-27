@@ -225,7 +225,7 @@ onMounted(() => {
         <DiagnosticChip :status="item.diagnostic_status" size="x-small" />
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+        <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.tag_number}を編集`" @click.stop="openEdit(item)" />
       </template>
     </v-data-table>
 
