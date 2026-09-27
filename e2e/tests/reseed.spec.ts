@@ -79,10 +79,10 @@ test('再投入は、設定画面には出ない', async ({ page }) => {
   await expect(page.getByRole('button', { name: '再投入する' })).toHaveCount(0)
 })
 
-test('管理者以外は、再投入のURLを開いても、ダッシュボードに戻される', async ({ page }) => {
+test('管理者以外は、再投入のURLを開いても、ホームに戻される', async ({ page }) => {
   await login(page, ACCOUNTS.member)
   await page.goto('/settings/reseed')
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(/\/home/)
 })
 
 test('再投入が無効なサーバ（本番など）では、実行の操作を出さず、無効である旨を案内する', async ({ page }) => {

@@ -48,9 +48,11 @@ test('計器詳細にも、シール液と一次点検の定型項目が表示�
 })
 
 // 不具合報告のAI支援（要求仕様書 2.5）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）
-test('プラナホームから現場メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
-  const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
+test('プラナの作業場から現場メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   await login(page, ACCOUNTS.member)
+  // プラナの作業場は、ホーム（ログイン後の最初の画面）から開く
+  const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
+  await page.goto('/plana')
   requireFakeAi((await (await statusResponse).json()).data.provider)
   await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await selectFirstOption(page, '対象の設備')

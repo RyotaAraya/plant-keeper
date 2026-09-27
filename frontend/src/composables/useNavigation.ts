@@ -21,12 +21,11 @@ export function useNavigation() {
   // 見出しは、見える項目が1つもないグループでは出さない（協力会社や一般ユーザ向けの整理）。
   const navGroups: NavGroup[] = [
     {
-      items: [{ title: 'ダッシュボード', icon: 'mdi-view-dashboard-outline', to: '/dashboard' }],
+      items: [{ title: 'ホーム', icon: 'mdi-home-outline', to: '/home' }],
     },
     {
       label: '日々の保全',
       items: [
-        { title: '朝会・夕会ボード', icon: 'mdi-clipboard-text-clock-outline', to: '/meeting-board' },
         { title: '計画', icon: 'mdi-calendar-check-outline', to: '/plans', also: ['/maintenances'] },
         { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
         { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },

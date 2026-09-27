@@ -1,14 +1,15 @@
 module Api
   module V1
     class DemoController < ApplicationController
-      # ログイン画面に出すデモアカウント。権限（自社/協力会社 × 管理者・業務管理者・一般・技能員）ごとに1人ずつ。
-      # 全ユーザを出すと数十人になり、選べなくなるため。データとしてのユーザ（点検の実施者など）は減らさない
+      # ログイン画面に出すデモアカウント。権限（自社/協力会社 × 管理者・業務管理者・一般・技能員）ごとに1人ずつと、
+      # ホームが変わる運転員（製造部の一般）を1人（末尾。権限の順はログイン画面の権限マトリクスの列と同じ）。全ユーザを出すと数十人になり、選べなくなるため。データとしてのユーザ（点検の実施者など）は減らさない
       DEMO_ACCOUNT_EMAILS = %w[
         admin@example.com
         suzuki@example.com
         sato@example.com
         yoshida@example.com
         honda@example.com
+        shimizu@example.com
       ].freeze
 
       def accounts

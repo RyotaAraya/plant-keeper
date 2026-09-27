@@ -4,6 +4,8 @@ import { test as base, expect, type Locator, type Page } from '@playwright/test'
 export const ACCOUNTS = {
   admin: { email: 'admin@example.com', password: 'password' },
   member: { email: 'sato@example.com', password: 'password' },
+  // 製造部の運転員（自社・一般）。ホームが運転員向けになる
+  operator: { email: 'shimizu@example.com', password: 'password' },
   // ログアウトするテスト専用（ログアウトの副作用を他のテストから切り離しておく）。
   // トークンは端末（ログイン）ごとに失効するため、他のテストと共有しても巻き込みはしない
   logout: { email: 'suzuki@example.com', password: 'password' },
@@ -30,7 +32,7 @@ export async function login(page: Page, account: { email: string; password: stri
   await page.getByLabel('メールアドレス').fill(account.email)
   await page.getByLabel('パスワード').fill(account.password)
   await page.getByRole('button', { name: 'ログイン', exact: true }).click()
-  await expect(page).toHaveURL(/\/plana$/)
+  await expect(page).toHaveURL(/\/home$/) // ログイン後の最初の画面はホーム（やること）
 }
 
 // Vuetifyのv-selectは入力要素が別要素に覆われていて直接クリックできないため、入力欄（.v-field）を操作して先頭の選択肢を選ぶ

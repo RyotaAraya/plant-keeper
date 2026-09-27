@@ -26,7 +26,7 @@ test('管理者が主要画面をメニューから順に開ける', async ({ pa
   }
 })
 
-test('一般ユーザには管理系メニューが表示されず、URL直打ちでもダッシュボードに戻される', async ({ page }) => {
+test('一般ユーザには管理系メニューが表示されず、URL直打ちでもホームに戻される', async ({ page }) => {
   await login(page, ACCOUNTS.member)
 
   for (const menu of ['監査ログ', 'ユーザ管理', '部署管理']) {
@@ -34,7 +34,7 @@ test('一般ユーザには管理系メニューが表示されず、URL直打�
   }
 
   await page.goto('/audit-logs')
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(/\/home/)
 })
 
 // 自社/協力会社の判定はログインAPIが返す user.company に依存する（company_id のみだと常に「協力会社扱い」になる）

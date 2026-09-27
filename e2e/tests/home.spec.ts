@@ -121,12 +121,12 @@ test('ログイン前に仕事を始めると、選んだ仕事を復帰先に�
   expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana?task=similar-troubles')
 })
 
-test('ヒーローのCTAから作業ホームを復帰先にしてログインへ進む', async ({ page }) => {
+test('ヒーローのCTAからホームを復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('link', { name: 'デモアカウントで試す', exact: true }).click()
 
   await expect(page).toHaveURL(/\/login\?redirect=/)
-  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana')
+  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/home')
 })
 
 test('トップページは、スマホの幅でも横にはみ出さない', async ({ page }) => {

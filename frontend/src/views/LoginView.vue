@@ -181,7 +181,7 @@ async function loginAs(accountEmail: string) {
 
         <template v-if="demoAccounts.length > 0">
           <v-divider class="my-6" />
-          <div class="text-caption text-medium-emphasis mb-2">デモアカウント（権限ごとに1人。クリックでログイン）</div>
+          <div class="text-caption text-medium-emphasis mb-2">デモアカウント（権限ごとに1人と、製造部の運転員。クリックでログイン）</div>
           <div class="pk-demo-list">
             <button
               v-for="account in demoAccounts"
