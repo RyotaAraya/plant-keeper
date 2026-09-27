@@ -18,10 +18,13 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,
+  // CIのジョブ（--shard）への振り分けを、ファイル単位ではなくテスト単位にする（ファイルの大きさの差で、ジョブの時間がそろわないため）。
+  // そのため、同じファイルのテストどうしでも、順番・前のテストのデータに頼らない（別のジョブ・ワーカーで動くことがある）
+  fullyParallel: true,
   // ローカルのdevサーバー（vite dev）は再起動後の初回アクセスで依存の再最適化とリロードが走り、初回だけ失敗することがあるため1回リトライする
   retries: 1,
   // CIは1並列。ランナー（非公開リポジトリは2コア）の中で並列にしても、ブラウザ・API・DBがCPUを取り合って短くならなかった
-  // （2並列 9.7分・7.9分、APIを2プロセスにしても10.3分）。CIでは、ジョブを分けて（--shard）別のマシンで流す（ci.yml）
+  // （2並列 9.7分・7.9分、APIを2プロセスにしても10.3分）。CIでは、4つのジョブに分けて（--shard）別のマシンで流す（ci.yml）
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
