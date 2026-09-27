@@ -4,6 +4,7 @@ import api from '@/api/axios'
 import { TEMPLATE_CYCLE_LABEL } from '@/constants/maintenanceStatus'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import ChecklistItemStatsDialog from '@/components/ChecklistItemStatsDialog.vue'
 import { ITEM_TYPE_OPTIONS, criteriaOf } from '@/utils/checklistCriteria'
 
 const tab = ref('services')
@@ -167,6 +168,15 @@ async function saveTemplate() {
   } catch (e: any) {
     templateErrors.value = e.response?.data?.errors || ['保存に失敗しました']
   }
+}
+
+// 項目の見直し（項目ごとの実施回数・不具合の件数）
+const statsDialog = ref(false)
+const statsTemplate = ref<{ id: number; name: string } | null>(null)
+
+function openStatsDialog(item: any) {
+  statsTemplate.value = { id: item.id, name: item.name }
+  statsDialog.value = true
 }
 
 async function duplicateTemplate(item: any) {
@@ -392,7 +402,7 @@ onMounted(() => {
             { title: '周期', key: 'cycle', width: '80px' },
             { title: '部署', key: 'department.name' },
             { title: '項目数', key: 'itemCount', width: '80px' },
-            { title: '', key: 'actions', width: '150px', sortable: false },
+            { title: '', key: 'actions', width: '180px', sortable: false },
           ]"
           :items="templates.map(t => ({ ...t, itemCount: (t.checklist_template_items || []).length })).sort((a, b) => Number(b.is_active) - Number(a.is_active))"
           density="compact"
@@ -407,10 +417,13 @@ onMounted(() => {
           </template>
           <template #item.actions="{ item }">
             <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openTemplateDialog(item)" />
+            <v-btn icon="mdi-chart-bar" size="x-small" variant="text" :aria-label="`${item.name} の項目の見直し`" title="項目の見直し" @click="openStatsDialog(item)" />
             <v-btn icon="mdi-content-copy" size="x-small" variant="text" @click="duplicateTemplate(item)" />
             <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="deleteTemplate(item)" />
           </template>
         </v-data-table>
+
+        <ChecklistItemStatsDialog v-model="statsDialog" :template="statsTemplate" />
 
         <v-dialog v-model="templateDialog" max-width="900" scrollable>
           <v-card>
