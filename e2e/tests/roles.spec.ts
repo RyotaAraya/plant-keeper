@@ -55,9 +55,9 @@ test('協力会社は拠点管理を見られず（メニューにも出ず、UR
   await expect(page.locator('.pk-account-menu')).toContainText('製油所')
 
   await page.goto('/sites')
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(/\/home/)
 
-  // 拠点の一覧を見られなくても、設備台帳・装置計器・ダッシュボードは自分の拠点で開ける
+  // 拠点の一覧を見られなくても、設備台帳・装置計器・ホームは自分の拠点で開ける
   for (const menu of ['設備台帳', '装置・計器']) {
     await page.getByRole('link', { name: menu, exact: true }).click()
     await expect(page.getByRole('heading', { level: 1, name: menu })).toBeVisible()

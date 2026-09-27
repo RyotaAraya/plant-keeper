@@ -24,7 +24,7 @@ const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
-// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ダッシュボードから来たときは、その拠点・ステータス）
+// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときは、その拠点・ステータス）
 const filters = ref({
   site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
   statuses: listFromQuery(route.query.status),

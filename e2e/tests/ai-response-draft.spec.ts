@@ -2,9 +2,11 @@ import { test, expect, login, requireFakeAi, ACCOUNTS } from './support'
 
 // 対応記録のAI支援（要求仕様書 2.5.2）。**本物のAPIは呼ばない**（fake のバックエンドでだけ実行する。requireFakeAi）。
 // 実行のたびに、シードのトラブル「FT-301 オリフィス閉塞疑い」に、対応記録（内容が `E2E ` で始まる）が1件ずつ増える
-test('プラナホームから対応メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
-  const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
+test('プラナの作業場から対応メモを入力してAIの下書きを作り、反映すると入力欄に入る（提案のIDは保存時に送られる）', async ({ page }) => {
   await login(page, ACCOUNTS.member)
+  // プラナの作業場は、ホーム（ログイン後の最初の画面）から開く
+  const statusResponse = page.waitForResponse((r) => r.url().endsWith('/api/v1/ai/status'))
+  await page.goto('/plana')
   requireFakeAi((await (await statusResponse).json()).data.provider)
   await page.getByTestId('plana-task').filter({ hasText: '対応記録の整理' }).click()
   await page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true }).fill('FT-301 オリフィス閉塞疑い')

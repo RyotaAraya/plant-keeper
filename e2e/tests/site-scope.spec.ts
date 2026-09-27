@@ -86,45 +86,6 @@ test('種別・ステータス・優先度は複数選択でき、選ぶとリ�
   await expect.poll(() => paramsOf(troubleRequests[troubleRequests.length - 1], 'priorities').sort()).toEqual(['critical', 'high'])
 })
 
-// ダッシュボードのカードから開いた一覧が、表示中の拠点とカードの絞り込みを引き継ぐこと。
-// ダッシュボードは開き直すと自拠点に戻るため、全拠点で見るときはその都度選ぶ。
-// 件数は、他のテストが並行してデータを追加しない項目（対応中トラブル・承認待ち点検）でだけ、カードの数字と一覧の件数を比べる
-// （未対応トラブルは、点検で不具合を報告するテストが1件ずつ増やす）
-async function expectCardOpensList(page: Page, card: RegExp, listHeading: string, scope: '自拠点' | '全拠点', options: { compareCount: boolean }) {
-  await page.getByRole('link', { name: 'ダッシュボード', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'ダッシュボード' })).toBeVisible()
-  if (scope === '全拠点') await pickFilterOption(page, '拠点', '全拠点')
-  const button = page.getByRole('link', { name: card })
-  await expect(button).toBeVisible()
-  const count = (await button.locator('.pk-kpi__value').innerText()).trim()
-
-  await button.click()
-  await expect(page.getByRole('heading', { level: 1, name: listHeading })).toBeVisible()
-  const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
-  await expect(tag).toContainText(scope === '全拠点' ? '全拠点' : '川崎製油所')
-  if (options.compareCount) await expect(page.locator('.v-data-table-footer')).toContainText(`/ ${count}件`)
-}
-
-test('ダッシュボードのカードから開いた一覧は、表示中の拠点とステータスを引き継ぐ', async ({ page }) => {
-  const troubleRequests = collectListRequests(page, 'troubles')
-  const inspectionRequests = collectListRequests(page, 'inspections')
-  await login(page, ACCOUNTS.ownerManager)
-
-  // 自拠点
-  await expectCardOpensList(page, /未対応トラブル/, 'トラブル管理', '自拠点', { compareCount: false })
-  await expect.poll(() => paramsOf(troubleRequests[troubleRequests.length - 1], 'statuses')).toEqual(['open'])
-  expect(paramsOf(troubleRequests[troubleRequests.length - 1], 'site_ids')).toHaveLength(1)
-  await expectCardOpensList(page, /対応中トラブル/, 'トラブル管理', '自拠点', { compareCount: true })
-  await expectCardOpensList(page, /承認待ち点検/, '点検・作業記録', '自拠点', { compareCount: true })
-  await expect.poll(() => paramsOf(inspectionRequests[inspectionRequests.length - 1], 'statuses')).toEqual(['approval_requested'])
-
-  // 全拠点（カードの数字と、開いた一覧の件数が一致する）
-  await expectCardOpensList(page, /未対応トラブル/, 'トラブル管理', '全拠点', { compareCount: false })
-  await expect.poll(() => paramsOf(troubleRequests[troubleRequests.length - 1], 'site_ids')).toHaveLength(0)
-  await expectCardOpensList(page, /対応中トラブル/, 'トラブル管理', '全拠点', { compareCount: true })
-  await expectCardOpensList(page, /承認待ち点検/, '点検・作業記録', '全拠点', { compareCount: true })
-})
-
 test('稼働中の拠点を1つずつ全部選ぶと「全拠点」になり、拠点で絞らない（非稼働の拠点のデータも外れない）', async ({ page }) => {
   const requests = collectListRequests(page, 'inspections')
   await login(page, ACCOUNTS.ownerManager)
@@ -168,7 +129,6 @@ test('別の拠点の点検計画から「点検を実施」を開いても、�
 
 test('拠点の絞り込みはすべての拠点データの一覧で同じ部品になっている', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
-  await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('川崎製油所')
 
   for (const menu of ['設備台帳', '装置・計器', '計画', '点検・作業記録', 'トラブル管理', '在庫管理', '修理管理']) {
     await openList(page, menu)

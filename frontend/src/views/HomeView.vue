@@ -106,7 +106,7 @@ const story = [
     <v-icon color="primary" size="24" class="mr-2" aria-hidden="true">mdi-gauge-full</v-icon>
     <span class="landing-brand">PlantKeeper</span>
     <v-spacer />
-    <v-btn variant="text" :to="auth.isLoggedIn ? '/plana' : '/login'">{{ auth.isLoggedIn ? 'ホーム' : 'ログイン' }}</v-btn>
+    <v-btn variant="text" :to="auth.isLoggedIn ? '/home' : '/login'">{{ auth.isLoggedIn ? 'ホーム' : 'ログイン' }}</v-btn>
   </v-app-bar>
   <v-main class="landing">
     <!-- 1. PlantKeeperとは -->
@@ -122,7 +122,7 @@ const story = [
             <v-icon size="18" aria-hidden="true">mdi-chevron-down</v-icon>
           </a>
           <div>
-            <v-btn to="/plana" color="primary" size="x-large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで試す' }}</v-btn>
+            <v-btn to="/home" color="primary" size="x-large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで試す' }}</v-btn>
           </div>
           <p class="landing-caption">{{ auth.isLoggedIn ? '設備やトラブルを選んで、作業を始められます。' : '登録不要。ログイン画面でデモアカウントを選ぶだけで試せます。' }}</p>
         </div>
@@ -295,7 +295,7 @@ const story = [
     </section>
     <section class="landing-section landing-final" aria-labelledby="final-title">
       <div><h2 id="final-title">デモを試す</h2></div>
-      <v-btn to="/plana" color="primary" size="large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで始める' }}</v-btn>
+      <v-btn to="/home" color="primary" size="large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで始める' }}</v-btn>
     </section>
     <footer class="landing-footer"><span>PlantKeeper</span><span>Developed by Ryota Araya</span></footer>
   </v-main>

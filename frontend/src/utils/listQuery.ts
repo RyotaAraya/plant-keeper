@@ -1,4 +1,4 @@
-// ダッシュボードなどから一覧を開くときに、拠点や絞り込みをURLのクエリで渡すための変換。
+// ホーム・計画などから一覧を開くときに、拠点や絞り込みをURLのクエリで渡すための変換。
 // 拠点は `site_ids=1,2`、全拠点は `site_ids=all`（クエリなしは、一覧の既定＝自拠点）。ステータスなどは `status=open,in_progress`
 
 export function siteIdsToQuery(ids: number[]): string {

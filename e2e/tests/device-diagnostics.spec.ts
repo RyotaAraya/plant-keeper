@@ -70,7 +70,7 @@ test('管理者はトークンを発行して試しに送れ、計器の一覧�
 test('外部連携は管理者だけで、一般ユーザには開けない', async ({ page }) => {
   await login(page, ACCOUNTS.member)
   await page.goto('/settings/integrations')
-  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page).toHaveURL(/\/home$/)
   const res = await page.request.get(`${apiBaseUrl()}/integration_tokens`, {
     headers: { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem('jwt'))}` },
   })

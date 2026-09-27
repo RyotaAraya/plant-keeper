@@ -7,10 +7,11 @@ async function submitLogin(page: Page) {
   await page.getByRole('button', { name: 'ログイン', exact: true }).click()
 }
 
-test('ログインするとプラナの作業場が開き、初期表示ではAIを呼ばない', async ({ page }) => {
+test('プラナの作業場は、初期表示ではAIを呼ばない', async ({ page }) => {
   const calls: string[] = []
   page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/ai/')) calls.push(r.url()) })
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await expect(page.getByRole('heading', { level: 1, name: '仕事を始める' })).toBeVisible()
   await expect(page.getByTestId('plana-task')).toHaveCount(3)
   await expect(page.getByLabel('いま起きている症状')).toBeVisible()
@@ -39,10 +40,10 @@ test('デモログインでも目的を引き継ぎ、技能員には対応記�
 test('外部URLや存在しない画面を認証後の復帰先に使わない', async ({ page }) => {
   await page.goto('/login?redirect=https%3A%2F%2Fexample.com')
   await submitLogin(page)
-  await expect(page).toHaveURL(/\/plana$/)
+  await expect(page).toHaveURL(/\/home$/)
   for (const destination of ['//example.com', '/login', '/not-a-route', '/\\example.com']) {
     await page.goto(`/login?redirect=${encodeURIComponent(destination)}`)
-    await expect(page).toHaveURL(/\/plana$/)
+    await expect(page).toHaveURL(/\/home$/)
   }
 })
 
@@ -57,6 +58,7 @@ test('期限切れのトークンでログイン画面を開いても復帰先�
 
 test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合欄から始める', async ({ page }) => {
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await page.getByTestId('plana-task').filter({ hasText: '不具合報告の整理' }).click()
   await selectFirstOption(page, '対象の設備')
   await selectFirstOption(page, '対象の計器（任意）')
@@ -71,6 +73,7 @@ test('プラナで選んだ設備と計器を点検に引き継ぎ、不具合�
 
 test('協力会社はURLで他拠点の設備を指定しても点検対象にできない', async ({ page }) => {
   await login(page, { email: 'honda@example.com', password: 'password' })
+  await page.goto('/plana')
   const otherSiteEquipmentId = await page.evaluate(async (apiUrl) => {
     const token = localStorage.getItem('jwt')
     const current = await fetch(`${apiUrl}/current_user`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json())
@@ -87,6 +90,7 @@ test('協力会社はURLで他拠点の設備を指定しても点検対象に�
 
 test('トラブルを探して対応記録の入力を直接開ける', async ({ page }) => {
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await page.getByTestId('plana-task').filter({ hasText: '対応記録の整理' }).click()
   await page.getByRole('textbox', { name: 'トラブルのタイトルで検索', exact: true }).fill('FT-301')
   await page.getByRole('button', { name: '検索', exact: true }).click()
@@ -100,6 +104,7 @@ test('トラブルを探して対応記録の入力を直接開ける', async ({
 
 test('技能員が対応記録の直接URLを開いてもダイアログは開かない', async ({ page }) => {
   await login(page, { email: 'honda@example.com', password: 'password' })
+  await page.goto('/plana')
   await openFirstTrouble(page)
   await expect(page).toHaveURL(/\/troubles\/\d+$/)
   await page.goto(`${page.url()}?plana=response-draft`)
@@ -111,6 +116,7 @@ test('技能員が対応記録の直接URLを開いてもダイアログは開�
 test('プラナの作業場で類似事例を検索し、メモを変えると古い結果を消す', async ({ page }) => {
   const status = page.waitForResponse((r) => r.url().endsWith('/ai/status'))
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   requireFakeAi((await (await status).json()).data.provider)
   await selectFirstOption(page, '対象の設備')
   await page.getByLabel('いま起きている症状').fill('流量指示が低い。導圧管のつまりが疑われる。')
@@ -124,6 +130,7 @@ test('プラナの作業場で類似事例を検索し、メモを変えると�
 test('AI無効でもメモと対象を保ったまま仕事を切り替え、通常入力へ進める', async ({ page }) => {
   await page.route('**/api/v1/ai/status', (route) => route.fulfill({ json: { data: { enabled: false, remaining_today: 0, daily_limit: 20, max_memo_length: 1000 } } }))
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await expect(page.getByTestId('plana-disabled')).toBeVisible()
   await selectFirstOption(page, '対象の設備')
   await page.getByLabel('いま起きている症状').fill('残しておきたいメモ')
@@ -141,6 +148,7 @@ test('AI無効でもメモと対象を保ったまま仕事を切り替え、通
 test('利用状況の取得に失敗しても、メモを残して再確認できる', async ({ page }) => {
   await page.route('**/api/v1/ai/status', (route) => route.abort('failed'), { times: 1 })
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await expect(page.getByText('AIの利用状況を取得できませんでした。', { exact: false })).toBeVisible()
   await page.getByLabel('いま起きている症状').fill('取得が失敗しても残すメモ')
   await page.getByRole('button', { name: '再確認', exact: true }).click()
@@ -158,6 +166,7 @@ test('検索中にメモを変更すると古い検索結果を表示せず、�
     await route.fulfill({ json: { data: { cases: [], candidates_count: 1, remaining_today: 19 } } })
   })
   await login(page, ACCOUNTS.member)
+  await page.goto('/plana')
   await selectFirstOption(page, '対象の設備')
   await page.getByLabel('いま起きている症状').fill('変更前の症状')
   const request = page.waitForRequest((r) => r.url().endsWith('/ai/similar_troubles') && r.method() === 'POST')

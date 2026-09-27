@@ -17,17 +17,15 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('@/views/DashboardView.vue'),
+      // ホーム（やること）。ログイン後の最初の画面。朝会・夕会（?mode=evening）と印刷もここ
+      path: '/home',
+      name: 'HomeTodo',
+      component: () => import('@/views/home/HomeTodoView.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/meeting-board',
-      name: 'MeetingBoard',
-      component: () => import('@/views/meeting/MeetingBoardView.vue'),
-      meta: { requiresAuth: true },
-    },
+    // 旧のダッシュボード・朝会・夕会ボードはホームへ（夕会の ?mode=evening は引き継ぐ）
+    { path: '/dashboard', redirect: '/home' },
+    { path: '/meeting-board', redirect: (to) => ({ path: '/home', query: to.query }) },
     {
       path: '/plana',
       name: 'Plana',
@@ -257,16 +255,16 @@ router.beforeEach(async (to) => {
     const companyType = user?.company?.company_type
 
     if (to.meta.requiresAdmin && role !== 'admin') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresOwner && companyType !== 'owner') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresOwnerManager && !(role === 'admin' || (role === 'manager' && companyType === 'owner'))) {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresNonWorker && role === 'worker') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
   }
 })

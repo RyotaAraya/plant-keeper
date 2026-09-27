@@ -78,7 +78,7 @@ Rails.application.routes.draw do
 
       # Phase 5: ダッシュボード
       get :dashboard, to: "dashboard#show"
-      get :meeting_board, to: "meeting_boards#show"
+      get :home, to: "home#show"
       # 外部のシステム（機器管理システム）からの受け口。ユーザのログインではなく、連携用のトークンで認証する
       namespace :integrations do
         post :device_diagnostics, to: "device_diagnostics#create"

@@ -20,7 +20,7 @@ const authStore = useAuthStore()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
-// 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ダッシュボードから来たときはその拠点）
+// 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときはその拠点）
 const selectedSiteIds = ref<number[]>(siteIdsFromQuery(route.query.site_ids, authStore.user?.site_id ? [authStore.user.site_id] : []))
 const bypassState = ref<string | null>(typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null)
 const search = ref('')
