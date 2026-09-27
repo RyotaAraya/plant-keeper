@@ -95,7 +95,7 @@ curl -s -o /dev/null -m 120 https://plant-keeper-api-stg.onrender.com/up
 E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
 ```
 
-- **AI支援のE2Eは、本物のAPIを呼ばない**。バックエンドが `AI_PROVIDER=fake`（APIを呼ばないダミー）のときだけ実行し、本物のAI（キーあり。stg など）や無効（キーなし）ではスキップする（判定は `GET /ai/status` の `provider`）。判定は `support.ts` の `requireFakeAi(provider)`（AIのE2Eはこれを使う）。CI は `ci.yml` の「Start API」で fake にしてあり、fake でなければ失敗にして黙ってスキップされるのを防ぐ。`ai-response-draft.spec.ts` は実行のたびに、シードのトラブル「FT-301 オリフィス閉塞疑い」に対応記録（内容が `E2E ` で始まる）を1件ずつ追加する（類似トラブルのE2Eは何も保存しない）。ローカルで実行するには `AI_PROVIDER=fake docker-compose up -d backend`
+- **AI支援のE2Eは、本物のAPIを呼ばない**。バックエンドが `AI_PROVIDER=fake`（APIを呼ばないダミー）のときだけ実行し、本物のAI（キーあり。stg など）や無効（キーなし）ではスキップする（判定は `GET /ai/status` の `provider`）。判定は `support.ts` の `requireFakeAi(provider)`（AIのE2Eはこれを使う）。CI は `ci.yml` の「Start API」で fake にしてあり、fake でなければ失敗にして黙ってスキップされるのを防ぐ。`ai-response-draft.spec.ts` は実行のたびに、シードのトラブル「FT-301 オリフィス閉塞疑い」に対応記録（内容が `E2E ` で始まる）を1件ずつ追加する（類似トラブルのE2Eは何も保存しない）。スマホ幅（390px）で不具合報告・対応記録を提案の反映から保存まで進める `responsive-layout.spec.ts` も fake のときだけで、実行のたびに点検とトラブル（タイトルが `E2E ` で始まる）と、同じトラブルへの対応記録を1件ずつ追加する。ローカルで実行するには `AI_PROVIDER=fake docker-compose up -d backend`
 - シードのデモアカウントに依存する（`backend/db/seeds`）。点検のテストは実行のたびに点検とトラブル（タイトルが `E2E ` で始まる）を1件ずつ追加するため、繰り返し実行すると一覧に溜まる。ローカルは `db:seed:replant`、stg は管理者の `admin/reseed` で戻せる
 - トラブル一覧の行クリックは初期表示の再描画で空振りすることがあるため、詳細画面へは `openFirstTrouble()` を使う（遷移までリトライし、到達も検証する）
 - 承認・点検計画のテストは、提出・承認まではせず画面の出し分けと遷移までを確認する（提出すると計画の期限が進み、シードの状態が変わって再実行できなくなるため）

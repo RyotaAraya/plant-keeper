@@ -22,6 +22,7 @@ const emit = defineEmits<{
 
 const RESPONSE_TYPE_LABEL: Record<string, string> = { investigation: '調査', repair: '修理', replacement: '交換', observation: '経過観察' }
 
+const draftButton = ref<{ $el: { focus(): void } } | null>(null)
 const memo = ref('')
 const loading = ref(false)
 const draft = ref<AiResponseDraft | null>(null)
@@ -69,6 +70,12 @@ function apply() {
   emit('apply', draft.value)
   draft.value = null
 }
+
+// 破棄したら、提案を作ったボタンへフォーカスを戻す（反映したときに入力欄へ移すのは親）
+function discard() {
+  draft.value = null
+  draftButton.value?.$el.focus()
+}
 </script>
 
 <template>
@@ -87,6 +94,7 @@ function apply() {
     />
     <div class="d-flex align-center flex-wrap ga-3 mt-1">
       <v-btn
+        ref="draftButton"
         size="small"
         variant="tonal"
         color="primary"
@@ -119,7 +127,7 @@ function apply() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn size="small" variant="text" @click="draft = null">破棄</v-btn>
+        <v-btn size="small" variant="text" @click="discard">破棄</v-btn>
         <v-btn size="small" color="primary" variant="flat" data-testid="ai-response-apply" @click="apply">入力欄に反映</v-btn>
       </v-card-actions>
     </v-card>

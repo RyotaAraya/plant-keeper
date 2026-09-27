@@ -21,6 +21,7 @@ export default [
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
         ResizeObserver: 'readonly',
+        HTMLElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         WebGLRenderingContext: 'readonly',
         WebGLProgram: 'readonly',
