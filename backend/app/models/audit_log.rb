@@ -4,7 +4,9 @@ class AuditLog < ApplicationRecord
   # 変更されたデータの拠点。全社共通のマスタ（資材・メーカー・流体など）は拠点を持たないので NULL
   belongs_to :site, optional: true
 
-  enum :action, { create: "create", update: "update", delete: "delete", login: "login", logout: "logout", approval_request: "approval_request" }, prefix: true
+  # export は、データを外へ書き出したこと（校正の作業指示。対象は書き出した点検計画）
+  enum :action, { create: "create", update: "update", delete: "delete", login: "login", logout: "logout", approval_request: "approval_request",
+                  export: "export" }, prefix: true
 
   validates :performed_at, presence: true
 

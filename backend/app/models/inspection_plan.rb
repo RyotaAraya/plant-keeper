@@ -64,6 +64,19 @@ class InspectionPlan < ApplicationRecord
   # 計画の拠点（設備は設備の拠点、基準器は基準器の拠点）
   def site = equipment&.site || reference_standard&.site
 
+  # チェックリストの（先頭の）5点校正の項目。なければ nil
+  def calibration_template_item
+    checklist_template&.checklist_template_items&.find(&:calibration?)
+  end
+
+  # 5点校正を回す計画か（計器が校正できて、チェックリストに5点校正の項目がある）。
+  # 周期の見直しの候補（CalibrationIntervalReview）と、校正の作業指示の書き出し（CalibrationWorkOrder）の対象
+  def five_point_calibration?
+    return false unless instrument&.calibratable?
+
+    calibration_template_item.present?
+  end
+
   private
 
   def assign_default_group

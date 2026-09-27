@@ -138,7 +138,8 @@ test('承認済みの5点校正の記録に、使用した基準器と点検日�
   await login(page, ACCOUNTS.member)
   const instruments = (await apiGet(page, '/instruments?q=FT-301')).filter((i: any) => i.tag_number === 'FT-301')
   const inspections = instruments.length ? await apiGet(page, `/inspections?instrument_id=${instruments[0].id}&per_page=100`) : []
-  const calibration = inspections.find((i: any) => i.checklist_template?.name === '伝送器 年次点検')
+  // 同じチェックリストの下書き（校正結果の取り込みのE2Eが残す）と取り違えないよう、承認済みに絞る
+  const calibration = inspections.find((i: any) => i.checklist_template?.name === '伝送器 年次点検' && i.status === 'approved')
   const detail = calibration ? await apiGet(page, `/inspections/${calibration.id}`) : null
   test.skip(!detail?.inspection_reference_standards?.length, 'シードの基準器の使用実績がない環境')
 

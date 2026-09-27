@@ -1,7 +1,8 @@
 module Api
   module V1
     # キャリブレータ・校正管理ソフトの校正結果（JSON。形式は `校正結果の取り込み形式.md`）の取り込み。
-    # 確認（preview）で記録ごとに取り込めるかと理由を返し、取り込み（create）で取り込める記録だけを点検の下書きにする。
+    # 確認（preview）で記録ごとに取り込めるかと理由を返し、取り込み（create）で取り込める記録だけを点検の下書きにする
+    # （記録に点検計画のIDがあれば、その計画の点検の下書き）。
     # create も同じ確認をやり直す（確認のあとに計器・基準器が変わっても、取り込めない記録は作らない）
     class CalibrationImportsController < BaseController
       # POST /api/v1/calibration_imports/preview
@@ -59,6 +60,9 @@ module Api
               index: row.index, site_name: row.site_name, tag_number: row.tag_number, performed_at: row.performed_at,
               performed_by: row.performed_by, calibrator: row.calibrator,
               instrument: row.instrument && { id: row.instrument.id, tag_number: row.instrument.tag_number, equipment_name: row.instrument.equipment.name },
+              inspection_plan: row.inspection_plan && {
+                id: row.inspection_plan.id, name: row.inspection_plan.name, next_due_on: row.inspection_plan.next_due_on
+              },
               reference_standards: row.reference_standards.map { |standard| { id: standard.id, management_number: standard.management_number, name: standard.name } },
               adjusted: row.input["adjusted"], result: row.result, importable: row.importable?, reasons: row.reasons
             }
