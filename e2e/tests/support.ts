@@ -1,9 +1,11 @@
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page } from '@playwright/test'
 
 // シードのデモアカウント（backend/db/seeds）
 export const ACCOUNTS = {
   admin: { email: 'admin@example.com', password: 'password' },
   member: { email: 'sato@example.com', password: 'password' },
+  // 製造部の運転員（自社・一般）。ホームが運転員向けになる
+  operator: { email: 'shimizu@example.com', password: 'password' },
   // ログアウトするテスト専用（ログアウトの副作用を他のテストから切り離しておく）。
   // トークンは端末（ログイン）ごとに失効するため、他のテストと共有しても巻き込みはしない
   logout: { email: 'suzuki@example.com', password: 'password' },
@@ -30,7 +32,7 @@ export async function login(page: Page, account: { email: string; password: stri
   await page.getByLabel('メールアドレス').fill(account.email)
   await page.getByLabel('パスワード').fill(account.password)
   await page.getByRole('button', { name: 'ログイン', exact: true }).click()
-  await expect(page).toHaveURL(/\/plana$/)
+  await expect(page).toHaveURL(/\/home$/) // ログイン後の最初の画面はホーム（やること）
 }
 
 // Vuetifyのv-selectは入力要素が別要素に覆われていて直接クリックできないため、入力欄（.v-field）を操作して先頭の選択肢を選ぶ
@@ -64,10 +66,23 @@ export async function judgeAllItems(page: Page) {
   await expect(page.getByTestId('missing-required')).toHaveCount(0)
 }
 
+// 「計画」画面をメニューから開き、表示（定期点検・定期整備・点検の期限順）を選ぶ。旧の「点検計画」は「点検の期限順」、「定期整備」は「定期整備」
+export async function openPlans(page: Page, tab?: '定期点検' | '定期整備' | '点検の期限順') {
+  await page.getByRole('link', { name: '計画', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '計画' })).toBeVisible()
+  if (tab) await page.locator('.v-btn-toggle').getByRole('button', { name: tab, exact: true }).click()
+}
+
 // 一覧（ページ分けされた表）から、名前に title を含む行を探して開く。繰り返し実行して「E2E 」の行が溜まっても、後ろのページまで探す。
 // 作成直後は一覧の再取得が終わるまで行が出ないため、最初のページから探し直しながら待つ
 export async function openListRow(page: Page, title: string) {
-  const row = page.getByRole('row', { name: new RegExp(title) })
+  const row = await findListRow(page, page.getByRole('row', { name: new RegExp(title) }))
+  // 行の端を押す（行の中には、計器の詳細へのリンクなどがあり、中央を押すとそちらに当たることがある）
+  await row.click({ position: { x: 8, y: 8 } })
+}
+
+// 一覧のページをめくって、行が表示されるページにする（繰り返し実行で行が溜まり、2ページ目以降に回ることがあるため）
+export async function findListRow(page: Page, row: Locator) {
   const first = page.getByRole('button', { name: '最初のページ' })
   const next = page.getByRole('button', { name: '次のページ' })
   await expect(async () => {
@@ -76,8 +91,7 @@ export async function openListRow(page: Page, title: string) {
     for (let i = 0; i < 100 && !(await row.isVisible()) && (await next.isEnabled()); i++) await next.click()
     await expect(row).toBeVisible({ timeout: 1000 })
   }).toPass({ timeout: 20_000 })
-  // 行の端を押す（行の中には、計器の詳細へのリンクなどがあり、中央を押すとそちらに当たることがある）
-  await row.click({ position: { x: 8, y: 8 } })
+  return row
 }
 
 export async function openFirstTrouble(page: Page) {

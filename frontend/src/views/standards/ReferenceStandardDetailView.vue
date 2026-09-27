@@ -3,9 +3,12 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
@@ -24,7 +27,8 @@ const { canManageReferenceStandard } = usePermissions()
 
 const standard = ref<any>(null)
 const loading = ref(false)
-const tab = ref('calibrations')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['calibrations', 'inspections', 'plans', 'history'])
 
 async function fetchStandard() {
   loading.value = true
@@ -90,31 +94,36 @@ onMounted(async () => {
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/reference-standards')">基準器一覧に戻る</v-btn>
-
     <v-skeleton-loader v-if="loading && !standard" type="card" />
 
     <template v-else-if="standard">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center flex-wrap ga-2">
-          <span>{{ standard.name }}</span>
-          <span class="text-body-2 text-medium-emphasis">{{ standard.management_number }}</span>
-          <v-chip :color="STATUS_COLOR[standard.status]" size="small" label variant="tonal">{{ STATUS_LABEL[standard.status] }}</v-chip>
+      <DetailHeader
+        back-to="/reference-standards"
+        back-label="基準器"
+        kind="基準器"
+        :title="standard.name"
+        :subtitle="`${standard.management_number} ・ ${standard.site?.name ?? ''} ／ ${CATEGORY_LABEL[standard.category]}`"
+      >
+        <template #status>
+          <StatusChip :label="STATUS_LABEL[standard.status]" :color="STATUS_COLOR[standard.status]" />
           <CalibrationStateChip :state="standard.calibration_state" :next-due-on="standard.next_due_on" data-testid="calibration-state" />
-          <v-spacer />
-          <v-btn v-if="canRecord" color="primary" size="small" prepend-icon="mdi-certificate-outline" @click="openCalibrationDialog">校正を記録</v-btn>
-          <v-btn v-if="canRecord" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle>{{ standard.site?.name }} / {{ CATEGORY_LABEL[standard.category] }}</v-card-subtitle>
+        </template>
+        <template #actions>
+          <v-btn v-if="canRecord" color="primary" prepend-icon="mdi-certificate-outline" @click="openCalibrationDialog">校正を記録</v-btn>
+          <v-btn v-if="canRecord" variant="outlined" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3"><strong>型式:</strong> {{ standard.model_number || '—' }}</v-col>
-            <v-col cols="6" md="3"><strong>製造番号:</strong> {{ standard.serial_number || '—' }}</v-col>
-            <v-col cols="6" md="3"><strong>測定範囲:</strong> {{ standard.measuring_range || '—' }}</v-col>
-            <v-col cols="6" md="3"><strong>精度:</strong> {{ standard.accuracy || '—' }}</v-col>
-            <v-col cols="12" md="6"><strong>保管場所:</strong> {{ standard.location || '—' }}</v-col>
-          </v-row>
-          <p v-if="standard.notes" class="mt-2"><strong>備考:</strong> {{ standard.notes }}</p>
+          <dl class="pk-summary__grid">
+            <div><dt>型式</dt><dd>{{ standard.model_number || '—' }}</dd></div>
+            <div><dt>製造番号</dt><dd>{{ standard.serial_number || '—' }}</dd></div>
+            <div><dt>測定範囲</dt><dd>{{ standard.measuring_range || '—' }}</dd></div>
+            <div><dt>精度</dt><dd>{{ standard.accuracy || '—' }}</dd></div>
+            <div><dt>保管場所</dt><dd>{{ standard.location || '—' }}</dd></div>
+            <div v-if="standard.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ standard.notes }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 

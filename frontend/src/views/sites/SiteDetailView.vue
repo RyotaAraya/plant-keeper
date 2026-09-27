@@ -2,7 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 
 const route = useRoute()
@@ -12,7 +15,8 @@ const { canManageSite } = usePermissions()
 const site = ref<any>(null)
 const equipments = ref<any[]>([])
 const loading = ref(false)
-const tab = ref('equipments')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['equipments'])
 
 // --- 編集 ---
 const editDialog = ref(false)
@@ -59,42 +63,27 @@ onMounted(fetchSite)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/sites')">
-      拠点一覧に戻る
-    </v-btn>
-
     <v-skeleton-loader v-if="loading" type="card" />
 
     <template v-else-if="site">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          {{ site.name }}
-          <v-chip :color="site.is_active ? 'success' : 'grey'" size="small" class="ml-2">
-            {{ site.is_active ? '稼働中' : '閉鎖' }}
-          </v-chip>
-          <v-spacer />
-          <v-btn v-if="canManageSite" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditSite">編集</v-btn>
-        </v-card-title>
+      <DetailHeader back-to="/sites" back-label="拠点管理" kind="拠点" :title="site.name">
+        <template #status>
+          <StatusChip :label="site.is_active ? '稼働中' : '閉鎖'" :color="site.is_active ? 'success' : 'grey'" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageSite" variant="outlined" prepend-icon="mdi-pencil" @click="openEditSite">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="12" md="4"><strong>所在県:</strong> {{ site.prefecture }}</v-col>
-            <v-col cols="12" md="4"><strong>住所:</strong> {{ site.address }}</v-col>
-            <v-col v-if="site.closed_on" cols="12" md="4"><strong>閉鎖日:</strong> {{ site.closed_on }}</v-col>
-          </v-row>
-          <v-row class="mt-2">
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ site.equipments_count }}</div>
-                <div class="text-body-2">設備数</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ site.warehouses_count }}</div>
-                <div class="text-body-2">倉庫数</div>
-              </v-card>
-            </v-col>
-          </v-row>
+          <dl class="pk-summary__grid">
+            <div><dt>所在県</dt><dd>{{ site.prefecture }}</dd></div>
+            <div class="pk-summary__wide"><dt>住所</dt><dd>{{ site.address }}</dd></div>
+            <div v-if="site.closed_on"><dt>閉鎖日</dt><dd>{{ site.closed_on }}</dd></div>
+            <div><dt>設備数</dt><dd class="pk-mono">{{ site.equipments_count }}</dd></div>
+            <div><dt>倉庫数</dt><dd class="pk-mono">{{ site.warehouses_count }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 

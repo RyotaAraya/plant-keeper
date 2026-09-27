@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import BypassActions from '@/components/BypassActions.vue'
 import BypassRequestDialog from '@/components/BypassRequestDialog.vue'
 import BypassSteps from '@/components/BypassSteps.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import type { Interlock } from '@/types/models'
 import { bypassColor, bypassLabel, formatDateTime, formatHours, restoreDueLabel } from '@/utils/interlock'
 
 const route = useRoute()
-const router = useRouter()
 const { canManageInterlock, canRequestBypass } = usePermissions()
 
 const interlock = ref<Interlock | null>(null)
 const loading = ref(false)
-const tab = ref('bypasses')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['bypasses', 'history'])
 const editDialog = ref(false)
 const requestDialog = ref(false)
 
@@ -39,30 +42,34 @@ onMounted(fetchInterlock)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/interlocks')">インターロック一覧に戻る</v-btn>
-
     <v-skeleton-loader v-if="loading && !interlock" type="card" />
 
     <template v-else-if="interlock">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center flex-wrap ga-2">
-          <span>{{ interlock.tag_number }} {{ interlock.name }}</span>
-          <v-chip v-if="!interlock.is_active" size="small" label>廃止</v-chip>
-          <v-spacer />
-          <v-btn v-if="canManageInterlock" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle>
-          {{ interlock.equipment.site.name }} /
-          <router-link :to="`/equipments/${interlock.equipment.id}`">{{ interlock.equipment.name }}</router-link>
-        </v-card-subtitle>
+      <DetailHeader back-to="/interlocks" back-label="インターロック" kind="インターロック" :title="`${interlock.tag_number} ${interlock.name}`">
+        <template #status>
+          <StatusChip v-if="!interlock.is_active" label="廃止" color="grey" />
+        </template>
+        <template #meta>
+          {{ interlock.equipment.site.name }} ／ <router-link :to="`/equipments/${interlock.equipment.id}`">{{ interlock.equipment.name }}</router-link>
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageInterlock" variant="outlined" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <p class="mb-2"><strong>トリップ時の動作:</strong> {{ interlock.trip_action || '—' }}</p>
-          <div class="d-flex align-center flex-wrap ga-2 mb-2">
-            <strong>関係する計器:</strong>
-            <v-chip v-for="i in interlock.instruments" :key="i.id" size="small" label :to="`/instruments/${i.id}`">{{ i.tag_number }}</v-chip>
-            <span v-if="!interlock.instruments.length" class="text-medium-emphasis">—</span>
-          </div>
-          <p v-if="interlock.notes"><strong>備考:</strong> {{ interlock.notes }}</p>
+          <dl class="pk-summary__grid">
+            <div class="pk-summary__wide"><dt>トリップ時の動作</dt><dd>{{ interlock.trip_action || '—' }}</dd></div>
+            <div class="pk-summary__wide">
+              <dt>関係する計器</dt>
+              <dd class="d-flex align-center flex-wrap ga-2">
+                <v-chip v-for="i in interlock.instruments" :key="i.id" size="small" label :to="`/instruments/${i.id}`">{{ i.tag_number }}</v-chip>
+                <span v-if="!interlock.instruments.length" class="text-medium-emphasis">—</span>
+              </dd>
+            </div>
+            <div v-if="interlock.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ interlock.notes }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 
@@ -71,7 +78,7 @@ onMounted(fetchInterlock)
           <v-icon>{{ current?.status === 'bypassed' ? 'mdi-shield-off-outline' : 'mdi-shield-check-outline' }}</v-icon>
           <span>いまのバイパス</span>
           <template v-if="current">
-            <v-chip :color="bypassColor(current)" size="small" label variant="flat">{{ bypassLabel(current) }}</v-chip>
+            <StatusChip :label="bypassLabel(current)" :color="bypassColor(current)" :alert="current.overdue" />
             <span class="text-body-2">{{ current.request_number }}</span>
           </template>
           <v-spacer />

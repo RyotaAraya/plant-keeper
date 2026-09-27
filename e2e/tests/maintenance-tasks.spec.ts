@@ -1,4 +1,4 @@
-import { test, expect, openListRow, judgeAllItems, login, selectFirstOption, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, openListRow, judgeAllItems, login, selectFirstOption, apiBaseUrl, ACCOUNTS, openPlans, findListRow } from './support'
 import type { Page } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
@@ -16,11 +16,11 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
   const stamp = Date.now()
   const title = `E2E ${stamp} FCC整備（作業）`
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '定期整備', exact: true }).click()
+  await openPlans(page, '定期整備')
 
   // インターロックのない設備で行う（ボイラー設備はデモのバイパスが残っていて、検収へ進めないため）
   await test.step('流動接触分解装置の定期整備を作る', async () => {
-    await page.getByRole('button', { name: '新規作成' }).click()
+    await page.getByRole('button', { name: '定期整備を作成' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('名称 *', { exact: false }).fill(title)
     await dialog.getByLabel('予定 開始日 *').fill(todayForInput())
@@ -66,7 +66,7 @@ test('計器を一括追加し、作業から点検を実施して完了にし�
     await expect(page).toHaveURL(/\/inspections$/)
     await page.goBack()
     await page.goBack()
-    await page.getByRole('link', { name: '定期整備', exact: true }).click()
+    await openPlans(page, '定期整備')
     await openListRow(page, title)
     await expect(tasks.getByTestId('tasks-progress')).toContainText(/完了 1 \/ \d+/)
     await expect(tasks.getByTestId('task-FT-601 伝送器 定修点検')).toContainText(todayForInput())
@@ -118,9 +118,8 @@ test.describe('作業の権限', () => {
 for (const [label, account] of [['一般ユーザ', ACCOUNTS.member], ['協力会社の技能員', WORKER]] as const) {
   test(`${label}は作業の状態を更新できるが、作業の追加・一括追加・編集・削除はできない`, async ({ page }) => {
     await login(page, account)
-    await page.getByRole('link', { name: '定期整備', exact: true }).click()
-    const row = page.locator('tbody tr', { hasText: /\d+ \/ \d+/ }).first() // 作業のある定期整備
-    await expect(row).toBeVisible()
+    await openPlans(page, '定期整備')
+    const row = await findListRow(page, page.locator('tbody tr', { hasText: /単発.*\d+ \/ \d+/ }).first()) // 作業のある単発の定期整備（系列の行は、押すと各回を開く）
     await row.click()
 
     const tasks = page.getByTestId('tasks-card')

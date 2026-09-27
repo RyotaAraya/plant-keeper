@@ -6,9 +6,10 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
-import { inspectionStatusColor, inspectionStatusLabel, inspectionTypeLabel } from '@/constants/recordLabels'
+import { inspectionTypeLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
@@ -23,7 +24,7 @@ const loading = ref(false)
 const totalCount = ref(0)
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
-// ダッシュボードから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
+// ほかの画面のリンクから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
 function filtersFromQuery() {
   return {
     site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
@@ -166,9 +167,7 @@ watch(() => route.query, () => {
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="inspectionStatusColor[item.status]" size="small">
-          {{ inspectionStatusLabel[item.status] || item.status }}
-        </v-chip>
+        <StatusChip kind="inspection" :value="item.status" />
       </template>
     </v-data-table>
   </MainLayout>

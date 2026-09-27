@@ -8,6 +8,7 @@ test('トラブル詳細に、この計器の過去のトラブルと点検が�
   await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
   await openListRow(page, 'FT-301 オリフィス閉塞疑い')
 
+  await page.getByRole('tab', { name: 'この計器の履歴' }).click() // 関連の一覧はタブ（詳細は「頭 → 概要 → タブ」）
   const section = page.getByTestId('instrument-history')
   await expect(section).toBeVisible()
   const troubles = section.getByTestId('instrument-history-troubles')

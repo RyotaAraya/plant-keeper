@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS, selectOption } from './support'
+import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS, selectOption, openPlans } from './support'
 import type { Page } from '@playwright/test'
 
 const WORKER = { email: 'honda@example.com', password: 'password' }
@@ -45,7 +45,7 @@ test('基準器の詳細に校正の履歴が出て、最新の校正が不合�
 
 test('基準器の年次校正が点検計画に載り、「校正を記録」で基準器の校正記録ダイアログが開く（記録はしない）', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
 
   const plan = page.locator('tbody tr', { hasText: '温度校正器（ドライブロック） 年次校正' })
   await expect(plan.locator('.v-chip', { hasText: '基準器' })).toBeVisible()
@@ -142,7 +142,7 @@ test('承認済みの5点校正の記録に、使用した基準器と点検日�
   const detail = calibration ? await apiGet(page, `/inspections/${calibration.id}`) : null
   test.skip(!detail?.inspection_reference_standards?.length, 'シードの基準器の使用実績がない環境')
 
-  await page.goto(`/inspections/${calibration.id}`)
+  await page.goto(`/inspections/${calibration.id}?tab=standards`)
   const used = page.getByTestId('reference-standards-used')
   await expect(used).toContainText('RS-KW-001')
   await expect(used).toContainText('CAL-K-0142')

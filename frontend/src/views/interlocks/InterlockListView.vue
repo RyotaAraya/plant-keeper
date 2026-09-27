@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -20,7 +21,7 @@ const authStore = useAuthStore()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
-// 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ダッシュボードから来たときはその拠点）
+// 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときはその拠点）
 const selectedSiteIds = ref<number[]>(siteIdsFromQuery(route.query.site_ids, authStore.user?.site_id ? [authStore.user.site_id] : []))
 const bypassState = ref<string | null>(typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null)
 const search = ref('')
@@ -123,7 +124,7 @@ watch([selectedSiteIds, bypassState, search], fetchInterlocks)
       </template>
       <template #item.open_bypass="{ item }">
         <template v-if="item.open_bypass">
-          <v-chip :color="bypassColor(item.open_bypass)" size="small" label variant="flat" class="mr-2">{{ bypassLabel(item.open_bypass) }}</v-chip>
+          <StatusChip :label="bypassLabel(item.open_bypass)" :color="bypassColor(item.open_bypass)" :alert="item.open_bypass.overdue" class="mr-2" />
           <span v-if="item.open_bypass.status === 'bypassed'" class="text-caption">
             {{ formatHours(item.open_bypass.bypassed_hours) }}経過 ／ 予定の復帰 {{ formatDateTime(item.open_bypass.planned_restore_at) }}（{{ restoreDueLabel(item.open_bypass) }}）
           </span>

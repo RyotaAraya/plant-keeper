@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_26_060100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -196,6 +196,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_060100) do
     t.index ["inspection_plan_id"], name: "index_inspection_plan_equipments_on_inspection_plan_id"
   end
 
+  create_table "inspection_plan_groups", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "name", null: false
+    t.bigint "department_id"
+    t.bigint "regulation_id"
+    t.integer "default_interval_days"
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["department_id"], name: "index_inspection_plan_groups_on_department_id"
+    t.index ["regulation_id"], name: "index_inspection_plan_groups_on_regulation_id"
+    t.index ["site_id", "name"], name: "index_inspection_plan_groups_on_site_id_and_name", unique: true
+    t.index ["site_id"], name: "index_inspection_plan_groups_on_site_id"
+    t.check_constraint "default_interval_days IS NULL OR default_interval_days > 0", name: "inspection_plan_groups_interval_positive"
+  end
+
   create_table "inspection_plans", force: :cascade do |t|
     t.string "name", null: false
     t.bigint "equipment_id"
@@ -209,8 +225,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_060100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "reference_standard_id"
+    t.bigint "inspection_plan_group_id", null: false
     t.index ["checklist_template_id"], name: "index_inspection_plans_on_checklist_template_id"
     t.index ["equipment_id"], name: "index_inspection_plans_on_equipment_id"
+    t.index ["inspection_plan_group_id"], name: "index_inspection_plans_on_inspection_plan_group_id"
     t.index ["instrument_id"], name: "index_inspection_plans_on_instrument_id"
     t.index ["next_due_on"], name: "index_inspection_plans_on_next_due_on"
     t.index ["reference_standard_id"], name: "index_inspection_plans_on_reference_standard_id"
@@ -781,8 +799,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_060100) do
   add_foreign_key "inspection_items", "instruments"
   add_foreign_key "inspection_plan_equipments", "equipments"
   add_foreign_key "inspection_plan_equipments", "inspection_plans"
+  add_foreign_key "inspection_plan_groups", "departments"
+  add_foreign_key "inspection_plan_groups", "regulations"
+  add_foreign_key "inspection_plan_groups", "sites"
   add_foreign_key "inspection_plans", "checklist_templates"
   add_foreign_key "inspection_plans", "equipments"
+  add_foreign_key "inspection_plans", "inspection_plan_groups"
   add_foreign_key "inspection_plans", "instruments"
   add_foreign_key "inspection_plans", "reference_standards"
   add_foreign_key "inspection_reference_standards", "inspections"

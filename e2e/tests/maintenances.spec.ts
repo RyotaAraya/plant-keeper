@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, login, ACCOUNTS, openPlans, findListRow } from './support'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
 const WORKER = { email: 'honda@example.com', password: 'password' }
@@ -9,11 +9,10 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
   // インターロックのない設備で行う（ボイラー設備はデモのバイパスが残っていて、検収へ進めないため）
   const title = `E2E ${Date.now()} 改質・減圧蒸留整備`
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '定期整備', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '定期整備' })).toBeVisible()
+  await openPlans(page, '定期整備')
 
   await test.step('複数の対象設備を選んで作成する', async () => {
-    await page.getByRole('button', { name: '新規作成' }).click()
+    await page.getByRole('button', { name: '定期整備を作成' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('名称 *', { exact: false }).fill(title)
     await dialog.getByLabel('予定 開始日 *').fill(todayForInput())
@@ -26,7 +25,7 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
   })
 
   await test.step('一覧に、対象設備が複数並ぶ', async () => {
-    const row = page.getByRole('row', { name: new RegExp(title) })
+    const row = await findListRow(page, page.getByRole('row', { name: new RegExp(title) }))
     await expect(row).toContainText('接触改質装置')
     await expect(row).toContainText('減圧蒸留装置')
     await expect(row).toContainText('計画中')
@@ -70,12 +69,10 @@ test('複数の設備を対象にした定期整備を作り、検収を記録�
 for (const [label, account] of [['一般ユーザ', ACCOUNTS.member], ['協力会社の技能員', WORKER]] as const) {
   test(`${label}は定期整備を見られるが、作成・編集・状態の変更はできない`, async ({ page }) => {
     await login(page, account)
-    await page.getByRole('link', { name: '定期整備', exact: true }).click()
-    await expect(page.getByRole('heading', { level: 1, name: '定期整備' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '新規作成' })).toHaveCount(0)
+    await openPlans(page, '定期整備')
+    await expect(page.getByRole('button', { name: '定期整備を作成' })).toHaveCount(0)
 
-    const row = page.locator('tbody tr', { has: page.locator('.v-chip') }).first()
-    await expect(row).toBeVisible()
+    const row = await findListRow(page, page.locator('tbody tr', { hasText: '単発' }).first()) // 系列の行は、押すと各回を開く
     await row.click()
     await expect(page.getByTestId('maintenance-status')).toBeVisible()
     await expect(page.getByRole('button', { name: '編集' })).toHaveCount(0)

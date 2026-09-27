@@ -29,7 +29,7 @@ async function openApprovalRequestedInspection(page: Page) {
     await page.locator('tbody tr').first().click()
     await expect(page).toHaveURL(/\/inspections\/\d+$/, { timeout: 2_000 })
   }).toPass({ timeout: 15_000 })
-  await expect(page.getByText('点検記録詳細')).toBeVisible()
+  await expect(page.getByText('点検記録', { exact: true })).toBeVisible() // 詳細の頭の種類
 }
 
 // 承認・差し戻しは管理者/マネージャーだけ。一般ユーザや協力会社の作業員には表示しない（バックエンドの InspectionPolicy#approve? に対応）

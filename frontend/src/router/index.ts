@@ -17,17 +17,15 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('@/views/DashboardView.vue'),
+      // ホーム（やること）。ログイン後の最初の画面。朝会・夕会（?mode=evening）と印刷もここ
+      path: '/home',
+      name: 'HomeTodo',
+      component: () => import('@/views/home/HomeTodoView.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/meeting-board',
-      name: 'MeetingBoard',
-      component: () => import('@/views/meeting/MeetingBoardView.vue'),
-      meta: { requiresAuth: true },
-    },
+    // 旧のダッシュボード・朝会・夕会ボードはホームへ（夕会の ?mode=evening は引き継ぐ）
+    { path: '/dashboard', redirect: '/home' },
+    { path: '/meeting-board', redirect: (to) => ({ path: '/home', query: to.query }) },
     {
       path: '/plana',
       name: 'Plana',
@@ -95,11 +93,14 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/inspection-plans',
-      name: 'InspectionPlans',
-      component: () => import('@/views/inspections/InspectionPlanListView.vue'),
+      // 点検のまとまりと定期整備（系列・単発）を1画面にまとめた「計画」。tab=inspection|maintenance|due
+      path: '/plans',
+      name: 'Plans',
+      component: () => import('@/views/plans/PlanView.vue'),
       meta: { requiresAuth: true },
     },
+    // 旧の点検計画・定期整備の一覧は「計画」画面へ（絞り込みのクエリは引き継ぐ）
+    { path: '/inspection-plans', redirect: (to) => ({ path: '/plans', query: { ...to.query, tab: 'due' } }) },
     {
       path: '/inspections',
       name: 'Inspections',
@@ -136,12 +137,7 @@ const router = createRouter({
       component: () => import('@/views/troubles/TroubleDetailView.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/maintenances',
-      name: 'Maintenances',
-      component: () => import('@/views/maintenances/MaintenanceListView.vue'),
-      meta: { requiresAuth: true },
-    },
+    { path: '/maintenances', redirect: (to) => ({ path: '/plans', query: { ...to.query, tab: 'maintenance' } }) },
     {
       path: '/maintenances/:id',
       name: 'MaintenanceDetail',
@@ -259,16 +255,16 @@ router.beforeEach(async (to) => {
     const companyType = user?.company?.company_type
 
     if (to.meta.requiresAdmin && role !== 'admin') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresOwner && companyType !== 'owner') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresOwnerManager && !(role === 'admin' || (role === 'manager' && companyType === 'owner'))) {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
     if (to.meta.requiresNonWorker && role === 'worker') {
-      return { path: '/dashboard' }
+      return { path: '/home' }
     }
   }
 })

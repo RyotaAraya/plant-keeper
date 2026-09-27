@@ -71,10 +71,10 @@ test('トップページの権限マトリクスは、実際にログインし�
   }
 })
 
-test('ログイン画面のデモアカウントは権限ごとに1人で、選ぶとマトリクスのその列が光る', async ({ page }) => {
+test('ログイン画面のデモアカウントは権限ごとに1人（と末尾に運転員）で、選ぶとマトリクスのその列が光る', async ({ page }) => {
   await page.goto('/login')
   const accounts = page.locator('.pk-demo-item')
-  await expect(accounts).toHaveCount(ROLES.length)
+  await expect(accounts).toHaveCount(ROLES.length + 1)
 
   const headers = page.locator('.pk-matrix__role')
   await expect(headers).toHaveCount(ROLES.length)
@@ -86,6 +86,10 @@ test('ログイン画面のデモアカウントは権限ごとに1人で、選�
     await expect(headers.nth(role.column)).toHaveClass(/is-active/)
   }
 
+  // 末尾の運転員は自社の一般なので、一般の列が光る
+  await accounts.nth(ROLES.length).hover()
+  await expect(headers.nth(ROLES.find((role) => role.name === '一般')!.column)).toHaveClass(/is-active/)
+
   await page.mouse.move(0, 0)
   await expect(page.locator('.pk-matrix__role.is-active')).toHaveCount(0)
 })
@@ -93,8 +97,8 @@ test('ログイン画面のデモアカウントは権限ごとに1人で、選�
 test('ログイン画面のデモアカウントに、所属拠点が表示される', async ({ page }) => {
   await page.goto('/login')
   const accounts = page.locator('.pk-demo-item')
-  await expect(accounts).toHaveCount(ROLES.length)
-  for (let i = 0; i < ROLES.length; i++) {
+  await expect(accounts).toHaveCount(ROLES.length + 1)
+  for (let i = 0; i <= ROLES.length; i++) {
     await expect(accounts.nth(i).locator('.pk-site-tag')).toContainText('製油所')
   }
 })

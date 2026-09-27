@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
-import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL } from '@/constants/maintenanceStatus'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
 import RegulationChip from '@/components/RegulationChip.vue'
@@ -19,7 +21,8 @@ const { canManageEquipment, canManageEquipmentAssignment } = usePermissions()
 
 const equipment = ref<any>(null)
 const loading = ref(false)
-const tab = ref('instruments')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['instruments', 'regulations', 'assignments', 'maintenances', 'history'])
 
 // --- 設備編集 ---
 const editDialog = ref(false)
@@ -119,40 +122,26 @@ onMounted(fetchEquipment)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/equipments')">
-      設備一覧に戻る
-    </v-btn>
-
     <v-skeleton-loader v-if="loading" type="card" />
 
     <template v-else-if="equipment">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          {{ equipment.name }}
-          <v-spacer />
-          <v-btn v-if="canManageEquipment" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle v-if="equipment.site">{{ equipment.site?.name }}</v-card-subtitle>
+      <DetailHeader back-to="/equipments" back-label="設備台帳" kind="設備" :title="equipment.name" :subtitle="equipment.site?.name">
+        <template #status>
+          <RegulationChip v-for="regulation in equipment.regulations ?? []" :key="regulation.id" :regulation="regulation" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageEquipment" variant="outlined" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <p v-if="equipment.description">{{ equipment.description }}</p>
-          <div v-if="equipment.regulations?.length" class="mt-2">
-            <RegulationChip v-for="regulation in equipment.regulations" :key="regulation.id" :regulation="regulation" class="mr-1" />
-          </div>
-          <InterlockChips :equipment-id="equipment.id" class="mt-2" />
-          <v-row class="mt-2">
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ equipment.instruments?.length || 0 }}</div>
-                <div class="text-body-2">計器数</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ equipment.troubles_count || 0 }}</div>
-                <div class="text-body-2">トラブル</div>
-              </v-card>
-            </v-col>
-          </v-row>
+          <dl class="pk-summary__grid">
+            <div><dt>計器数</dt><dd class="pk-mono">{{ equipment.instruments?.length || 0 }}</dd></div>
+            <div><dt>トラブル</dt><dd class="pk-mono">{{ equipment.troubles_count || 0 }}</dd></div>
+            <div v-if="equipment.description" class="pk-summary__wide"><dt>説明</dt><dd style="white-space: pre-wrap">{{ equipment.description }}</dd></div>
+          </dl>
+          <InterlockChips :equipment-id="equipment.id" class="mt-3" />
         </v-card-text>
       </v-card>
 
@@ -253,7 +242,7 @@ onMounted(fetchEquipment)
               :subtitle="`予定日: ${m.planned_start_on}`"
             >
               <template #append>
-                <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="small">{{ MAINTENANCE_STATUS_LABEL[m.status] || m.status }}</v-chip>
+                <StatusChip kind="maintenance" :value="m.status" />
               </template>
             </v-list-item>
           </v-list>

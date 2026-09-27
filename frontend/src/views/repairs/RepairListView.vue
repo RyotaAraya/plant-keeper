@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -24,7 +25,7 @@ const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
-// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ダッシュボードから来たときは、その拠点・ステータス）
+// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときは、その拠点・ステータス）
 const filters = ref({
   site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
   statuses: listFromQuery(route.query.status),
@@ -156,9 +157,7 @@ watch(() => filters.value.site_ids, fetchStocks)
         {{ item.stock?.serial_number || '—' }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
-        </v-chip>
+        <StatusChip :label="statusLabel[item.status] || item.status" :color="statusColor[item.status]" />
       </template>
       <template #item.repair_vendor="{ item }">
         {{ item.repair_vendor || '—' }}

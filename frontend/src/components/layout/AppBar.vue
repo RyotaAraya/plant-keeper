@@ -9,7 +9,9 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const { items } = useNavigation()
-const section = computed(() => items.value.find((item) => route.path === item.to || route.path.startsWith(`${item.to}/`)))
+const section = computed(() =>
+  items.value.find((item) => [item.to, ...(item.also ?? [])].some((path) => route.path === path || route.path.startsWith(`${path}/`))),
+)
 const detailLabel = computed(() => {
   if (!section.value || route.path === section.value.to) return ''
   if (route.name === 'InspectionNew') return '新規点検'
@@ -37,8 +39,8 @@ async function handleLogout() {
   <v-app-bar density="default">
     <v-app-bar-nav-icon aria-label="メニューを開閉" @click="$emit('toggle-drawer')" />
     <nav class="pk-app-location" aria-label="現在の場所">
-      <router-link to="/plana" :aria-current="route.path === '/plana' ? 'page' : undefined">ホーム</router-link>
-      <template v-if="section">
+      <router-link to="/home" :aria-current="route.path === '/home' ? 'page' : undefined">ホーム</router-link>
+      <template v-if="section && section.to !== '/home'">
         <span aria-hidden="true">/</span>
         <router-link v-if="detailLabel" :to="section.to" :aria-label="`${section.title}の一覧へ戻る`">{{ section.title }}</router-link>
         <span v-else aria-current="page">{{ section.title }}</span>

@@ -41,16 +41,14 @@ async function switchTo(page: Page, account: { email: string; password: string }
 }
 
 // シードのデモ: I-701（ボイラードラム液位 低低）は、LT-701 の調査でバイパスしたまま、予定の復帰を過ぎている
-test('ダッシュボードと台帳で、復帰期限を過ぎたバイパスが目立ち、詳細で理由と代替措置が分かる', async ({ page }) => {
+test('ホームと台帳で、復帰期限を過ぎたバイパスが目立ち、詳細で理由と代替措置が分かる', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.goto('/dashboard')
 
-  const section = page.getByTestId('dashboard-bypass')
-  await expect(section.locator('dd.pk-bypass__alert')).toBeVisible()
-  await expect(section.getByRole('link', { name: /I-701 ボイラードラム液位 低低/ })).toContainText('復帰期限超過')
+  // ホームの先頭（拠点全体）に、復帰期限超過として出る
+  const section = page.getByTestId('home-bypasses')
+  await expect(section.locator('li.pk-home-list__alert', { hasText: 'I-701 ボイラードラム液位 低低' })).toContainText('復帰期限超過')
 
-  await section.getByRole('link', { name: '復帰期限超過', exact: true }).click()
-  await expect(page).toHaveURL(/\/interlocks\?.*bypass_state=overdue/)
+  await page.goto('/interlocks?bypass_state=overdue')
   await expect(page.getByTestId('interlock-overdue-alert')).toBeVisible()
   // 件数は決め打ちしない（シードの予定の復帰は投入時からの相対時間のため、stg では時間がたつと I-751 も期限を過ぎる）
   await expect(page.locator('tbody tr', { hasText: 'I-701' })).toBeVisible()

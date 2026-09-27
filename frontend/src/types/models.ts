@@ -315,9 +315,29 @@ export interface IntervalReview {
   evidence: { inspection_id: number; inspected_at: string; adjusted: boolean; as_found: { result: string; max_error: number | null } }[]
 }
 
+// 点検のまとまり（点検計画の親）。担当部署・法規区分・既定の周期を持ち、周期と次回期限は子の計画が持つ
+export interface InspectionPlanGroup {
+  id: number
+  site_id: number
+  name: string
+  department_id: number | null
+  regulation_id: number | null
+  default_interval_days: number | null
+  is_active: boolean
+  site?: { id: number; name: string }
+  department?: { id: number; name: string } | null
+  regulation?: { id: number; code: string; name: string } | null
+  // 一覧（GET /inspection_plan_groups）だけが付ける: 有効な計画の数・期限超過の数・いちばん近い次回期限
+  plans_count?: number
+  overdue_count?: number
+  next_due_on?: string | null
+}
+
 export interface InspectionPlan {
   id: number
   name: string
+  inspection_plan_group_id: number
+  inspection_plan_group?: Pick<InspectionPlanGroup, 'id' | 'name' | 'department' | 'regulation'>
   // 点検の対象は、設備か基準器（年次の校正）のどちらか一方
   equipment_id: number | null
   reference_standard_id?: number | null
@@ -640,18 +660,6 @@ export interface AiSimilarTroubles {
   remaining_today: number
 }
 
-export interface DashboardScope {
-  siteId: number | null
-  departmentId: number | null
-}
-
-export interface DepartmentTreeNode {
-  id: number
-  name: string
-  level: string
-  children: DepartmentTreeNode[]
-}
-
 // 計器の5点校正の1回分（校正の傾向。古い順）。max_error は出力・DCS表示の誤差の絶対値の最大（%スパン）
 export interface CalibrationStageSummary {
   result: 'pass' | 'fail' | 'incomplete' | 'empty'
@@ -719,31 +727,6 @@ export interface Interlock {
   bypasses?: InterlockBypass[]
 }
 
-export interface DashboardSummary {
-  scope: { site_name: string | null; department_name: string | null }
-  troubles: { open: number; in_progress: number; critical: number }
-  inspections: { pending_approval: number }
-  interlock_bypasses: {
-    bypassed: number
-    overdue: number
-    awaiting_confirmation: number
-    pending_approval: number
-    bypassed_list: InterlockBypass[]
-  }
-  maintenances: {
-    planned: number
-    in_progress: number
-    upcoming_count: number
-    upcoming: {
-      id: number
-      title: string
-      status: string
-      planned_start_on: string
-      planned_end_on: string | null
-      equipments: { id: number; name: string }[]
-    }[]
-  }
-}
 
 export interface AiResponseDraft {
   suggestion_id: number
@@ -755,49 +738,35 @@ export interface AiResponseDraft {
   remaining_today: number
 }
 
-// 朝会・夕会ボード（GET /meeting_board）。今日・明日の予定を拠点・部署で絞って1枚にまとめる
+// ホーム（GET /home）。所属のチーム → 課 → 部のエリアごとに、今日やることを出す
 type NamedRef = { id: number; name: string }
 
-export interface MeetingBoardPlan extends Pick<InspectionPlan,
+export interface HomePlan extends Pick<InspectionPlan,
   'id' | 'name' | 'next_due_on' | 'days_until_due' | 'interval_days' | 'inspection_type' | 'equipment_id' | 'instrument_id' | 'checklist_template_id' | 'reference_standard_id'> {
   equipment: NamedRef | null
   equipments: NamedRef[]
   instrument: { id: number; tag_number: string } | null
   reference_standard: NamedRef | null
-  checklist_template: (NamedRef & { department: NamedRef }) | null
+  inspection_plan_group: NamedRef
 }
 
-export interface MeetingBoardTask {
+export interface HomeTask {
   id: number
   title: string
   kind: 'inspection' | 'overhaul' | 'replacement' | 'work'
   status: 'not_started' | 'in_progress'
   notes: string | null
   checklist_template_id: number | null
-  department: NamedRef | null
+  scheduled_maintenance: { id: number; title: string }
   equipment: NamedRef
   instrument: { id: number; tag_number: string } | null
   assigned_to: NamedRef | null
 }
 
-export interface MeetingBoardMaintenance {
+export interface HomeTrouble {
   id: number
   title: string
   status: string
-  planned_start_on: string
-  planned_end_on: string | null
-  actual_start_on: string | null
-  site: NamedRef
-  // 範囲の作業（見送りを除く）の数と、そのうち完了した数
-  task_count: number
-  completed_count: number
-  open_tasks: MeetingBoardTask[]
-}
-
-export interface MeetingBoardTrouble {
-  id: number
-  title: string
-  status: 'open' | 'in_progress'
   priority: string
   reported_at: string
   equipment: NamedRef
@@ -805,8 +774,8 @@ export interface MeetingBoardTrouble {
   assigned_to: NamedRef | null
 }
 
-// 夕会の実績（点検日が今日の点検は、下書きのままのものを含む。画面で積み残しに分ける）
-export interface MeetingBoardInspection {
+// 夕会の実績（点検日が今日の点検は、下書きのままのものを含む。画面で積み残しに分ける）。承認待ちの点検も同じ形
+export interface HomeInspection {
   id: number
   status: 'draft' | 'submitted' | 'approval_requested' | 'approved'
   inspection_type: string
@@ -820,7 +789,7 @@ export interface MeetingBoardInspection {
   checklist_template: NamedRef | null
 }
 
-export interface MeetingBoardResponse {
+export interface HomeResponse {
   id: number
   response_type: string
   description: string
@@ -829,10 +798,10 @@ export interface MeetingBoardResponse {
   trouble: { id: number; title: string; status: string; equipment: NamedRef; instrument: { id: number; tag_number: string } | null }
 }
 
-export interface MeetingBoardCompletedTask {
+export interface HomeCompletedTask {
   id: number
   title: string
-  kind: MeetingBoardTask['kind']
+  kind: HomeTask['kind']
   completed_on: string
   scheduled_maintenance: { id: number; title: string }
   department: NamedRef | null
@@ -841,13 +810,23 @@ export interface MeetingBoardCompletedTask {
   assigned_to: NamedRef | null
 }
 
-export interface MeetingBoard {
+// department が null のエリアは拠点全体（部署のない人・所属と別の拠点）
+export interface HomeArea {
+  department: (NamedRef & { level: 'division' | 'section' | 'team' }) | null
+  inspection_plans: HomePlan[]
+  maintenance_tasks: HomeTask[]
+  troubles: { total_count: number; items: HomeTrouble[] }
+  results: { inspections: HomeInspection[]; trouble_responses: HomeResponse[]; completed_tasks: HomeCompletedTask[] }
+}
+
+export interface HomeBoard {
   today: string
   tomorrow: string
-  scope: { site_name: string | null; department_name: string | null }
-  inspection_plans: MeetingBoardPlan[]
-  maintenances: MeetingBoardMaintenance[]
-  troubles: { total_count: number; items: MeetingBoardTrouble[] }
+  // manager=承認待ちを先頭に / operator=運転員（不具合の報告・自分の報告の状況） / worker=やること
+  kind: 'manager' | 'operator' | 'worker'
+  site: NamedRef
   interlock_bypasses: InterlockBypass[]
-  results: { inspections: MeetingBoardInspection[]; trouble_responses: MeetingBoardResponse[]; completed_tasks: MeetingBoardCompletedTask[] }
+  areas: HomeArea[]
+  approvals?: { inspections: HomeInspection[]; interlock_bypasses: InterlockBypass[] }
+  my_troubles?: HomeTrouble[]
 }

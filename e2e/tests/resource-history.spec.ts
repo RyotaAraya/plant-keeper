@@ -20,7 +20,7 @@ test('トラブル詳細の変更履歴は、日本語のラベルと状態の�
   const updated = await page.request.patch(`${api}/troubles/${id}`, { headers, data: { trouble: { status: 'in_progress', assigned_to_id: me.user.id } } })
   expect(updated.ok()).toBeTruthy()
 
-  await page.goto(`/troubles/${id}`)
+  await page.goto(`/troubles/${id}?tab=changes`) // 変更履歴はタブ（?tab= で開ける）
   const history = page.getByTestId('resource-history')
   await expect(history).toContainText('更新')
 

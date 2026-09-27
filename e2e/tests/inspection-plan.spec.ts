@@ -1,4 +1,4 @@
-import { test, expect, login, resetSession, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, login, resetSession, apiBaseUrl, selectOption, ACCOUNTS, openPlans } from './support'
 
 const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 
@@ -7,8 +7,7 @@ const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 test('点検計画に期限超過が表示され、「点検を実施」で計画の設備を引き継いだ点検画面が開く', async ({ page }) => {
   await login(page, ACCOUNTS.member)
 
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()
+  await openPlans(page, '点検の期限順')
   await expect(page.locator('tbody tr').first()).toBeVisible()
   await expect(page.getByText(/日超過/).first()).toBeVisible()
 
@@ -32,20 +31,19 @@ test('点検計画に期限超過が表示され、「点検を実施」で計�
 
 test('計画の追加ボタンはマネージャーにだけ表示される', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()
+  await openPlans(page, '点検の期限順')
   await expect(page.getByRole('button', { name: '計画を追加' })).toHaveCount(0)
 
   await resetSession(page)
   await login(page, OWNER_MANAGER)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
   await expect(page.getByRole('button', { name: '計画を追加' })).toBeVisible()
 })
 
 // 巡回の計画は、装置ごとではなく、いくつかの装置をまとめて1件にする
 test('複数の設備をまとめた巡回の計画から「点検を実施」を開くと、その設備すべてが点検に引き継がれる', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
 
   const row = page.getByRole('row', { name: /製造部 巡回点検/ })
   await expect(row).toContainText('常圧蒸留装置、')
@@ -107,5 +105,56 @@ test('業務管理者は、延長の候補の根拠と注意を見て周期を�
     await expect(page.locator('tbody tr', { hasText: name })).toContainText('730日ごと')
   } finally {
     await page.request.patch(`${apiBaseUrl()}/inspection_plans/${planId}`, { headers, data: { inspection_plan: { is_active: false } } })
+  }
+})
+
+// 点検計画は、必ず点検のまとまり（親）に属す。担当部署・法規区分はまとまりが持つ
+test('点検計画にまとまりと法規区分が表示され、法規区分・まとまりで絞り込める', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await openPlans(page, '点検の期限順')
+
+  const valve = page.getByRole('row', { name: /ボイラー安全弁 年次点検/ })
+  await expect(valve).toContainText('安全弁 年次点検')
+  await expect(valve).toContainText('ボイラー・第一種圧力容器')
+
+  await test.step('法規区分で絞り込むと、その区分のまとまりの計画だけになる', async () => {
+    await selectOption(page, '法規区分', 'ボイラー・第一種圧力容器')
+    await expect(page.getByRole('row', { name: /FT-301 流量伝送器 ゼロ点確認/ })).toHaveCount(0)
+    for (const text of await page.locator('tbody tr').allInnerTexts()) expect(text).toContain('ボイラー・第一種圧力容器')
+    await page.goto('/inspection-plans') // 絞り込みを外す
+  })
+
+  await test.step('まとまりで絞り込むと、そのまとまりの計画だけになる', async () => {
+    await selectOption(page, 'まとまり', '伝送器 月次点検', { exact: true })
+    await expect(page.getByRole('row', { name: /FT-301 流量伝送器 ゼロ点確認/ })).toBeVisible()
+    await expect(page.getByRole('row', { name: /ボイラー安全弁 年次点検/ })).toHaveCount(0)
+  })
+})
+
+test('業務管理者は、まとまりを選んで点検計画を追加でき、周期にまとまりの既定の周期が入る', async ({ page }) => {
+  await login(page, OWNER_MANAGER)
+  await openPlans(page, '点検の期限順')
+  await page.getByRole('button', { name: '計画を追加' }).click()
+  const dialog = page.getByRole('dialog')
+  const name = `E2E ${Date.now()} まとまりの計画`
+
+  await dialog.getByLabel('計画名').fill(name)
+  await expect(dialog.getByRole('button', { name: '保存' })).toBeDisabled() // まとまりは必須
+  await dialog.locator('.v-field', { has: page.getByLabel('設備', { exact: true }) }).click()
+  await page.getByRole('option', { name: '常圧蒸留装置', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await dialog.locator('.v-field', { has: page.getByLabel('まとまり', { exact: true }) }).click()
+  await page.getByRole('option', { name: '伝送器 月次点検', exact: true }).click()
+  await expect(dialog.getByLabel('周期（日）')).toHaveValue('30')
+
+  const saved = page.waitForResponse((res) => res.url().endsWith('/inspection_plans') && res.request().method() === 'POST')
+  await dialog.getByRole('button', { name: '保存' }).click()
+  const planId = (await (await saved).json()).data.id
+  try {
+    await expect(dialog).toBeHidden()
+    await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText('伝送器 月次点検')
+  } finally {
+    const token = await page.evaluate(() => localStorage.getItem('jwt'))
+    await page.request.patch(`${apiBaseUrl()}/inspection_plans/${planId}`, { headers: { Authorization: `Bearer ${token}` }, data: { inspection_plan: { is_active: false } } })
   }
 })

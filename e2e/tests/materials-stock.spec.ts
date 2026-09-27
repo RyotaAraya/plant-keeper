@@ -48,7 +48,7 @@ test('自社は資材ごとの自拠点・他拠点の在庫が見え、自拠�
   // 詳細画面では、拠点付きの倉庫ごとの在庫が見える
   await pickStockFilter(page, '他拠点にだけ在庫あり')
   await openMaterialDetail(page, /3301HA/)
-  await expect(page.getByRole('heading', { name: '在庫状況' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '在庫状況' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('cell', { name: /堺製油所 堺第1倉庫/ })).toBeVisible()
   await expect(page.getByRole('cell', { name: /和歌山製油所 和歌山倉庫/ })).toBeVisible()
 })
@@ -64,6 +64,6 @@ test('在庫を見られない協力会社には、資材の在庫の列・絞�
 
   await openMaterialDetail(page, /3301HA/)
   // 詳細画面は開けるが、在庫状況は出ない（最近の発注は出る）
-  await expect(page.getByRole('heading', { name: '最近の発注' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '在庫状況' })).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /最近の発注/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: '在庫状況' })).toHaveCount(0)
 })

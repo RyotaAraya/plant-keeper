@@ -51,10 +51,11 @@ test('校正の節で、5点校正 → 校正の傾向 → 周期の見直しを
   expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
 })
 
-test('日々の確認の節で、朝会・夕会ボードと機器の自己診断（NE 107の4つの状態）を実際の画面つきで示す', async ({ page }) => {
+test('日々の確認の節で、ホーム（やること）と機器の自己診断（NE 107の4つの状態）を実際の画面つきで示す', async ({ page }) => {
   await page.goto('/')
   const section = page.locator('#daily')
-  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['朝会・夕会ボード', '機器の自己診断（NAMUR NE 107）'])
+  await expect(section.getByRole('heading', { level: 3 })).toHaveText(['ホーム（やること）', '機器の自己診断（NAMUR NE 107）'])
+  await expect(section).not.toContainText('朝会・夕会ボード')
   await expect(section).toContainText('積み残し')
   await expect(section.getByTestId('diagnostic-chip')).toHaveText(['F 故障', 'C 機能点検中', 'S 仕様外', 'M 保守要求'])
   const imgs = section.getByRole('img')
@@ -121,12 +122,12 @@ test('ログイン前に仕事を始めると、選んだ仕事を復帰先に�
   expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana?task=similar-troubles')
 })
 
-test('ヒーローのCTAから作業ホームを復帰先にしてログインへ進む', async ({ page }) => {
+test('ヒーローのCTAからホームを復帰先にしてログインへ進む', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('link', { name: 'デモアカウントで試す', exact: true }).click()
 
   await expect(page).toHaveURL(/\/login\?redirect=/)
-  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/plana')
+  expect(new URL(page.url()).searchParams.get('redirect')).toBe('/home')
 })
 
 test('トップページは、スマホの幅でも横にはみ出さない', async ({ page }) => {
