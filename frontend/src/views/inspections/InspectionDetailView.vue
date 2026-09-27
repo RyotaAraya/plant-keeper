@@ -124,6 +124,14 @@ onMounted(fetchInspection)
                 </router-link>
               </dd>
             </div>
+            <div v-if="inspection.import_source" class="pk-summary__wide" data-testid="import-source">
+              <dt>取り込み元</dt>
+              <dd>
+                校正結果のファイル「{{ inspection.import_source.file_name }}」（{{ inspection.import_source.record_index }}件目）
+                <span v-if="inspection.import_source.performed_by">・校正の実施者: {{ inspection.import_source.performed_by }}</span>
+                <span v-if="inspection.import_source.calibrator?.model">・キャリブレータ: {{ [inspection.import_source.calibrator.model, inspection.import_source.calibrator.serial_number].filter(Boolean).join(' / ') }}</span>
+              </dd>
+            </div>
             <div v-if="inspection.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ inspection.notes }}</dd></div>
           </dl>
         </v-card-text>

@@ -1,5 +1,6 @@
 // CSV出力。Excelで文字化けしないよう UTF-8 の BOM を付ける。
 // 「=」「+」「-」「@」で始まるセルは、Excelが数式として実行しないよう先頭に「'」を付ける（ユーザが入力した文字が入り得るため）
+import { downloadBlob } from '@/utils/download'
 
 const FORMULA_START = /^[=+\-@\t\r]/
 
@@ -14,13 +15,5 @@ export function toCsv(rows: unknown[][]): string {
 }
 
 export function downloadCsv(filename: string, rows: unknown[][]) {
-  const blob = new Blob(['﻿', toCsv(rows)], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  downloadBlob(filename, new Blob(['﻿', toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
 }
