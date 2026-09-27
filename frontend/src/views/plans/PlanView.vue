@@ -13,6 +13,7 @@ import InspectionGroupPlans from '@/components/plans/InspectionGroupPlans.vue'
 import InspectionPlanDueList from '@/components/plans/InspectionPlanDueList.vue'
 import InspectionPlanGroupDialog from '@/components/plans/InspectionPlanGroupDialog.vue'
 import MaintenanceCreateDialog from '@/components/plans/MaintenanceCreateDialog.vue'
+import PlanTabs, { PLAN_TABS, type PlanTab } from '@/components/plans/PlanTabs.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
@@ -24,21 +25,13 @@ import { latestGuard } from '@/utils/latestGuard'
 import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { regulationColor } from '@/utils/regulation'
 
-type Tab = 'all' | 'inspection' | 'maintenance' | 'due'
-const TABS: { value: Tab; title: string }[] = [
-  { value: 'all', title: 'すべて' },
-  { value: 'inspection', title: '定期点検' },
-  { value: 'maintenance', title: '定期整備' },
-  { value: 'due', title: '点検の期限順' },
-]
-
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { canManageInspectionPlan, canManageMaintenance } = usePermissions()
 
-const tabFromQuery = (): Tab => (TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as Tab) : 'all')
-const tab = ref<Tab>(tabFromQuery())
+const tabFromQuery = (): PlanTab => (PLAN_TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as PlanTab) : 'all')
+const tab = ref<PlanTab>(tabFromQuery())
 const showInspection = computed(() => tab.value === 'all' || tab.value === 'inspection')
 const showMaintenance = computed(() => tab.value === 'all' || tab.value === 'maintenance')
 
@@ -185,7 +178,7 @@ function changeSite(siteIds: number[]) {
   loadSiteOptions(siteIds)
 }
 
-function changeTab(value: Tab) {
+function changeTab(value: PlanTab) {
   router.replace({ path: '/plans', query: value === 'all' ? {} : { tab: value } })
 }
 
@@ -239,18 +232,18 @@ loadAll()
       </template>
     </PageHeader>
 
-    <div class="pk-plan-tabs mb-4">
-      <v-btn-toggle :model-value="tab" mandatory density="compact" variant="outlined" color="primary" aria-label="表示する計画" @update:model-value="changeTab">
-        <v-btn v-for="t in TABS" :key="t.value" :value="t.value">{{ t.title }}</v-btn>
-      </v-btn-toggle>
-    </div>
-
-    <InspectionPlanDueList v-if="tab === 'due'" ref="dueList" :key="route.fullPath" />
+    <!-- 表示の切り替えは、ホームの朝会・夕会と同じく、絞り込みの行の拠点のすぐ右に置く -->
+    <InspectionPlanDueList v-if="tab === 'due'" ref="dueList" :key="route.fullPath">
+      <template #view>
+        <PlanTabs :model-value="tab" @update:model-value="changeTab" />
+      </template>
+    </InspectionPlanDueList>
 
     <template v-else>
       <div class="pk-filters">
         <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
         <v-divider vertical class="pk-scope-divider" />
+        <PlanTabs :model-value="tab" @update:model-value="changeTab" />
         <template v-if="showInspection">
           <v-select
             v-model="filters.department_id"
@@ -261,11 +254,11 @@ loadAll()
             clearable
             density="compact"
             hide-details
-            style="min-width: 200px; max-width: 280px"
+            style="max-width: 280px"
           />
-          <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="法規区分" style="min-width: 180px; max-width: 220px" />
+          <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="法規区分" style="max-width: 220px" />
         </template>
-        <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="min-width: 180px; max-width: 220px" />
+        <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="max-width: 220px" />
       </div>
 
       <section v-if="showInspection" class="mb-6" aria-labelledby="plan-inspection-heading">
@@ -405,8 +398,6 @@ loadAll()
 </template>
 
 <style scoped>
-/* 狭い画面では、切り替えだけを横にスクロールする（ボタンを潰さない） */
-.pk-plan-tabs { overflow-x: auto; }
 .pk-plan-heading { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
 .pk-plan-heading span { color: var(--pk-muted); font-size: 0.8125rem; font-weight: 400; }
 .pk-plan-table :deep(tbody tr.v-data-table__tr) { cursor: pointer; }

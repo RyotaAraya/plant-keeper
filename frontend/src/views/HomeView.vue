@@ -4,7 +4,7 @@ import PermissionMatrix from '@/components/PermissionMatrix.vue'
 import troubleScreenshot from '@/assets/screenshots/trouble-detail.png'
 import bypassScreenshot from '@/assets/screenshots/interlock-bypass.png'
 import calibrationScreenshot from '@/assets/screenshots/calibration-trend.png'
-import meetingBoardScreenshot from '@/assets/screenshots/meeting-board.png'
+import homeScreenshot from '@/assets/screenshots/home.png'
 import diagnosticsScreenshot from '@/assets/screenshots/device-diagnostics.png'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
@@ -185,10 +185,10 @@ const story = [
       <div class="landing-daily-grid">
         <article>
           <figure class="landing-hero-shot">
-            <a :href="meetingBoardScreenshot" target="_blank" rel="noopener" aria-label="朝会・夕会ボードの画面を拡大する（新しいタブ）"><img :src="meetingBoardScreenshot" width="1120" height="1022" alt="朝会・夕会ボードの朝会の画面。川崎製油所 計装保全課の、インターロックのバイパス3件、期限超過・今日・明日が期限の点検計画、実施中の定期整備の作業と進み具合が1枚に並ぶ。" /></a>
+            <a :href="homeScreenshot" target="_blank" rel="noopener" aria-label="ホームの画面を拡大する（新しいタブ）"><img :src="homeScreenshot" width="1120" height="1062" alt="川崎製油所の計器Aチームの人のホーム（朝会）。先頭にインターロックのバイパス3件、その下に計器Aチームのやること（実施中の定期整備の作業と、優先度の高い順のトラブル）が1本のリストで並ぶ。" /></a>
           </figure>
-          <h3 class="landing-feature-title">朝会・夕会ボード</h3>
-          <p class="landing-body-text">点検計画、実施中の定期整備の作業、トラブル、インターロックのバイパスを、部署ごとに1枚で出します。夕会では、今日の実績と、下書きのまま残った点検（積み残し）を分けて出します。A4でそのまま印刷できます。</p>
+          <h3 class="landing-feature-title">ホーム（やること）</h3>
+          <p class="landing-body-text">ログインすると、自分の所属のチーム・課・部ごとに、期限の来た点検計画、定期整備の作業、トラブルを1本のリストで出します。夕会に切り替えると、今日の実績と積み残しを出します。A4でそのまま印刷できます。</p>
         </article>
         <article>
           <figure class="landing-hero-shot">
