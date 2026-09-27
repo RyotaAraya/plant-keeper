@@ -50,6 +50,8 @@ Rails.application.routes.draw do
           get :sample
         end
       end
+      # 校正の作業指示（5点校正のある点検計画）の書き出し。結果の記録に計画のIDを入れて返すと、取り込みでその計画の点検になる
+      resources :calibration_work_orders, only: [ :index, :create ]
       resources :troubles, only: [ :index, :show, :create, :update ] do
         member { post :defer_to_maintenance }
       end

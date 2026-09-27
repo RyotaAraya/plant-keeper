@@ -2,8 +2,11 @@
 # 計器ごとの点検の下書きにする。
 # - 1ファイルに複数の計器の記録を持てる。記録ごとに、取り込めるか（計器・校正条件・基準器・実施日時）を確かめ、
 #   取り込めない記録は理由つきで飛ばす（確認の画面は preview、取り込みは import!。どちらも同じ確認をする）
-# - 作るのは5点校正の項目1つだけの点検の下書き（テンプレート・点検計画なし）。判定は手入力と同じ（校正条件を凍結し、CalibrationSheet）。
-#   提出は人が内容を確かめてから行うため、取り込んだだけでは承認・点検計画の期限は進まない
+# - 記録に点検計画のID（inspection_plan_id。校正の作業指示 CalibrationWorkOrder から）があれば、その計画のチェックリストで点検の下書きを作り、
+#   5点校正の項目を取り込んだ結果で埋める（ほかの項目は人が記入する）。計画の計器と記録の計器が違う・計画が無効・5点校正の項目がない記録は取り込まない。
+#   計画のIDがなければ、5点校正の項目1つだけの点検の下書き（テンプレート・点検計画なし。計器から計画を推定はしない）
+# - 判定は手入力と同じ（校正条件を凍結し、CalibrationSheet）。
+#   提出は人が内容を確かめてから行うため、取り込んだだけでは承認・点検計画の期限は進まない（進むのは提出したとき）
 # - 使った基準器は点検に付けるが、使用前の1点チェックは未確認のまま（現場で確かめたことを人が記録する）
 class CalibrationImport
   FORMAT = "plant-keeper-calibration"
@@ -20,7 +23,8 @@ class CalibrationImport
   class InvalidFile < StandardError; end
 
   Row = Struct.new(
-    :index, :site_name, :tag_number, :performed_at, :performed_by, :calibrator, :instrument, :reference_standards, :input, :result, :reasons,
+    :index, :site_name, :tag_number, :performed_at, :performed_by, :calibrator, :instrument, :inspection_plan, :reference_standards, :input, :result,
+    :reasons,
     keyword_init: true
   ) do
     def importable? = reasons.empty?
@@ -52,11 +56,7 @@ class CalibrationImport
       importable_rows.map do |row|
         inspection = create_inspection!(row)
         yield inspection if block_given?
-        item = inspection.inspection_items.create!(
-          position: 1, content: ITEM_CONTENT, item_type: "calibration", criterion: ITEM_CRITERION, required: true,
-          instrument: row.instrument, calibration_input: row.input
-        )
-        yield item if block_given?
+        create_items!(inspection, row).each { |item| yield item if block_given? }
         row.reference_standards.each { |standard| inspection.inspection_reference_standards.create!(reference_standard: standard) }
         inspection
       end
@@ -71,7 +71,8 @@ class CalibrationImport
   end
 
   # 見本のファイル（デモ用）。拠点の校正できる伝送器を数台、少し前の日時で、使える基準器で校正した記録にする。
-  # 1台は調整前が不合格で、調整して合格。基準器が使えない（有効期限切れなど）ものがあれば、それを使った記録を1件加え、
+  # 1台は調整前が不合格で、調整して合格。計器に5点校正のある有効な点検計画が1つだけあれば、その計画のID（inspection_plan_id）を入れ、
+  # 作業指示から返ってきた結果として計画の点検になる例にする。基準器が使えない（有効期限切れなど）ものがあれば、それを使った記録を1件加え、
   # 確認の画面で「取り込まない」理由が出る例にする。拠点のデータから作るため、シードの日付が動いても取り込める
   SAMPLE_ERRORS = [ 0.1, 0.2, -0.15 ].freeze
 
@@ -83,18 +84,24 @@ class CalibrationImport
     usable = standards.find { |standard| standard.unusable_reasons(today, require_traceable: true).empty? }
     unusable = standards.find { |standard| !standard.category_temperature? && standard.unusable_reasons(today).any? }
 
+    plan_ids = InspectionPlan.active.where(instrument: instruments).includes(:instrument, checklist_template: :checklist_template_items)
+                             .select(&:five_point_calibration?).group_by(&:instrument_id)
+                             .filter_map { |instrument_id, plans| [ instrument_id, plans.first.id ] if plans.one? }.to_h
+
     records = instruments.each_with_index.map do |instrument, index|
-      sample_record(site, instrument, usable, Time.current.beginning_of_hour - (index + 1).hours, adjusted: index == 1, error: SAMPLE_ERRORS[index])
+      sample_record(site, instrument, usable, Time.current.beginning_of_hour - (index + 1).hours, adjusted: index == 1, error: SAMPLE_ERRORS[index],
+                    plan_id: plan_ids[instrument.id])
     end
     if unusable && instruments.any?
-      records << sample_record(site, instruments.first, unusable, Time.current.beginning_of_hour - 5.hours, adjusted: false, error: 0.1)
+      records << sample_record(site, instruments.first, unusable, Time.current.beginning_of_hour - 5.hours, adjusted: false, error: 0.1,
+                               plan_id: plan_ids[instruments.first.id])
     end
 
     { "format" => FORMAT, "version" => VERSION, "calibrator" => { "model" => "ドキュメンティングキャリブレータ（見本）", "serial_number" => "SAMPLE-0001" },
       "records" => records }
   end
 
-  def self.sample_record(site, instrument, standard, time, adjusted:, error:)
+  def self.sample_record(site, instrument, standard, time, adjusted:, error:, plan_id:)
     sheet = CalibrationSheet.new(CalibrationSheet.snapshot_for(instrument))
     stage = lambda do |output_error|
       { "points" => CalibrationSheet::POINTS.map do |percent|
@@ -108,7 +115,7 @@ class CalibrationImport
     {
       "site" => site.name, "tag_number" => instrument.tag_number, "performed_at" => time.iso8601, "performed_by" => "見本 太郎",
       "reference_standards" => [ standard&.management_number ].compact, "adjusted" => adjusted, "stages" => stages
-    }
+    }.merge(plan_id ? { "inspection_plan_id" => plan_id } : {})
   end
   private_class_method :sample_record
 
@@ -146,6 +153,7 @@ class CalibrationImport
     row.performed_at = performed_at(record["performed_at"], row.reasons)
     row.instrument = find_instrument(row)
     check_instrument(row) if row.instrument
+    check_plan(row, record["inspection_plan_id"]) unless record["inspection_plan_id"].nil?
     row.reasons << "測定値がありません" unless CalibrationSheet.measured_any?(row.input)
     check_reference_standards(row, record["reference_standards"])
     check_duplicate(row, seen)
@@ -195,6 +203,24 @@ class CalibrationImport
     end
   end
 
+  # 計画のIDがあれば、その計画の点検にできるか（有効・記録と同じ計器・チェックリストに5点校正の項目）を確かめる
+  def check_plan(row, value)
+    id = Integer(value.to_s, 10, exception: false)
+    return row.reasons << "点検計画のID（inspection_plan_id）は1以上の整数で指定してください" if id.nil? || id <= 0
+
+    plan = InspectionPlan.includes(:instrument, checklist_template: :checklist_template_items).find_by(id: id)
+    return row.reasons << "点検計画（ID #{id}）が見つかりません" if plan.nil?
+
+    row.inspection_plan = plan
+    if !plan.is_active
+      row.reasons << "点検計画「#{plan.name}」は無効です"
+    elsif row.instrument && plan.instrument_id != row.instrument.id
+      row.reasons << "点検計画「#{plan.name}」の計器（#{plan.instrument&.tag_number || 'なし'}）と、記録の計器が違います"
+    elsif plan.calibration_template_item.nil?
+      row.reasons << "点検計画「#{plan.name}」のチェックリストに、5点校正の項目がありません"
+    end
+  end
+
   # 使った基準器は、提出するときと同じ規則で、実施日に使えるかを確かめる（取引用の計器ならトレーサビリティも）
   def check_reference_standards(row, numbers)
     numbers = Array(numbers).filter_map { |number| self.class.text(number) }.uniq
@@ -232,14 +258,34 @@ class CalibrationImport
   end
 
   def create_inspection!(row)
+    plan = row.inspection_plan
     Inspection.create!(
       user: @user, equipment: row.instrument.equipment, instrument: row.instrument, department: @department,
-      inspection_type: "periodic", status: "draft", inspected_at: row.performed_at, notes: notes_for(row),
+      inspection_plan: plan, checklist_template: plan&.checklist_template,
+      inspection_type: plan&.inspection_type || "periodic", status: "draft", inspected_at: row.performed_at, notes: notes_for(row),
       import_source: {
         "kind" => "calibration_file", "file_name" => file_name, "format_version" => VERSION, "record_index" => row.index,
         "calibrator" => row.calibrator, "performed_by" => row.performed_by, "imported_at" => Time.current.iso8601
       }
     )
+  end
+
+  # 計画があれば、チェックリストの項目をすべて作り（基準は InspectionItem がテンプレートから写す）、5点校正の項目を取り込んだ結果で埋める。
+  # なければ、5点校正の項目1つだけ
+  def create_items!(inspection, row)
+    calibration_item = row.inspection_plan&.calibration_template_item
+    if calibration_item.nil?
+      return [ inspection.inspection_items.create!(
+        position: 1, content: ITEM_CONTENT, item_type: "calibration", criterion: ITEM_CRITERION, required: true,
+        instrument: row.instrument, calibration_input: row.input
+      ) ]
+    end
+
+    row.inspection_plan.checklist_template.checklist_template_items.each_with_index.map do |template_item, index|
+      attributes = { checklist_template_item: template_item, position: index + 1, content: template_item.content, item_type: template_item.item_type }
+      attributes.merge!(instrument: row.instrument, calibration_input: row.input) if template_item == calibration_item
+      inspection.inspection_items.create!(attributes)
+    end
   end
 
   def notes_for(row)

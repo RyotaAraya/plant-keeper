@@ -1,7 +1,8 @@
 require "test_helper"
 
 # キャリブレータ・校正管理ソフトの校正結果（JSON）の取り込み: 確認で記録ごとに取り込めるかと理由を返し、
-# 取り込みで、取り込める記録だけを5点校正の点検の下書きにする（提出・点検計画の期限は進めない）
+# 取り込みで、取り込める記録だけを5点校正の点検の下書きにする（提出・点検計画の期限は進めない）。
+# 記録に点検計画のIDがあれば、その計画のチェックリストの点検の下書きにする
 class CalibrationImportsTest < ActionDispatch::IntegrationTest
   setup do
     @site = create_site(name: "川崎製油所")
@@ -89,16 +90,94 @@ class CalibrationImportsTest < ActionDispatch::IntegrationTest
     assert AuditLog.exists?(auditable: item, action: "create")
   end
 
-  test "取り込んだだけでは点検計画の期限は進まない" do
-    group = InspectionPlanGroup.create!(site: @site, name: "伝送器 年次点検", default_interval_days: 365)
-    plan = InspectionPlan.create!(inspection_plan_group: group, name: "FT-301 年次", equipment: @equipment, instrument: @instrument,
-                                  inspection_type: "periodic", interval_days: 365, next_due_on: @today)
+  def create_plan(template: calibration_template, instrument: @instrument, **attrs)
+    @group ||= InspectionPlanGroup.create!(site: @site, name: "伝送器 年次点検", default_interval_days: 365)
+    InspectionPlan.create!(inspection_plan_group: @group, name: "#{instrument.tag_number} 年次", equipment: @equipment, instrument: instrument,
+                           checklist_template: template, inspection_type: "periodic", interval_days: 365, next_due_on: @today, **attrs)
+  end
+
+  def calibration_template
+    return @calibration_template if @calibration_template
+
+    template = @calibration_template = ChecklistTemplate.create!(name: "伝送器 年次点検", department: @department, inspection_type: "periodic")
+    template.checklist_template_items.create!(position: 1, content: "外観", item_type: "check", section: "点検", required: true)
+    template.checklist_template_items.create!(position: 2, content: "5点校正", item_type: "calibration", criterion: "許容差以内", required: true)
+    template.checklist_template_items.create!(position: 3, content: "所見", item_type: "text", required: false)
+    template
+  end
+
+  test "計画のIDがない記録は、計器に計画があっても計画に結ばず、期限も進まない" do
+    plan = create_plan
 
     post_file("", document([ record ]))
 
     assert_response :created
     assert_equal @today, plan.reload.next_due_on
-    assert_nil Inspection.last.inspection_plan_id
+    inspection = Inspection.last
+    assert_nil inspection.inspection_plan_id
+    assert_nil inspection.checklist_template_id
+    assert_equal [ "calibration" ], inspection.inspection_items.map(&:item_type)
+  end
+
+  test "計画のIDがある記録は、計画のチェックリストで下書きを作って5点校正を埋め、提出したときに計画の期限が進む" do
+    plan = create_plan
+
+    post_file("/preview", document([ record(inspection_plan_id: plan.id) ]))
+    assert_equal({ "id" => plan.id, "name" => "FT-301 年次", "next_due_on" => @today.iso8601 }, json["data"]["rows"][0]["inspection_plan"])
+
+    # 数字の文字列も受け付け、先頭の0は8進数ではなく10進数として読む
+    post_file("", document([ record(inspection_plan_id: "0#{plan.id}") ]))
+
+    assert_response :created
+    inspection = Inspection.find(json["data"]["inspections"].first["id"])
+    assert inspection.draft?
+    assert_equal plan, inspection.inspection_plan
+    assert_equal plan.checklist_template, inspection.checklist_template
+    items = inspection.inspection_items.to_a
+    assert_equal [ "外観", "5点校正", "所見" ], items.map(&:content)
+    assert_equal plan.checklist_template.checklist_template_items.to_a, items.map(&:checklist_template_item)
+    assert_equal "点検", items[0].section
+    assert_nil items[0].result
+    assert_equal "許容差以内", items[1].criterion
+    assert_equal "pass", items[1].calibration_result
+    assert_equal @instrument, items[1].instrument
+    assert(items.values_at(0, 2).all? { |item| item.calibration_data.nil? })
+    assert_equal @today, plan.reload.next_due_on
+
+    inspection.update!(status: "submitted")
+    assert_equal inspection.inspected_at.to_date + 365, plan.reload.next_due_on
+  end
+
+  test "計画が見つからない・無効・計器が違う・5点校正の項目がない・IDが整数でない記録は取り込まない" do
+    other = Instrument.create!(equipment: @equipment, tag_number: "FT-302", instrument_type: "flow_transmitter",
+                               range_lower: 0, range_upper: 100, range_unit: "kPa", tolerance_percent: 0.5)
+    inactive = create_plan(is_active: false)
+    other_plan = create_plan(instrument: other)
+    template = ChecklistTemplate.create!(name: "伝送器 月次点検", department: @department, inspection_type: "periodic")
+    template.checklist_template_items.create!(position: 1, content: "ゼロ点", item_type: "measurement")
+    monthly = create_plan(template: template)
+    records = [
+      record(inspection_plan_id: 0),
+      record(inspection_plan_id: InspectionPlan.maximum(:id) + 1, performed_at: 2.hours.ago.iso8601),
+      record(inspection_plan_id: inactive.id, performed_at: 3.hours.ago.iso8601),
+      record(inspection_plan_id: other_plan.id, performed_at: 4.hours.ago.iso8601),
+      record(inspection_plan_id: monthly.id, performed_at: 5.hours.ago.iso8601),
+      record(inspection_plan_id: "FT-301", performed_at: 6.hours.ago.iso8601),
+      record(inspection_plan_id: "0x1", performed_at: 7.hours.ago.iso8601)
+    ]
+
+    post_file("", document(records))
+
+    assert_response :unprocessable_entity
+    reasons = json["data"]["rows"].map { |row| row["reasons"].join(" / ") }
+    assert_includes reasons[0], "inspection_plan_id）は1以上の整数で"
+    assert_includes reasons[1], "が見つかりません"
+    assert_includes reasons[2], "は無効です"
+    assert_includes reasons[3], "の計器（FT-302）と、記録の計器が違います"
+    assert_includes reasons[4], "5点校正の項目がありません"
+    assert_includes reasons[5], "inspection_plan_id）は1以上の整数で"
+    assert_includes reasons[6], "inspection_plan_id）は1以上の整数で"
+    assert_equal 0, Inspection.count
   end
 
   test "校正条件のない計器・使えない基準器・基準器の指定なし・未来の日時・測定値なしは取り込まない" do
@@ -195,9 +274,21 @@ class CalibrationImportsTest < ActionDispatch::IntegrationTest
     assert_response :ok
     sample = response.body
     assert_equal [ "FT-301" ], JSON.parse(sample)["records"].map { |r| r["tag_number"] }
+    assert_nil JSON.parse(sample)["records"][0]["inspection_plan_id"]
 
     post_file("", sample)
     assert_response :created
     assert_equal 1, json["data"]["inspections"].size
+  end
+
+  test "見本のファイルは、計器に5点校正の計画が1つだけあれば計画のIDを入れ、計画の点検になる" do
+    plan = create_plan
+
+    get "/api/v1/calibration_imports/sample", headers: auth_headers_for(@user)
+    assert_equal plan.id, JSON.parse(response.body)["records"][0]["inspection_plan_id"]
+
+    post_file("", response.body)
+    assert_response :created
+    assert_equal plan, Inspection.find(json["data"]["inspections"].first["id"]).inspection_plan
   end
 end

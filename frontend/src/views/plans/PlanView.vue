@@ -224,6 +224,7 @@ loadAll()
   <MainLayout>
     <PageHeader title="計画" description="定期点検のまとまりと、定期整備の系列・単発の整備です。行を押すと、設備・計器ごとの周期と次回期限を開きます。">
       <template v-if="tab === 'due'">
+        <v-btn color="primary" variant="outlined" prepend-icon="mdi-file-export-outline" class="mr-2" @click="dueList?.openWorkOrder()">校正の作業指示</v-btn>
         <v-btn v-if="canManageInspectionPlan" color="primary" prepend-icon="mdi-plus" @click="dueList?.openCreate()">計画を追加</v-btn>
       </template>
       <template v-else>

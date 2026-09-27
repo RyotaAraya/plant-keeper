@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // キャリブレータ・校正管理ソフトの校正結果（JSON）を取り込む。ファイルを選ぶと、記録ごとに取り込めるかと理由を確認し（preview）、
-// 取り込める記録だけを、5点校正の点検の下書きにする。提出は、各点検の内容を確かめてから人が行う
+// 取り込める記録だけを、5点校正の点検の下書きにする（記録に点検計画のIDがあれば、その計画のチェックリストの点検の下書き）。
+// 提出は、各点検の内容を確かめてから人が行う
 import { computed, ref, watch } from 'vue'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
@@ -112,6 +113,7 @@ function resultLabel(result: CalibrationResult | null) {
       <v-card-text>
         <div class="text-body-2 text-medium-emphasis mb-3">
           キャリブレータ・校正管理ソフトから書き出した5点校正の結果（JSON）を、計器ごとの点検の下書きにします。判定は手入力と同じです。
+          校正の作業指示（「計画」の点検の期限順から書き出し）の計画のIDがある記録は、その計画の点検になり、提出したときに次回期限が進みます。
           取り込んだだけでは提出されないため、各点検の内容と使用前の1点チェックを確かめてから提出してください。
           <v-btn variant="text" size="small" density="compact" prepend-icon="mdi-download" class="ml-1" @click="downloadSample">見本のファイル</v-btn>
         </div>
@@ -172,6 +174,7 @@ function resultLabel(result: CalibrationResult | null) {
                 <td>
                   <div class="font-weight-medium">{{ row.tag_number || '—' }}</div>
                   <div class="text-caption text-medium-emphasis">{{ row.instrument?.equipment_name || row.site_name }}</div>
+                  <div v-if="row.inspection_plan" class="text-caption" data-testid="calibration-import-plan">計画: {{ row.inspection_plan.name }}</div>
                 </td>
                 <td>{{ formatDateTime(row.performed_at) }}</td>
                 <td>{{ row.reference_standards.map((s: any) => s.management_number).join('、') || '—' }}</td>
