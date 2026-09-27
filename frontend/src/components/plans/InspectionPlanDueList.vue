@@ -149,6 +149,8 @@ watch(filters, fetchPlans, { deep: true })
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
+      <!-- 「計画」画面の表示の切り替え（ほかの表示と同じ位置に置くため、親から受け取る） -->
+      <slot name="view" />
       <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
       <FilterSelect
         v-model="filters.inspection_plan_group_ids"
