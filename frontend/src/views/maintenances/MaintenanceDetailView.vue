@@ -24,6 +24,7 @@ import {
   periodLabel,
   transitionLabel,
 } from '@/constants/maintenanceStatus'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { todayForInput } from '@/utils/datetime'
@@ -38,6 +39,8 @@ const maintenance = ref<any>(null)
 const loading = ref(true)
 const users = ref<any[]>([])
 const actionError = ref('')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['tasks', 'series', 'assignments', 'changes'])
 
 const nextStatuses = computed<string[]>(() => MAINTENANCE_TRANSITIONS[maintenance.value?.status] ?? [])
 // 完了にできるのは、検収の記録があり、結果が「手直しあり」でないとき
@@ -256,6 +259,7 @@ onMounted(fetchMaintenance)
         </template>
         <template #actions>
           <v-btn v-if="canManageMaintenance" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
+          <v-btn v-if="canManageMaintenance" variant="outlined" prepend-icon="mdi-content-copy" @click="nextDialog = true">次回を作る</v-btn>
         </template>
       </DetailHeader>
 
@@ -295,45 +299,33 @@ onMounted(fetchMaintenance)
       </div>
       <v-alert v-if="actionError" type="error" density="compact" class="mb-3" closable @click:close="actionError = ''">{{ actionError }}</v-alert>
 
-      <v-card class="mb-4">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">拠点</div>
-              <div>{{ maintenance.site?.name }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">予定期間</div>
-              <div>{{ periodLabel(maintenance.planned_start_on, maintenance.planned_end_on) }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">実績期間</div>
-              <div>{{ maintenance.actual_start_on || maintenance.actual_end_on ? periodLabel(maintenance.actual_start_on, maintenance.actual_end_on) : '—' }}</div>
-            </v-col>
-            <v-col cols="12">
-              <div class="text-caption text-grey">対象設備（{{ maintenance.equipments?.length ?? 0 }}）</div>
-              <v-chip
-                v-for="equipment in maintenance.equipments"
-                :key="equipment.id"
-                size="small"
-                label
-                variant="tonal"
-                class="mr-1 mt-1"
-                style="cursor: pointer"
-                @click="router.push(`/equipments/${equipment.id}`)"
-              >
-                {{ equipment.name }}
-              </v-chip>
-            </v-col>
-          </v-row>
-          <div v-if="maintenance.description" class="mt-3">
-            <div class="text-caption text-grey">説明</div>
-            <div style="white-space: pre-wrap">{{ maintenance.description }}</div>
-          </div>
-          <div v-if="maintenance.used_materials" class="mt-3">
-            <div class="text-caption text-grey">使用資材</div>
-            <div>{{ maintenance.used_materials }}</div>
-          </div>
+          <dl class="pk-summary__grid">
+            <div><dt>拠点</dt><dd>{{ maintenance.site?.name }}</dd></div>
+            <div><dt>予定期間</dt><dd>{{ periodLabel(maintenance.planned_start_on, maintenance.planned_end_on) }}</dd></div>
+            <div><dt>実績期間</dt><dd>{{ maintenance.actual_start_on || maintenance.actual_end_on ? periodLabel(maintenance.actual_start_on, maintenance.actual_end_on) : '—' }}</dd></div>
+            <div class="pk-summary__wide">
+              <dt>対象設備（{{ maintenance.equipments?.length ?? 0 }}）</dt>
+              <dd>
+                <v-chip
+                  v-for="equipment in maintenance.equipments"
+                  :key="equipment.id"
+                  size="small"
+                  label
+                  variant="tonal"
+                  class="mr-1 mt-1"
+                  style="cursor: pointer"
+                  @click="router.push(`/equipments/${equipment.id}`)"
+                >
+                  {{ equipment.name }}
+                </v-chip>
+              </dd>
+            </div>
+            <div v-if="maintenance.description" class="pk-summary__wide"><dt>説明</dt><dd style="white-space: pre-wrap">{{ maintenance.description }}</dd></div>
+            <div v-if="maintenance.used_materials" class="pk-summary__wide"><dt>使用資材</dt><dd>{{ maintenance.used_materials }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 
@@ -358,122 +350,6 @@ onMounted(fetchMaintenance)
               </tr>
             </tbody>
           </v-table>
-        </v-card-text>
-      </v-card>
-
-      <!-- 作業（部署ごと） -->
-      <v-card class="mb-4" data-testid="tasks-card">
-        <v-card-title class="d-flex align-center text-subtitle-1">
-          作業
-          <span class="ml-2 text-body-2 text-medium-emphasis" data-testid="tasks-progress">完了 {{ taskProgress.completed }} / {{ taskProgress.total }}</span>
-          <v-spacer />
-          <v-btn v-if="canManageMaintenance && tasksEditable" size="small" variant="outlined" class="mr-2" prepend-icon="mdi-playlist-plus" @click="bulkDialog = true">計器を一括追加</v-btn>
-          <v-btn v-if="canManageMaintenance && tasksEditable" size="small" color="primary" prepend-icon="mdi-plus" @click="openTaskDialog()">作業を追加</v-btn>
-        </v-card-title>
-        <v-card-text>
-          <v-progress-linear v-if="taskProgress.total" :model-value="(taskProgress.completed / taskProgress.total) * 100" color="success" height="6" rounded class="mb-3" />
-          <p v-if="!tasks.length" class="text-body-2 text-medium-emphasis">
-            作業はまだありません。部署ごとに、この整備で点検・整備する設備や計器を追加します（「計器を一括追加」で、設備の計器を種類ごとの定修点検つきでまとめて追加できます）。
-          </p>
-          <div v-for="group in taskGroups" :key="group.name" class="mb-4">
-            <div class="text-subtitle-2 mb-1">{{ group.name }}（{{ group.tasks.length }}）</div>
-            <v-table density="compact">
-              <thead>
-                <tr>
-                  <th class="text-no-wrap">対象</th>
-                  <th class="text-no-wrap">種類</th>
-                  <th>内容</th>
-                  <th class="text-no-wrap">担当者</th>
-                  <th class="text-no-wrap">状態</th>
-                  <th class="text-no-wrap">完了日</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="task in group.tasks" :key="task.id" :data-testid="`task-${task.title}`">
-                  <td class="text-no-wrap">{{ task.equipment?.name }}<span v-if="task.instrument"> / {{ task.instrument.tag_number }}</span></td>
-                  <td class="text-no-wrap">{{ TASK_KIND_LABEL[task.kind] }}</td>
-                  <td>
-                    {{ task.title }}
-                    <div v-if="task.checklist_template && !task.title.includes(task.checklist_template.name)" class="text-caption text-medium-emphasis">{{ task.checklist_template.name }}</div>
-                    <div v-if="task.notes" class="text-caption text-medium-emphasis">{{ task.notes }}</div>
-                    <v-chip v-if="task.trouble" size="x-small" label color="deep-purple" variant="tonal" class="mt-1" style="cursor: pointer" :data-testid="`task-trouble-${task.trouble.id}`" @click="router.push(`/troubles/${task.trouble.id}`)">
-                      トラブル #{{ task.trouble.id }}
-                    </v-chip>
-                  </td>
-                  <td class="text-no-wrap">{{ task.assigned_to?.name || '—' }}</td>
-                  <td style="min-width: 150px">
-                    <v-select
-                      :model-value="task.status"
-                      :items="taskStatusItems"
-                      item-title="title"
-                      item-value="value"
-                      density="compact"
-                      variant="outlined"
-                      hide-details
-                      :disabled="!tasksEditable"
-                      :aria-label="`${task.title}の状態`"
-                      :base-color="TASK_STATUS_COLOR[task.status]"
-                      @update:model-value="changeTaskStatus(task, $event)"
-                    />
-                  </td>
-                  <td class="text-no-wrap">{{ task.completed_on || '—' }}</td>
-                  <td class="text-no-wrap text-right">
-                    <v-btn
-                      v-if="tasksEditable && task.kind === 'inspection' && !['completed', 'cancelled'].includes(task.status)"
-                      size="x-small"
-                      variant="outlined"
-                      color="primary"
-                      @click="startInspection(task)"
-                    >
-                      点検を実施
-                    </v-btn>
-                    <v-btn v-else-if="task.latest_inspection" size="x-small" variant="text" @click="router.push(`/inspections/${task.latest_inspection.id}`)">点検記録</v-btn>
-                    <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${task.title}を編集`" @click="openTaskDialog(task)" />
-                    <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-delete" size="x-small" variant="text" color="error" :aria-label="`${task.title}を削除`" @click="deleteTask(task)" />
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <!-- 系列（繰り返し） -->
-      <v-card class="mb-4" data-testid="series-card">
-        <v-card-title class="d-flex align-center text-subtitle-1">
-          系列（繰り返し）<span v-if="series" class="ml-2 text-body-1">{{ series.name }}</span>
-          <v-spacer />
-          <v-btn v-if="canManageMaintenance" size="small" color="primary" prepend-icon="mdi-content-copy" class="mr-2" @click="nextDialog = true">次回を作る</v-btn>
-          <v-btn v-if="canManageMaintenance && series" size="small" variant="outlined" @click="seriesDialog = true">系列を編集</v-btn>
-          <v-btn v-else-if="canManageMaintenance" size="small" variant="outlined" @click="seriesDialog = true">系列に登録</v-btn>
-        </v-card-title>
-        <v-card-text>
-          <p v-if="!series" class="text-body-2 text-medium-emphasis">
-            系列に属していません。繰り返し行う整備は、系列に登録すると、設備ごとの周期から「次回を作る」で対象設備を自動で選べます。
-          </p>
-          <template v-else>
-            <div class="text-caption text-grey mb-1">設備ごとの周期</div>
-            <v-chip v-for="m in series.maintenance_series_equipments" :key="m.id" size="small" label variant="tonal" class="mr-1 mb-2">
-              {{ m.equipment?.name }}（{{ m.interval_months }}か月ごと）
-            </v-chip>
-            <div class="text-caption text-grey mt-2 mb-1">各回</div>
-            <v-list density="compact">
-              <v-list-item
-                v-for="m in series.maintenances"
-                :key="m.id"
-                :active="m.id === maintenance.id"
-                :title="m.title"
-                :subtitle="`${periodLabel(m.planned_start_on, m.planned_end_on)} ／ ${(m.equipments || []).map((e: any) => e.name).join('・')}`"
-                :data-testid="`series-history-${m.id}`"
-                @click="m.id !== maintenance.id && router.push(`/maintenances/${m.id}`).then(fetchMaintenance)"
-              >
-                <template #append>
-                  <StatusChip kind="maintenance" :value="m.status" />
-                </template>
-              </v-list-item>
-            </v-list>
-          </template>
         </v-card-text>
       </v-card>
 
@@ -511,28 +387,156 @@ onMounted(fetchMaintenance)
         </v-card-text>
       </v-card>
 
-      <div class="d-flex align-center mb-3">
-        <h2 class="text-h6">担当者</h2>
-        <v-spacer />
-        <v-btn v-if="canManageMaintenance" size="small" variant="text" class="mr-2" @click="quickAssignSelf"><v-icon start>mdi-account-plus</v-icon>自分を追加</v-btn>
-        <v-btn v-if="canManageMaintenance" size="small" variant="outlined" prepend-icon="mdi-plus" @click="openAssign">担当追加</v-btn>
-      </div>
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab value="tasks">作業（{{ taskProgress.total }}）</v-tab>
+        <v-tab value="series">系列</v-tab>
+        <v-tab value="assignments">担当者（{{ maintenance.maintenance_assignments?.length ?? 0 }}）</v-tab>
+        <v-tab value="changes">変更履歴</v-tab>
+      </v-tabs>
+      <v-window v-model="tab">
+        <v-window-item value="tasks">
+          <!-- 作業（部署ごと） -->
+          <v-card class="mb-4" data-testid="tasks-card">
+            <v-card-title class="d-flex align-center text-subtitle-1">
+              作業
+              <span class="ml-2 text-body-2 text-medium-emphasis" data-testid="tasks-progress">完了 {{ taskProgress.completed }} / {{ taskProgress.total }}</span>
+              <v-spacer />
+              <v-btn v-if="canManageMaintenance && tasksEditable" size="small" variant="outlined" class="mr-2" prepend-icon="mdi-playlist-plus" @click="bulkDialog = true">計器を一括追加</v-btn>
+              <v-btn v-if="canManageMaintenance && tasksEditable" size="small" color="primary" prepend-icon="mdi-plus" @click="openTaskDialog()">作業を追加</v-btn>
+            </v-card-title>
+            <v-card-text>
+              <v-progress-linear v-if="taskProgress.total" :model-value="(taskProgress.completed / taskProgress.total) * 100" color="success" height="6" rounded class="mb-3" />
+              <p v-if="!tasks.length" class="text-body-2 text-medium-emphasis">
+                作業はまだありません。部署ごとに、この整備で点検・整備する設備や計器を追加します（「計器を一括追加」で、設備の計器を種類ごとの定修点検つきでまとめて追加できます）。
+              </p>
+              <div v-for="group in taskGroups" :key="group.name" class="mb-4">
+                <div class="text-subtitle-2 mb-1">{{ group.name }}（{{ group.tasks.length }}）</div>
+                <v-table density="compact">
+                  <thead>
+                    <tr>
+                      <th class="text-no-wrap">対象</th>
+                      <th class="text-no-wrap">種類</th>
+                      <th>内容</th>
+                      <th class="text-no-wrap">担当者</th>
+                      <th class="text-no-wrap">状態</th>
+                      <th class="text-no-wrap">完了日</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="task in group.tasks" :key="task.id" :data-testid="`task-${task.title}`">
+                      <td class="text-no-wrap">{{ task.equipment?.name }}<span v-if="task.instrument"> / {{ task.instrument.tag_number }}</span></td>
+                      <td class="text-no-wrap">{{ TASK_KIND_LABEL[task.kind] }}</td>
+                      <td>
+                        {{ task.title }}
+                        <div v-if="task.checklist_template && !task.title.includes(task.checklist_template.name)" class="text-caption text-medium-emphasis">{{ task.checklist_template.name }}</div>
+                        <div v-if="task.notes" class="text-caption text-medium-emphasis">{{ task.notes }}</div>
+                        <v-chip v-if="task.trouble" size="x-small" label color="deep-purple" variant="tonal" class="mt-1" style="cursor: pointer" :data-testid="`task-trouble-${task.trouble.id}`" @click="router.push(`/troubles/${task.trouble.id}`)">
+                          トラブル #{{ task.trouble.id }}
+                        </v-chip>
+                      </td>
+                      <td class="text-no-wrap">{{ task.assigned_to?.name || '—' }}</td>
+                      <td style="min-width: 150px">
+                        <v-select
+                          :model-value="task.status"
+                          :items="taskStatusItems"
+                          item-title="title"
+                          item-value="value"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                          :disabled="!tasksEditable"
+                          :aria-label="`${task.title}の状態`"
+                          :base-color="TASK_STATUS_COLOR[task.status]"
+                          @update:model-value="changeTaskStatus(task, $event)"
+                        />
+                      </td>
+                      <td class="text-no-wrap">{{ task.completed_on || '—' }}</td>
+                      <td class="text-no-wrap text-right">
+                        <v-btn
+                          v-if="tasksEditable && task.kind === 'inspection' && !['completed', 'cancelled'].includes(task.status)"
+                          size="x-small"
+                          variant="outlined"
+                          color="primary"
+                          @click="startInspection(task)"
+                        >
+                          点検を実施
+                        </v-btn>
+                        <v-btn v-else-if="task.latest_inspection" size="x-small" variant="text" @click="router.push(`/inspections/${task.latest_inspection.id}`)">点検記録</v-btn>
+                        <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${task.title}を編集`" @click="openTaskDialog(task)" />
+                        <v-btn v-if="canManageMaintenance && tasksEditable" icon="mdi-delete" size="x-small" variant="text" color="error" :aria-label="`${task.title}を削除`" @click="deleteTask(task)" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-window-item>
 
-      <v-list v-if="maintenance.maintenance_assignments?.length">
-        <v-list-item v-for="a in maintenance.maintenance_assignments" :key="a.id" :title="a.user?.name" :subtitle="a.role === 'lead' ? '主担当' : 'メンバー'">
-          <template #prepend>
-            <v-icon :color="a.role === 'lead' ? 'primary' : 'grey'">{{ a.role === 'lead' ? 'mdi-account-star' : 'mdi-account' }}</v-icon>
-          </template>
-          <template #append>
-            <v-btn v-if="canManageMaintenance" icon="mdi-close" size="x-small" variant="text" @click="removeAssignment(a.id)" />
-          </template>
-        </v-list-item>
-      </v-list>
-      <div v-else class="text-center text-grey py-4">担当者が割り当てられていません</div>
+        <v-window-item value="series">
+          <!-- 系列（繰り返し） -->
+          <v-card class="mb-4" data-testid="series-card">
+            <v-card-title class="d-flex align-center text-subtitle-1">
+              系列（繰り返し）<span v-if="series" class="ml-2 text-body-1">{{ series.name }}</span>
+              <v-spacer />
+              <v-btn v-if="canManageMaintenance && series" size="small" variant="outlined" @click="seriesDialog = true">系列を編集</v-btn>
+              <v-btn v-else-if="canManageMaintenance" size="small" variant="outlined" @click="seriesDialog = true">系列に登録</v-btn>
+            </v-card-title>
+            <v-card-text>
+              <p v-if="!series" class="text-body-2 text-medium-emphasis">
+                系列に属していません。繰り返し行う整備は、系列に登録すると、設備ごとの周期から「次回を作る」で対象設備を自動で選べます。
+              </p>
+              <template v-else>
+                <div class="text-caption text-grey mb-1">設備ごとの周期</div>
+                <v-chip v-for="m in series.maintenance_series_equipments" :key="m.id" size="small" label variant="tonal" class="mr-1 mb-2">
+                  {{ m.equipment?.name }}（{{ m.interval_months }}か月ごと）
+                </v-chip>
+                <div class="text-caption text-grey mt-2 mb-1">各回</div>
+                <v-list density="compact">
+                  <v-list-item
+                    v-for="m in series.maintenances"
+                    :key="m.id"
+                    :active="m.id === maintenance.id"
+                    :title="m.title"
+                    :subtitle="`${periodLabel(m.planned_start_on, m.planned_end_on)} ／ ${(m.equipments || []).map((e: any) => e.name).join('・')}`"
+                    :data-testid="`series-history-${m.id}`"
+                    @click="m.id !== maintenance.id && router.push({ path: `/maintenances/${m.id}`, query: { tab: 'series' } }).then(fetchMaintenance)"
+                  >
+                    <template #append>
+                      <StatusChip kind="maintenance" :value="m.status" />
+                    </template>
+                  </v-list-item>
+                </v-list>
+              </template>
+            </v-card-text>
+          </v-card>
+        </v-window-item>
 
-      <v-divider class="my-4" />
-      <h2 class="text-h6 mb-3">変更履歴</h2>
-      <ResourceHistory auditable-type="ScheduledMaintenance" :auditable-id="maintenance.id" />
+        <v-window-item value="assignments">
+          <div v-if="canManageMaintenance" class="d-flex align-center mb-3">
+            <v-spacer />
+            <v-btn size="small" variant="text" class="mr-2" @click="quickAssignSelf"><v-icon start>mdi-account-plus</v-icon>自分を追加</v-btn>
+            <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="openAssign">担当追加</v-btn>
+          </div>
+
+          <v-list v-if="maintenance.maintenance_assignments?.length">
+            <v-list-item v-for="a in maintenance.maintenance_assignments" :key="a.id" :title="a.user?.name" :subtitle="a.role === 'lead' ? '主担当' : 'メンバー'">
+              <template #prepend>
+                <v-icon :color="a.role === 'lead' ? 'primary' : 'grey'">{{ a.role === 'lead' ? 'mdi-account-star' : 'mdi-account' }}</v-icon>
+              </template>
+              <template #append>
+                <v-btn v-if="canManageMaintenance" icon="mdi-close" size="x-small" variant="text" @click="removeAssignment(a.id)" />
+              </template>
+            </v-list-item>
+          </v-list>
+          <div v-else class="text-center text-grey py-4">担当者が割り当てられていません</div>
+        </v-window-item>
+
+        <v-window-item value="changes">
+          <ResourceHistory auditable-type="ScheduledMaintenance" :auditable-id="maintenance.id" />
+        </v-window-item>
+      </v-window>
 
       <MaintenanceTaskDialog v-model="taskDialog" :maintenance="maintenance" :task="editingTask" @saved="fetchMaintenance" />
       <MaintenanceTaskBulkDialog v-model="bulkDialog" :maintenance="maintenance" @saved="fetchMaintenance" />

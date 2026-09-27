@@ -24,6 +24,7 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
   })
 
   await test.step('系列に登録する（ボイラー設備は24か月、常圧蒸留装置は48か月ごと）', async () => {
+    await page.getByRole('tab', { name: '系列' }).click()
     const card = page.getByTestId('series-card')
     await expect(card).toContainText('系列に属していません')
     await card.getByRole('button', { name: '系列に登録' }).click()
@@ -55,6 +56,7 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
     await expect(page.getByRole('heading', { level: 1, name: `E2E ${stamp} 2028年 A号ボイラー整備` })).toBeVisible()
     await expect(page.getByTestId('maintenance-status')).toHaveText('計画中')
     await expect(page.getByText('対象設備（1）')).toBeVisible()
+    await page.getByRole('tab', { name: '系列' }).click()
     await expect(page.getByTestId('series-card').locator('[data-testid^="series-history-"]')).toHaveCount(2)
   })
 

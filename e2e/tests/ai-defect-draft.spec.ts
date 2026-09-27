@@ -42,7 +42,7 @@ test('計器詳細にも、シール液と一次点検の定型項目が表示�
   await page.getByRole('textbox', { name: 'タグ番号・種別・設置場所' }).fill('LT-701')
   await page.locator('tbody tr', { hasText: 'LT-701' }).first().click()
 
-  await expect(page.getByText('シール液:')).toBeVisible()
+  await expect(page.getByTestId('detail-summary').getByText('シール液', { exact: true })).toBeVisible()
   const checks = page.getByTestId('troubleshooting-checks')
   await expect(checks).toContainText('シール液の種類の確認')
 })

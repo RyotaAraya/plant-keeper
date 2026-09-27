@@ -142,7 +142,7 @@ test('承認済みの5点校正の記録に、使用した基準器と点検日�
   const detail = calibration ? await apiGet(page, `/inspections/${calibration.id}`) : null
   test.skip(!detail?.inspection_reference_standards?.length, 'シードの基準器の使用実績がない環境')
 
-  await page.goto(`/inspections/${calibration.id}`)
+  await page.goto(`/inspections/${calibration.id}?tab=standards`)
   const used = page.getByTestId('reference-standards-used')
   await expect(used).toContainText('RS-KW-001')
   await expect(used).toContainText('CAL-K-0142')
