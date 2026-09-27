@@ -3,6 +3,7 @@
 class ChecklistTemplatePolicy < ApplicationPolicy
   def index?     = true
   def show?      = true
+  def item_stats? = true
   def create?    = admin? || owner_manager?
   def update?    = admin? || owner_manager?
   def destroy?   = admin?

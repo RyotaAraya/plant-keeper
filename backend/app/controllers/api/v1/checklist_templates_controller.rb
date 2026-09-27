@@ -1,7 +1,7 @@
 module Api
   module V1
     class ChecklistTemplatesController < BaseController
-      before_action :set_template, only: [ :show, :update, :destroy, :duplicate ]
+      before_action :set_template, only: [ :show, :update, :destroy, :duplicate, :item_stats ]
 
       # 項目の型と基準（ChecklistCriteria）
       ITEM_FIELDS = [ :id, :position, :content, :item_type, :section, :criterion, :unit, :lower_limit, :upper_limit, :options, :required ].freeze
@@ -36,6 +36,18 @@ module Api
             }
           )
         }
+      end
+
+      # GET /api/v1/checklist_templates/:id/item_stats
+      # 項目ごとの実施回数・不具合の件数（項目の見直しの材料）。period=1y（既定）|3y|all、site_ids で拠点を絞る
+      def item_stats
+        authorize @template
+        period = params[:period].presence || ChecklistItemStats::DEFAULT_PERIOD
+        unless ChecklistItemStats.valid_period?(period)
+          return render json: { errors: [ "期間の指定が正しくありません" ] }, status: :unprocessable_entity
+        end
+
+        render json: { data: ChecklistItemStats.new(@template, period: period, site_ids: id_list_param(:site_ids, :site_id)).result }
       end
 
       # POST /api/v1/checklist_templates
