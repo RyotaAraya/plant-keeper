@@ -1,18 +1,26 @@
 name: CI
 
 # ドキュメント（Markdown）・エージェント向けの設定だけの変更では動かさない（アプリの動作に関わらないため）
+# 同じコミットで何度も動かさない: main 向けの PR（develop → main のリリース PR）と main への push では動かさない。
+# main に入るのは develop で CI を通したコミット（とマージコミット）だけで、リリース PR には develop への push の結果が出る
 on:
   pull_request:
+    branches-ignore: [ main ]
     paths-ignore:
       - "**/*.md"
       - ".claude/**"
       - ".agents/**"
   push:
-    branches: [ main, develop ]
+    branches: [ develop ]
     paths-ignore:
       - "**/*.md"
       - ".claude/**"
       - ".agents/**"
+
+# 同じブランチ（PR）に新しい push が来たら、古いコミットの CI は止める
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend_scan_ruby:
