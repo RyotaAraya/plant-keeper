@@ -66,3 +66,26 @@ test('点検計画から「点検を実施」を開くと、計画のテンプ�
   await expect(page.getByText('吹出し圧力', { exact: true })).toBeVisible()
   await expect(page.getByText('吹止まり圧力', { exact: true })).toBeVisible()
 })
+
+// 項目の見直し: テンプレートの項目ごとに、提出した点検の実施回数・不具合の件数を出す（件数はほかのテストの点検で増えるため決め打ちしない）
+test('設定のチェックリストから「項目の見直し」を開くと、項目ごとの実施回数・不具合の件数が並び、期間を切り替えられる', async ({ page }) => {
+  await login(page, ACCOUNTS.admin)
+  await page.getByRole('link', { name: '設定', exact: true }).click()
+  await page.getByRole('tab', { name: 'チェックリスト' }).click()
+
+  const loaded = page.waitForResponse((res) => /\/checklist_templates\/\d+\/item_stats\?period=1y/.test(res.url()) && res.ok())
+  await page.getByRole('button', { name: '調節弁 年次点検 の項目の見直し' }).click()
+  await loaded
+  const dialog = page.getByTestId('checklist-item-stats')
+  await expect(dialog.getByText('調節弁 年次点検')).toBeVisible()
+  await expect(dialog.getByText(/提出した点検 \d+件の記録から/)).toBeVisible()
+  for (const header of ['実施', '不具合', '最後の不具合']) {
+    await expect(dialog.getByRole('columnheader', { name: header, exact: true })).toBeVisible()
+  }
+  await expect(dialog.getByRole('row', { name: /フルストロークテスト/ })).toBeVisible()
+
+  const all = page.waitForResponse((res) => /item_stats\?period=all/.test(res.url()) && res.ok())
+  await dialog.getByRole('button', { name: '全期間' }).click()
+  await all
+  await expect(dialog.getByRole('row', { name: /フルストロークテスト/ })).toBeVisible()
+})

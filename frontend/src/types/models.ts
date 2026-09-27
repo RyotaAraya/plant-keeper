@@ -285,6 +285,28 @@ export interface ChecklistTemplateItem {
   updated_at: string
 }
 
+// テンプレートの項目ごとの実施回数・不具合の件数（GET /checklist_templates/:id/item_stats。項目の見直しの材料）
+export type ChecklistItemStatsPeriod = '1y' | '3y' | 'all'
+
+export interface ChecklistItemStatsRow {
+  id: number
+  position: number
+  section: string | null
+  content: string
+  item_type: string
+  performed_count: number
+  defect_count: number
+  na_count: number
+  last_defect_at: string | null
+}
+
+export interface ChecklistItemStats {
+  period: ChecklistItemStatsPeriod
+  from: string | null
+  inspections_count: number
+  items: ChecklistItemStatsRow[]
+}
+
 export interface Inspection {
   id: number
   checklist_template_id: number | null

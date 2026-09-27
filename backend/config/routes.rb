@@ -38,6 +38,7 @@ Rails.application.routes.draw do
       resources :checklist_templates, only: [ :index, :show, :create, :update, :destroy ] do
         member do
           post :duplicate
+          get :item_stats
         end
       end
       resources :inspection_plans, only: [ :index, :create, :update ]
