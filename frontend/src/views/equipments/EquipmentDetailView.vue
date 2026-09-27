@@ -2,10 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
-import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL } from '@/constants/maintenanceStatus'
 import { todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
 import RegulationChip from '@/components/RegulationChip.vue'
@@ -119,25 +120,20 @@ onMounted(fetchEquipment)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/equipments')">
-      設備一覧に戻る
-    </v-btn>
-
     <v-skeleton-loader v-if="loading" type="card" />
 
     <template v-else-if="equipment">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          {{ equipment.name }}
-          <v-spacer />
-          <v-btn v-if="canManageEquipment" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle v-if="equipment.site">{{ equipment.site?.name }}</v-card-subtitle>
+      <DetailHeader back-to="/equipments" back-label="設備台帳" kind="設備" :title="equipment.name" :subtitle="equipment.site?.name">
+        <template #status>
+          <RegulationChip v-for="regulation in equipment.regulations ?? []" :key="regulation.id" :regulation="regulation" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageEquipment" variant="outlined" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <v-card class="mb-4" data-testid="detail-summary">
         <v-card-text>
           <p v-if="equipment.description">{{ equipment.description }}</p>
-          <div v-if="equipment.regulations?.length" class="mt-2">
-            <RegulationChip v-for="regulation in equipment.regulations" :key="regulation.id" :regulation="regulation" class="mr-1" />
-          </div>
           <InterlockChips :equipment-id="equipment.id" class="mt-2" />
           <v-row class="mt-2">
             <v-col cols="6" md="3">
@@ -253,7 +249,7 @@ onMounted(fetchEquipment)
               :subtitle="`予定日: ${m.planned_start_on}`"
             >
               <template #append>
-                <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="small">{{ MAINTENANCE_STATUS_LABEL[m.status] || m.status }}</v-chip>
+                <StatusChip kind="maintenance" :value="m.status" />
               </template>
             </v-list-item>
           </v-list>

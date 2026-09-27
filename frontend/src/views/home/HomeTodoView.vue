@@ -8,9 +8,11 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { TASK_KIND_LABEL } from '@/constants/maintenanceStatus'
-import { inspectionStatusColor, inspectionStatusLabel, priorityColor, priorityLabel, responseTypeLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
+import { responseTypeLabel, troubleStatusLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import type { HomeArea, HomeBoard, HomeInspection, HomePlan, HomeTask, HomeTrouble } from '@/types/models'
 import { equipmentNames } from '@/utils/equipment'
@@ -21,13 +23,12 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { canViewSites, canManageReferenceStandard } = usePermissions()
+const { canManageReferenceStandard } = usePermissions()
 
 const board = ref<HomeBoard | null>(null)
 const loading = ref(true)
 const error = ref('')
 const siteId = ref<number | null>(authStore.user?.site_id ?? null)
-const sites = ref<{ id: number; name: string }[]>(authStore.user?.site ? [authStore.user.site] : [])
 const fetchGuard = latestGuard()
 
 const evening = computed(() => route.query.mode === 'evening')
@@ -137,21 +138,7 @@ async function fetchBoard() {
   }
 }
 
-// 拠点を選べるのは、拠点の一覧を見られる人（自社）だけ。協力会社は所属拠点で固定
-async function loadSites() {
-  if (!canViewSites.value) return
-  try {
-    const res = await api.get('/sites', { params: { per_page: 100, is_active: true } })
-    const own = authStore.user?.site
-    const items: { id: number; name: string }[] = res.data.data
-    sites.value = items.sort((a, b) => Number(b.id === own?.id) - Number(a.id === own?.id))
-  } catch {
-    // 選択肢が取れなくても、所属拠点のホームは見られる
-  }
-}
-
 watch(siteId, fetchBoard, { immediate: true })
-onMounted(loadSites)
 </script>
 
 <template>
@@ -162,7 +149,10 @@ onMounted(loadSites)
         <v-btn class="pk-no-print" variant="outlined" prepend-icon="mdi-printer-outline" :disabled="!board" data-testid="home-print" @click="printHome">印刷</v-btn>
       </PageHeader>
 
-      <div class="pk-home__bar">
+      <!-- 一覧と同じ絞り込みの行: 左端に拠点（1つだけ選ぶ。協力会社は所属拠点の表示だけ）、朝会・夕会の切り替え -->
+      <div class="pk-filters">
+        <SiteScopeTag :model-value="siteId ? [siteId] : []" single class="pk-no-print" @update:model-value="siteId = $event[0] ?? null" />
+        <v-divider vertical class="pk-scope-divider pk-no-print" />
         <v-btn-toggle
           :model-value="evening ? 'evening' : 'morning'"
           class="pk-no-print"
@@ -177,17 +167,7 @@ onMounted(loadSites)
           <v-btn value="morning" data-testid="home-mode-morning">朝会</v-btn>
           <v-btn value="evening" data-testid="home-mode-evening">夕会</v-btn>
         </v-btn-toggle>
-        <v-select
-          v-if="canViewSites"
-          v-model="siteId"
-          :items="sites"
-          item-title="name"
-          item-value="id"
-          label="拠点"
-          density="compact"
-          hide-details
-          class="pk-home__site pk-no-print"
-        />
+        <v-spacer />
         <p class="pk-home__day" data-testid="home-day">
           <strong>{{ evening ? '夕会' : '朝会' }}</strong>
           <span>{{ board?.site.name }}</span>
@@ -214,7 +194,7 @@ onMounted(loadSites)
           <h2 id="home-approvals-title">承認待ち<small>{{ board.approvals.inspections.length + board.approvals.interlock_bypasses.length }}件</small></h2>
           <ul v-if="board.approvals.inspections.length || board.approvals.interlock_bypasses.length" class="pk-home-list">
             <li v-for="bypass in board.approvals.interlock_bypasses" :key="`bypass-${bypass.id}`">
-              <v-chip size="x-small" label color="warning" variant="flat">バイパス申請</v-chip>
+              <v-chip size="x-small" label color="warning" variant="tonal">バイパス申請</v-chip>
               <div class="pk-home-list__copy">
                 <router-link :to="`/interlocks/${bypass.interlock.id}`"><strong>{{ bypass.interlock.tag_number }} {{ bypass.interlock.name }}</strong></router-link>
                 <span>{{ bypass.interlock.equipment.name }} ／ {{ bypass.requested_by?.name ?? '—' }}の申請 ／ {{ bypass.reason }}</span>
@@ -236,7 +216,7 @@ onMounted(loadSites)
           <h2 id="home-bypass-title">インターロックのバイパス<small>{{ board.site.name }}全体・{{ board.interlock_bypasses.length }}件</small></h2>
           <ul class="pk-home-list">
             <li v-for="bypass in board.interlock_bypasses" :key="bypass.id" :class="{ 'pk-home-list__alert': bypass.overdue }">
-              <v-chip :color="bypassColor(bypass)" size="x-small" label variant="flat">{{ bypassLabel(bypass) }}</v-chip>
+              <StatusChip :label="bypassLabel(bypass)" :color="bypassColor(bypass)" :alert="bypass.overdue" />
               <div class="pk-home-list__copy">
                 <router-link :to="`/interlocks/${bypass.interlock.id}`"><strong>{{ bypass.interlock.tag_number }} {{ bypass.interlock.name }}</strong></router-link>
                 <span v-if="bypass.status === 'bypassed'">{{ bypass.interlock.equipment.name }} ／ {{ formatHours(bypass.bypassed_hours) }}経過 ／ 予定の復帰まで{{ restoreDueLabel(bypass) }}</span>
@@ -251,7 +231,7 @@ onMounted(loadSites)
           <h2 id="home-my-troubles-title">自分が報告したトラブル<small>{{ board.my_troubles.length }}件</small></h2>
           <ul v-if="board.my_troubles.length" class="pk-home-list">
             <li v-for="trouble in board.my_troubles" :key="trouble.id">
-              <v-chip :color="troubleStatusColor[trouble.status]" size="x-small" label variant="tonal">{{ troubleStatusLabel[trouble.status] }}</v-chip>
+              <StatusChip kind="trouble" :value="trouble.status" />
               <div class="pk-home-list__copy">
                 <router-link :to="`/troubles/${trouble.id}`"><strong>{{ trouble.title }}</strong></router-link>
                 <span>{{ troubleTarget(trouble) }} ／ 担当 {{ trouble.assigned_to?.name ?? '未定' }}</span>
@@ -280,7 +260,7 @@ onMounted(loadSites)
             <h3>今日の実績<small>{{ entry.submitted.length + entry.area.results.trouble_responses.length + entry.area.results.completed_tasks.length }}件</small></h3>
             <ul v-if="entry.submitted.length || entry.area.results.trouble_responses.length || entry.area.results.completed_tasks.length" class="pk-home-list">
               <li v-for="inspection in entry.submitted" :key="`i-${inspection.id}`" :data-testid="`home-result-inspection-${inspection.id}`">
-                <v-chip size="x-small" label :color="inspectionStatusColor[inspection.status]" variant="tonal">{{ inspectionStatusLabel[inspection.status] }}</v-chip>
+                <StatusChip kind="inspection" :value="inspection.status" />
                 <div class="pk-home-list__copy">
                   <router-link :to="`/inspections/${inspection.id}`"><strong>{{ inspection.checklist_template?.name ?? '点検' }}</strong></router-link>
                   <span>{{ inspectionTarget(inspection) }} ／ {{ inspection.user.name }} ／ {{ timeLabel(inspection.inspected_at) }}</span>
@@ -348,7 +328,7 @@ onMounted(loadSites)
                   <strong>{{ todo.trouble.title }}</strong>
                   <span>{{ troubleTarget(todo.trouble) }} ／ {{ troubleStatusLabel[todo.trouble.status] }} ／ 担当 {{ todo.trouble.assigned_to?.name ?? '未定' }}</span>
                 </div>
-                <v-chip :color="priorityColor[todo.trouble.priority]" size="x-small" label variant="flat">{{ priorityLabel[todo.trouble.priority] }}</v-chip>
+                <StatusChip kind="priority" :value="todo.trouble.priority" />
                 <v-btn size="small" variant="outlined" :to="`/troubles/${todo.trouble.id}`">開く</v-btn>
               </template>
             </li>
@@ -378,9 +358,6 @@ onMounted(loadSites)
 </template>
 
 <style scoped>
-.pk-home { max-width: 1040px; margin-inline: auto; }
-.pk-home__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 16px; }
-.pk-home__site { flex: 0 1 220px; }
 .pk-home__day { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--pk-muted); font-size: 0.875rem; }
 .pk-home__day strong { padding: 2px 10px; border-radius: 6px; background: var(--pk-soft-blue); color: var(--pk-steel-dark); }
 .pk-home__printed { display: none; }
@@ -407,11 +384,9 @@ a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 2px; }
 @media (max-width: 600px) {
   .pk-home-section { padding: 12px 14px; }
   .pk-home-list li { flex-wrap: wrap; }
-  .pk-home__site { flex-basis: 100%; }
 }
 /* 印刷（会議で紙に出す）: 操作を消し、行の途中でページを分けない */
 @media print {
-  .pk-home { max-width: none; }
   .pk-home :deep(.pk-page-header__desc), .pk-home-list .v-btn { display: none !important; }
   .pk-home__printed { display: inline; }
   .pk-home-section { margin-bottom: 8px; padding: 6px 12px; border-radius: 6px; break-inside: auto; }

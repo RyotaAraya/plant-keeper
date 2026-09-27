@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -102,7 +103,7 @@ watch([selectedSiteIds, statuses, categories, search], fetchStandards)
     >
       <template #item.category="{ item }">{{ CATEGORY_LABEL[item.category] }}</template>
       <template #item.status="{ item }">
-        <v-chip :color="STATUS_COLOR[item.status]" size="small" label variant="tonal">{{ STATUS_LABEL[item.status] }}</v-chip>
+        <StatusChip :label="STATUS_LABEL[item.status]" :color="STATUS_COLOR[item.status]" />
       </template>
       <template #item.calibration_state="{ item }">
         <CalibrationStateChip :state="item.calibration_state" :next-due-on="item.next_due_on" />

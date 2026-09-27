@@ -7,10 +7,12 @@ import { useAiAvailability } from '@/composables/useAiAvailability'
 import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import DeferTroubleDialog from '@/components/DeferTroubleDialog.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
-import { priorityColor, priorityLabel, responseTypeLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
+import { responseTypeLabel } from '@/constants/recordLabels'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import ResponseAiAssist from '@/components/ResponseAiAssist.vue'
 import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
@@ -21,6 +23,13 @@ import type { AiResponseDraft } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
+
+// 詳細の中身は「概要 → タブ」。選んだタブは URL の ?tab= で保つ（再読み込みで戻らない）
+const TABS = ['responses', 'history', 'changes'] as const
+const tab = computed({
+  get: () => (TABS.includes(route.query.tab as (typeof TABS)[number]) ? (route.query.tab as string) : 'responses'),
+  set: (value: string) => void router.replace({ query: { ...route.query, tab: value === 'responses' ? undefined : value } }),
+})
 const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers, canManageMaintenance } = usePermissions()
 const trouble = ref<any>(null)
 const loading = ref(true)
@@ -98,7 +107,6 @@ const deferDialog = ref(false)
 async function onDeferred(maintenanceId: number) {
   await router.push(`/maintenances/${maintenanceId}`)
 }
-const taskStatusLabel: Record<string, string> = { not_started: '未着手', in_progress: '実施中', completed: '完了', cancelled: '見送り' }
 const priorityOptions = [
   { title: '低', value: 'low' },
   { title: '中', value: 'medium' },
@@ -240,160 +248,129 @@ watch(() => route.params.id, (id, previous) => {
   <MainLayout>
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="trouble">
-      <div class="d-flex align-center mb-4">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/troubles')" />
-        <h1 class="text-h5 ml-2">{{ trouble.title }}</h1>
-        <v-spacer />
-        <v-btn v-if="canDefer" class="mr-2" color="deep-purple" variant="tonal" prepend-icon="mdi-wrench-clock" @click="deferDialog = true">定期整備に回す</v-btn>
-        <v-btn v-if="canUpdateTrouble" class="mr-2" variant="outlined" @click="openEdit">
-          <v-icon start>mdi-pencil</v-icon>編集
-        </v-btn>
-        <v-btn v-if="canCreateTroubleResponse" color="primary" @click="openResponse">
-          <v-icon start>mdi-comment-plus</v-icon>対応記録
-        </v-btn>
-      </div>
+      <DetailHeader back-to="/troubles" back-label="トラブル管理" kind="トラブル" :title="trouble.title">
+        <template #status>
+          <StatusChip kind="trouble" :value="trouble.status" />
+          <StatusChip kind="priority" :value="trouble.priority" />
+        </template>
+        <template #meta>
+          {{ trouble.equipment?.name }}<template v-if="trouble.instrument"> ／ {{ trouble.instrument.tag_number }}</template>
+          ・ {{ trouble.reported_by?.name }}が{{ formatDate(trouble.reported_at) }}に報告
+        </template>
+        <template #actions>
+          <v-btn v-if="canDefer" color="deep-purple" variant="tonal" prepend-icon="mdi-wrench-clock" @click="deferDialog = true">定期整備に回す</v-btn>
+          <v-btn v-if="canUpdateTrouble" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
+          <v-btn v-if="canCreateTroubleResponse" color="primary" prepend-icon="mdi-comment-plus" @click="openResponse">対応記録</v-btn>
+        </template>
+      </DetailHeader>
 
-      <v-card class="mb-4">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">ステータス</div>
-              <v-chip :color="troubleStatusColor[trouble.status]" size="small">
-                {{ troubleStatusLabel[trouble.status] }}
-              </v-chip>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">優先度</div>
-              <v-chip :color="priorityColor[trouble.priority]" size="small">
-                {{ priorityLabel[trouble.priority] }}
-              </v-chip>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">報告日時</div>
-              <div>{{ formatDate(trouble.reported_at) }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">解決日時</div>
-              <div>{{ trouble.resolved_at ? formatDate(trouble.resolved_at) : '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">設備</div>
-              <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${trouble.equipment?.id}`)">
-                {{ trouble.equipment?.name }}
-              </a>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">計器</div>
-              <router-link v-if="trouble.instrument" class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>
-              <div v-else>—</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">報告者</div>
-              <div>{{ trouble.reported_by?.name }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">担当者</div>
-              <div>{{ trouble.assigned_to?.name || '未割当' }}</div>
-            </v-col>
-          </v-row>
-          <div v-if="trouble.description" class="mt-3">
-            <div class="text-caption text-grey">詳細</div>
-            <div style="white-space: pre-wrap">{{ trouble.description }}</div>
-          </div>
-          <div v-if="trouble.inspection_item" class="mt-3">
-            <div class="text-caption text-grey">発生元点検</div>
-            <v-chip size="small" class="mr-2" @click="router.push(`/inspections/${trouble.inspection_item?.inspection?.id}`)">
-              {{ trouble.inspection_item.inspection?.inspection_type }} — {{ formatDate(trouble.inspection_item.inspection?.inspected_at) }}
-            </v-chip>
-            <span>項目: {{ trouble.inspection_item.content }}</span>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <v-card v-if="trouble.maintenance_tasks?.length" class="mb-4" data-testid="deferred-card">
-        <v-card-title class="text-subtitle-1">定期整備</v-card-title>
-        <v-card-text>
-          <div v-for="task in trouble.maintenance_tasks" :key="task.id" class="d-flex align-center ga-2 mb-1">
-            <a class="text-primary" style="cursor: pointer" @click="router.push(`/maintenances/${task.scheduled_maintenance_id}`)">{{ task.scheduled_maintenance?.title }}</a>
-            <span class="text-caption text-medium-emphasis">作業: {{ task.title }}</span>
-            <v-chip size="x-small" label variant="tonal">{{ taskStatusLabel[task.status] }}</v-chip>
+          <dl class="pk-summary__grid">
+            <div><dt>設備</dt><dd><router-link class="text-primary" :to="`/equipments/${trouble.equipment?.id}`">{{ trouble.equipment?.name }}</router-link></dd></div>
+            <div>
+              <dt>計器</dt>
+              <dd><router-link v-if="trouble.instrument" class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link><template v-else>—</template></dd>
+            </div>
+            <div><dt>報告者</dt><dd>{{ trouble.reported_by?.name }}</dd></div>
+            <div><dt>担当者</dt><dd>{{ trouble.assigned_to?.name || '未割当' }}</dd></div>
+            <div><dt>報告日時</dt><dd>{{ formatDate(trouble.reported_at) }}</dd></div>
+            <div><dt>解決日時</dt><dd>{{ trouble.resolved_at ? formatDate(trouble.resolved_at) : '—' }}</dd></div>
+            <div v-if="trouble.inspection_item" class="pk-summary__wide">
+              <dt>発生元点検</dt>
+              <dd>
+                <router-link class="text-primary" :to="`/inspections/${trouble.inspection_item?.inspection?.id}`">{{ formatDate(trouble.inspection_item.inspection?.inspected_at) }} の点検</router-link>
+                ／ 項目: {{ trouble.inspection_item.content }}
+              </dd>
+            </div>
+            <div v-if="trouble.maintenance_tasks?.length" class="pk-summary__wide" data-testid="deferred-card">
+              <dt>定期整備</dt>
+              <dd v-for="task in trouble.maintenance_tasks" :key="task.id">
+                <router-link class="text-primary" :to="`/maintenances/${task.scheduled_maintenance_id}`">{{ task.scheduled_maintenance?.title }}</router-link>
+                ／ 作業: {{ task.title }} <StatusChip kind="task" :value="task.status" class="ml-1" />
+              </dd>
+            </div>
+            <div v-if="trouble.description" class="pk-summary__wide"><dt>詳細</dt><dd style="white-space: pre-wrap">{{ trouble.description }}</dd></div>
+          </dl>
+          <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
+          <div v-if="aiStatus?.enabled" class="mt-3" data-testid="similar-section">
+            <div class="d-flex align-center ga-3">
+              <v-btn
+                ref="similarButton"
+                size="small"
+                variant="tonal"
+                color="primary"
+                :loading="similar.loading.value"
+                :disabled="aiStatus.remaining_today <= 0"
+                data-testid="ai-similar-button"
+                @click="searchSimilar"
+              >
+                <template #prepend><PlanaAvatar :size="20" /></template>
+                過去の類似トラブルを探す
+              </v-btn>
+              <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>
+            </div>
+            <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
+            <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
           </div>
         </v-card-text>
       </v-card>
 
-      <!-- この計器の過去のトラブルと点検。AIを使わずに、同じ計器の履歴を全件たどれる（各行から詳細へ、「すべて見る」から一覧へ） -->
-      <v-card v-if="trouble.instrument" class="mb-4" data-testid="instrument-history">
-        <v-card-title class="text-subtitle-1">
-          この計器（<router-link class="text-primary" :to="`/instruments/${trouble.instrument.id}`">{{ trouble.instrument.tag_number }}</router-link>）の履歴
-        </v-card-title>
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" md="6">
-              <div class="text-caption text-medium-emphasis mb-1">過去のトラブル</div>
-              <InstrumentHistoryList kind="troubles" :instrument-id="trouble.instrument.id" :exclude-trouble-id="trouble.id" />
-            </v-col>
-            <v-col cols="12" md="6">
-              <div class="text-caption text-medium-emphasis mb-1">最近の点検</div>
-              <InstrumentHistoryList kind="inspections" :instrument-id="trouble.instrument.id" />
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-
-      <AiAvailability :status="aiStatus" :loading="aiLoading" :failed="aiFailed" @retry="fetchAiStatus" />
-      <div v-if="aiStatus?.enabled" class="mb-4" data-testid="similar-section">
-        <div class="d-flex align-center ga-3">
-          <v-btn
-            ref="similarButton"
-            size="small"
-            variant="tonal"
-            color="primary"
-            :loading="similar.loading.value"
-            :disabled="aiStatus.remaining_today <= 0"
-            data-testid="ai-similar-button"
-            @click="searchSimilar"
-          >
-            <template #prepend><PlanaAvatar :size="20" /></template>
-            過去の類似トラブルを探す
-          </v-btn>
-          <span class="text-caption text-medium-emphasis">今日の残り {{ aiStatus.remaining_today }} / {{ aiStatus.daily_limit }} 回</span>
-        </div>
-        <v-alert v-if="similar.error.value" type="warning" variant="tonal" density="compact" class="mt-2" data-testid="ai-similar-error">{{ similar.error.value }}</v-alert>
-        <SimilarTroubleList v-if="similar.result.value" :result="similar.result.value" @close="closeSimilar" />
-      </div>
-
-      <h2 class="text-h6 mb-3">対応履歴</h2>
-      <v-timeline density="compact" side="end">
-        <v-timeline-item
-          v-for="resp in trouble.trouble_responses"
-          :key="resp.id"
-          :dot-color="resp.response_type === 'repair' ? 'primary' : resp.response_type === 'replacement' ? 'warning' : 'grey'"
-          size="small"
-        >
-          <v-card variant="outlined">
+      <!-- 関連の一覧はタブで切り替える -->
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab value="responses">対応記録（{{ trouble.trouble_responses?.length ?? 0 }}）</v-tab>
+        <v-tab v-if="trouble.instrument" value="history">この計器の履歴</v-tab>
+        <v-tab value="changes">変更履歴</v-tab>
+      </v-tabs>
+      <v-window v-model="tab">
+        <v-window-item value="responses">
+          <v-timeline v-if="trouble.trouble_responses?.length" density="compact" side="end">
+            <v-timeline-item
+              v-for="resp in trouble.trouble_responses"
+              :key="resp.id"
+              :dot-color="resp.response_type === 'repair' ? 'primary' : resp.response_type === 'replacement' ? 'warning' : 'grey'"
+              size="small"
+            >
+              <v-card variant="outlined">
+                <v-card-text>
+                  <div class="d-flex align-center mb-1">
+                    <v-chip size="x-small" label variant="tonal" class="mr-2">{{ responseTypeLabel[resp.response_type] }}</v-chip>
+                    <span class="text-body-2 font-weight-bold">{{ resp.user?.name }}</span>
+                    <v-spacer />
+                    <span class="text-caption text-grey">{{ formatDate(resp.responded_at) }}</span>
+                  </div>
+                  <div style="white-space: pre-wrap">{{ resp.description }}</div>
+                  <div v-if="resp.used_materials" class="mt-1 text-caption">
+                    <v-icon size="x-small">mdi-package-variant</v-icon> 使用資材: {{ resp.used_materials }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-timeline-item>
+          </v-timeline>
+          <div v-else class="text-center text-grey py-4">対応記録がありません</div>
+        </v-window-item>
+        <!-- この計器の過去のトラブルと点検。AIを使わずに、同じ計器の履歴を全件たどれる（各行から詳細へ、「すべて見る」から一覧へ） -->
+        <v-window-item v-if="trouble.instrument" value="history">
+          <v-card data-testid="instrument-history">
             <v-card-text>
-              <div class="d-flex align-center mb-1">
-                <v-chip size="x-small" class="mr-2">{{ responseTypeLabel[resp.response_type] }}</v-chip>
-                <span class="text-body-2 font-weight-bold">{{ resp.user?.name }}</span>
-                <v-spacer />
-                <span class="text-caption text-grey">{{ formatDate(resp.responded_at) }}</span>
-              </div>
-              <div style="white-space: pre-wrap">{{ resp.description }}</div>
-              <div v-if="resp.used_materials" class="mt-1 text-caption">
-                <v-icon size="x-small">mdi-package-variant</v-icon> 使用資材: {{ resp.used_materials }}
-              </div>
+              <v-row>
+                <v-col cols="12" md="6">
+                  <div class="text-caption text-medium-emphasis mb-1">過去のトラブル</div>
+                  <InstrumentHistoryList kind="troubles" :instrument-id="trouble.instrument.id" :exclude-trouble-id="trouble.id" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <div class="text-caption text-medium-emphasis mb-1">最近の点検</div>
+                  <InstrumentHistoryList kind="inspections" :instrument-id="trouble.instrument.id" />
+                </v-col>
+              </v-row>
             </v-card-text>
           </v-card>
-        </v-timeline-item>
-      </v-timeline>
-
-      <div v-if="!trouble.trouble_responses?.length" class="text-center text-grey py-4">
-        対応記録がありません
-      </div>
-
-      <v-divider class="my-4" />
-      <h2 class="text-h6 mb-3">変更履歴</h2>
-      <ResourceHistory auditable-type="Trouble" :auditable-id="trouble.id" />
+        </v-window-item>
+        <v-window-item value="changes">
+          <ResourceHistory auditable-type="Trouble" :auditable-id="trouble.id" />
+        </v-window-item>
+      </v-window>
 
       <!-- Edit Dialog -->
       <v-dialog v-model="editDialog" max-width="500">

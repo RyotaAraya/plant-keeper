@@ -8,6 +8,9 @@ import { useAuthStore } from '@/stores/auth'
 // 拠点は複数選べる。初期値は自分の所属拠点（呼び出し側で決める）。全拠点を選ぶと、拠点をまたいで見られる。
 // 空の配列は全拠点を表す（絞り込みなし）。拠点の一覧を見られない協力会社は切り替えられず、所属拠点の表示だけになる
 const model = defineModel<number[]>({ required: true })
+// single: 拠点を1つだけ選ぶ（ホームなど、拠点をまたいで見ない画面）。全拠点の選択は出さない
+const props = defineProps<{ single?: boolean }>()
+const open = ref(false)
 
 const { canViewSites } = usePermissions()
 const authStore = useAuthStore()
@@ -37,6 +40,11 @@ const label = computed(() => {
 })
 
 function toggle(id: number) {
+  if (props.single) {
+    model.value = [id]
+    open.value = false
+    return
+  }
   const current = selectedIds.value
   const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id]
   // 全ての拠点を外すことはできない（少なくとも1つは選んでおく）
@@ -51,7 +59,7 @@ function selectOwn() {
 </script>
 
 <template>
-  <v-menu v-if="switchable" location="bottom start" :close-on-content-click="false">
+  <v-menu v-if="switchable" v-model="open" location="bottom start" :close-on-content-click="false">
     <template #activator="{ props: menuProps }">
       <button v-bind="menuProps" type="button" class="pk-site-scope pk-site-scope--switchable" aria-label="表示する拠点を選ぶ">
         <v-icon size="18" aria-hidden="true">mdi-domain</v-icon>
@@ -66,17 +74,18 @@ function selectOwn() {
           :key="site.id"
           :title="site.name"
           :subtitle="site.id === ownSiteId ? '所属拠点' : undefined"
-          role="menuitemcheckbox"
+          :role="single ? 'menuitemradio' : 'menuitemcheckbox'"
           :aria-checked="selectedIds.includes(site.id)"
           @click="toggle(site.id)"
         >
           <template #prepend>
-            <v-checkbox-btn :model-value="selectedIds.includes(site.id)" density="compact" tabindex="-1" aria-hidden="true" class="pointer-events-none" />
+            <v-radio v-if="single" :model-value="selectedIds.includes(site.id)" :value="true" density="compact" tabindex="-1" aria-hidden="true" class="pointer-events-none" />
+            <v-checkbox-btn v-else :model-value="selectedIds.includes(site.id)" density="compact" tabindex="-1" aria-hidden="true" class="pointer-events-none" />
           </template>
         </v-list-item>
       </v-list>
-      <v-divider />
-      <div class="d-flex justify-space-between pa-1">
+      <v-divider v-if="!single" />
+      <div v-if="!single" class="d-flex justify-space-between pa-1">
         <v-btn size="small" variant="text" :disabled="!ownSiteId" @click="selectOwn">所属拠点だけ</v-btn>
         <v-btn size="small" variant="text" @click="model = []">全拠点</v-btn>
       </div>

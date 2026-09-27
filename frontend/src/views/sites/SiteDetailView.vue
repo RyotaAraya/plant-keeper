@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 
@@ -59,22 +61,18 @@ onMounted(fetchSite)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/sites')">
-      拠点一覧に戻る
-    </v-btn>
-
     <v-skeleton-loader v-if="loading" type="card" />
 
     <template v-else-if="site">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          {{ site.name }}
-          <v-chip :color="site.is_active ? 'success' : 'grey'" size="small" class="ml-2">
-            {{ site.is_active ? '稼働中' : '閉鎖' }}
-          </v-chip>
-          <v-spacer />
-          <v-btn v-if="canManageSite" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditSite">編集</v-btn>
-        </v-card-title>
+      <DetailHeader back-to="/sites" back-label="拠点管理" kind="拠点" :title="site.name">
+        <template #status>
+          <StatusChip :label="site.is_active ? '稼働中' : '閉鎖'" :color="site.is_active ? 'success' : 'grey'" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageSite" variant="outlined" prepend-icon="mdi-pencil" @click="openEditSite">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <v-card class="mb-4" data-testid="detail-summary">
         <v-card-text>
           <v-row>
             <v-col cols="12" md="4"><strong>所在県:</strong> {{ site.prefecture }}</v-col>

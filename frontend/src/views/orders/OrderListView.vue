@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import { todayForInput } from '@/utils/datetime'
 
 const orders = ref<any[]>([])
@@ -189,7 +190,7 @@ watch(filters, fetchOrders, { deep: true })
       <template #item.status="{ item }">
         <v-menu v-if="!['cancelled', 'received'].includes(item.status)">
           <template #activator="{ props }">
-            <v-chip v-bind="props" :color="statusColor[item.status]" size="small" style="cursor:pointer">
+            <v-chip v-bind="props" :color="statusColor[item.status]" size="small" label variant="tonal" style="cursor:pointer">
               {{ statusLabel[item.status] }}
               <v-icon end size="x-small">mdi-chevron-down</v-icon>
             </v-chip>
@@ -206,9 +207,7 @@ watch(filters, fetchOrders, { deep: true })
             </v-list-item>
           </v-list>
         </v-menu>
-        <v-chip v-else :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
-        </v-chip>
+        <StatusChip v-else :label="statusLabel[item.status]" :color="statusColor[item.status]" />
       </template>
     </v-data-table>
 

@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { canTransactStock } from '@/constants/stock'
@@ -105,12 +107,14 @@ onMounted(() => {
   <MainLayout>
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="stock">
-      <div class="d-flex align-center mb-4">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/stocks')" />
-        <h1 class="text-h5 ml-2">在庫詳細</h1>
-        <v-spacer />
-        <v-btn v-if="canManageStockTransaction && canTransactStock(stock.status)" color="primary" prepend-icon="mdi-swap-horizontal" @click="openTx">入出庫</v-btn>
-      </div>
+      <DetailHeader back-to="/stocks" back-label="在庫管理" kind="在庫" :title="stock.material?.name ?? '在庫'" :subtitle="`${stock.material?.part_number ?? ''} ・ ${stock.warehouse?.name ?? ''}`">
+        <template #status>
+          <StatusChip :label="statusLabel[stock.status] || stock.status" :color="statusColor[stock.status]" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageStockTransaction && canTransactStock(stock.status)" color="primary" prepend-icon="mdi-swap-horizontal" @click="openTx">入出庫</v-btn>
+        </template>
+      </DetailHeader>
 
       <v-card class="mb-4">
         <v-card-text>
@@ -135,9 +139,7 @@ onMounted(() => {
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">ステータス</div>
-              <v-chip :color="statusColor[stock.status]" size="small">
-                {{ statusLabel[stock.status] || stock.status }}
-              </v-chip>
+              <StatusChip :label="statusLabel[stock.status] || stock.status" :color="statusColor[stock.status]" />
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">購入日</div>
