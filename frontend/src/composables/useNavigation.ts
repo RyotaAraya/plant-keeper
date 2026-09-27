@@ -17,20 +17,24 @@ export function useNavigation() {
   type NavItem = { title: string; icon: string; to: string; also?: string[]; permission?: { value: boolean } }
   type NavGroup = { label?: string; items: NavItem[] }
 
-  // 日々の作業と、参照する台帳・組織設定を分ける。画面名と権限はヘッダーでも共用する。
-  // 見出しは、見える項目が1つもないグループでは出さない（協力会社や一般ユーザ向けの整理）。
+  // 仕事の流れ（やること＝ホーム → 記録する → 計画する）で並べ、そのあとに参照する台帳・資材・組織設定を置く。
+  // 画面名と権限はヘッダーでも共用する。見出しは、見える項目が1つもないグループでは出さない（協力会社や一般ユーザ向けの整理）。
+  // プラナの入口は、SideNav がリストの最後に置く
   const navGroups: NavGroup[] = [
     {
       items: [{ title: 'ホーム', icon: 'mdi-home-outline', to: '/home' }],
     },
     {
-      label: '日々の保全',
+      label: '記録する',
       items: [
-        { title: '計画', icon: 'mdi-calendar-check-outline', to: '/plans', also: ['/maintenances'] },
         { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
         { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },
         { title: 'インターロック', icon: 'mdi-shield-alert-outline', to: '/interlocks' },
       ],
+    },
+    {
+      label: '計画する',
+      items: [{ title: '計画', icon: 'mdi-calendar-check-outline', to: '/plans', also: ['/maintenances'] }],
     },
     {
       label: '設備の台帳',

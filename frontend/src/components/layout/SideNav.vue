@@ -38,11 +38,6 @@ function isItemActive(path: string) {
       <v-icon size="26" color="primary">mdi-gauge-full</v-icon>
       <span class="pk-sidenav__brand-text">PlantKeeper</span>
     </div>
-    <router-link to="/plana" class="pk-sidenav__assistant" :aria-current="route.path === '/plana' ? 'page' : undefined">
-      <PlanaAvatar :size="38" />
-      <span><strong>プラナ</strong><small>記録と調べもの</small></span>
-      <v-icon size="16" aria-hidden="true">mdi-chevron-right</v-icon>
-    </router-link>
     <v-list nav density="compact" class="pk-sidenav__list">
       <template v-for="group in visibleGroups" :key="group.label ?? 'top'">
         <v-list-subheader v-if="group.label" class="pk-sidenav__group">{{ group.label }}</v-list-subheader>
@@ -58,6 +53,12 @@ function isItemActive(path: string) {
         />
       </template>
     </v-list>
+    <!-- プラナは記録や調べものを手伝う入口のため、仕事の流れ・台帳のあとに置く -->
+    <router-link to="/plana" class="pk-sidenav__assistant" :aria-current="route.path === '/plana' ? 'page' : undefined">
+      <PlanaAvatar :size="38" />
+      <span><strong>プラナ</strong><small>記録と調べもの</small></span>
+      <v-icon size="16" aria-hidden="true">mdi-chevron-right</v-icon>
+    </router-link>
   </v-navigation-drawer>
 </template>
 
@@ -86,7 +87,7 @@ function isItemActive(path: string) {
   padding: 0.5rem 0.75rem 1rem;
 }
 
-.pk-sidenav__assistant { display: flex; align-items: center; gap: 0.55rem; margin: 0 0.75rem 0.5rem; padding: 0.85rem 0.65rem; background: var(--pk-soft-blue); border-radius: 14px; color: var(--pk-plana-navy); text-decoration: none; }
+.pk-sidenav__assistant { display: flex; align-items: center; gap: 0.55rem; margin: 0 0.75rem 1rem; padding: 0.85rem 0.65rem; background: var(--pk-soft-blue); border-radius: 14px; color: var(--pk-plana-navy); text-decoration: none; }
 .pk-sidenav__assistant strong { display: block; font-size: 0.875rem; }
 .pk-sidenav__assistant small { display: block; margin-top: 0.15rem; font-size: 0.65rem; color: var(--pk-muted); }
 .pk-sidenav__assistant:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 3px; }
