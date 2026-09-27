@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationTable from '@/components/CalibrationTable.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
@@ -79,18 +81,22 @@ onMounted(fetchInspection)
   <MainLayout>
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="inspection">
-      <div class="d-flex align-center mb-4">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/inspections')" />
-        <h1 class="text-h5 ml-2">点検記録詳細</h1>
-        <v-spacer />
-        <v-btn v-if="inspection.status === 'draft' && canEdit" class="mr-2" variant="outlined" @click="router.push(`/inspections/${inspection.id}/edit`)">
-          <v-icon start>mdi-pencil</v-icon>編集
-        </v-btn>
-        <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
-        <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
-        <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" class="mr-2" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
-        <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
-      </div>
+      <DetailHeader
+        back-to="/inspections"
+        back-label="点検・作業記録"
+        kind="点検記録"
+        :title="inspection.checklist_template?.name || inspectionTypeLabel[inspection.inspection_type] || '点検'"
+        :subtitle="`${inspection.equipment?.name ?? ''} ・ ${formatDate(inspection.inspected_at)}`"
+      >
+        <template #status><StatusChip kind="inspection" :value="inspection.status" /></template>
+        <template #actions>
+          <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" @click="router.push(`/inspections/${inspection.id}/edit`)">編集</v-btn>
+          <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
+          <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
+          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
+          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
+        </template>
+      </DetailHeader>
       <v-alert v-if="actionError" type="error" variant="tonal" closable class="mb-4" @click:close="actionError = ''">{{ actionError }}</v-alert>
 
       <v-card class="mb-4">
@@ -106,9 +112,7 @@ onMounted(fetchInspection)
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">ステータス</div>
-              <v-chip :color="statusColor[inspection.status]" size="small">
-                {{ statusLabel[inspection.status] }}
-              </v-chip>
+              <StatusChip :label="statusLabel[inspection.status] || inspection.status" :color="statusColor[inspection.status]" />
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-caption text-grey">実施者</div>

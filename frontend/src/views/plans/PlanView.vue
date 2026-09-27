@@ -4,6 +4,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MaintenanceSeriesDialog from '@/components/MaintenanceSeriesDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -13,7 +14,7 @@ import InspectionPlanDueList from '@/components/plans/InspectionPlanDueList.vue'
 import InspectionPlanGroupDialog from '@/components/plans/InspectionPlanGroupDialog.vue'
 import MaintenanceCreateDialog from '@/components/plans/MaintenanceCreateDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { MAINTENANCE_STATUS_COLOR, MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
+import { MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
@@ -290,7 +291,7 @@ loadAll()
           <template #item.department="{ item }">{{ item.department?.name ?? '—' }}</template>
           <template #item.plans_count="{ item }">{{ item.plans_count }}件</template>
           <template #item.next_due_on="{ item }">
-            <v-chip v-if="item.overdue_count" color="error" size="small" class="mr-1">超過 {{ item.overdue_count }}件</v-chip>
+            <StatusChip v-if="item.overdue_count" :label="`超過 ${item.overdue_count}件`" color="error" alert class="mr-1" />
             <span v-if="item.next_due_on" class="text-no-wrap">次回 {{ item.next_due_on }}</span>
           </template>
           <template #item.actions="{ item }">
@@ -351,7 +352,7 @@ loadAll()
             <span v-else class="text-medium-emphasis">—</span>
           </template>
           <template #item.status="{ item }">
-            <v-chip v-if="roundOf(item)" :color="MAINTENANCE_STATUS_COLOR[roundOf(item).status]" size="small">{{ MAINTENANCE_STATUS_LABEL[roundOf(item).status] }}</v-chip>
+            <StatusChip v-if="roundOf(item)" kind="maintenance" :value="roundOf(item).status" />
           </template>
           <template #item.actions="{ item }">
             <v-btn v-if="item.kind === 'series' && canManageMaintenance" icon="mdi-pencil-outline" size="small" variant="text" :aria-label="`${item.series.name}を編集`" @click.stop="openSeriesDialog(item.series)" />
@@ -379,7 +380,7 @@ loadAll()
                   >
                     <span>{{ m.title }}</span>
                     <span class="text-medium-emphasis text-no-wrap">{{ periodLabel(m.planned_start_on, m.planned_end_on) }}</span>
-                    <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="x-small">{{ MAINTENANCE_STATUS_LABEL[m.status] }}</v-chip>
+                    <StatusChip kind="maintenance" :value="m.status" />
                   </router-link>
                   <div v-if="!item.maintenances.length" class="text-medium-emphasis text-body-2">この拠点の回はありません。</div>
                 </div>

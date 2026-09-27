@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -156,9 +157,7 @@ watch(() => filters.value.site_ids, fetchStocks)
         {{ item.stock?.serial_number || '—' }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="statusColor[item.status]" size="small">
-          {{ statusLabel[item.status] }}
-        </v-chip>
+        <StatusChip :label="statusLabel[item.status] || item.status" :color="statusColor[item.status]" />
       </template>
       <template #item.repair_vendor="{ item }">
         {{ item.repair_vendor || '—' }}

@@ -6,10 +6,10 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
-import { priorityColor, priorityLabel, troubleStatusColor, troubleStatusLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
@@ -215,14 +215,10 @@ watch(() => route.query, () => {
         {{ formatDate(item.reported_at) }}
       </template>
       <template #item.priority="{ item }">
-        <v-chip :color="priorityColor[item.priority]" size="x-small">
-          {{ priorityLabel[item.priority] }}
-        </v-chip>
+        <StatusChip kind="priority" :value="item.priority" />
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="troubleStatusColor[item.status]" size="small">
-          {{ troubleStatusLabel[item.status] }}
-        </v-chip>
+        <StatusChip kind="trouble" :value="item.status" />
       </template>
       <template #item.instrument.tag_number="{ item }">
         <!-- 計器の詳細（過去のトラブル・点検の履歴）へ。行のクリック（トラブルの詳細）とは別に動かす -->

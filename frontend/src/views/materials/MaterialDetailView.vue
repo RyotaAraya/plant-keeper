@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -38,11 +39,7 @@ onMounted(fetchMaterial)
   <MainLayout>
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="material">
-      <div class="d-flex align-center mb-4">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/materials')" />
-        <h1 class="text-h5 ml-2">{{ material.name }}</h1>
-        <v-chip class="ml-3" size="small">{{ material.part_number }}</v-chip>
-      </div>
+      <DetailHeader back-to="/materials" back-label="資材管理" kind="資材" :title="material.name" :subtitle="`型番 ${material.part_number}`" />
 
       <v-card class="mb-4">
         <v-card-text>

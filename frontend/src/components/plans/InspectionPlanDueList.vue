@@ -3,6 +3,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
 import InspectionPlanDialog from '@/components/plans/InspectionPlanDialog.vue'
@@ -192,7 +193,7 @@ watch(filters, fetchPlans, { deep: true })
       hover
     >
       <template #item.next_due_on="{ item }">
-        <v-chip :color="dueColor(item)" size="small">{{ dueLabel(item) }}</v-chip>
+        <StatusChip :label="dueLabel(item)" :color="dueColor(item)" :alert="item.overdue" />
       </template>
       <template #item.inspection_plan_group.name="{ item }">
         {{ item.inspection_plan_group?.name }}

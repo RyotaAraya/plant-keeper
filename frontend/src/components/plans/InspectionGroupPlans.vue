@@ -3,6 +3,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
 import InspectionPlanDialog from '@/components/plans/InspectionPlanDialog.vue'
 import { usePermissions } from '@/composables/usePermissions'
@@ -63,7 +64,7 @@ onMounted(load)
       </thead>
       <tbody>
         <tr v-for="plan in plans" :key="plan.id">
-          <td><v-chip :color="dueColor(plan)" size="small">{{ dueLabel(plan) }}</v-chip></td>
+          <td><StatusChip :label="dueLabel(plan)" :color="dueColor(plan)" :alert="plan.overdue" /></td>
           <td>{{ plan.name }}</td>
           <td>{{ plan.reference_standard ? plan.reference_standard.name : equipmentNames(plan) }}</td>
           <td>{{ plan.instrument?.tag_number }}</td>

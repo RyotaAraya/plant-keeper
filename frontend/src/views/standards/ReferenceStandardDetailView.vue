@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
@@ -90,22 +92,26 @@ onMounted(async () => {
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/reference-standards')">基準器一覧に戻る</v-btn>
-
     <v-skeleton-loader v-if="loading && !standard" type="card" />
 
     <template v-else-if="standard">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center flex-wrap ga-2">
-          <span>{{ standard.name }}</span>
-          <span class="text-body-2 text-medium-emphasis">{{ standard.management_number }}</span>
-          <v-chip :color="STATUS_COLOR[standard.status]" size="small" label variant="tonal">{{ STATUS_LABEL[standard.status] }}</v-chip>
+      <DetailHeader
+        back-to="/reference-standards"
+        back-label="基準器"
+        kind="基準器"
+        :title="standard.name"
+        :subtitle="`${standard.management_number} ・ ${standard.site?.name ?? ''} ／ ${CATEGORY_LABEL[standard.category]}`"
+      >
+        <template #status>
+          <StatusChip :label="STATUS_LABEL[standard.status]" :color="STATUS_COLOR[standard.status]" />
           <CalibrationStateChip :state="standard.calibration_state" :next-due-on="standard.next_due_on" data-testid="calibration-state" />
-          <v-spacer />
-          <v-btn v-if="canRecord" color="primary" size="small" prepend-icon="mdi-certificate-outline" @click="openCalibrationDialog">校正を記録</v-btn>
-          <v-btn v-if="canRecord" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle>{{ standard.site?.name }} / {{ CATEGORY_LABEL[standard.category] }}</v-card-subtitle>
+        </template>
+        <template #actions>
+          <v-btn v-if="canRecord" color="primary" prepend-icon="mdi-certificate-outline" @click="openCalibrationDialog">校正を記録</v-btn>
+          <v-btn v-if="canRecord" variant="outlined" prepend-icon="mdi-pencil" @click="editDialog = true">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <v-card class="mb-4" data-testid="detail-summary">
         <v-card-text>
           <v-row>
             <v-col cols="6" md="3"><strong>型式:</strong> {{ standard.model_number || '—' }}</v-col>

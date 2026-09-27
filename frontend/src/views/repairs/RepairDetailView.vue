@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
@@ -105,20 +107,19 @@ onMounted(fetchRepair)
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <v-btn icon variant="text" @click="router.push('/repairs')">
-        <v-icon>mdi-arrow-left</v-icon>
-      </v-btn>
-      <h1 class="text-h5 ml-2">修理詳細</h1>
-      <v-spacer />
-      <v-btn v-if="canManageRepairs && repair && !['completed','disposed'].includes(repair.status)" variant="outlined" @click="openEdit">編集</v-btn>
-    </div>
-
     <div v-if="loading" class="d-flex justify-center mt-8">
       <v-progress-circular indeterminate />
     </div>
 
     <template v-else-if="repair">
+      <DetailHeader back-to="/repairs" back-label="修理管理" kind="修理" :title="repair.stock?.material?.name ?? '修理'" :subtitle="repair.repair_vendor ? `修理先 ${repair.repair_vendor}` : undefined">
+        <template #status>
+          <StatusChip :label="statusLabel[repair.status]" :color="statusColor[repair.status]" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageRepairs && !['completed','disposed'].includes(repair.status)" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
+        </template>
+      </DetailHeader>
       <!-- ステータス遷移 -->
       <div v-if="canManageRepairs && nextStatusOptions[repair.status]?.length" class="d-flex ga-2 mb-4">
         <v-btn
@@ -140,9 +141,7 @@ onMounted(fetchRepair)
               <v-list density="compact">
                 <v-list-item title="ステータス">
                   <template #append>
-                    <v-chip :color="statusColor[repair.status]" size="small">
-                      {{ statusLabel[repair.status] }}
-                    </v-chip>
+                    <StatusChip :label="statusLabel[repair.status] || repair.status" :color="statusColor[repair.status]" />
                   </template>
                 </v-list-item>
                 <v-list-item title="処置方針" :subtitle="dispositionLabel[repair.disposition] || '—'" />

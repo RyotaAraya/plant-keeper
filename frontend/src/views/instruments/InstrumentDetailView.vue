@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
@@ -110,22 +111,21 @@ onMounted(fetchInstrument)
 
 <template>
   <MainLayout>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-2" @click="router.push('/instruments')">
-      計器一覧に戻る
-    </v-btn>
-
     <v-skeleton-loader v-if="loading" type="card" />
 
     <template v-else-if="instrument">
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          {{ instrument.tag_number }}
-          <v-spacer />
-          <v-btn v-if="canManageEquipment" variant="outlined" size="small" prepend-icon="mdi-pencil" @click="openEditInstrument">編集</v-btn>
-        </v-card-title>
-        <v-card-subtitle>
-          {{ instrument.equipment?.name }} / {{ instrument.equipment?.site?.name }}
-        </v-card-subtitle>
+      <DetailHeader
+        back-to="/instruments"
+        back-label="装置・計器"
+        kind="計器"
+        :title="instrument.tag_number"
+        :subtitle="`${instrument.equipment?.name ?? ''} ／ ${instrument.equipment?.site?.name ?? ''}`"
+      >
+        <template #actions>
+          <v-btn v-if="canManageEquipment" variant="outlined" prepend-icon="mdi-pencil" @click="openEditInstrument">編集</v-btn>
+        </template>
+      </DetailHeader>
+      <v-card class="mb-4" data-testid="detail-summary">
         <v-card-text>
           <v-row>
             <v-col cols="12" md="3"><strong>種別:</strong> {{ instrument.instrument_type }}</v-col>

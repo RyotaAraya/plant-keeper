@@ -2,7 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MaintenanceSeriesDialog from '@/components/MaintenanceSeriesDialog.vue'
 import MaintenanceTaskBulkDialog from '@/components/MaintenanceTaskBulkDialog.vue'
 import MaintenanceTaskDialog from '@/components/MaintenanceTaskDialog.vue'
@@ -248,12 +250,14 @@ onMounted(fetchMaintenance)
   <MainLayout>
     <v-progress-linear v-if="loading && !maintenance" indeterminate />
     <template v-else-if="maintenance">
-      <div class="d-flex align-center mb-2">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/plans?tab=maintenance')" />
-        <h1 class="text-h5 ml-2">{{ maintenance.title }}</h1>
-        <v-spacer />
-        <v-btn v-if="canManageMaintenance" variant="outlined" @click="openEdit"><v-icon start>mdi-pencil</v-icon>編集</v-btn>
-      </div>
+      <DetailHeader back-to="/plans?tab=maintenance" back-label="計画" kind="定期整備" :title="maintenance.title" :subtitle="maintenance.site?.name">
+        <template #status>
+          <StatusChip kind="maintenance" :value="maintenance.status" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageMaintenance" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
+        </template>
+      </DetailHeader>
 
       <!-- 状態の流れ -->
       <div class="d-flex align-center flex-wrap ga-2 mb-2" data-testid="maintenance-flow">
@@ -261,7 +265,8 @@ onMounted(fetchMaintenance)
           <v-icon v-if="i > 0" size="small" color="grey" aria-hidden="true">mdi-chevron-right</v-icon>
           <v-chip
             :color="MAINTENANCE_STATUS_COLOR[status]"
-            :variant="status === maintenance.status ? 'flat' : 'outlined'"
+            :variant="status === maintenance.status ? 'tonal' : 'outlined'"
+            label
             size="small"
             :data-testid="status === maintenance.status ? 'maintenance-status' : undefined"
           >
@@ -343,7 +348,7 @@ onMounted(fetchMaintenance)
           <v-table density="compact">
             <tbody>
               <tr v-for="b in bypasses" :key="b.id" style="cursor: pointer" @click="router.push(`/interlocks/${b.interlock.id}`)">
-                <td class="text-no-wrap"><v-chip :color="bypassColor(b)" size="small" label variant="flat">{{ bypassLabel(b) }}</v-chip></td>
+                <td class="text-no-wrap"><StatusChip :label="bypassLabel(b)" :color="bypassColor(b)" :alert="b.overdue" /></td>
                 <td class="text-no-wrap">{{ b.interlock.tag_number }} {{ b.interlock.name }}</td>
                 <td class="text-no-wrap">{{ b.interlock.equipment.name }}</td>
                 <td>{{ b.reason }}</td>
@@ -464,7 +469,7 @@ onMounted(fetchMaintenance)
                 @click="m.id !== maintenance.id && router.push(`/maintenances/${m.id}`).then(fetchMaintenance)"
               >
                 <template #append>
-                  <v-chip :color="MAINTENANCE_STATUS_COLOR[m.status]" size="x-small">{{ MAINTENANCE_STATUS_LABEL[m.status] }}</v-chip>
+                  <StatusChip kind="maintenance" :value="m.status" />
                 </template>
               </v-list-item>
             </v-list>

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import StatusChip from '@/components/StatusChip.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -123,7 +124,7 @@ watch([selectedSiteIds, bypassState, search], fetchInterlocks)
       </template>
       <template #item.open_bypass="{ item }">
         <template v-if="item.open_bypass">
-          <v-chip :color="bypassColor(item.open_bypass)" size="small" label variant="flat" class="mr-2">{{ bypassLabel(item.open_bypass) }}</v-chip>
+          <StatusChip :label="bypassLabel(item.open_bypass)" :color="bypassColor(item.open_bypass)" :alert="item.open_bypass.overdue" class="mr-2" />
           <span v-if="item.open_bypass.status === 'bypassed'" class="text-caption">
             {{ formatHours(item.open_bypass.bypassed_hours) }}経過 ／ 予定の復帰 {{ formatDateTime(item.open_bypass.planned_restore_at) }}（{{ restoreDueLabel(item.open_bypass) }}）
           </span>

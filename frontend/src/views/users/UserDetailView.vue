@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
@@ -205,16 +207,6 @@ async function openEdit() {
   editDialog.value = true
 }
 
-const AVATAR_COLORS = [
-  '#1565C0', '#2E7D32', '#6A1B9A', '#00838F',
-  '#E65100', '#AD1457', '#4527A0', '#00695C',
-]
-function avatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length]
-}
-function nameInitial(name: string) {
-  return name.charAt(0)
-}
 
 async function saveEdit() {
   editErrors.value = []
@@ -244,20 +236,14 @@ onMounted(() => {
   <MainLayout>
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="user">
-      <div class="d-flex align-center mb-4">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/users')" />
-        <v-avatar :color="avatarColor(user.id)" size="48" class="ml-2">
-          <span class="text-white text-h6 font-weight-bold">{{ nameInitial(user.name) }}</span>
-        </v-avatar>
-        <h1 class="text-h5 ml-3">{{ user.name }}</h1>
-        <v-chip class="ml-3" :color="user.is_active ? 'success' : 'grey'" size="small">
-          {{ user.is_active ? '在籍' : '退職' }}
-        </v-chip>
-        <v-spacer />
-        <v-btn v-if="canManageUsers" variant="outlined" @click="openEdit">
-          <v-icon start>mdi-pencil</v-icon>編集
-        </v-btn>
-      </div>
+      <DetailHeader back-to="/users" back-label="ユーザ管理" kind="ユーザ" :title="user.name" :subtitle="user.company?.name">
+        <template #status>
+          <StatusChip :label="user.is_active ? '在籍' : '退職'" :color="user.is_active ? 'success' : 'grey'" />
+        </template>
+        <template #actions>
+          <v-btn v-if="canManageUsers" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
+        </template>
+      </DetailHeader>
 
       <v-card class="mb-4">
         <v-card-text>

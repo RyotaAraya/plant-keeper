@@ -6,9 +6,10 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
-import { inspectionStatusColor, inspectionStatusLabel, inspectionTypeLabel } from '@/constants/recordLabels'
+import { inspectionTypeLabel } from '@/constants/recordLabels'
 import { useAuthStore } from '@/stores/auth'
 import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
@@ -166,9 +167,7 @@ watch(() => route.query, () => {
         {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="inspectionStatusColor[item.status]" size="small">
-          {{ inspectionStatusLabel[item.status] || item.status }}
-        </v-chip>
+        <StatusChip kind="inspection" :value="item.status" />
       </template>
     </v-data-table>
   </MainLayout>
