@@ -297,7 +297,7 @@ watch(filters, fetchPlans, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 280px"
+        style="min-width: 200px; max-width: 280px"
       />
       <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
       <v-select
