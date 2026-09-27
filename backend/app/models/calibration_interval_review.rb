@@ -19,12 +19,8 @@ class CalibrationIntervalReview
     @instrument = plan.instrument
   end
 
-  # 5点校正を回す計画か（計器が校正できて、チェックリストに5点校正の項目がある）
-  def applicable?
-    return false unless @instrument&.calibratable? && @plan.checklist_template
-
-    @plan.checklist_template.checklist_template_items.any? { |item| item.item_type == "calibration" }
-  end
+  # 5点校正を回す計画か（InspectionPlan#five_point_calibration?）
+  def applicable? = @plan.five_point_calibration?
 
   # 候補がなければ nil
   def result

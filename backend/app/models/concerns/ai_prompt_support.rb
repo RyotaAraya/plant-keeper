@@ -18,9 +18,9 @@ module AiPromptSupport
 
   private
 
-  # 設備と計器（とそのサービス＝流体）の説明の行
+  # 設備と計器（とそのサービス＝流体）の説明の行。マスタの値（名前・タグ番号など）も、メモと同じく escape してから入れる
   def equipment_lines(equipment, instrument)
-    lines = [ "設備: #{equipment.name}" ]
+    lines = [ "設備: #{escape(equipment.name)}" ]
     if instrument
       lines << "計器: #{instrument_label(instrument)}"
       lines << "シール液: #{escape(instrument.seal_fluid)}" if instrument.seal_fluid.present?
@@ -43,18 +43,18 @@ module AiPromptSupport
 
   # 「タグ番号 PT-101、種類 圧力伝送器」
   def instrument_label(instrument)
-    kind = ("、種類 #{INSTRUMENT_TYPE_LABELS.fetch(instrument.instrument_type, instrument.instrument_type)}" if instrument.instrument_type.present?)
-    "タグ番号 #{instrument.tag_number}#{kind}"
+    kind = ("、種類 #{escape(INSTRUMENT_TYPE_LABELS.fetch(instrument.instrument_type, instrument.instrument_type))}" if instrument.instrument_type.present?)
+    "タグ番号 #{escape(instrument.tag_number)}#{kind}"
   end
 
   def service_lines(service)
     return [] unless service
 
-    detail = [ ("温度 #{service.temperature}" if service.temperature.present?),
-               ("圧力 #{service.pressure}" if service.pressure.present?),
+    detail = [ ("温度 #{escape(service.temperature)}" if service.temperature.present?),
+               ("圧力 #{escape(service.pressure)}" if service.pressure.present?),
                ("危険性 #{HAZARD_LABELS.fetch(service.hazard_level, service.hazard_level)}" if service.hazard_level.present?) ].compact
-    lines = [ "サービス（流体）: #{service.name}#{"（#{detail.join("、")}）" if detail.any?}" ]
-    lines << "危険性の説明: #{service.hazard_description}" if service.hazard_description.present?
+    lines = [ "サービス（流体）: #{escape(service.name)}#{"（#{detail.join("、")}）" if detail.any?}" ]
+    lines << "危険性の説明: #{escape(service.hazard_description)}" if service.hazard_description.present?
     lines
   end
 

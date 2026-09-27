@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import AiAvailability from '@/components/AiAvailability.vue'
@@ -20,6 +20,7 @@ import PlanaAvatar from '@/components/plana/PlanaAvatar.vue'
 import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { nowForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
+import { revealApplied } from '@/utils/revealApplied'
 import type { AiResponseDraft } from '@/types/models'
 
 const route = useRoute()
@@ -56,9 +57,18 @@ const responseDirty = computed(() => responseDialog.value && (
   responseMemoDirty.value || JSON.stringify(responseForm.value) !== responseInitial.value
 ))
 useUnsavedWork(responseDirty)
+// 閉じたら、開いたボタンへフォーカスを戻す（v-dialog は activator なしで開くと戻さないため）。
+// プラナの作業場から開いたとき（押したボタンがない）は、この画面の「対応記録」ボタンへ戻す
+const responseButton = ref<{ $el: HTMLElement } | null>(null)
+const responseOpener = ref<HTMLElement | null>(null)
+const responseRecord = ref<HTMLElement | null>(null)
+function hideResponse() {
+  responseDialog.value = false
+  nextTick(() => (responseOpener.value?.isConnected ? responseOpener.value : responseButton.value?.$el)?.focus())
+}
 function closeResponse() {
   if (responseDirty.value && !confirm('入力中の対応記録とメモを破棄しますか？')) return
-  responseDialog.value = false
+  hideResponse()
   responseMemoDirty.value = false
   responseSession.value++
 }
@@ -176,15 +186,20 @@ function openResponse() {
   responseInitial.value = JSON.stringify(responseForm.value)
   responseMemoDirty.value = false
   responseSession.value++
+  const active = document.activeElement
+  responseOpener.value = active instanceof HTMLElement && active !== document.body ? active : null
   responseDialog.value = true
 }
 
-// AIの下書きを入力欄に入れる（保存はしない。対応日時は入れない）。対応種別は、AIが決められなかったときは今の値のまま
-function applyAiResponseDraft(draft: AiResponseDraft) {
+// AIの下書きを入力欄に入れる（保存はしない。対応日時は入れない）。対応種別は、AIが決められなかったときは今の値のまま。
+// 反映したら「保存する内容」を見える位置に出し、対応内容へフォーカスを移す（スマホでは提案の下にあるため）
+async function applyAiResponseDraft(draft: AiResponseDraft) {
   if (draft.response_type) responseForm.value.response_type = draft.response_type
   responseForm.value.description = draft.description
   if (draft.used_materials) responseForm.value.used_materials = draft.used_materials
   responseAiSuggestionId.value = draft.suggestion_id
+  await nextTick()
+  revealApplied(responseRecord.value, 'textarea')
 }
 
 // このトラブルのタイトルと詳細を現場メモとして、過去の類似トラブルを探す（このトラブル自身は候補から外す）
@@ -208,7 +223,7 @@ async function saveResponse() {
         ai_suggestion_id: responseAiSuggestionId.value,
       }
     })
-    responseDialog.value = false
+    hideResponse()
     await fetchTrouble({ keepContent: true })
   } catch (e: any) {
     responseErrors.value = e.response?.data?.errors || ['保存に失敗しました']
@@ -257,7 +272,7 @@ watch(() => route.params.id, (id, previous) => {
         <template #actions>
           <v-btn v-if="canDefer" color="deep-purple" variant="tonal" prepend-icon="mdi-wrench-clock" @click="deferDialog = true">定期整備に回す</v-btn>
           <v-btn v-if="canUpdateTrouble" variant="outlined" prepend-icon="mdi-pencil" @click="openEdit">編集</v-btn>
-          <v-btn v-if="canCreateTroubleResponse" color="primary" prepend-icon="mdi-comment-plus" @click="openResponse">対応記録</v-btn>
+          <v-btn v-if="canCreateTroubleResponse" ref="responseButton" color="primary" prepend-icon="mdi-comment-plus" @click="openResponse">対応記録</v-btn>
         </template>
       </DetailHeader>
 
@@ -399,7 +414,7 @@ watch(() => route.params.id, (id, previous) => {
       </v-dialog>
 
       <!-- Response Dialog -->
-      <v-dialog :model-value="responseDialog" :max-width="aiStatus?.enabled ? 1100 : 600" aria-labelledby="response-dialog-title" @update:model-value="!$event && closeResponse()">
+      <v-dialog :model-value="responseDialog" scrollable :max-width="aiStatus?.enabled ? 1100 : 600" aria-labelledby="response-dialog-title" @update:model-value="!$event && closeResponse()">
         <v-card>
           <v-card-title id="response-dialog-title">対応記録追加</v-card-title>
           <v-card-text>
@@ -422,7 +437,7 @@ watch(() => route.params.id, (id, previous) => {
                   @remaining="aiStatus.remaining_today = $event"
                 />
               </section>
-              <section class="response-workspace__record" aria-labelledby="response-record-heading">
+              <section ref="responseRecord" class="response-workspace__record" aria-labelledby="response-record-heading">
                 <h2 id="response-record-heading">保存する内容</h2>
                 <p class="response-workspace__hint">直接入力・編集できます。「記録」を押すと保存されます。</p>
                 <v-select v-model="responseForm.response_type" :items="responseTypeOptions" item-title="title" item-value="value" label="対応種別" class="mb-2" />

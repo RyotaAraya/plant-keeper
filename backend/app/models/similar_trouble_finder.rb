@@ -121,7 +121,7 @@ class SimilarTroubleFinder
     trouble = candidate.trouble
     lines = [ "タイトル: #{escape(trouble.title)}",
               "状態: #{STATUS_LABELS.fetch(trouble.status, trouble.status)}、優先度: #{PRIORITY_LABELS.fetch(trouble.priority, trouble.priority)}",
-              "設備: #{trouble.equipment.name}#{"、計器: #{instrument_label(trouble.instrument)}" if trouble.instrument}" ]
+              "設備: #{escape(trouble.equipment.name)}#{"、計器: #{instrument_label(trouble.instrument)}" if trouble.instrument}" ]
     lines << "内容: #{escape(trouble.description.to_s.truncate(DESCRIPTION_MAX))}" if trouble.description.present?
     responses = trouble.trouble_responses.sort_by { |r| [ r.responded_at, r.id ] }.last(RESPONSES_PER_CANDIDATE)
     if responses.any?

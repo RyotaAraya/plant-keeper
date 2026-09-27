@@ -301,6 +301,19 @@ export interface Inspection {
   updated_at: string
   // 点検で見た設備（代表の設備 equipment_id を含む。複数の設備をまとめた点検は2つ以上）
   equipments?: { id: number; name: string }[]
+  // 校正結果のファイルから取り込んだ点検の出所（手入力は null）
+  import_source?: CalibrationImportSource | null
+}
+
+export interface CalibrationImportSource {
+  kind: 'calibration_file'
+  file_name: string
+  format_version: number
+  // ファイルの何件目の記録か
+  record_index: number
+  calibrator: { model: string | null; serial_number: string | null }
+  performed_by: string | null
+  imported_at: string
 }
 
 // 5点校正のある点検計画の、周期の見直しの候補（ルールで判定。決めるのは人）

@@ -41,10 +41,10 @@ const headers = [
 ]
 
 const actionLabel: Record<string, string> = {
-  create: '作成', update: '更新', delete: '削除', login: 'ログイン', logout: 'ログアウト', approval_request: '承認依頼'
+  create: '作成', update: '更新', delete: '削除', login: 'ログイン', logout: 'ログアウト', approval_request: '承認依頼', export: '書き出し'
 }
 const actionColor: Record<string, string> = {
-  create: 'success', update: 'info', delete: 'error', login: 'grey', logout: 'grey', approval_request: 'warning'
+  create: 'success', update: 'info', delete: 'error', login: 'grey', logout: 'grey', approval_request: 'warning', export: 'secondary'
 }
 const actionOptions = Object.entries(actionLabel).map(([value, title]) => ({ title, value }))
 

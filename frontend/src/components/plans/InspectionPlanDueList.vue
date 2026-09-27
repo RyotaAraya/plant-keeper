@@ -6,6 +6,7 @@ import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
+import CalibrationWorkOrderDialog from '@/components/plans/CalibrationWorkOrderDialog.vue'
 import InspectionPlanDialog from '@/components/plans/InspectionPlanDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
@@ -133,9 +134,13 @@ function startInspection(plan: InspectionPlan) {
   router.push(inspectionFromPlan(plan))
 }
 
-// 計画の追加（ボタンは「計画」画面の見出しにある）
+// 計画の追加と、校正の作業指示の書き出し（ボタンは「計画」画面の見出しにある。書き出しの候補は表示中の拠点の計画）
 const dialog = ref(false)
-defineExpose({ openCreate: () => { dialog.value = true } })
+const workOrderDialog = ref(false)
+defineExpose({
+  openCreate: () => { dialog.value = true },
+  openWorkOrder: () => { workOrderDialog.value = true },
+})
 
 onMounted(() => {
   fetchMasters()
@@ -244,5 +249,6 @@ watch(filters, fetchPlans, { deep: true })
     <IntervalReviewDialog v-model="reviewDialog" :plan="reviewing" @saved="fetchPlans" />
 
     <InspectionPlanDialog v-model="dialog" :equipments="equipments" :groups="groups" @saved="fetchPlans" />
+    <CalibrationWorkOrderDialog v-model="workOrderDialog" :site-ids="filters.site_ids" />
   </div>
 </template>
