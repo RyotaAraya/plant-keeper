@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import CalibrationImportDialog from '@/components/CalibrationImportDialog.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
@@ -22,6 +23,7 @@ const inspections = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
+const importOpen = ref(false)
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ほかの画面のリンクから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
@@ -126,8 +128,10 @@ watch(() => route.query, () => {
 <template>
   <MainLayout>
     <PageHeader title="点検・作業記録" description="点検の結果をチェックリストで記録し、承認まで進めます。不具合はトラブルに自動登録されます。">
+      <v-btn variant="outlined" color="primary" prepend-icon="mdi-file-import-outline" class="mr-2" @click="importOpen = true">校正結果の取り込み</v-btn>
       <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/inspections/new')">新規点検</v-btn>
     </PageHeader>
+    <CalibrationImportDialog v-model="importOpen" @imported="fetchInspections" />
 
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
