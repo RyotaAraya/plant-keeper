@@ -364,26 +364,19 @@ onMounted(fetchMaintenance)
         </v-card-title>
         <v-card-text>
           <p v-if="!maintenance.acceptance_result" class="text-body-2 text-medium-emphasis">検収の記録はまだありません。</p>
-          <v-row v-else>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">検収日</div>
-              <div>{{ maintenance.accepted_on }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">検収者</div>
-              <div>{{ maintenance.accepted_by?.name }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">結果</div>
-              <v-chip :color="ACCEPTANCE_RESULT_COLOR[maintenance.acceptance_result]" size="small" label variant="tonal">
-                {{ ACCEPTANCE_RESULT_LABEL[maintenance.acceptance_result] }}
-              </v-chip>
-            </v-col>
-            <v-col v-if="maintenance.acceptance_notes" cols="12">
-              <div class="text-caption text-grey">指摘事項</div>
-              <div style="white-space: pre-wrap">{{ maintenance.acceptance_notes }}</div>
-            </v-col>
-          </v-row>
+          <dl v-else class="pk-summary__grid">
+            <div><dt>検収日</dt><dd>{{ maintenance.accepted_on }}</dd></div>
+            <div><dt>検収者</dt><dd>{{ maintenance.accepted_by?.name }}</dd></div>
+            <div>
+              <dt>結果</dt>
+              <dd>
+                <v-chip :color="ACCEPTANCE_RESULT_COLOR[maintenance.acceptance_result]" size="small" label variant="tonal">
+                  {{ ACCEPTANCE_RESULT_LABEL[maintenance.acceptance_result] }}
+                </v-chip>
+              </dd>
+            </div>
+            <div v-if="maintenance.acceptance_notes" class="pk-summary__wide"><dt>指摘事項</dt><dd style="white-space: pre-wrap">{{ maintenance.acceptance_notes }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 

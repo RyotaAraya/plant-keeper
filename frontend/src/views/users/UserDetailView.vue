@@ -5,12 +5,15 @@ import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const { canManageUsers } = usePermissions()
 const user = ref<any>(null)
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['assignments'])
 const sites = ref<any[]>([])
 const companies = ref<any[]>([])
 const departmentTreeBySite = ref<Record<number, any[]>>({})
@@ -278,7 +281,7 @@ onMounted(() => {
         </v-card-text>
       </v-card>
 
-      <v-tabs model-value="assignments" class="mb-4">
+      <v-tabs v-model="tab" class="mb-4">
         <v-tab value="assignments">設備担当（{{ user.equipment_assignments?.length ?? 0 }}）</v-tab>
       </v-tabs>
       <v-table v-if="user.equipment_assignments?.length" density="compact">
