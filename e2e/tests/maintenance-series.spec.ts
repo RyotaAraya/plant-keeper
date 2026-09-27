@@ -1,4 +1,4 @@
-import { test, expect, openListRow, login, ACCOUNTS } from './support'
+import { test, expect, openListRow, login, ACCOUNTS, openPlans, findListRow } from './support'
 
 // 定期整備の系列: 設備ごとの周期を登録し、「次回を作る」で周期が来た設備を自動で対象にする（ボイラー2年・もう一方は4年）。
 // このテストは定期整備を3件作る（名前が「E2E 」で始まる。繰り返し実行すると一覧に溜まる）
@@ -6,10 +6,10 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
   const stamp = Date.now()
   const title = `E2E ${stamp} 2026年 A号ボイラー整備`
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '定期整備', exact: true }).click()
+  await openPlans(page, '定期整備')
 
   await test.step('複数設備の定期整備を作る（2026年4月）', async () => {
-    await page.getByRole('button', { name: '新規作成' }).click()
+    await page.getByRole('button', { name: '定期整備を作成' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('名称 *', { exact: false }).fill(title)
     await dialog.getByLabel('予定 開始日 *').fill('2026-04-01')
@@ -70,9 +70,9 @@ test('系列に登録して次回を作ると、周期が来た設備だけが�
 
 test('系列に属さない定期整備も、次回を作れる（日付は入力する）', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '定期整備', exact: true }).click()
+  await openPlans(page, '定期整備')
   // シードの定期整備（系列なし）。E2Eが作った系列つきの整備と、デモの系列（A号ボイラー整備）は除く
-  const row = page.locator('tbody tr', { has: page.locator('.v-chip'), hasNotText: /E2E|A号ボイラー整備/ }).first()
+  const row = await findListRow(page, page.locator('tbody tr', { hasText: '単発', hasNotText: /E2E|A号ボイラー整備/ }).first())
   await expect(row).toBeVisible()
   await row.click()
 

@@ -13,7 +13,8 @@ export function useNavigation() {
     canViewSites,
   } = usePermissions()
 
-  type NavItem = { title: string; icon: string; to: string; permission?: { value: boolean } }
+  // also: この項目に属する、ほかのパスの詳細画面（ヘッダーの現在地に使う。例: 定期整備の回の詳細は「計画」）
+  type NavItem = { title: string; icon: string; to: string; also?: string[]; permission?: { value: boolean } }
   type NavGroup = { label?: string; items: NavItem[] }
 
   // 日々の作業と、参照する台帳・組織設定を分ける。画面名と権限はヘッダーでも共用する。
@@ -26,11 +27,10 @@ export function useNavigation() {
       label: '日々の保全',
       items: [
         { title: '朝会・夕会ボード', icon: 'mdi-clipboard-text-clock-outline', to: '/meeting-board' },
-        { title: '点検計画', icon: 'mdi-calendar-alert', to: '/inspection-plans' },
+        { title: '計画', icon: 'mdi-calendar-check-outline', to: '/plans', also: ['/maintenances'] },
         { title: '点検・作業記録', icon: 'mdi-clipboard-check-outline', to: '/inspections' },
         { title: 'トラブル管理', icon: 'mdi-alert-circle-outline', to: '/troubles' },
         { title: 'インターロック', icon: 'mdi-shield-alert-outline', to: '/interlocks' },
-        { title: '定期整備', icon: 'mdi-wrench-outline', to: '/maintenances' },
       ],
     },
     {

@@ -132,4 +132,24 @@ class InspectionPlanGroupsTest < ActionDispatch::IntegrationTest
     assert_equal [ "LT-101 年次点検" ], names.call(department_id: @division.id)
     assert_equal [], names.call(department_id: create_department(site: @site, name: "製造部").id)
   end
+
+  test "まとまりの一覧は、担当部署（配下を含む）・法規区分で絞り込め、計画の数・期限超過の数・いちばん近い次回期限が付く" do
+    regulation = Regulation.create!(code: "fire_service", name: "危険物施設", law_name: "消防法")
+    team = create_department(site: @site, name: "計器Aチーム", level: "team", parent: @section)
+    legal = create_group(name: "タンク液面計 年次点検", regulation: regulation, department: team)
+    create_group(name: "製造部 巡回点検", department: create_department(site: @site, name: "製造部"))
+    create_plan(name: "LT-1", inspection_plan_group: legal, next_due_on: @today - 2)
+    create_plan(name: "LT-2", inspection_plan_group: legal, next_due_on: @today + 5)
+    create_plan(name: "LT-3", inspection_plan_group: legal, next_due_on: @today - 9, is_active: false)
+
+    rows = lambda do |params|
+      get "/api/v1/inspection_plan_groups", headers: auth_headers_for(@member), params: { site_ids: [ @site.id ], **params }
+      assert_response :ok
+      response.parsed_body["data"]
+    end
+    assert_equal [ "タンク液面計 年次点検" ], rows.call(department_id: @division.id).pluck("name")
+    assert_equal [ "タンク液面計 年次点検" ], rows.call(regulation_ids: [ regulation.id ]).pluck("name")
+    row = rows.call({}).find { |r| r["name"] == "タンク液面計 年次点検" }
+    assert_equal [ 2, 1, (@today - 2).to_s ], row.values_at("plans_count", "overdue_count", "next_due_on")
+  end
 end

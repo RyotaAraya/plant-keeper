@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS, selectOption } from './support'
+import { test, expect, login, apiBaseUrl, selectFirstOption, ACCOUNTS, selectOption, openPlans } from './support'
 import type { Page } from '@playwright/test'
 
 const WORKER = { email: 'honda@example.com', password: 'password' }
@@ -45,7 +45,7 @@ test('基準器の詳細に校正の履歴が出て、最新の校正が不合�
 
 test('基準器の年次校正が点検計画に載り、「校正を記録」で基準器の校正記録ダイアログが開く（記録はしない）', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
 
   const plan = page.locator('tbody tr', { hasText: '温度校正器（ドライブロック） 年次校正' })
   await expect(plan.locator('.v-chip', { hasText: '基準器' })).toBeVisible()

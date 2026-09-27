@@ -11,7 +11,7 @@ test('スマホではメニューを開いて画面を選ぶと閉じ、一覧�
   await expect(page.getByRole('heading', { level: 1, name: '設備台帳' })).toBeVisible()
   await expect(equipmentLink).not.toBeInViewport()
 
-  for (const path of ['/equipments', '/inspections/new', '/plana', '/dashboard']) {
+  for (const path of ['/equipments', '/inspections/new', '/plana', '/dashboard', '/plans']) {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)

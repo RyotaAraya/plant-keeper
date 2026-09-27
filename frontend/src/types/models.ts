@@ -327,7 +327,10 @@ export interface InspectionPlanGroup {
   site?: { id: number; name: string }
   department?: { id: number; name: string } | null
   regulation?: { id: number; code: string; name: string } | null
+  // 一覧（GET /inspection_plan_groups）だけが付ける: 有効な計画の数・期限超過の数・いちばん近い次回期限
   plans_count?: number
+  overdue_count?: number
+  next_due_on?: string | null
 }
 
 export interface InspectionPlan {

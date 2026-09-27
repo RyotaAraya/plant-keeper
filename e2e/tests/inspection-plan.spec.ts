@@ -1,4 +1,4 @@
-import { test, expect, login, resetSession, apiBaseUrl, selectOption, ACCOUNTS } from './support'
+import { test, expect, login, resetSession, apiBaseUrl, selectOption, ACCOUNTS, openPlans } from './support'
 
 const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 
@@ -7,8 +7,7 @@ const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 test('点検計画に期限超過が表示され、「点検を実施」で計画の設備を引き継いだ点検画面が開く', async ({ page }) => {
   await login(page, ACCOUNTS.member)
 
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()
+  await openPlans(page, '点検の期限順')
   await expect(page.locator('tbody tr').first()).toBeVisible()
   await expect(page.getByText(/日超過/).first()).toBeVisible()
 
@@ -32,20 +31,19 @@ test('点検計画に期限超過が表示され、「点検を実施」で計�
 
 test('計画の追加ボタンはマネージャーにだけ表示される', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '点検計画' })).toBeVisible()
+  await openPlans(page, '点検の期限順')
   await expect(page.getByRole('button', { name: '計画を追加' })).toHaveCount(0)
 
   await resetSession(page)
   await login(page, OWNER_MANAGER)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
   await expect(page.getByRole('button', { name: '計画を追加' })).toBeVisible()
 })
 
 // 巡回の計画は、装置ごとではなく、いくつかの装置をまとめて1件にする
 test('複数の設備をまとめた巡回の計画から「点検を実施」を開くと、その設備すべてが点検に引き継がれる', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
 
   const row = page.getByRole('row', { name: /製造部 巡回点検/ })
   await expect(row).toContainText('常圧蒸留装置、')
@@ -113,7 +111,7 @@ test('業務管理者は、延長の候補の根拠と注意を見て周期を�
 // 点検計画は、必ず点検のまとまり（親）に属す。担当部署・法規区分はまとまりが持つ
 test('点検計画にまとまりと法規区分が表示され、法規区分・まとまりで絞り込める', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
 
   const valve = page.getByRole('row', { name: /ボイラー安全弁 年次点検/ })
   await expect(valve).toContainText('安全弁 年次点検')
@@ -135,7 +133,7 @@ test('点検計画にまとまりと法規区分が表示され、法規区分�
 
 test('業務管理者は、まとまりを選んで点検計画を追加でき、周期にまとまりの既定の周期が入る', async ({ page }) => {
   await login(page, OWNER_MANAGER)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
   await page.getByRole('button', { name: '計画を追加' }).click()
   const dialog = page.getByRole('dialog')
   const name = `E2E ${Date.now()} まとまりの計画`

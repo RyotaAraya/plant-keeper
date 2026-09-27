@@ -1,4 +1,4 @@
-import { test, expect, login } from './support'
+import { test, expect, login, openPlans } from './support'
 import type { Page } from '@playwright/test'
 
 const ACCOUNTS = {
@@ -143,7 +143,8 @@ test('稼働中の拠点を1つずつ全部選ぶと「全拠点」になり、�
 
 test('別の拠点の点検計画から「点検を実施」を開いても、点検フォームの部署は空にならず、自分の部署が表示される', async ({ page }) => {
   await login(page, ACCOUNTS.ownerManager)
-  await openList(page, '点検計画')
+  await openList(page, '計画')
+  await page.locator('.v-btn-toggle').getByRole('button', { name: '点検の期限順', exact: true }).click()
 
   // 根岸製油所の計画だけを表示する（川崎を外す）
   const tag = page.getByRole('button', { name: '表示する拠点を選ぶ' })
@@ -169,7 +170,7 @@ test('拠点の絞り込みはすべての拠点データの一覧で同じ部�
   await login(page, ACCOUNTS.ownerManager)
   await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('川崎製油所')
 
-  for (const menu of ['設備台帳', '装置・計器', '点検計画', '点検・作業記録', 'トラブル管理', '定期整備', '在庫管理', '修理管理']) {
+  for (const menu of ['設備台帳', '装置・計器', '計画', '点検・作業記録', 'トラブル管理', '在庫管理', '修理管理']) {
     await openList(page, menu)
     await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' }), menu).toContainText('川崎製油所')
   }
