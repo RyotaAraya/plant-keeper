@@ -10,6 +10,7 @@ import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import StatusChip from '@/components/StatusChip.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import { responseTypeLabel } from '@/constants/recordLabels'
@@ -24,14 +25,10 @@ import type { AiResponseDraft } from '@/types/models'
 const route = useRoute()
 const router = useRouter()
 
-// 詳細の中身は「概要 → タブ」。選んだタブは URL の ?tab= で保つ（再読み込みで戻らない）
-const TABS = ['responses', 'history', 'changes'] as const
-const tab = computed({
-  get: () => (TABS.includes(route.query.tab as (typeof TABS)[number]) ? (route.query.tab as string) : 'responses'),
-  set: (value: string) => void router.replace({ query: { ...route.query, tab: value === 'responses' ? undefined : value } }),
-})
 const { canUpdateTrouble, canCreateTroubleResponse, canViewUsers, canManageMaintenance } = usePermissions()
 const trouble = ref<any>(null)
+// 詳細の中身は「概要 → タブ」（この計器の履歴は、計器があるときだけ）
+const tab = useDetailTab(() => ['responses', ...(trouble.value?.instrument ? ['history'] : []), 'changes'])
 const loading = ref(true)
 const users = ref<any[]>([])
 

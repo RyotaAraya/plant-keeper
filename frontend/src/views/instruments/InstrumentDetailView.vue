@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import InstrumentHistoryList from '@/components/InstrumentHistoryList.vue'
@@ -29,7 +30,14 @@ const { canManageEquipment } = usePermissions()
 
 const instrument = ref<any>(null)
 const loading = ref(false)
-const tab = ref('info')
+// 詳細の中身は「概要 → タブ」（校正の傾向・機器の診断は、あるときだけ）
+const tab = useDetailTab(() => [
+  'troubles',
+  'inspections',
+  ...(instrument.value?.calibratable || calibrationHistory.value.length ? ['calibration'] : []),
+  ...(diagnostics.value.length ? ['diagnostics'] : []),
+  'history',
+])
 
 // --- 編集 ---
 const editDialog = ref(false)
@@ -125,55 +133,64 @@ onMounted(fetchInstrument)
           <v-btn v-if="canManageEquipment" variant="outlined" prepend-icon="mdi-pencil" @click="openEditInstrument">編集</v-btn>
         </template>
       </DetailHeader>
-      <v-card class="mb-4" data-testid="detail-summary">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="12" md="3"><strong>種別:</strong> {{ instrument.instrument_type }}</v-col>
-            <v-col cols="12" md="3"><strong>サービス:</strong> {{ instrument.service?.name || '—' }}</v-col>
-            <v-col cols="12" md="3"><strong>ラインクラス:</strong> {{ instrument.line_class?.code || '—' }}</v-col>
-            <v-col cols="12" md="3"><strong>設置場所:</strong> {{ instrument.location || '—' }}</v-col>
-            <v-col v-if="instrument.seal_fluid" cols="12" md="3"><strong>シール液:</strong> {{ instrument.seal_fluid }}</v-col>
-          </v-row>
-          <v-row v-if="instrument.service" class="mt-2">
-            <v-col cols="12" md="3"><strong>温度:</strong> {{ instrument.service.temperature }}</v-col>
-            <v-col cols="12" md="3"><strong>圧力:</strong> {{ instrument.service.pressure }}</v-col>
-            <v-col cols="12" md="3">
-              <strong>危険性:</strong>
-              <v-chip :color="instrument.service.hazard_level === 'high' ? 'error' : instrument.service.hazard_level === 'medium' ? 'warning' : 'success'" size="small">
-                {{ { high: '高', medium: '中', low: '低' }[instrument.service.hazard_level as string] }}
-              </v-chip>
-            </v-col>
-          </v-row>
-          <p v-if="instrument.notes" class="mt-3"><strong>備考:</strong> {{ instrument.notes }}</p>
-          <InterlockChips :instrument-id="instrument.id" class="mt-3" />
-          <div class="mt-3 d-flex flex-wrap align-center ga-2" data-testid="diagnostic-current">
-            <strong>機器の診断（NAMUR NE 107）:</strong>
-            <DiagnosticChip :status="instrument.diagnostic_status" />
-            <span v-if="instrument.diagnostic_status" class="text-body-2 text-medium-emphasis">
-              {{ formatDateTime(instrument.diagnostic_since) }} から ／ 最後に受け取った日時 {{ formatDateTime(instrument.diagnostic_received_at) }}
-            </span>
-            <span v-if="instrument.diagnostic_status && instrument.diagnostic_status !== 'good'" class="text-body-2">
-              — {{ DIAGNOSTIC_STATUS[instrument.diagnostic_status as keyof typeof DIAGNOSTIC_STATUS].hint }}
-            </span>
-          </div>
-          <div v-if="instrument.troubleshooting_checks?.length" class="mt-3" data-testid="troubleshooting-checks">
-            <strong>一次点検の定型項目（参考。手順書・保全基準の代わりではありません）:</strong>
-            <ul class="ml-5">
-              <li v-for="c in instrument.troubleshooting_checks" :key="c">{{ c }}</li>
-            </ul>
-          </div>
-          <div class="mt-3" data-testid="calibration-conditions">
-            <strong>校正の条件:</strong>
-            <template v-if="instrument.calibratable">
-              {{ Number(instrument.range_lower) }}〜{{ Number(instrument.range_upper) }} {{ instrument.range_unit }}、許容差 ±{{ Number(instrument.tolerance_percent) }}%スパン（{{ TOLERANCE_BASIS_LABEL[instrument.tolerance_basis] ?? '出所未設定' }}）
-              <template v-if="instrument.calibration_kind === 'transmitter'">
-                、出力 {{ CHARACTERISTIC_LABEL[instrument.output_characteristic] }}・DCS {{ CHARACTERISTIC_LABEL[instrument.dcs_characteristic] }}
-              </template>
+          <dl class="pk-summary__grid">
+            <div><dt>種別</dt><dd>{{ instrument.instrument_type }}</dd></div>
+            <div><dt>サービス</dt><dd>{{ instrument.service?.name || '—' }}</dd></div>
+            <div><dt>ラインクラス</dt><dd>{{ instrument.line_class?.code || '—' }}</dd></div>
+            <div><dt>設置場所</dt><dd>{{ instrument.location || '—' }}</dd></div>
+            <div v-if="instrument.seal_fluid"><dt>シール液</dt><dd>{{ instrument.seal_fluid }}</dd></div>
+            <template v-if="instrument.service">
+              <div><dt>温度</dt><dd>{{ instrument.service.temperature }}</dd></div>
+              <div><dt>圧力</dt><dd>{{ instrument.service.pressure }}</dd></div>
+              <div>
+                <dt>危険性</dt>
+                <dd>
+                  <v-chip :color="instrument.service.hazard_level === 'high' ? 'error' : instrument.service.hazard_level === 'medium' ? 'warning' : 'success'" size="small" label variant="tonal">
+                    {{ { high: '高', medium: '中', low: '低' }[instrument.service.hazard_level as string] }}
+                  </v-chip>
+                </dd>
+              </div>
             </template>
-            <span v-else class="text-medium-emphasis">未設定（編集で校正範囲と許容差を設定すると、点検で5点校正を記録できます）</span>
-            <v-chip v-if="instrument.telemetry" size="small" label color="indigo" variant="tonal" class="ml-2">テレメータ計器</v-chip>
-            <v-chip v-if="instrument.custody_transfer" size="small" label color="brown" variant="tonal" class="ml-2">取引用</v-chip>
-          </div>
+            <div v-if="instrument.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ instrument.notes }}</dd></div>
+            <div class="pk-summary__wide" data-testid="diagnostic-current">
+              <dt>機器の診断（NAMUR NE 107）</dt>
+              <dd class="d-flex flex-wrap align-center ga-2">
+                <DiagnosticChip :status="instrument.diagnostic_status" />
+                <span v-if="instrument.diagnostic_status" class="text-body-2 text-medium-emphasis">
+                  {{ formatDateTime(instrument.diagnostic_since) }} から ／ 最後に受け取った日時 {{ formatDateTime(instrument.diagnostic_received_at) }}
+                </span>
+                <span v-if="instrument.diagnostic_status && instrument.diagnostic_status !== 'good'" class="text-body-2">
+                  — {{ DIAGNOSTIC_STATUS[instrument.diagnostic_status as keyof typeof DIAGNOSTIC_STATUS].hint }}
+                </span>
+              </dd>
+            </div>
+            <div class="pk-summary__wide" data-testid="calibration-conditions">
+              <dt>校正の条件</dt>
+              <dd>
+                <template v-if="instrument.calibratable">
+                  {{ Number(instrument.range_lower) }}〜{{ Number(instrument.range_upper) }} {{ instrument.range_unit }}、許容差 ±{{ Number(instrument.tolerance_percent) }}%スパン（{{ TOLERANCE_BASIS_LABEL[instrument.tolerance_basis] ?? '出所未設定' }}）
+                  <template v-if="instrument.calibration_kind === 'transmitter'">
+                    、出力 {{ CHARACTERISTIC_LABEL[instrument.output_characteristic] }}・DCS {{ CHARACTERISTIC_LABEL[instrument.dcs_characteristic] }}
+                  </template>
+                </template>
+                <span v-else class="text-medium-emphasis">未設定（編集で校正範囲と許容差を設定すると、点検で5点校正を記録できます）</span>
+                <v-chip v-if="instrument.telemetry" size="small" label color="indigo" variant="tonal" class="ml-2">テレメータ計器</v-chip>
+                <v-chip v-if="instrument.custody_transfer" size="small" label color="brown" variant="tonal" class="ml-2">取引用</v-chip>
+              </dd>
+            </div>
+            <div v-if="instrument.troubleshooting_checks?.length" class="pk-summary__wide" data-testid="troubleshooting-checks">
+              <dt>一次点検の定型項目（参考。手順書・保全基準の代わりではありません）</dt>
+              <dd>
+                <ul class="ml-5">
+                  <li v-for="c in instrument.troubleshooting_checks" :key="c">{{ c }}</li>
+                </ul>
+              </dd>
+            </div>
+          </dl>
+          <InterlockChips :instrument-id="instrument.id" class="mt-3" />
         </v-card-text>
       </v-card>
 

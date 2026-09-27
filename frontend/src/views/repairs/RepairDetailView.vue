@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
@@ -9,7 +9,6 @@ import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
-const router = useRouter()
 const { canManageRepairs } = usePermissions()
 
 const repair = ref<any>(null)
@@ -133,85 +132,39 @@ onMounted(fetchRepair)
         </v-btn>
       </div>
 
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-card class="mb-4">
-            <v-card-title>修理情報</v-card-title>
-            <v-card-text>
-              <v-list density="compact">
-                <v-list-item title="ステータス">
-                  <template #append>
-                    <StatusChip :label="statusLabel[repair.status] || repair.status" :color="statusColor[repair.status]" />
-                  </template>
-                </v-list-item>
-                <v-list-item title="処置方針" :subtitle="dispositionLabel[repair.disposition] || '—'" />
-                <v-list-item title="修理業者" :subtitle="repair.repair_vendor || '—'" />
-                <v-list-item title="依頼者" :subtitle="repair.requested_by?.name || '—'" />
-                <v-list-item title="発送日" :subtitle="repair.shipped_on || '—'" />
-                <v-list-item title="修理完了日" :subtitle="repair.completed_on || '—'" />
-                <v-list-item title="受領日" :subtitle="repair.received_on || '—'" />
-                <v-list-item title="修理費" :subtitle="formatPrice(repair.repair_cost)" />
-                <v-list-item title="送料" :subtitle="formatPrice(repair.shipping_cost)" />
-                <v-list-item v-if="repair.notes" title="備考" :subtitle="repair.notes" />
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
-
-        <v-col cols="12" md="6">
-          <v-card class="mb-4">
-            <v-card-title>在庫品</v-card-title>
-            <v-card-text>
-              <v-list density="compact">
-                <v-list-item
-                  title="資材名"
-                  :subtitle="repair.stock?.material?.name || '—'"
-                />
-                <v-list-item
-                  title="型番"
-                  :subtitle="repair.stock?.material?.part_number || '—'"
-                />
-                <v-list-item
-                  title="シリアル番号"
-                  :subtitle="repair.stock?.serial_number || '—'"
-                />
-                <v-list-item
-                  title="保管場所"
-                  :subtitle="repair.stock?.warehouse?.name || '—'"
-                />
-              </v-list>
-              <v-btn
-                variant="text"
-                size="small"
-                class="mt-1"
-                @click="router.push(`/stocks/${repair.stock_id}`)"
-              >
-                在庫詳細を見る
-                <v-icon end size="small">mdi-open-in-new</v-icon>
-              </v-btn>
-            </v-card-text>
-          </v-card>
-
-          <v-card v-if="repair.trouble">
-            <v-card-title>関連トラブル</v-card-title>
-            <v-card-text>
-              <v-list density="compact">
-                <v-list-item title="タイトル" :subtitle="repair.trouble.title" />
-                <v-list-item title="ステータス" :subtitle="repair.trouble.status" />
-              </v-list>
-              <v-btn
-                variant="text"
-                size="small"
-                class="mt-1"
-                @click="router.push(`/troubles/${repair.trouble_id}`)"
-              >
-                トラブル詳細を見る
-                <v-icon end size="small">mdi-open-in-new</v-icon>
-              </v-btn>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+      <!-- 概要: 常に見える基本情報（関連の一覧はないため、タブは置かない） -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
+        <v-card-text>
+          <dl class="pk-summary__grid">
+            <div><dt>処置方針</dt><dd>{{ dispositionLabel[repair.disposition] || '—' }}</dd></div>
+            <div><dt>修理業者</dt><dd>{{ repair.repair_vendor || '—' }}</dd></div>
+            <div><dt>依頼者</dt><dd>{{ repair.requested_by?.name || '—' }}</dd></div>
+            <div><dt>発送日</dt><dd>{{ repair.shipped_on || '—' }}</dd></div>
+            <div><dt>修理完了日</dt><dd>{{ repair.completed_on || '—' }}</dd></div>
+            <div><dt>受領日</dt><dd>{{ repair.received_on || '—' }}</dd></div>
+            <div><dt>修理費</dt><dd>{{ formatPrice(repair.repair_cost) }}</dd></div>
+            <div><dt>送料</dt><dd>{{ formatPrice(repair.shipping_cost) }}</dd></div>
+            <div v-if="repair.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ repair.notes }}</dd></div>
+          </dl>
+          <v-divider class="my-4" />
+          <dl class="pk-summary__grid">
+            <div>
+              <dt>在庫品</dt>
+              <dd><router-link class="text-primary" :to="`/stocks/${repair.stock_id}`">{{ repair.stock?.material?.name || '—' }}</router-link></dd>
+            </div>
+            <div><dt>型番</dt><dd>{{ repair.stock?.material?.part_number || '—' }}</dd></div>
+            <div><dt>シリアル番号</dt><dd>{{ repair.stock?.serial_number || '—' }}</dd></div>
+            <div><dt>保管場所</dt><dd>{{ repair.stock?.warehouse?.name || '—' }}</dd></div>
+            <div v-if="repair.trouble" class="pk-summary__wide">
+              <dt>関連トラブル</dt>
+              <dd class="d-flex align-center ga-2">
+                <router-link class="text-primary" :to="`/troubles/${repair.trouble_id}`">{{ repair.trouble.title }}</router-link>
+                <StatusChip kind="trouble" :value="repair.trouble.status" />
+              </dd>
+            </div>
+          </dl>
+        </v-card-text>
+      </v-card>
     </template>
 
     <!-- 編集ダイアログ -->

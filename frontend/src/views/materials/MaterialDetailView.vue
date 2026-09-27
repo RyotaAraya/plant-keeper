@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -11,6 +12,8 @@ const router = useRouter()
 const authStore = useAuthStore()
 const material = ref<any>(null)
 const loading = ref(true)
+// 詳細の中身は「概要 → タブ」（在庫状況は、在庫を見られる人だけ）
+const tab = useDetailTab(() => [...(material.value?.stock_summary ? ['stock'] : []), 'orders'])
 
 const categoryLabel: Record<string, string> = {
   instrument: '計装', valve: 'バルブ', electrical: '電気', piping: '配管'
@@ -41,56 +44,36 @@ onMounted(fetchMaterial)
     <template v-else-if="material">
       <DetailHeader back-to="/materials" back-label="資材管理" kind="資材" :title="material.name" :subtitle="`型番 ${material.part_number}`" />
 
-      <v-card class="mb-4">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">メーカー</div>
-              <div>{{ material.manufacturer?.name }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">カテゴリ</div>
-              <div>{{ categoryLabel[material.category] }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">入手性</div>
-              <div>{{ availabilityLabel[material.availability] }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">定格</div>
-              <div>{{ material.rating || '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">リード日数</div>
-              <div>{{ material.lead_time_days ? `${material.lead_time_days}日` : '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">発注方式</div>
-              <div>{{ reorderLabel[material.reorder_method] || '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">発注点 / 数量</div>
-              <div>{{ material.reorder_point ?? '—' }} / {{ material.reorder_quantity ?? '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">危険物</div>
-              <div>
+          <dl class="pk-summary__grid">
+            <div><dt>メーカー</dt><dd>{{ material.manufacturer?.name }}</dd></div>
+            <div><dt>カテゴリ</dt><dd>{{ categoryLabel[material.category] }}</dd></div>
+            <div><dt>入手性</dt><dd>{{ availabilityLabel[material.availability] }}</dd></div>
+            <div><dt>定格</dt><dd>{{ material.rating || '—' }}</dd></div>
+            <div><dt>リード日数</dt><dd>{{ material.lead_time_days ? `${material.lead_time_days}日` : '—' }}</dd></div>
+            <div><dt>発注方式</dt><dd>{{ reorderLabel[material.reorder_method] || '—' }}</dd></div>
+            <div><dt>発注点 / 数量</dt><dd>{{ material.reorder_point ?? '—' }} / {{ material.reorder_quantity ?? '—' }}</dd></div>
+            <div>
+              <dt>危険物</dt>
+              <dd>
                 <v-icon v-if="material.is_hazardous" color="error" size="small">mdi-alert</v-icon>
                 {{ material.is_hazardous ? material.hazard_note || 'はい' : 'なし' }}
-              </div>
-            </v-col>
-          </v-row>
-          <div v-if="material.description" class="mt-3">
-            <div class="text-caption text-grey">説明</div>
-            <div>{{ material.description }}</div>
-          </div>
+              </dd>
+            </div>
+            <div v-if="material.description" class="pk-summary__wide"><dt>説明</dt><dd style="white-space: pre-wrap">{{ material.description }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 
-      <v-row>
-        <!-- 在庫は自社のみ。見られない人には項目自体が返らない -->
-        <v-col v-if="material.stock_summary" cols="12" md="6">
-          <h2 class="text-h6 mb-3">在庫状況</h2>
+      <!-- 在庫は自社のみ。見られない人には項目自体が返らない -->
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab v-if="material.stock_summary" value="stock">在庫状況</v-tab>
+        <v-tab value="orders">最近の発注（{{ material.recent_orders?.length ?? 0 }}）</v-tab>
+      </v-tabs>
+      <v-window v-model="tab">
+        <v-window-item v-if="material.stock_summary" value="stock">
           <v-card variant="outlined">
             <v-card-text>
               <div class="text-h4 text-center mb-2 pk-mono">{{ material.usable_stock }}</div>
@@ -120,9 +103,8 @@ onMounted(fetchMaterial)
               <div v-else class="text-center text-grey">在庫なし</div>
             </v-card-text>
           </v-card>
-        </v-col>
-        <v-col cols="12" md="6">
-          <h2 class="text-h6 mb-3">最近の発注</h2>
+        </v-window-item>
+        <v-window-item value="orders">
           <v-card variant="outlined">
             <v-list v-if="material.recent_orders?.length" density="compact">
               <v-list-item
@@ -141,8 +123,8 @@ onMounted(fetchMaterial)
               <div class="text-center text-grey">発注履歴なし</div>
             </v-card-text>
           </v-card>
-        </v-col>
-      </v-row>
+        </v-window-item>
+      </v-window>
     </template>
   </MainLayout>
 </template>

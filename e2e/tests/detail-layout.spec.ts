@@ -1,7 +1,7 @@
 import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
 
-// 詳細画面の頭（DetailHeader）と状態チップの規則（StatusChip）。デザインガイド「詳細画面」「状態の表示」
-test('どの詳細画面も、戻る → 種類 → 名前の同じ形の頭で始まる', async ({ page }) => {
+// 詳細画面の頭（DetailHeader）・概要（.pk-summary__grid）と状態チップの規則（StatusChip）。デザインガイド「詳細画面」「状態の表示」
+test('どの詳細画面も、戻る → 種類 → 名前の同じ形の頭で始まり、その下に概要が出る', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   const token = await page.evaluate(() => localStorage.getItem('jwt'))
   const get = async (path: string) => (await (await page.request.get(`${apiBaseUrl()}${path}`, { headers: { Authorization: `Bearer ${token}` } })).json()).data
@@ -27,6 +27,7 @@ test('どの詳細画面も、戻る → 種類 → 名前の同じ形の頭で�
       await expect(header.locator('.pk-detail-header__kind')).toHaveText(kind)
       await expect(header.getByRole('heading', { level: 1 })).not.toBeEmpty()
       await expect(header.getByRole('link', { name: `${back}に戻る` })).toBeVisible()
+      await expect(page.getByTestId('detail-summary').locator('.pk-summary__grid').first()).toBeVisible()
     })
   }
 })
@@ -45,4 +46,20 @@ test('状態のチップは淡い色で、緊急だけ塗りつぶす。トラ�
   await expect(page).toHaveURL(/tab=changes/)
   await page.reload()
   await expect(page.getByRole('tab', { name: '変更履歴' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('定期整備の詳細は、作業・系列・担当者・変更履歴のタブで、選んだタブは再読み込みでも保たれる', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  const token = await page.evaluate(() => localStorage.getItem('jwt'))
+  const res = await page.request.get(`${apiBaseUrl()}/scheduled_maintenances?per_page=1`, { headers: { Authorization: `Bearer ${token}` } })
+  const maintenance = (await res.json()).data[0]
+  await page.goto(`/maintenances/${maintenance.id}`)
+
+  await expect(page.getByRole('tab', { name: /^作業/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('tasks-card')).toBeVisible()
+  await page.getByRole('tab', { name: '系列' }).click()
+  await expect(page).toHaveURL(/tab=series/)
+  await page.reload()
+  await expect(page.getByRole('tab', { name: '系列' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('series-card')).toBeVisible()
 })

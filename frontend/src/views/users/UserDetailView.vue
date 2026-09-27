@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
-const router = useRouter()
 const { canManageUsers } = usePermissions()
 const user = ref<any>(null)
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['assignments'])
 const sites = ref<any[]>([])
 const companies = ref<any[]>([])
 const departmentTreeBySite = ref<Record<number, any[]>>({})
@@ -245,24 +247,16 @@ onMounted(() => {
         </template>
       </DetailHeader>
 
-      <v-card class="mb-4">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">メール</div>
-              <div>{{ user.email }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">在籍区分</div>
-              <div>{{ employmentTypeLabel[user.employment_type] || user.employment_type }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">権限</div>
-              <div>{{ systemRoleLabel[user.system_role] || user.system_role }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">所属会社</div>
-              <div class="d-flex align-center ga-2">
+          <dl class="pk-summary__grid">
+            <div><dt>メール</dt><dd>{{ user.email }}</dd></div>
+            <div><dt>在籍区分</dt><dd>{{ employmentTypeLabel[user.employment_type] || user.employment_type }}</dd></div>
+            <div><dt>権限</dt><dd>{{ systemRoleLabel[user.system_role] || user.system_role }}</dd></div>
+            <div>
+              <dt>所属会社</dt>
+              <dd class="d-flex align-center ga-2">
                 <span>{{ user.company?.name || '—' }}</span>
                 <v-chip
                   v-if="user.company"
@@ -273,47 +267,29 @@ onMounted(() => {
                 >
                   {{ user.company.company_type === 'owner' ? '自社' : '協力' }}
                 </v-chip>
-              </div>
-            </v-col>
+              </dd>
+            </div>
             <template v-if="user.company?.company_type === 'owner'">
-              <v-col cols="6" md="3">
-                <div class="text-caption text-grey">役職</div>
-                <div>{{ positionLabel[user.position] || '—' }}</div>
-              </v-col>
-              <v-col cols="12" md="6">
-                <div class="text-caption text-grey">部署</div>
-                <div>{{ user.department?.full_path || '—' }}</div>
-              </v-col>
+              <div><dt>役職</dt><dd>{{ positionLabel[user.position] || '—' }}</dd></div>
+              <div class="pk-summary__wide"><dt>部署</dt><dd>{{ user.department?.full_path || '—' }}</dd></div>
             </template>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">{{ user.company?.company_type === 'owner' ? '入社年' : '参加年' }}</div>
-              <div>{{ user.join_year ? `${user.join_year}年` : '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">出身地</div>
-              <div>{{ user.home_prefecture || '—' }}</div>
-            </v-col>
-            <v-col v-if="user.company?.company_type === 'owner'" cols="6" md="3">
-              <div class="text-caption text-grey">前職</div>
-              <div>{{ user.previous_company || '—' }}</div>
-            </v-col>
-            <v-col v-if="user.deactivated_on" cols="6" md="3">
-              <div class="text-caption text-grey">退職日</div>
-              <div>{{ user.deactivated_on }}</div>
-            </v-col>
-          </v-row>
+            <div><dt>{{ user.company?.company_type === 'owner' ? '入社年' : '参加年' }}</dt><dd>{{ user.join_year ? `${user.join_year}年` : '—' }}</dd></div>
+            <div><dt>出身地</dt><dd>{{ user.home_prefecture || '—' }}</dd></div>
+            <div v-if="user.company?.company_type === 'owner'"><dt>前職</dt><dd>{{ user.previous_company || '—' }}</dd></div>
+            <div v-if="user.deactivated_on"><dt>退職日</dt><dd>{{ user.deactivated_on }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 
-      <h2 class="text-h6 mb-3">設備担当</h2>
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab value="assignments">設備担当（{{ user.equipment_assignments?.length ?? 0 }}）</v-tab>
+      </v-tabs>
       <v-table v-if="user.equipment_assignments?.length" density="compact">
         <thead><tr><th>設備</th><th>役割</th><th>開始日</th><th>終了日</th></tr></thead>
         <tbody>
           <tr v-for="a in user.equipment_assignments" :key="a.id">
             <td>
-              <a class="text-primary" style="cursor:pointer" @click="router.push(`/equipments/${a.equipment?.id}`)">
-                {{ a.equipment?.name }}
-              </a>
+              <router-link class="text-primary" :to="`/equipments/${a.equipment?.id}`">{{ a.equipment?.name }}</router-link>
             </td>
             <td>{{ a.role === 'lead' ? '主担当' : 'メンバー' }}</td>
             <td>{{ a.started_on }}</td>

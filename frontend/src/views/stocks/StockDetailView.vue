@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { canTransactStock } from '@/constants/stock'
 import { nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
-const router = useRouter()
 const { canManageStockTransaction } = usePermissions()
 const stock = ref<any>(null)
+// 詳細の中身は「概要 → タブ」（修理履歴は、あるときだけ）
+const tab = useDetailTab(() => ['transactions', ...(stock.value?.repairs?.length ? ['repairs'] : [])])
 const loading = ref(true)
 
 // Transaction dialog
@@ -116,101 +118,79 @@ onMounted(() => {
         </template>
       </DetailHeader>
 
-      <v-card class="mb-4">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <v-row>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">資材名</div>
-              <a class="text-primary" style="cursor:pointer" @click="router.push(`/materials/${stock.material?.id}`)">
-                {{ stock.material?.name }}
-              </a>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">型番</div>
-              <div>{{ stock.material?.part_number }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">倉庫</div>
-              <div>{{ stock.warehouse?.name }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">数量</div>
-              <div class="text-h5">{{ stock.quantity }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">ステータス</div>
-              <StatusChip :label="statusLabel[stock.status] || stock.status" :color="statusColor[stock.status]" />
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">購入日</div>
-              <div>{{ stock.purchased_on || '—' }}</div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="text-caption text-grey">シリアル番号</div>
-              <div>{{ stock.serial_number || '—' }}</div>
-            </v-col>
-            <v-col v-if="stock.notes" cols="6" md="3">
-              <div class="text-caption text-grey">備考</div>
-              <div>{{ stock.notes }}</div>
-            </v-col>
-          </v-row>
+          <dl class="pk-summary__grid">
+            <div><dt>資材名</dt><dd><router-link class="text-primary" :to="`/materials/${stock.material?.id}`">{{ stock.material?.name }}</router-link></dd></div>
+            <div><dt>型番</dt><dd>{{ stock.material?.part_number }}</dd></div>
+            <div><dt>倉庫</dt><dd>{{ stock.warehouse?.name }}</dd></div>
+            <div><dt>数量</dt><dd class="text-h6">{{ stock.quantity }}</dd></div>
+            <div><dt>購入日</dt><dd>{{ stock.purchased_on || '—' }}</dd></div>
+            <div><dt>シリアル番号</dt><dd>{{ stock.serial_number || '—' }}</dd></div>
+            <div v-if="stock.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ stock.notes }}</dd></div>
+          </dl>
         </v-card-text>
       </v-card>
 
-      <!-- 入出庫履歴 -->
-      <h2 class="text-h6 mb-3">入出庫履歴</h2>
-      <v-table v-if="stock.stock_transactions?.length" density="compact">
-        <thead>
-          <tr>
-            <th width="160">日時</th>
-            <th width="80">種別</th>
-            <th width="70">数量</th>
-            <th>理由・用途</th>
-            <th width="100">実施者</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="tx in stock.stock_transactions" :key="tx.id">
-            <td>{{ formatDate(tx.transacted_at) }}</td>
-            <td>
-              <v-chip :color="txTypeColor[tx.transaction_type]" size="x-small">
-                {{ txTypeLabel[tx.transaction_type] || tx.transaction_type }}
-              </v-chip>
-            </td>
-            <td>{{ tx.quantity }}</td>
-            <td>{{ tx.reason || '—' }}</td>
-            <td>{{ tx.user?.name }}</td>
-          </tr>
-        </tbody>
-      </v-table>
-      <div v-else class="text-grey text-center py-4">入出庫履歴なし</div>
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab value="transactions">入出庫履歴（{{ stock.stock_transactions?.length ?? 0 }}）</v-tab>
+        <v-tab v-if="stock.repairs?.length" value="repairs">修理履歴（{{ stock.repairs.length }}）</v-tab>
+      </v-tabs>
+      <v-window v-model="tab">
+        <v-window-item value="transactions">
+          <v-table v-if="stock.stock_transactions?.length" density="compact">
+            <thead>
+              <tr>
+                <th width="160">日時</th>
+                <th width="80">種別</th>
+                <th width="70">数量</th>
+                <th>理由・用途</th>
+                <th width="100">実施者</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="tx in stock.stock_transactions" :key="tx.id">
+                <td>{{ formatDate(tx.transacted_at) }}</td>
+                <td>
+                  <v-chip :color="txTypeColor[tx.transaction_type]" size="x-small">
+                    {{ txTypeLabel[tx.transaction_type] || tx.transaction_type }}
+                  </v-chip>
+                </td>
+                <td>{{ tx.quantity }}</td>
+                <td>{{ tx.reason || '—' }}</td>
+                <td>{{ tx.user?.name }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+          <div v-else class="text-grey text-center py-4">入出庫履歴なし</div>
+        </v-window-item>
 
-      <!-- 修理履歴 -->
-      <template v-if="stock.repairs?.length">
-        <h2 class="text-h6 mt-6 mb-3">修理履歴</h2>
-        <v-table density="compact">
-          <thead>
-            <tr>
-              <th width="100">ステータス</th>
-              <th>修理業者</th>
-              <th width="110">発送日</th>
-              <th width="110">完了日</th>
-              <th width="100">費用</th>
-              <th width="100">依頼者</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in stock.repairs" :key="r.id">
-              <td>{{ repairStatusLabel[r.status] || r.status }}</td>
-              <td>{{ r.repair_vendor || '—' }}</td>
-              <td>{{ r.shipped_on || '—' }}</td>
-              <td>{{ r.completed_on || '—' }}</td>
-              <td>{{ r.repair_cost ? `¥${r.repair_cost.toLocaleString()}` : '—' }}</td>
-              <td>{{ r.requested_by?.name }}</td>
-            </tr>
-          </tbody>
-        </v-table>
-      </template>
+        <v-window-item v-if="stock.repairs?.length" value="repairs">
+          <v-table density="compact">
+            <thead>
+              <tr>
+                <th width="100">ステータス</th>
+                <th>修理業者</th>
+                <th width="110">発送日</th>
+                <th width="110">完了日</th>
+                <th width="100">費用</th>
+                <th width="100">依頼者</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in stock.repairs" :key="r.id">
+                <td>{{ repairStatusLabel[r.status] || r.status }}</td>
+                <td>{{ r.repair_vendor || '—' }}</td>
+                <td>{{ r.shipped_on || '—' }}</td>
+                <td>{{ r.completed_on || '—' }}</td>
+                <td>{{ r.repair_cost ? `¥${r.repair_cost.toLocaleString()}` : '—' }}</td>
+                <td>{{ r.requested_by?.name }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-window-item>
+      </v-window>
 
       <!-- Transaction Dialog -->
       <v-dialog v-model="txDialog" max-width="500">

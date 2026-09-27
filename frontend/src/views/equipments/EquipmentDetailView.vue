@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import { todayForInput } from '@/utils/datetime'
@@ -20,7 +21,8 @@ const { canManageEquipment, canManageEquipmentAssignment } = usePermissions()
 
 const equipment = ref<any>(null)
 const loading = ref(false)
-const tab = ref('instruments')
+// 詳細の中身は「概要 → タブ」
+const tab = useDetailTab(() => ['instruments', 'regulations', 'assignments', 'maintenances', 'history'])
 
 // --- 設備編集 ---
 const editDialog = ref(false)
@@ -131,24 +133,15 @@ onMounted(fetchEquipment)
           <v-btn v-if="canManageEquipment" variant="outlined" prepend-icon="mdi-pencil" @click="openEditEquipment">編集</v-btn>
         </template>
       </DetailHeader>
-      <v-card class="mb-4" data-testid="detail-summary">
+      <!-- 概要: 常に見える基本情報 -->
+      <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
-          <p v-if="equipment.description">{{ equipment.description }}</p>
-          <InterlockChips :equipment-id="equipment.id" class="mt-2" />
-          <v-row class="mt-2">
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ equipment.instruments?.length || 0 }}</div>
-                <div class="text-body-2">計器数</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-card variant="tonal" class="text-center pa-3">
-                <div class="text-h5">{{ equipment.troubles_count || 0 }}</div>
-                <div class="text-body-2">トラブル</div>
-              </v-card>
-            </v-col>
-          </v-row>
+          <dl class="pk-summary__grid">
+            <div><dt>計器数</dt><dd class="pk-mono">{{ equipment.instruments?.length || 0 }}</dd></div>
+            <div><dt>トラブル</dt><dd class="pk-mono">{{ equipment.troubles_count || 0 }}</dd></div>
+            <div v-if="equipment.description" class="pk-summary__wide"><dt>説明</dt><dd style="white-space: pre-wrap">{{ equipment.description }}</dd></div>
+          </dl>
+          <InterlockChips :equipment-id="equipment.id" class="mt-3" />
         </v-card-text>
       </v-card>
 

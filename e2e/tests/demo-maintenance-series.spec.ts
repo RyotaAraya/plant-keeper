@@ -19,6 +19,7 @@ test('デモの系列: 2026年の整備に、部署ごとの作業と、定修�
   await expect(page.getByRole('heading', { level: 1, name: '2026年 A号ボイラー整備' })).toBeVisible()
 
   await test.step('系列の履歴に3回分（2022・2024・2026年）が並ぶ', async () => {
+    await page.getByRole('tab', { name: '系列' }).click()
     const card = page.getByTestId('series-card')
     await expect(card).toContainText('ボイラー設備（24か月ごと）')
     await expect(card).toContainText('発電設備（48か月ごと）')
@@ -26,6 +27,7 @@ test('デモの系列: 2026年の整備に、部署ごとの作業と、定修�
   })
 
   await test.step('作業: 計装課の点検、電気課の整備、定修待ちのトラブルから回した作業', async () => {
+    await page.getByRole('tab', { name: /^作業/ }).click()
     const tasks = page.getByTestId('tasks-card')
     await expect(tasks).toContainText('計装保全課')
     await expect(tasks).toContainText('電気保全課')
