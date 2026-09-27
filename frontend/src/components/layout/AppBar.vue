@@ -9,7 +9,9 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const { items } = useNavigation()
-const section = computed(() => items.value.find((item) => route.path === item.to || route.path.startsWith(`${item.to}/`)))
+const section = computed(() =>
+  items.value.find((item) => [item.to, ...(item.also ?? [])].some((path) => route.path === path || route.path.startsWith(`${path}/`))),
+)
 const detailLabel = computed(() => {
   if (!section.value || route.path === section.value.to) return ''
   if (route.name === 'InspectionNew') return '新規点検'

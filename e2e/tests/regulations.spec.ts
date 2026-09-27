@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS } from './support'
+import { test, expect, login, ACCOUNTS, openPlans } from './support'
 
 // 法規区分（高圧ガス・ボイラーなど）: 設備がどの法規の対象かが分かり、法定検査の周期が点検計画の起点になる。
 // 適用法規の付け外しはデータを書き換えるため、ここでは表示までを確認する（付け外しはバックエンドのテストが検証）
@@ -30,7 +30,7 @@ test('設備台帳に適用法規が表示され、設備詳細の「適用法�
 
 test('点検計画の追加で設備を選ぶと、適用される法定検査が周期の目安として出て、押すと計画名と周期に入る', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
   await page.getByRole('button', { name: '計画を追加' }).click()
 
   // 「設備」は絞り込み欄にもあるため、ダイアログ内に限定して先頭の設備を選ぶ

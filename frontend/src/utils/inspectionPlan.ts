@@ -25,3 +25,16 @@ export function inspectionFromPlan(plan: PlanTarget): RouteLocationRaw {
 export function referenceStandardFromPlan(plan: Pick<InspectionPlan, 'reference_standard_id'>, canRecord: boolean): RouteLocationRaw {
   return { path: `/reference-standards/${plan.reference_standard_id}`, query: canRecord ? { record: '1' } : {} }
 }
+
+// 期限までの日数で色分け（超過=赤、7日以内=橙）。点検計画の期限順の一覧と、「計画」画面のまとまりの中で共用
+export function dueColor(plan: Pick<InspectionPlan, 'overdue' | 'days_until_due'>) {
+  if (plan.overdue) return 'error'
+  if (plan.days_until_due <= 7) return 'warning'
+  return 'success'
+}
+
+export function dueLabel(plan: Pick<InspectionPlan, 'overdue' | 'days_until_due' | 'next_due_on'>) {
+  if (plan.overdue) return `${plan.next_due_on}（${-plan.days_until_due}日超過）`
+  if (plan.days_until_due === 0) return `${plan.next_due_on}（本日）`
+  return `${plan.next_due_on}（あと${plan.days_until_due}日）`
+}

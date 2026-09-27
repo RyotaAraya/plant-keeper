@@ -11,14 +11,25 @@ module Api
       }.freeze
 
       # GET /api/v1/inspection_plan_groups
-      # 既定は有効なまとまりのみ（is_active=false で無効も）。plans_count は有効な計画の数
+      # 既定は有効なまとまりのみ（is_active=false で無効も）。担当部署（配下を含む）・法規区分で絞り込める。
+      # 有効な計画の数（plans_count）・期限超過の数（overdue_count）・いちばん近い次回期限（next_due_on）を付ける
       def index
         authorize InspectionPlanGroup
         groups = InspectionPlanGroup.includes(:site, :department, :regulation).order(:site_id, :name)
         groups = groups.active unless params[:is_active] == "false"
         groups = groups.where(site_id: id_list_param(:site_ids, :site_id)) if id_list_param(:site_ids, :site_id)
-        counts = InspectionPlan.active.where(inspection_plan_group_id: groups.select(:id)).group(:inspection_plan_group_id).count
-        render json: { data: groups.map { |group| group_json(group).merge("plans_count" => counts[group.id] || 0) } }
+        groups = groups.where(regulation_id: id_list_param(:regulation_ids, :regulation_id)) if id_list_param(:regulation_ids, :regulation_id)
+        groups = groups.where(department_id: Department.subtree_ids(params[:department_id].to_i)) if params[:department_id].present?
+
+        plans = InspectionPlan.active.where(inspection_plan_group_id: groups.select(:id)).group(:inspection_plan_group_id)
+        counts = plans.count
+        overdue = plans.where(next_due_on: ...InspectionPlan.today).count
+        next_due = plans.minimum(:next_due_on)
+        render json: {
+          data: groups.map do |group|
+            group_json(group).merge("plans_count" => counts[group.id] || 0, "overdue_count" => overdue[group.id] || 0, "next_due_on" => next_due[group.id])
+          end
+        }
       end
 
       # GET /api/v1/inspection_plan_groups/:id（子の点検計画つき。無効の計画も含む）

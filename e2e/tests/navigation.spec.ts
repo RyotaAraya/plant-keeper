@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS, openFirstTrouble } from './support'
+import { test, expect, login, ACCOUNTS, openFirstTrouble, openPlans } from './support'
 
 // メニュー名 / 画面見出し / 一覧にシードデータが表示されるか
 const screens = [
@@ -7,7 +7,7 @@ const screens = [
   { menu: '基準器', heading: '基準器', hasRows: true },
   { menu: '点検・作業記録', heading: '点検・作業記録', hasRows: true },
   { menu: 'トラブル管理', heading: 'トラブル管理', hasRows: true },
-  { menu: '定期整備', heading: '定期整備', hasRows: true },
+  { menu: '計画', heading: '計画', hasRows: true },
   { menu: '資材管理', heading: '資材管理', hasRows: true },
   { menu: '監査ログ', heading: '監査ログ', hasRows: false },
 ]

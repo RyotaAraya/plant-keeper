@@ -249,7 +249,7 @@ onMounted(fetchMaintenance)
     <v-progress-linear v-if="loading && !maintenance" indeterminate />
     <template v-else-if="maintenance">
       <div class="d-flex align-center mb-2">
-        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/maintenances')" />
+        <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/plans?tab=maintenance')" />
         <h1 class="text-h5 ml-2">{{ maintenance.title }}</h1>
         <v-spacer />
         <v-btn v-if="canManageMaintenance" variant="outlined" @click="openEdit"><v-icon start>mdi-pencil</v-icon>編集</v-btn>

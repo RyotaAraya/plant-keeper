@@ -264,7 +264,7 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
               <h2 id="board-plan-title">{{ evening ? '点検計画（積み残しと明日の予定）' : '点検計画' }}<small>{{ board.inspection_plans.length }}件</small></h2>
               <p>期限を過ぎたものと、今日・明日が期限のものです。部署はチェックリストの部署で、上位の部署（課・部）のものも含みます。</p>
             </div>
-            <v-btn variant="text" color="primary" size="small" :to="listLink('/inspection-plans', {}, false)" append-icon="mdi-chevron-right">計画の一覧</v-btn>
+            <v-btn variant="text" color="primary" size="small" :to="listLink('/plans', { tab: 'due' }, false)" append-icon="mdi-chevron-right">計画の一覧</v-btn>
           </header>
           <div class="pk-board-plans">
             <div v-for="group in planGroups" :key="group.key" class="pk-board-plans__group" :data-testid="`board-plans-${group.key}`">
@@ -293,7 +293,7 @@ watch(scope, fetchBoard, { deep: true, immediate: true })
               <h2 id="board-task-title">{{ evening ? '積み残しの作業（実施中の定期整備）' : '実施中の定期整備の作業' }}<small>残り{{ openTaskCount }}件</small></h2>
               <p>未着手・実施中の作業です。進み具合は、範囲の作業（見送りを除く）のうち完了した数です。部署は作業の部署で、上位の部署のものも含みます。部署を選ぶと、部署が未定の作業は出ません。</p>
             </div>
-            <v-btn variant="text" color="primary" size="small" :to="listLink('/maintenances', { status: 'in_progress' }, false)" append-icon="mdi-chevron-right">定期整備の一覧</v-btn>
+            <v-btn variant="text" color="primary" size="small" :to="listLink('/plans', { tab: 'maintenance', status: 'in_progress' }, false)" append-icon="mdi-chevron-right">定期整備の一覧</v-btn>
           </header>
           <template v-if="board.maintenances.length">
             <article v-for="maintenance in board.maintenances" :key="maintenance.id" class="pk-board-maintenance" :data-testid="`board-maintenance-${maintenance.id}`">

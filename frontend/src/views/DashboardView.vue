@@ -158,7 +158,7 @@ watch(scope, fetchDashboard, { deep: true, immediate: true })
               <h2 id="site-maintenance-title">拠点の定期整備</h2>
               <p>{{ scope.siteId ? `${siteName}全体` : '全拠点' }}の予定です。部署の選択にかかわらず表示します。</p>
             </div>
-            <v-btn variant="text" color="primary" size="small" :to="listLink('/maintenances', {}, false)" append-icon="mdi-chevron-right">すべて見る</v-btn>
+            <v-btn variant="text" color="primary" size="small" :to="listLink('/plans', { tab: 'maintenance' }, false)" append-icon="mdi-chevron-right">すべて見る</v-btn>
           </header>
           <div class="pk-maintenance__body">
             <dl class="pk-maintenance__stats">
@@ -184,7 +184,7 @@ watch(scope, fetchDashboard, { deep: true, immediate: true })
               <div v-else class="pk-schedule-empty">
                 <v-icon size="24" aria-hidden="true">mdi-calendar-check-outline</v-icon>
                 <p>30日以内に開始する定期整備はありません。</p>
-                <router-link :to="listLink('/maintenances', {}, false)">先の予定を確認する</router-link>
+                <router-link :to="listLink('/plans', { tab: 'maintenance' }, false)">先の予定を確認する</router-link>
               </div>
             </div>
           </div>

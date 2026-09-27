@@ -95,11 +95,14 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/inspection-plans',
-      name: 'InspectionPlans',
-      component: () => import('@/views/inspections/InspectionPlanListView.vue'),
+      // 点検のまとまりと定期整備（系列・単発）を1画面にまとめた「計画」。tab=inspection|maintenance|due
+      path: '/plans',
+      name: 'Plans',
+      component: () => import('@/views/plans/PlanView.vue'),
       meta: { requiresAuth: true },
     },
+    // 旧の点検計画・定期整備の一覧は「計画」画面へ（絞り込みのクエリは引き継ぐ）
+    { path: '/inspection-plans', redirect: (to) => ({ path: '/plans', query: { ...to.query, tab: 'due' } }) },
     {
       path: '/inspections',
       name: 'Inspections',
@@ -136,12 +139,7 @@ const router = createRouter({
       component: () => import('@/views/troubles/TroubleDetailView.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/maintenances',
-      name: 'Maintenances',
-      component: () => import('@/views/maintenances/MaintenanceListView.vue'),
-      meta: { requiresAuth: true },
-    },
+    { path: '/maintenances', redirect: (to) => ({ path: '/plans', query: { ...to.query, tab: 'maintenance' } }) },
     {
       path: '/maintenances/:id',
       name: 'MaintenanceDetail',

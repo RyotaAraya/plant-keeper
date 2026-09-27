@@ -1,4 +1,4 @@
-import { test, expect, login, ACCOUNTS, selectOption } from './support'
+import { test, expect, login, ACCOUNTS, selectOption, openPlans } from './support'
 
 // チェックリストは「機器の種類 × 周期」（月次・年次・定修）。巡回は機器で分けず、装置単位の「巡回点検」1つ。廃止した旧テンプレートは、点検の選択肢に出ない
 test('設定のチェックリストに、機器の種類 × 周期のテンプレートが並び、項目数が多すぎない', async ({ page }) => {
@@ -57,7 +57,7 @@ test('調節弁の年次点検では、ポジショナの5点校正の表が出�
 
 test('点検計画から「点検を実施」を開くと、計画のテンプレートの項目が読み込まれる（ボイラー安全弁の年次点検）', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await page.getByRole('link', { name: '点検計画', exact: true }).click()
+  await openPlans(page, '点検の期限順')
   const plan = page.locator('tbody tr', { hasText: 'ボイラー安全弁 年次点検' })
   await expect(plan).toBeVisible()
   await plan.getByRole('button', { name: '点検を実施' }).click()

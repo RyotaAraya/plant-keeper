@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page } from '@playwright/test'
 
 // シードのデモアカウント（backend/db/seeds）
 export const ACCOUNTS = {
@@ -64,10 +64,23 @@ export async function judgeAllItems(page: Page) {
   await expect(page.getByTestId('missing-required')).toHaveCount(0)
 }
 
+// 「計画」画面をメニューから開き、表示（定期点検・定期整備・点検の期限順）を選ぶ。旧の「点検計画」は「点検の期限順」、「定期整備」は「定期整備」
+export async function openPlans(page: Page, tab?: '定期点検' | '定期整備' | '点検の期限順') {
+  await page.getByRole('link', { name: '計画', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '計画' })).toBeVisible()
+  if (tab) await page.locator('.v-btn-toggle').getByRole('button', { name: tab, exact: true }).click()
+}
+
 // 一覧（ページ分けされた表）から、名前に title を含む行を探して開く。繰り返し実行して「E2E 」の行が溜まっても、後ろのページまで探す。
 // 作成直後は一覧の再取得が終わるまで行が出ないため、最初のページから探し直しながら待つ
 export async function openListRow(page: Page, title: string) {
-  const row = page.getByRole('row', { name: new RegExp(title) })
+  const row = await findListRow(page, page.getByRole('row', { name: new RegExp(title) }))
+  // 行の端を押す（行の中には、計器の詳細へのリンクなどがあり、中央を押すとそちらに当たることがある）
+  await row.click({ position: { x: 8, y: 8 } })
+}
+
+// 一覧のページをめくって、行が表示されるページにする（繰り返し実行で行が溜まり、2ページ目以降に回ることがあるため）
+export async function findListRow(page: Page, row: Locator) {
   const first = page.getByRole('button', { name: '最初のページ' })
   const next = page.getByRole('button', { name: '次のページ' })
   await expect(async () => {
@@ -76,8 +89,7 @@ export async function openListRow(page: Page, title: string) {
     for (let i = 0; i < 100 && !(await row.isVisible()) && (await next.isEnabled()); i++) await next.click()
     await expect(row).toBeVisible({ timeout: 1000 })
   }).toPass({ timeout: 20_000 })
-  // 行の端を押す（行の中には、計器の詳細へのリンクなどがあり、中央を押すとそちらに当たることがある）
-  await row.click({ position: { x: 8, y: 8 } })
+  return row
 }
 
 export async function openFirstTrouble(page: Page) {
