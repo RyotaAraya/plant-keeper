@@ -28,6 +28,7 @@ const emit = defineEmits<{
 
 const PRIORITY_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '緊急' }
 
+const draftButton = ref<{ $el: { focus(): void } } | null>(null)
 const similarButton = ref<{ $el: { focus(): void } } | null>(null)
 function closeSimilar() {
   similar.clear()
@@ -98,6 +99,13 @@ function apply() {
   emit('apply', draft.value)
   draft.value = null
 }
+
+// 破棄したら、提案を作ったボタンへフォーカスを戻す（提案のカードが消えて、フォーカスの行き場がなくなるため）。
+// 反映したときは、反映先の入力欄へ移すのは親（入力欄を持つ側）
+function discard() {
+  draft.value = null
+  draftButton.value?.$el.focus()
+}
 </script>
 
 <template>
@@ -116,6 +124,7 @@ function apply() {
     />
     <div class="d-flex align-center flex-wrap ga-3 mt-1">
       <v-btn
+        ref="draftButton"
         size="small"
         variant="tonal"
         color="primary"
@@ -173,9 +182,9 @@ function apply() {
           タイトル・説明・優先度以外は反映されません。
         </p>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions class="pk-ai-report-actions">
         <v-spacer />
-        <v-btn size="small" variant="text" @click="draft = null">破棄</v-btn>
+        <v-btn size="small" variant="text" @click="discard">破棄</v-btn>
         <v-btn size="small" color="primary" variant="flat" data-testid="ai-apply" @click="apply">タイトル・説明・優先度を入力欄に反映</v-btn>
       </v-card-actions>
     </v-card>
@@ -192,6 +201,8 @@ function apply() {
 .pk-ai-report-grid ul { margin: 0; padding-left: 18px; }
 .pk-ai-report-grid li { font-size: .8125rem; line-height: 1.7; color: var(--pk-muted); }
 .pk-ai-report-caption { font-size: .6875rem; color: var(--pk-muted); margin-top: 12px; }
+/* スマホ幅では、反映のボタン（文言が長い）が入りきらずに切れるため、次の行へ回す */
+.pk-ai-report-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
 @media (max-width: 600px) {
   .pk-ai-report-grid { grid-template-columns: 1fr; gap: 12px; }
 }

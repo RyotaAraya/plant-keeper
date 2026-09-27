@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import AiAvailability from '@/components/AiAvailability.vue'
@@ -16,6 +16,7 @@ import type { AiDefectDraft, InspectionReferenceStandardUse, ReferenceStandard }
 import { calibrationInputFrom, emptyCalibrationInput, evaluateCalibration, snapshotFromInstrument } from '@/utils/calibration'
 import { ITEM_TYPE_OPTIONS, criteriaOf, isFilled, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
 import { nowForInput } from '@/utils/datetime'
+import { revealApplied } from '@/utils/revealApplied'
 
 const route = useRoute()
 const router = useRouter()
@@ -196,12 +197,15 @@ async function fetchInstruments() {
 }
 
 // AIの下書きを、項目の不具合の入力欄に入れる（タイトル・説明・優先度だけ。保存は点検を保存したとき）。
-// どの提案をもとにしたかを、保存時に送る（監査ログに残り、AIの案と人が確定した内容を突き合わせられる）
-function applyAiDraft(item: any, draft: AiDefectDraft) {
+// どの提案をもとにしたかを、保存時に送る（監査ログに残り、AIの案と人が確定した内容を突き合わせられる）。
+// 反映したら「報告する内容」を見える位置に出し、タイトルへフォーカスを移す（スマホでは提案の下にあるため）
+async function applyAiDraft(item: any, draft: AiDefectDraft, idx: number) {
   item.defect_title = draft.title
   item.defect_description = draft.description
   if (draft.priority) item.defect_priority = draft.priority
   item.ai_suggestion_id = draft.suggestion_id
+  await nextTick()
+  revealApplied(document.getElementById(`defect-record-${idx}`), 'input')
 }
 
 async function onEquipmentChange() {
@@ -633,11 +637,11 @@ onMounted(async () => {
                       :item-label="item.content"
                       :has-existing="!!item.defect_title"
                       @dirty="markMemo(item, $event)"
-                      @apply="applyAiDraft(item, $event)"
+                      @apply="applyAiDraft(item, $event, idx)"
                       @remaining="aiStatus.remaining_today = $event"
                     />
                   </section>
-                  <section class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
+                  <section :id="`defect-record-${idx}`" class="defect-workspace__record" :aria-labelledby="`defect-record-heading-${idx}`">
                     <h3 :id="`defect-record-heading-${idx}`">報告する内容</h3>
                     <p class="defect-workspace__hint">直接入力・編集できます。点検の保存時にトラブルとして登録されます。</p>
                     <v-row dense>
@@ -700,7 +704,7 @@ onMounted(async () => {
 .defect-workspace h3 { font-size: 1rem; margin-bottom: 8px; color: var(--pk-plana-navy); }
 .defect-workspace__hint { font-size: 0.8125rem; line-height: 1.7; color: var(--pk-muted); margin-bottom: 20px; }
 .defect-workspace__draft { min-width: 0; padding: 20px; background: var(--pk-mist); border: 1px solid var(--pk-line); border-radius: 12px; }
-.defect-workspace__record { min-width: 0; padding-top: 20px; }
+.defect-workspace__record { min-width: 0; padding-top: 20px; scroll-margin-top: 64px; }
 @media (min-width: 960px) {
   .defect-workspace--assisted { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
