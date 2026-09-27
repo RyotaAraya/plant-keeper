@@ -26,6 +26,7 @@ puts "5点校正ができる計器: #{Instrument.all.count(&:calibratable?)}件�
 puts "基準器: #{ReferenceStandard.count}件（校正の履歴: #{ReferenceStandardCalibration.count}件）"
 puts "法規区分: #{Regulation.count}件（設備への適用: #{EquipmentRegulation.count}件）"
 puts "インターロック: #{Interlock.count}件（バイパスの記録: #{InterlockBypass.count}件 / バイパス中: #{InterlockBypass.status_bypassed.count}件 / 復帰期限超過: #{InterlockBypass.overdue.count}件）"
+puts "点検のまとまり: #{InspectionPlanGroup.count}件（法規区分つき: #{InspectionPlanGroup.where.not(regulation_id: nil).count}件）"
 puts "点検計画: #{InspectionPlan.count}件（期限超過: #{InspectionPlan.overdue.count}件）"
 puts "点検記録: #{Inspection.count}件"
 puts "トラブル: #{Trouble.count}件"

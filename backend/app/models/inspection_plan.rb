@@ -9,6 +9,8 @@ class InspectionPlan < ApplicationRecord
   belongs_to :reference_standard, optional: true
   belongs_to :instrument, optional: true
   belongs_to :checklist_template, optional: true
+  # 点検のまとまり（親）。指定しなければ、拠点 × チェックリストのまとまりに入れる（InspectionPlanGroup.default_for）
+  belongs_to :inspection_plan_group, optional: true # 必須（DBも NOT NULL）。検証は group_in_same_site（日本語の文言にするため）
 
   has_many :inspections, dependent: :nullify
   has_many :inspection_plan_equipments, dependent: :destroy
@@ -23,6 +25,9 @@ class InspectionPlan < ApplicationRecord
   validate :exactly_one_target
   validate :template_is_not_turnaround
   validate :instrument_only_for_single_equipment
+  validate :group_in_same_site
+
+  before_validation :assign_default_group, unless: :inspection_plan_group
 
   scope :active, -> { where(is_active: true) }
   scope :overdue, -> { active.where(next_due_on: ...today) }
@@ -56,7 +61,24 @@ class InspectionPlan < ApplicationRecord
   # CoversEquipments が使う、対象設備の中間テーブル
   def equipment_links = inspection_plan_equipments
 
+  # 計画の拠点（設備は設備の拠点、基準器は基準器の拠点）
+  def site = equipment&.site || reference_standard&.site
+
   private
+
+  def assign_default_group
+    return unless site
+
+    self.inspection_plan_group = InspectionPlanGroup.default_for(site: site, checklist_template: checklist_template,
+                                                                 reference_standard: reference_standard.present?, interval_days: interval_days)
+  end
+
+  def group_in_same_site
+    return unless site # 対象がないときは exactly_one_target が知らせる
+    return errors.add(:base, "点検のまとまりを指定してください") unless inspection_plan_group
+
+    errors.add(:base, "点検のまとまりは、計画と同じ拠点のものにしてください") if inspection_plan_group.site_id != site.id
+  end
 
   # 計器を指定できるのは、設備が1つの計画だけ（計器は代表の設備のもの）
   def instrument_only_for_single_equipment

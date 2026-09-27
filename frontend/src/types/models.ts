@@ -315,9 +315,26 @@ export interface IntervalReview {
   evidence: { inspection_id: number; inspected_at: string; adjusted: boolean; as_found: { result: string; max_error: number | null } }[]
 }
 
+// 点検のまとまり（点検計画の親）。担当部署・法規区分・既定の周期を持ち、周期と次回期限は子の計画が持つ
+export interface InspectionPlanGroup {
+  id: number
+  site_id: number
+  name: string
+  department_id: number | null
+  regulation_id: number | null
+  default_interval_days: number | null
+  is_active: boolean
+  site?: { id: number; name: string }
+  department?: { id: number; name: string } | null
+  regulation?: { id: number; code: string; name: string } | null
+  plans_count?: number
+}
+
 export interface InspectionPlan {
   id: number
   name: string
+  inspection_plan_group_id: number
+  inspection_plan_group?: Pick<InspectionPlanGroup, 'id' | 'name' | 'department' | 'regulation'>
   // 点検の対象は、設備か基準器（年次の校正）のどちらか一方
   equipment_id: number | null
   reference_standard_id?: number | null
