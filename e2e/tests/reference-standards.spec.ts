@@ -64,8 +64,13 @@ test('協力会社の技能員も基準器を見られるが、登録・編集�
   await page.getByRole('link', { name: '基準器', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '基準器' })).toBeVisible()
   await expect(page.getByRole('button', { name: '新規登録' })).toHaveCount(0)
-  await page.locator('tbody tr').first().click()
-  await expect(page.getByRole('heading', { level: 1 }).or(page.getByTestId('calibration-state'))).toBeVisible()
+  // 一覧の初期表示の描き直しで行のクリックが空振りすることがあるため、詳細に移るまで押し直す。
+  // 詳細に移ったことを確かめてから、操作のボタンがないことを見る（以前は一覧の見出しでも通ってしまい、詳細では strict mode の違反になっていた）
+  await expect(async () => {
+    await page.locator('tbody tr.v-data-table__tr').first().click({ position: { x: 8, y: 8 } })
+    await expect(page).toHaveURL(/\/reference-standards\/\d+/, { timeout: 2000 })
+  }).toPass({ timeout: 20_000 })
+  await expect(page.getByTestId('calibration-state')).toBeVisible()
   await expect(page.getByRole('button', { name: '校正を記録' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '編集' })).toHaveCount(0)
 })
