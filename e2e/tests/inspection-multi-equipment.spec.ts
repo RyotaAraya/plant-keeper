@@ -1,4 +1,4 @@
-import { test, expect, login, selectOption, ACCOUNTS } from './support'
+import { test, expect, login, apiBaseUrl, selectOption, ACCOUNTS } from './support'
 
 // 運転員の巡回は、装置ごとではなく、いくつかの装置をまとめて1件で記録する。異常があったときだけ、その設備の不具合として記録する
 test('複数の設備をまとめて巡回点検を記録し、異常があった設備のトラブルとして登録される', async ({ page }) => {
@@ -40,11 +40,27 @@ test('複数の設備をまとめて巡回点検を記録し、異常があっ�
   })
 })
 
+// 前のテストが作った点検には頼らない（テスト単位で別のジョブ・ワーカーに振り分けられるため）。実行のたびに、APIで設備2つの点検（備考が `E2E ` で始まる下書き）を1件作る
 test('点検の詳細には、まとめて点検した設備がすべて出る', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
-  await page.goto('/inspections')
-  await page.getByRole('row', { name: /常圧蒸留装置、重油間接脱硫装置/ }).first().click()
+  const api = apiBaseUrl()
+  const loginRes = await page.request.post(`${api}/login`, { data: { user: ACCOUNTS.member } })
+  const headers = { Authorization: loginRes.headers()['authorization'] }
+  const get = async (path: string) => (await page.request.get(`${api}${path}`, { headers })).json()
+  const me = (await get('/current_user')).user
+  const equipments = (await get(`/equipments?per_page=1000&site_ids[]=${me.site_id}`)).data
+  const ids = ['常圧蒸留装置', '重油間接脱硫装置'].map((name) => equipments.find((e: any) => e.name === name).id)
+  const department = (await get(`/departments?site_id=${me.site_id}`)).data[0]
+  const created = await page.request.post(`${api}/inspections`, {
+    headers,
+    data: { inspection: { equipment_ids: ids, department_id: department.id, inspection_type: 'routine', status: 'draft', inspected_at: new Date().toISOString(), notes: `E2E ${Date.now()} 設備をまとめた点検` } },
+  })
+  expect(created.ok()).toBeTruthy()
+  const id = (await created.json()).data.id
 
-  await expect(page).toHaveURL(/\/inspections\/\d+/)
-  await expect(page.getByTestId('inspection-equipment')).toHaveCount(2)
+  await login(page, ACCOUNTS.member)
+  await page.goto(`/inspections/${id}`)
+  const shown = page.getByTestId('inspection-equipment')
+  await expect(shown).toHaveCount(2)
+  await expect(shown.first()).toContainText('常圧蒸留装置')
+  await expect(shown.nth(1)).toContainText('重油間接脱硫装置')
 })
