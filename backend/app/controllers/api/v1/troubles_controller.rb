@@ -61,6 +61,8 @@ module Api
               instrument: { only: [ :id, :tag_number ] },
               reported_by: { only: [ :id, :name ] },
               assigned_to: { only: [ :id, :name ] },
+              # 機器の診断から作ったときの、元の診断と連携（トークンの名前）
+              instrument_diagnostic: { only: [ :id, :status, :code, :message, :occurred_at ], include: { integration_token: { only: [ :id, :name ] } } },
               inspection_item: {
                 only: [ :id, :content, :measured_value ],
                 include: { inspection: { only: [ :id, :inspected_at, :inspection_type ] } }
@@ -173,7 +175,7 @@ module Api
       def set_trouble
         @trouble = Trouble.includes(
           :equipment, :instrument, :reported_by, :assigned_to,
-          :inspection_item, :maintenance_tasks,
+          :inspection_item, :maintenance_tasks, { instrument_diagnostic: :integration_token },
           trouble_responses: :user
         ).find(params[:id])
       end

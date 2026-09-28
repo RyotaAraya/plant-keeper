@@ -5,7 +5,8 @@ module Api
       # POST /api/v1/integrations/device_diagnostics（ヘッダー X-Integration-Token: 連携用のトークン）
       #   { "diagnostics": [ { "tag_number": "PT-502", "status": "M", "code": "DRIFT", "message": "センサのドリフト", "occurred_at": "2026-09-26T10:00:00+09:00" } ] }
       # ユーザのログイン（JWT）は使わない（BaseController を継承しない）。計器はトークンの拠点のタグ番号で探す。
-      # 1件ずつ結果を返す（changed=状態が変わった / unchanged=いまと同じ / stale=いまより古い / error）。1件の誤りで全体を止めない
+      # 1件ずつ結果を返す（changed=状態が変わった / unchanged=いまと同じ / stale=いまより古い / error）。1件の誤りで全体を止めない。
+      # 故障（F）でトラブルを作ったときは、その結果に trouble_id が入る（DiagnosticTrouble）
       class DeviceDiagnosticsController < ApplicationController
         MAX_ITEMS = 500
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_000100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -726,13 +726,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
     t.datetime "resolved_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "manual", null: false
+    t.bigint "instrument_diagnostic_id"
     t.index ["assigned_to_id"], name: "index_troubles_on_assigned_to_id"
     t.index ["equipment_id"], name: "index_troubles_on_equipment_id"
     t.index ["inspection_item_id"], name: "index_troubles_on_inspection_item_id"
+    t.index ["instrument_diagnostic_id"], name: "index_troubles_on_instrument_diagnostic_id"
     t.index ["instrument_id"], name: "index_troubles_on_instrument_id"
     t.index ["priority"], name: "index_troubles_on_priority"
     t.index ["reported_by_id"], name: "index_troubles_on_reported_by_id"
     t.index ["status"], name: "index_troubles_on_status"
+    t.check_constraint "(source::text = 'device_diagnostic'::text) = (instrument_diagnostic_id IS NOT NULL)", name: "troubles_diagnostic_source"
+    t.check_constraint "source::text = ANY (ARRAY['manual'::character varying, 'inspection'::character varying, 'device_diagnostic'::character varying]::text[])", name: "troubles_source"
   end
 
   create_table "users", force: :cascade do |t|
@@ -875,6 +880,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
   add_foreign_key "trouble_responses", "users"
   add_foreign_key "troubles", "equipments"
   add_foreign_key "troubles", "inspection_items"
+  add_foreign_key "troubles", "instrument_diagnostics"
   add_foreign_key "troubles", "instruments"
   add_foreign_key "troubles", "users", column: "assigned_to_id"
   add_foreign_key "troubles", "users", column: "reported_by_id"

@@ -324,7 +324,7 @@ onMounted(() => {
             </v-chip>
           </template>
           <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openServiceDialog(item)" />
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click="openServiceDialog(item)" />
           </template>
         </v-data-table>
 
@@ -366,7 +366,7 @@ onMounted(() => {
           density="compact"
         >
           <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openLcDialog(item)" />
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.code}を編集`" @click="openLcDialog(item)" />
           </template>
         </v-data-table>
 
@@ -416,7 +416,7 @@ onMounted(() => {
             {{ inspectionTypeLabel[item.inspection_type] || item.inspection_type }}
           </template>
           <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openTemplateDialog(item)" />
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click="openTemplateDialog(item)" />
             <v-btn icon="mdi-chart-bar" size="x-small" variant="text" :aria-label="`${item.name} の項目の見直し`" title="項目の見直し" @click="openStatsDialog(item)" />
             <v-btn icon="mdi-content-copy" size="x-small" variant="text" @click="duplicateTemplate(item)" />
             <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="deleteTemplate(item)" />
@@ -523,7 +523,7 @@ onMounted(() => {
           density="compact"
         >
           <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openMfrDialog(item)" />
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click="openMfrDialog(item)" />
           </template>
         </v-data-table>
 
@@ -563,7 +563,7 @@ onMounted(() => {
           density="compact"
         >
           <template #item.actions="{ item }">
-            <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openWhDialog(item)" />
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click="openWhDialog(item)" />
           </template>
         </v-data-table>
 

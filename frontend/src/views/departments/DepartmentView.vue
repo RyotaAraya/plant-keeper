@@ -361,8 +361,8 @@ onMounted(() => {
                     >
                       {{ member.role_note || 'メンバー' }}
                     </v-chip>
-                    <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="openRoleEdit(member)" />
-                    <v-btn icon="mdi-account-minus" size="x-small" variant="text" color="error" @click="removeMember(member)" />
+                    <v-btn icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${member.user.name}の役割を編集`" @click="openRoleEdit(member)" />
+                    <v-btn icon="mdi-account-minus" size="x-small" variant="text" color="error" :aria-label="`${member.user.name}を外す`" @click="removeMember(member)" />
                   </template>
                 </v-list-item>
               </v-list>

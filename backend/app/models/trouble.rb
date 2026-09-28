@@ -17,6 +17,8 @@ class Trouble < ApplicationRecord
   belongs_to :instrument, optional: true
   belongs_to :reported_by, class_name: "User"
   belongs_to :assigned_to, class_name: "User", optional: true
+  # 機器の診断から作ったときの、元の診断（DiagnosticTrouble）
+  belongs_to :instrument_diagnostic, optional: true
 
   has_many :trouble_responses, dependent: :destroy
   has_many :repairs, dependent: :restrict_with_error
@@ -24,13 +26,24 @@ class Trouble < ApplicationRecord
 
   enum :status, { open: "open", in_progress: "in_progress", deferred: "deferred", resolved: "resolved", closed: "closed" }
   enum :priority, { low: "low", medium: "medium", high: "high", critical: "critical" }
+  # 出所: 手入力 / 点検の不具合（InspectionsController）/ 機器の診断（DiagnosticTrouble）。APIからは変えられない
+  enum :source, { manual: "manual", inspection: "inspection", device_diagnostic: "device_diagnostic" }, prefix: true
 
   validates :title, presence: true
   validates :reported_at, presence: true
 
+  # 部署のトラブル: 報告者か担当者の所属がその部署。
+  # 機器の診断から作ったトラブルは、報告者（トークンを発行した人）の代わりに、計器の点検計画のまとまりの担当部署で数える
   scope :for_departments, ->(ids) {
     users = User.where(department_id: ids).select(:id)
-    where(reported_by_id: users).or(where(assigned_to_id: users))
+    where.not(source: "device_diagnostic").where(reported_by_id: users)
+         .or(where(assigned_to_id: users))
+         .or(where(source: "device_diagnostic", instrument_id: InspectionPlan.instrument_ids_for_departments(ids)))
+  }
+  # 機器の診断から作ったトラブルのうち、担当者も、計器の点検計画の担当部署もないもの（ホームでは拠点全体に出す）
+  scope :diagnostic_without_department, -> {
+    source_device_diagnostic.where(assigned_to_id: nil)
+                            .where.not(instrument_id: InspectionPlan.instrument_ids_for_departments(Department.select(:id)))
   }
 
   validate :deferred_needs_active_task

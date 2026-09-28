@@ -23,6 +23,12 @@ const logsWithChanges = computed(() =>
   logs.value.map((log) => ({ ...log, changes: formatAuditChanges(log.changes_json, props.auditableType, log.action) })),
 )
 
+// 連携からの記録の、どの連携からか（changes_json.integration_token）
+function connectionName(changes: unknown) {
+  const name = (changes as Record<string, unknown> | null)?.integration_token
+  return typeof name === 'string' ? `連携: ${name}` : ''
+}
+
 function formatDate(dt: string) {
   if (!dt) return ''
   return new Date(dt).toLocaleString('ja-JP', {
@@ -62,7 +68,8 @@ watch(() => props.auditableId, fetchHistory)
           <v-chip size="x-small" :color="actionColor[log.action] || 'grey'">
             {{ actionLabel[log.action] || log.action }}
           </v-chip>
-          <span class="text-body-2">{{ log.user?.name }}</span>
+          <!-- ユーザのない記録は、機器管理システムなどの連携から（機器の診断から作ったトラブル） -->
+          <span class="text-body-2">{{ log.user?.name ?? connectionName(log.changes_json) }}</span>
           <span class="text-caption text-grey ml-auto">{{ formatDate(log.performed_at) }}</span>
         </div>
         <div v-if="log.changes.length" class="text-caption">

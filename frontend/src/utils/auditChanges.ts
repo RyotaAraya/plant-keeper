@@ -3,7 +3,7 @@
 // ID（equipment_id など）は、そのままでは何のことか分からないため、作成のときは出さず、更新のときは「変更あり」とだけ出す
 // （名前は履歴の元の画面で見られる。ID そのものが要る管理者は、監査ログの画面で見る）。
 // 知らないカラムは、情報を失わないよう、カラム名のまま出す
-import { inspectionStatusLabel, inspectionTypeLabel, priorityLabel, troubleStatusLabel } from '@/constants/recordLabels'
+import { inspectionStatusLabel, inspectionTypeLabel, priorityLabel, troubleSourceLabel, troubleStatusLabel } from '@/constants/recordLabels'
 import { BYPASS_STATUS_LABEL } from '@/utils/interlock'
 import { ACCEPTANCE_RESULT_LABEL, MAINTENANCE_STATUS_LABEL, TASK_KIND_LABEL, TASK_STATUS_LABEL } from '@/constants/maintenanceStatus'
 
@@ -46,6 +46,8 @@ const FIELD_LABELS: Record<string, string> = {
   inspection_item_id: '点検の項目', inspection_id: '点検',
   equipment_ids: '対象設備', regulation_ids: '適用法規', intervals: '周期',
   ai_suggestion_id: 'プラナの整理案',
+  // 機器の診断から作ったトラブル
+  source: '出所', instrument_diagnostic_id: '機器の診断', integration_token: '連携',
   // インターロック・バイパス
   trip_action: 'トリップ時の動作', instrument_ids: '関係する計器', interlock_id: 'インターロック',
   request_number: '申請番号', reason: '理由', compensatory_measure: '代替措置', planned_restore_at: '予定の復帰日時',
@@ -66,6 +68,7 @@ const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
 // 対象に依らない、カラム名ごとの値の呼び方
 const VALUE_LABELS: Record<string, Record<string, string>> = {
   priority: priorityLabel,
+  source: troubleSourceLabel,
   inspection_type: inspectionTypeLabel,
   acceptance_result: ACCEPTANCE_RESULT_LABEL,
   kind: TASK_KIND_LABEL,

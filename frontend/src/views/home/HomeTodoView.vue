@@ -226,6 +226,21 @@ watch(siteId, fetchBoard, { immediate: true })
           </ul>
         </section>
 
+        <!-- 機器の診断（故障）から自動で登録したトラブルのうち、担当者も計器の点検計画の担当部署もないもの（拠点全体） -->
+        <section v-if="board.diagnostic_troubles.length" class="pk-home-section" aria-labelledby="home-diagnostic-title" data-testid="home-diagnostic-troubles">
+          <h2 id="home-diagnostic-title">機器の診断から登録したトラブル<small>{{ board.site.name }}全体・担当部署なし・{{ board.diagnostic_troubles.length }}件</small></h2>
+          <ul class="pk-home-list">
+            <li v-for="trouble in board.diagnostic_troubles" :key="trouble.id">
+              <StatusChip kind="trouble" :value="trouble.status" />
+              <div class="pk-home-list__copy">
+                <router-link :to="`/troubles/${trouble.id}`"><strong>{{ trouble.title }}</strong></router-link>
+                <span>{{ troubleTarget(trouble) }} ／ 担当 未定</span>
+              </div>
+              <StatusChip kind="priority" :value="trouble.priority" />
+            </li>
+          </ul>
+        </section>
+
         <!-- 運転員: 自分が報告したトラブル -->
         <section v-if="board.my_troubles" class="pk-home-section" aria-labelledby="home-my-troubles-title" data-testid="home-my-troubles">
           <h2 id="home-my-troubles-title">自分が報告したトラブル<small>{{ board.my_troubles.length }}件</small></h2>
@@ -326,7 +341,9 @@ watch(siteId, fetchBoard, { immediate: true })
               <template v-else>
                 <div class="pk-home-list__copy">
                   <strong>{{ todo.trouble.title }}</strong>
-                  <span>{{ troubleTarget(todo.trouble) }} ／ {{ troubleStatusLabel[todo.trouble.status] }} ／ 担当 {{ todo.trouble.assigned_to?.name ?? '未定' }}</span>
+                  <span>
+                    <template v-if="todo.trouble.source === 'device_diagnostic'">機器の診断 ／ </template>{{ troubleTarget(todo.trouble) }} ／ {{ troubleStatusLabel[todo.trouble.status] }} ／ 担当 {{ todo.trouble.assigned_to?.name ?? '未定' }}
+                  </span>
                 </div>
                 <StatusChip kind="priority" :value="todo.trouble.priority" />
                 <v-btn size="small" variant="outlined" :to="`/troubles/${todo.trouble.id}`">開く</v-btn>
