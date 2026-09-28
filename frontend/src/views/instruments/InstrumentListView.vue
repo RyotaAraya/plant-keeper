@@ -9,7 +9,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
+import { inSites, keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
 import { latestGuard } from '@/utils/latestGuard'
 import { listFromQuery } from '@/utils/listQuery'
@@ -18,7 +18,7 @@ import { DIAGNOSTIC_FILTER_OPTIONS } from '@/constants/diagnostics'
 const router = useRouter()
 const route = useRoute()
 const { canManageEquipment } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const instruments = ref<any[]>([])
 const equipments = ref<any[]>([])
@@ -30,7 +30,7 @@ const totalCount = ref(0)
 // フィルタ（すべて複数選択）
 const search = ref('')
 // 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
-const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
+const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
 const selectedEquipmentIds = ref<number[]>([])
 const selectedServiceIds = ref<number[]>([])
 const selectedLineClassIds = ref<number[]>([])
@@ -38,10 +38,7 @@ const selectedLineClassIds = ref<number[]>([])
 const selectedDiagnosticStatuses = ref<string[]>(listFromQuery(route.query.diagnostic_status))
 
 // 拠点で絞り込んだ設備リスト
-const filteredEquipments = computed(() => {
-  if (!selectedSiteIds.value.length) return equipments.value
-  return equipments.value.filter((e: any) => selectedSiteIds.value.includes(e.site_id))
-})
+const filteredEquipments = computed(() => equipments.value.filter((e: any) => inSites(selectedSiteIds.value, e.site_id)))
 
 // 作成/編集ダイアログ
 const dialog = ref(false)
@@ -162,11 +159,7 @@ watch(search, () => {
 })
 // 拠点変更時: その拠点に属さない設備選択を解除
 watch(selectedSiteIds, (newIds) => {
-  if (newIds.length) {
-    selectedEquipmentIds.value = selectedEquipmentIds.value.filter(
-      id => newIds.includes(equipments.value.find((e: any) => e.id === id)?.site_id)
-    )
-  }
+  selectedEquipmentIds.value = keepInSites(selectedEquipmentIds.value, equipments.value, newIds)
   fetchInstruments()
 }, { deep: true })
 watch([selectedEquipmentIds, selectedServiceIds, selectedLineClassIds, selectedDiagnosticStatuses], () => {

@@ -18,16 +18,18 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
+import { keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlanGroup } from '@/types/models'
 import { groupLabel } from '@/utils/inspectionPlanGroup'
 import { latestGuard } from '@/utils/latestGuard'
-import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { listFromQuery } from '@/utils/listQuery'
 import { regulationColor } from '@/utils/regulation'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 const { canManageInspectionPlan, canManageMaintenance } = usePermissions()
 
 const tabFromQuery = (): PlanTab => (PLAN_TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as PlanTab) : 'all')
@@ -38,7 +40,7 @@ const showMaintenance = computed(() => tab.value === 'all' || tab.value === 'mai
 function initialFilters() {
   return {
     // 通常業務では自拠点の計画だけ見ればよいため、自分の所属拠点を初期値にする
-    site_ids: siteIdsFromQuery(route.query.site_ids, authStore.user?.site_id ? [authStore.user.site_id] : []),
+    site_ids: initialSiteIds(route.query.site_ids),
     // 担当部署・法規区分は、点検のまとまりだけが持つ
     department_id: null as number | null,
     regulation_ids: [] as number[],
@@ -172,9 +174,7 @@ async function loadAll() {
 
 // 拠点を変えたら、表示する拠点にない部署の絞り込みは外す
 function changeSite(siteIds: number[]) {
-  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
-  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
-  filters.value = { ...filters.value, site_ids: siteIds, department_id: keepDepartment ? keepDepartment.id : null }
+  filters.value = { ...filters.value, site_ids: siteIds, department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds) }
   loadSiteOptions(siteIds)
 }
 

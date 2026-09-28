@@ -4,7 +4,7 @@
 import { ref, watch } from 'vue'
 import api from '@/api/axios'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { useAuthStore } from '@/stores/auth'
+import { useSiteScope } from '@/composables/useSiteScope'
 import type { ChecklistItemStats, ChecklistItemStatsPeriod, ChecklistItemStatsRow } from '@/types/models'
 import { ITEM_TYPE_OPTIONS } from '@/utils/checklistCriteria'
 import { latestGuard } from '@/utils/latestGuard'
@@ -12,7 +12,7 @@ import { latestGuard } from '@/utils/latestGuard'
 const props = defineProps<{ template: { id: number; name: string } | null }>()
 const open = defineModel<boolean>({ default: false })
 
-const authStore = useAuthStore()
+const { ownSiteIds } = useSiteScope()
 const PERIOD_OPTIONS: { title: string; value: ChecklistItemStatsPeriod }[] = [
   { title: '直近1年', value: '1y' },
   { title: '直近3年', value: '3y' },
@@ -32,7 +32,8 @@ watch(open, (isOpen) => {
   if (!isOpen) return
   stats.value = null
   period.value = '1y'
-  siteIds.value = authStore.user?.site_id ? [authStore.user.site_id] : []
+  // ダイアログは URL を持たないため、開くたびに所属拠点から始める
+  siteIds.value = ownSiteIds()
 })
 watch([open, period, siteIds], () => {
   if (open.value) fetchStats()

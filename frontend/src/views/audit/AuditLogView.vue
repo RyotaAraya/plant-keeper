@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { useAuthStore } from '@/stores/auth'
+import { useSiteScope } from '@/composables/useSiteScope'
 import { downloadCsv } from '@/utils/csv'
 import { monthsAgoForInput, todayForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
 
-const authStore = useAuthStore()
+const route = useRoute()
+const { initialSiteIds } = useSiteScope()
 
 const logs = ref<any[]>([])
 const loading = ref(false)
@@ -22,7 +24,7 @@ const LIST_LIMIT = 1000
 
 // 通常業務では自拠点の変更だけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）。期間は直近1か月
 const filters = ref({
-  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
+  site_ids: initialSiteIds(route.query.site_ids),
   from: monthsAgoForInput(1),
   to: todayForInput(),
   action: null as string | null,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import api from '@/api/axios'
 import { usePermissions } from '@/composables/usePermissions'
+import { useActiveSites } from '@/composables/useSiteScope'
 import { useAuthStore } from '@/stores/auth'
 
 // 一覧がどの拠点を表示しているかを示す銘板。全ての一覧の絞り込みの行の左端に置く。
@@ -15,14 +15,14 @@ const open = ref(false)
 const { canViewSites } = usePermissions()
 const authStore = useAuthStore()
 
-const sites = ref<{ id: number; name: string }[]>([])
+const { sites: activeSites, load: loadSites } = useActiveSites()
 const ownSiteId = computed(() => authStore.user?.site_id ?? null)
 
-onMounted(async () => {
-  if (!canViewSites.value) return
-  const res = await api.get('/sites', { params: { per_page: 100, is_active: true } })
-  // 所属拠点を先頭に置く（切り替えたあとに戻りやすいように）
-  sites.value = [...res.data.data].sort((a, b) => Number(b.id === ownSiteId.value) - Number(a.id === ownSiteId.value))
+// 所属拠点を先頭に置く（切り替えたあとに戻りやすいように）
+const sites = computed(() => [...activeSites.value].sort((a, b) => Number(b.id === ownSiteId.value) - Number(a.id === ownSiteId.value)))
+
+onMounted(() => {
+  if (canViewSites.value) loadSites()
 })
 
 const switchable = computed(() => canViewSites.value && sites.value.length > 1)

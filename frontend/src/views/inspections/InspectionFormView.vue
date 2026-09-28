@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import AiAvailability from '@/components/AiAvailability.vue'
 import { useAiAvailability } from '@/composables/useAiAvailability'
+import { useSiteScope } from '@/composables/useSiteScope'
 import { useUnsavedWork } from '@/composables/useUnsavedWork'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DefectAiAssist from '@/components/DefectAiAssist.vue'
@@ -21,6 +22,7 @@ import { revealApplied } from '@/utils/revealApplied'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { ownSiteIds } = useSiteScope()
 const editId = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!editId.value && route.name === 'InspectionEdit')
 
@@ -157,7 +159,7 @@ function defectInstrumentFor(item: any) {
 
 async function fetchMasters() {
   const [, tmplRes, standardRes] = await Promise.all([
-    loadSiteOptions(authStore.user?.site_id ? [authStore.user.site_id] : []),
+    loadSiteOptions(ownSiteIds()),
     api.get('/checklist_templates', { params: { include_inactive: true } }),
     api.get('/reference_standards', { params: { per_page: 1000 } }),
   ])

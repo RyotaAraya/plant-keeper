@@ -8,14 +8,14 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
-import { listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { useSiteScope } from '@/composables/useSiteScope'
+import { listFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
 const { canManageRepairs } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const repairs = ref<any[]>([])
 const stocks = ref<any[]>([])
@@ -27,7 +27,7 @@ const errors = ref<string[]>([])
 
 // 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときは、その拠点・ステータス）
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  site_ids: initialSiteIds(route.query.site_ids),
   statuses: listFromQuery(route.query.status),
 })
 

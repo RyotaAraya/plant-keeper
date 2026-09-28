@@ -8,21 +8,20 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
+import { useSiteScope } from '@/composables/useSiteScope'
 import type { Interlock } from '@/types/models'
 import { BYPASS_STATE_OPTIONS, bypassColor, bypassLabel, formatDateTime, formatHours, restoreDueLabel } from '@/utils/interlock'
 import { latestGuard } from '@/utils/latestGuard'
-import { siteIdsFromQuery } from '@/utils/listQuery'
 
 const route = useRoute()
 const router = useRouter()
 const { canManageInterlock } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
 // 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときはその拠点）
-const selectedSiteIds = ref<number[]>(siteIdsFromQuery(route.query.site_ids, authStore.user?.site_id ? [authStore.user.site_id] : []))
+const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
 const bypassState = ref<string | null>(typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null)
 const search = ref('')
 

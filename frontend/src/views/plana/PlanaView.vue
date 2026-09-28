@@ -8,6 +8,7 @@ import SimilarTroubleList from '@/components/SimilarTroubleList.vue'
 import { planaCapabilities } from '@/constants/planaCapabilities'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/usePermissions'
+import { useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useSimilarTroubles } from '@/composables/useSimilarTroubles'
 import { latestGuard } from '@/utils/latestGuard'
@@ -17,11 +18,13 @@ import { useAiAvailability } from '@/composables/useAiAvailability'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { ownSiteIds } = useSiteScope()
 const { canCreateTroubleResponse } = usePermissions()
 const tasks = computed(() => planaCapabilities.filter((task) => task.key !== 'response-draft' || canCreateTroubleResponse.value))
 const activeTask = computed(() => tasks.value.find((task) => task.key === route.query.task) ?? tasks.value[1]!)
 const unavailableTask = computed(() => route.query.task === 'response-draft' && !canCreateTroubleResponse.value)
-const siteIds = ref<number[]>(auth.user?.site_id ? [auth.user.site_id] : [])
+// 一覧ではないため、URL の拠点は引き継がず、所属拠点から始める
+const siteIds = ref<number[]>(ownSiteIds())
 const { equipments, load } = useSiteScopeOptions({ withDepartments: false })
 const equipmentId = ref<number | null>(null)
 const instrumentId = ref<number | null>(null)
