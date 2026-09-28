@@ -12,6 +12,8 @@ import CalibrationTrendChart from '@/components/CalibrationTrendChart.vue'
 import InterlockChips from '@/components/InterlockChips.vue'
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import DiagnosticChip from '@/components/DiagnosticChip.vue'
+import DiagnosticAdvanceDialog from '@/components/plans/DiagnosticAdvanceDialog.vue'
+import StatusChip from '@/components/StatusChip.vue'
 import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
 import { formatDateTime } from '@/utils/interlock'
 import {
@@ -22,7 +24,7 @@ import {
   emptyCalibrationFields,
   type CalibrationFields,
 } from '@/utils/calibration'
-import type { CalibrationHistoryRow, InstrumentDiagnostic } from '@/types/models'
+import type { CalibrationHistoryRow, DiagnosticAdvance, InstrumentDiagnostic } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -114,6 +116,20 @@ const STAGE_RESULT_COLOR: Record<string, string> = { pass: 'success', fail: 'err
 const formatError = (value: number | null | undefined) => (value == null ? '—' : `${value.toFixed(2)}%`)
 const formatDate = (value: string) => new Date(value).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
+// --- 機器の診断による、点検計画の前倒しの候補 ---
+const advanceDialog = ref(false)
+const advancing = ref<{ id: number; name: string; next_due_on: string } | null>(null)
+const advanceDiagnostic = computed<DiagnosticAdvance | null>(() => {
+  const status = instrument.value?.diagnostic_status
+  if (status !== 'maintenance_required' && status !== 'out_of_specification') return null
+  return { diagnostic_status: status, diagnostic_since: instrument.value.diagnostic_since, code: diagnostics.value[0]?.code, message: diagnostics.value[0]?.message }
+})
+
+function openAdvance(plan: { id: number; name: string; next_due_on: string }) {
+  advancing.value = plan
+  advanceDialog.value = true
+}
+
 onMounted(fetchInstrument)
 </script>
 
@@ -165,6 +181,16 @@ onMounted(fetchInstrument)
                 <span v-if="instrument.diagnostic_status && instrument.diagnostic_status !== 'good'" class="text-body-2">
                   — {{ DIAGNOSTIC_STATUS[instrument.diagnostic_status as keyof typeof DIAGNOSTIC_STATUS].hint }}
                 </span>
+              </dd>
+              <!-- 故障から自動で登録したトラブル（未解決）と、保守要求・仕様外での点検計画の前倒しの候補 -->
+              <dd v-for="trouble in instrument.diagnostic_troubles ?? []" :key="`t-${trouble.id}`" class="d-flex flex-wrap align-center ga-2 mt-1" data-testid="diagnostic-trouble">
+                <StatusChip kind="trouble" :value="trouble.status" />
+                <router-link class="text-primary text-body-2" :to="`/troubles/${trouble.id}`">{{ trouble.title }}</router-link>
+                <span class="text-caption text-medium-emphasis">診断から自動で登録</span>
+              </dd>
+              <dd v-for="plan in instrument.diagnostic_advance_plans ?? []" :key="`p-${plan.id}`" class="d-flex flex-wrap align-center ga-2 mt-1" data-testid="diagnostic-advance-plan">
+                <v-chip size="small" label variant="flat" color="primary" append-icon="mdi-chevron-right" @click="openAdvance(plan)">前倒しの候補</v-chip>
+                <span class="text-body-2">{{ plan.name }}（次回期限 {{ plan.next_due_on }}）</span>
               </dd>
             </div>
             <div class="pk-summary__wide" data-testid="calibration-conditions">
@@ -296,5 +322,7 @@ onMounted(fetchInstrument)
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <DiagnosticAdvanceDialog v-model="advanceDialog" :plan="advancing" :diagnostic="advanceDiagnostic" :tag-number="instrument?.tag_number" @saved="fetchInstrument" />
   </MainLayout>
 </template>

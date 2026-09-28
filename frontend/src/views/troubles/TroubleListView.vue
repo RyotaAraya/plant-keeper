@@ -228,8 +228,13 @@ watch(() => route.query, () => {
       <template #item.assigned_to.name="{ item }">
         {{ item.assigned_to?.name || '未割当' }}
       </template>
+      <template #item.title="{ item }">
+        {{ item.title }}
+        <v-chip v-if="item.source === 'device_diagnostic'" size="x-small" label variant="tonal" color="primary" class="ml-1">機器の診断</v-chip>
+      </template>
       <template #item.department_display="{ item }">
-        {{ item.assigned_to?.department?.name || item.reported_by?.department?.name || '—' }}
+        <!-- 機器の診断から作ったトラブルの報告者は連携用のトークンを発行した人のため、報告者の部署は出さない -->
+        {{ item.assigned_to?.department?.name || (item.source === 'device_diagnostic' ? '' : item.reported_by?.department?.name) || '—' }}
       </template>
     </v-data-table>
 

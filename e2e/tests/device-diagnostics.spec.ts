@@ -1,7 +1,9 @@
 import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
 
 // 機器の自己診断（NAMUR NE 107）の受け口。診断は計器のいまの状態を変えるため、シードの計器は使わず、
-// E2E 専用の計器（E2E-DIAG。なければAPIで作る）に送り、最後に「正常」に戻す。トークンは実行のたびに発行し、最後に失効する
+// E2E 専用の計器（E2E-DIAG。なければAPIで作る）に送り、最後に「正常」に戻す。トークンは実行のたびに発行し、最後に失効する。
+// 試しに送る診断は故障（F）で、計器のトラブルが自動で登録される。同じ計器に未解決のものがあると重ねて作らないため、
+// 始める前と最後に、この計器の診断から作ったトラブルを完了にする
 const TAG = 'E2E-DIAG'
 
 test('管理者はトークンを発行して試しに送れ、計器の一覧・詳細に診断が出て、失効したトークンは受け付けない', async ({ page }) => {
@@ -19,6 +21,13 @@ test('管理者はトークンを発行して試しに送れ、計器の一覧�
     instrument = (await created.json()).data
   }
   const stamp = `E2E ${Date.now()}`
+  const closeDiagnosticTroubles = async () => {
+    const troubles = (await (await page.request.get(`${api}/troubles`, { headers, params: { instrument_id: instrument.id, per_page: 100 } })).json()).data
+    for (const trouble of troubles.filter((t: any) => t.source === 'device_diagnostic' && t.status !== 'closed')) {
+      expect((await page.request.patch(`${api}/troubles/${trouble.id}`, { headers, data: { trouble: { status: 'closed' } } })).ok()).toBeTruthy()
+    }
+  }
+  await closeDiagnosticTroubles()
 
   await login(page, ACCOUNTS.admin)
   await page.goto('/settings')
@@ -41,6 +50,7 @@ test('管理者はトークンを発行して試しに送れ、計器の一覧�
     await page.getByTestId('integration-test-tag').locator('input').fill(TAG)
     await page.getByTestId('integration-test-send').click()
     await expect(page.getByTestId('integration-test-result')).toContainText('計器の状態が変わりました')
+    await expect(page.getByTestId('integration-test-result')).toContainText('故障のためトラブルを登録しました')
     await page.getByTestId('integration-issue-close').click()
     const row = page.locator('[data-testid^="integration-token-"]', { hasText: stamp })
     await expect(row.locator('td').nth(4)).not.toHaveText('未使用')
@@ -56,9 +66,16 @@ test('管理者はトークンを発行して試しに送れ、計器の一覧�
     const latest = page.getByTestId('diagnostic-history').locator('tbody tr').first()
     await expect(latest.locator('td').nth(1)).toHaveText('F 故障')
     await expect(latest.locator('td').nth(4)).toHaveText(stamp)
+
+    // 故障から自動で登録したトラブル（報告者は人ではなく連携）
+    await page.getByTestId('diagnostic-trouble').getByRole('link', { name: `${TAG} 機器の診断で故障` }).click()
+    await expect(page).toHaveURL(/\/troubles\/\d+$/)
+    await expect(page.getByTestId('detail-summary')).toContainText(`機器の診断（${stamp}）`)
+    await expect(page.getByTestId('trouble-diagnostic-source').getByTestId('diagnostic-chip')).toHaveText('F 故障')
   } finally {
-    // 計器を正常に戻してから、トークンを画面で失効する
+    // 計器を正常に戻し、自動のトラブルを完了にしてから、トークンを画面で失効する
     expect((await send('N')).ok()).toBeTruthy()
+    await closeDiagnosticTroubles()
     await page.goto('/settings/integrations')
     await page.locator('[data-testid^="integration-token-"]', { hasText: stamp }).getByRole('button', { name: '失効' }).click()
     await page.getByTestId('integration-revoke-submit').click()

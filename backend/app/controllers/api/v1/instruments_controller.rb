@@ -76,7 +76,13 @@ module Api
           ).merge("calibration_history" => CalibrationTrend.new(@instrument).rows,
                   # 機器の自己診断の状態が変わった記録（新しい順に20件）と、送ってきた連携の名前
                   "diagnostics" => @instrument.instrument_diagnostics.includes(:integration_token).order(occurred_at: :desc, id: :desc).limit(20)
-                                              .map { |d| d.as_json(only: [ :id, :status, :code, :message, :occurred_at, :created_at ]).merge("source" => d.integration_token&.name) })
+                                              .map { |d| d.as_json(only: [ :id, :status, :code, :message, :occurred_at, :created_at ]).merge("source" => d.integration_token&.name) },
+                  # 診断（保守要求・仕様外）で、次回期限を前倒しする候補の点検計画
+                  "diagnostic_advance_plans" => InspectionPlan.diagnostic_advance_candidates.where(instrument_id: @instrument.id).order(:next_due_on, :id)
+                                                              .map { |plan| plan.as_json(only: [ :id, :name, :next_due_on, :interval_days, :last_inspected_on ]) },
+                  # 診断から作った、まだ解決していないトラブル
+                  "diagnostic_troubles" => Trouble.source_device_diagnostic.where(instrument_id: @instrument.id, status: DiagnosticTrouble::OPEN_STATUSES)
+                                                  .order(reported_at: :desc).map { |trouble| trouble.as_json(only: [ :id, :title, :status, :priority, :reported_at ]) })
         }
       end
 

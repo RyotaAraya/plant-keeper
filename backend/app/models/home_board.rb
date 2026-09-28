@@ -5,6 +5,8 @@
 # - 点検計画: まとまりの担当部署。期限超過・今日・明日が期限のもの
 # - 定期整備の作業: 実施中の定期整備の、未着手・実施中の作業の部署
 # - トラブル: 未対応・対応中で、報告者か担当者の所属がその部署
+#   （機器の診断から作ったトラブルは、報告者の代わりに計器の点検計画のまとまりの担当部署。Trouble.for_departments。
+#    どちらもないものは、エリアに分けず拠点全体として先頭に出す）
 # 部署のない人（協力会社など）と、所属と別の拠点を選んだときは、拠点全体を1つのエリアにする。
 # インターロックのバイパスは安全に関わるため、エリアに分けず拠点全体。
 # 夕会の実績（点検日が今日の点検・今日の対応記録・今日完了した作業）も、同じエリアに分ける
@@ -76,6 +78,15 @@ class HomeBoard
     end
   end
 
+  # 機器の診断から作ったトラブルのうち、どのエリアにも入らないもの（担当者も、計器の点検計画の担当部署もない）。
+  # 拠点全体を1つのエリアにしているときは、そのエリアに入るので出さない
+  def unrouted_diagnostic_troubles
+    return Trouble.none if area_departments == [ nil ]
+
+    Trouble.diagnostic_without_department.where(status: OPEN_TROUBLE_STATUSES).joins(:equipment).where(equipments: { site_id: site.id })
+           .includes(:equipment, :instrument, :assigned_to).in_order_of(:priority, PRIORITY_ORDER).order(:reported_at, :id)
+  end
+
   # 管理者・マネージャーの承認待ち（拠点の、承認依頼中の点検と、申請中のバイパス）
   def pending_inspections
     Inspection.where(status: "approval_requested").joins(:equipment).where(equipments: { site_id: site.id })
@@ -86,9 +97,9 @@ class HomeBoard
     InterlockBypass.where(status: "requested").for_sites([ site.id ]).includes(*InterlockBypassJson::BYPASS_INCLUDES).order(:created_at, :id)
   end
 
-  # 運転員: 自分が報告したトラブル（完了を除く。新しい順）
+  # 運転員: 自分が報告したトラブル（完了を除く。新しい順。機器の診断から作ったものは、報告者が人ではないため除く）
   def my_troubles
-    Trouble.where(reported_by_id: user.id).where.not(status: "closed").includes(:equipment, :instrument, :assigned_to)
+    Trouble.where(reported_by_id: user.id).where.not(status: "closed").where.not(source: "device_diagnostic").includes(:equipment, :instrument, :assigned_to)
            .order(reported_at: :desc, id: :desc).limit(MY_TROUBLE_LIMIT)
   end
 

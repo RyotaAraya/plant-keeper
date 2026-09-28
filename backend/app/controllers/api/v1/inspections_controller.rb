@@ -253,6 +253,7 @@ module Api
         # 点検の計器は代表の設備のものなので、別の設備のトラブルには引き継がない
         equipment_id = ii.equipment_id || inspection.equipment_id
         trouble = Trouble.create!(
+          source: "inspection",
           inspection_item: ii,
           equipment_id: equipment_id,
           instrument_id: item[:instrument_id] || (inspection.instrument_id if equipment_id == inspection.equipment_id),

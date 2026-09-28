@@ -38,12 +38,40 @@ class InspectionPlan < ApplicationRecord
       .or(where(reference_standard_id: ReferenceStandard.where(site_id: site_ids).select(:id)))
   }
 
+  # 機器の自己診断で、次回期限の前倒しを勧める状態（保守要求・仕様外）
+  DIAGNOSTIC_ADVANCE_STATUSES = %w[maintenance_required out_of_specification].freeze
+
+  # 機器の診断で、次回期限を前倒しする候補（決めるのは人。ここでは候補を出すだけ）:
+  # 有効な計器の計画で、計器がいま保守要求・仕様外、期限が明日以降、かつ診断が出た日より前に点検したきり（点検していない）もの。
+  # 診断が出た日以降に点検した計画・期限を今日以前にした計画は、もう候補にしない（同じ診断で候補を出し続けないため）。
+  # #diagnostic_advance? と同じ規則（変えるときは両方を直す）
+  scope :diagnostic_advance_candidates, lambda {
+    active.where(next_due_on: (today + 1)..).joins(:instrument).where(instruments: { diagnostic_status: DIAGNOSTIC_ADVANCE_STATUSES })
+          .where("inspection_plans.last_inspected_on IS NULL OR inspection_plans.last_inspected_on < " \
+                 "(instruments.diagnostic_since AT TIME ZONE 'UTC' AT TIME ZONE ?)::date", Time.zone.tzinfo.name)
+  }
+
+  # 部署（まとまりの担当部署）の、有効な計器の点検計画の計器（サブクエリ。NOT IN で使えるよう NULL を含めない）
+  def self.instrument_ids_for_departments(department_ids)
+    active.where.not(instrument_id: nil)
+          .where(inspection_plan_group_id: InspectionPlanGroup.where(department_id: department_ids).select(:id))
+          .select(:instrument_id)
+  end
+
   # アプリのタイムゾーン（日本時間）での今日。朝の時間帯に前日扱いにならない
   def self.today = Time.zone.today
 
   def overdue = is_active && next_due_on < self.class.today
 
   def days_until_due = (next_due_on - self.class.today).to_i
+
+  # 機器の診断で、次回期限を前倒しする候補か（scope :diagnostic_advance_candidates と同じ規則）
+  def diagnostic_advance?
+    return false unless is_active && instrument&.diagnostic_status.in?(DIAGNOSTIC_ADVANCE_STATUSES) && instrument.diagnostic_since
+    return false unless next_due_on > self.class.today
+
+    last_inspected_on.nil? || last_inspected_on < instrument.diagnostic_since.in_time_zone.to_date
+  end
 
   # 点検が実施されたら、実施日を起点に次回期限を進める。
   # 古い点検の後追い登録や、同じ点検の再保存で期限が戻らないよう、実施日が前回以前なら何もしない

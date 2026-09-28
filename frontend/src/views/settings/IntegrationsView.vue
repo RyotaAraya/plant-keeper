@@ -78,7 +78,8 @@ async function copyToken() {
 
 // --- 試しに送る（発行したトークンで、本物の受け口に送る。機器管理システムの代わり） ---
 const testForm = ref({ tag_number: '', status: 'failure' as DiagnosticStatus, code: '', message: '' })
-const testResult = ref<{ tag_number: string; result: string; errors: string[] } | null>(null)
+// trouble_id は、故障（F）でトラブルを自動で登録したとき
+const testResult = ref<{ tag_number: string; result: string; errors: string[]; trouble_id?: number | null } | null>(null)
 const testError = ref('')
 const testing = ref(false)
 const statusOptions = (Object.keys(DIAGNOSTIC_STATUS) as DiagnosticStatus[]).map((value) => ({
@@ -222,6 +223,7 @@ onMounted(fetchTokens)
             <v-alert v-else-if="testResult" :type="testResult.result === 'error' ? 'error' : 'success'" variant="tonal" class="mt-3" data-testid="integration-test-result">
               {{ testResult.tag_number }}: {{ RESULT_LABEL[testResult.result] ?? testResult.result }}
               <template v-if="testResult.errors.length">（{{ testResult.errors.join('、') }}）</template>
+              <template v-if="testResult.trouble_id">。故障のため<router-link :to="`/troubles/${testResult.trouble_id}`">トラブルを登録しました</router-link></template>
             </v-alert>
           </template>
         </v-card-text>

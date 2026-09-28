@@ -24,6 +24,7 @@ class InspectionsTest < ActionDispatch::IntegrationTest
     assert_equal "open", trouble.status
     assert_equal "high", trouble.priority
     assert_equal @user, trouble.reported_by
+    assert_equal "inspection", trouble.source # 出所は点検（手入力・機器の診断と区別する）
     assert_equal @equipment, trouble.equipment
     assert_equal InspectionItem.last, trouble.inspection_item
   end

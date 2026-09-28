@@ -41,4 +41,13 @@ module DeviceDiagnosticCatalog
 
   # 最後に受け取った日時（機器管理システムは定期的に送ってくる）
   RECEIVED_HOURS_AGO = 0.25
+
+  # 診断のある計器の点検計画。保守要求・仕様外の計器は「前倒しの候補」になり（期限を明日以降に、前回の点検を診断より前にする）、
+  # 故障の計器（TV-602）の自動のトラブルは、この計画のまとまりの担当部署のエリアに出る。
+  # まとまりは拠点 × チェックリストの既定のもの（InspectionPlanGroup.default_for）。last_days_ago = 前回の点検が何日前か
+  PLANS = [
+    { tag: "PT-502", name: "PT-502 水素圧力伝送器 年次校正", template: "伝送器 年次点検", interval: 365, last_days_ago: 200 },
+    { tag: "LT-701", name: "LT-701 ドラム液位計 月次点検", template: "伝送器 月次点検", interval: 30, last_days_ago: 10 },
+    { tag: "TV-602", name: "TV-602 再生塔温度伝送器 年次校正", template: "伝送器 年次点検", interval: 365, last_days_ago: 120 }
+  ].freeze
 end

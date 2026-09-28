@@ -73,6 +73,9 @@ export interface Instrument {
   diagnostic_received_at?: string | null
   // 詳細だけ: 状態が変わった記録（新しい順に20件）
   diagnostics?: InstrumentDiagnostic[]
+  // 詳細だけ: 診断（保守要求・仕様外）で次回期限を前倒しする候補の点検計画と、診断から作った未解決のトラブル
+  diagnostic_advance_plans?: Pick<InspectionPlan, 'id' | 'name' | 'next_due_on' | 'interval_days' | 'last_inspected_on'>[]
+  diagnostic_troubles?: Pick<Trouble, 'id' | 'title' | 'status' | 'priority' | 'reported_at'>[]
   created_at: string
   updated_at: string
 }
@@ -392,6 +395,15 @@ export interface InspectionPlan {
   instrument?: { id: number; tag_number: string } | null
   checklist_template?: { id: number; name: string } | null
   interval_review?: IntervalReview | null
+  // 機器の診断（保守要求・仕様外）で、次回期限を前倒しする候補のときの、計器のいまの診断
+  diagnostic_advance?: DiagnosticAdvance | null
+}
+
+export interface DiagnosticAdvance {
+  diagnostic_status: 'maintenance_required' | 'out_of_specification'
+  diagnostic_since: string
+  code?: string | null
+  message?: string | null
 }
 
 export interface InspectionItem {
@@ -436,11 +448,16 @@ export interface Trouble {
   description: string | null
   status: string
   priority: string
+  // 出所: 手入力 / 点検の不具合 / 機器の診断（故障から自動で作る。報告者は連携用のトークンを発行した人）
+  source: TroubleSource
+  instrument_diagnostic_id: number | null
   reported_at: string
   resolved_at: string | null
   created_at: string
   updated_at: string
 }
+
+export type TroubleSource = 'manual' | 'inspection' | 'device_diagnostic'
 
 export interface TroubleResponse {
   id: number
@@ -804,6 +821,7 @@ export interface HomeTrouble {
   status: string
   priority: string
   reported_at: string
+  source: TroubleSource
   equipment: NamedRef
   instrument: { id: number; tag_number: string } | null
   assigned_to: NamedRef | null
@@ -861,6 +879,8 @@ export interface HomeBoard {
   kind: 'manager' | 'operator' | 'worker'
   site: NamedRef
   interlock_bypasses: InterlockBypass[]
+  // 機器の診断から作ったトラブルのうち、どのエリアにも入らないもの（担当者も、計器の点検計画の担当部署もない）
+  diagnostic_troubles: HomeTrouble[]
   areas: HomeArea[]
   approvals?: { inspections: HomeInspection[]; interlock_bypasses: InterlockBypass[] }
   my_troubles?: HomeTrouble[]

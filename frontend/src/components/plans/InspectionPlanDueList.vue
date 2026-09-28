@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 点検計画の期限順の一覧（「計画」画面の「点検の期限順」。旧の点検計画の一覧）。期限超過・周期の見直しの候補で絞り込み、行から点検を始める
+// 点検計画の期限順の一覧（「計画」画面の「点検の期限順」。旧の点検計画の一覧）。期限超過・周期の見直しの候補・機器の診断による前倒しの候補で絞り込み、行から点検を始める
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
@@ -7,9 +7,11 @@ import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
 import CalibrationWorkOrderDialog from '@/components/plans/CalibrationWorkOrderDialog.vue'
+import DiagnosticAdvanceDialog from '@/components/plans/DiagnosticAdvanceDialog.vue'
 import InspectionPlanDialog from '@/components/plans/InspectionPlanDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
+import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlan, InspectionPlanGroup } from '@/types/models'
@@ -44,6 +46,8 @@ const filters = ref({
   overdue: route.query.overdue === 'true',
   // 周期の見直しの候補（5点校正の記録から。any / extend / shorten）
   interval_review: (typeof route.query.interval_review === 'string' ? route.query.interval_review : null) as string | null,
+  // 機器の診断（保守要求・仕様外）で、次回期限を前倒しする候補
+  diagnostic_advance: route.query.diagnostic_advance === 'true',
 })
 
 const headers = [
@@ -72,6 +76,7 @@ async function fetchPlans() {
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.overdue) params.overdue = 'true'
     if (filters.value.interval_review) params.interval_review = filters.value.interval_review
+    if (filters.value.diagnostic_advance) params.diagnostic_advance = 'true'
     const res = await api.get('/inspection_plans', { params })
     if (!isLatest()) return
     plans.value = res.data.data
@@ -124,6 +129,15 @@ const reviewing = ref<InspectionPlan | null>(null)
 function openReview(plan: InspectionPlan) {
   reviewing.value = plan
   reviewDialog.value = true
+}
+
+// --- 機器の診断による前倒しの候補 ---
+const advanceDialog = ref(false)
+const advancing = ref<InspectionPlan | null>(null)
+
+function openAdvance(plan: InspectionPlan) {
+  advancing.value = plan
+  advanceDialog.value = true
 }
 
 function openReferenceStandard(plan: InspectionPlan) {
@@ -190,6 +204,7 @@ watch(filters, fetchPlans, { deep: true })
         style="min-width: 220px; max-width: 240px"
         data-testid="interval-review-filter"
       />
+      <v-switch v-model="filters.diagnostic_advance" label="診断で前倒しの候補" color="primary" density="compact" hide-details data-testid="diagnostic-advance-filter" />
     </div>
 
     <v-data-table
@@ -236,6 +251,19 @@ watch(filters, fetchPlans, { deep: true })
         >
           {{ REVIEW_LABEL[item.interval_review.kind] }}
         </v-chip>
+        <v-chip
+          v-if="item.diagnostic_advance"
+          :color="DIAGNOSTIC_STATUS[item.diagnostic_advance.diagnostic_status].color"
+          size="small"
+          label
+          variant="flat"
+          append-icon="mdi-chevron-right"
+          :title="`機器の診断: ${DIAGNOSTIC_STATUS[item.diagnostic_advance.diagnostic_status].label}`"
+          :data-testid="`diagnostic-advance-chip-${item.id}`"
+          @click="openAdvance(item)"
+        >
+          前倒し
+        </v-chip>
       </template>
       <template #item.last_inspected_on="{ item }">{{ item.last_inspected_on ?? '未実施' }}</template>
       <template #item.actions="{ item }">
@@ -247,6 +275,13 @@ watch(filters, fetchPlans, { deep: true })
     </v-data-table>
 
     <IntervalReviewDialog v-model="reviewDialog" :plan="reviewing" @saved="fetchPlans" />
+    <DiagnosticAdvanceDialog
+      v-model="advanceDialog"
+      :plan="advancing"
+      :diagnostic="advancing?.diagnostic_advance ?? null"
+      :tag-number="advancing?.instrument?.tag_number"
+      @saved="fetchPlans"
+    />
 
     <InspectionPlanDialog v-model="dialog" :equipments="equipments" :groups="groups" @saved="fetchPlans" />
     <CalibrationWorkOrderDialog v-model="workOrderDialog" :site-ids="filters.site_ids" />

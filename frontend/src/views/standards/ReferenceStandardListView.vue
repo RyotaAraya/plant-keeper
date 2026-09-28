@@ -116,7 +116,7 @@ watch([selectedSiteIds, statuses, categories, search], fetchStandards)
         <span v-else class="text-medium-emphasis">—</span>
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="canManageReferenceStandard" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+        <v-btn v-if="canManageReferenceStandard" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click.stop="openEdit(item)" />
       </template>
     </v-data-table>
 
