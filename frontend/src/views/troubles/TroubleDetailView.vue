@@ -65,14 +65,14 @@ const responseDirty = computed(() => responseDialog.value && (
   responseMemoDirty.value || JSON.stringify(responseForm.value) !== responseInitial.value
 ))
 useUnsavedWork(responseDirty)
-// 閉じたら、開いたボタンへフォーカスを戻す（v-dialog は activator なしで開くと戻さないため）。
-// プラナの作業場から開いたとき（押したボタンがない）は、この画面の「対応記録」ボタンへ戻す
+// 閉じたら、開いたボタンへフォーカスを戻すのは、アプリ全体の仕組み（utils/dialogFocusReturn.ts）に任せる。
+// プラナの作業場から開いたとき（この画面で押したボタンがない）だけ、この画面の「対応記録」ボタンへ戻す
 const responseButton = ref<{ $el: HTMLElement } | null>(null)
-const responseOpener = ref<HTMLElement | null>(null)
+const responseOpenedWithoutOpener = ref(false)
 const responseRecord = ref<HTMLElement | null>(null)
 function hideResponse() {
   responseDialog.value = false
-  nextTick(() => (responseOpener.value?.isConnected ? responseOpener.value : responseButton.value?.$el)?.focus())
+  if (responseOpenedWithoutOpener.value) nextTick(() => responseButton.value?.$el.focus())
 }
 function closeResponse() {
   if (responseDirty.value && !confirm('入力中の対応記録とメモを破棄しますか？')) return
@@ -195,7 +195,7 @@ function openResponse() {
   responseMemoDirty.value = false
   responseSession.value++
   const active = document.activeElement
-  responseOpener.value = active instanceof HTMLElement && active !== document.body ? active : null
+  responseOpenedWithoutOpener.value = !(active instanceof HTMLElement && active !== document.body)
   responseDialog.value = true
 }
 

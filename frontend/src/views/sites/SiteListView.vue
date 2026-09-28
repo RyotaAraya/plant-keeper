@@ -101,7 +101,7 @@ watch(showInactive, fetchSites)
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="canManageSite" icon="mdi-pencil" size="x-small" variant="text" @click.stop="openEdit(item)" />
+        <v-btn v-if="canManageSite" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click.stop="openEdit(item)" />
       </template>
     </v-data-table>
 
