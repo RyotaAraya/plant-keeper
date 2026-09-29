@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
-import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
 
+const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 const users = ref<any[]>([])
 const { departments, load: loadSiteOptions } = useSiteScopeOptions({ withEquipments: false })
 const loading = ref(false)
@@ -18,7 +19,7 @@ const showInactive = ref(false)
 
 // 通常業務では自拠点のユーザだけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）
 const filters = ref({
-  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
+  site_ids: initialSiteIds(route.query.site_ids),
   q: '',
   employment_type: null as string | null,
   system_role: null as string | null,

@@ -13,20 +13,19 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
+import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import type { InspectionPlan, InspectionPlanGroup } from '@/types/models'
 import { dueColor, dueLabel, inspectionFromPlan, referenceStandardFromPlan } from '@/utils/inspectionPlan'
 import { groupLabel } from '@/utils/inspectionPlanGroup'
 import { equipmentNames } from '@/utils/equipment'
 import { REVIEW_COLOR, REVIEW_FILTER_OPTIONS, REVIEW_LABEL } from '@/utils/intervalReview'
 import { regulationColor } from '@/utils/regulation'
-import { siteIdsFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
 const { canManageReferenceStandard } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const plans = ref<InspectionPlan[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
@@ -37,7 +36,7 @@ const loading = ref(false)
 
 // 通常業務では自拠点の計画だけ見ればよいため、自分の所属拠点を初期値にする
 const filters = ref({
-  site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+  site_ids: initialSiteIds(route.query.site_ids),
   equipment_ids: [] as number[],
   inspection_plan_group_ids: [] as number[],
   regulation_ids: [] as number[],
@@ -107,16 +106,12 @@ async function fetchMasters() {
 
 // 拠点を変えたら、表示する拠点にない設備・まとまり・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 function changeSite(siteIds: number[]) {
-  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
-  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
-  const keepGroups = filters.value.inspection_plan_group_ids.filter((id) => groups.value.find((g) => g.id === id && shown(g.site_id)))
-  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
   filters.value = {
     ...filters.value,
     site_ids: siteIds,
-    equipment_ids: keepEquipment,
-    inspection_plan_group_ids: keepGroups,
-    department_id: keepDepartment ? keepDepartment.id : null,
+    equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
+    inspection_plan_group_ids: keepInSites(filters.value.inspection_plan_group_ids, groups.value, siteIds),
+    department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
   }
   loadSiteOptions(siteIds)
   loadGroups(siteIds)

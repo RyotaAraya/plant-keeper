@@ -7,6 +7,7 @@ import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
+import { invalidateActiveSites } from '@/composables/useSiteScope'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,6 +40,7 @@ async function saveSite() {
   editErrors.value = []
   try {
     await api.patch(`/sites/${route.params.id}`, { site: editForm.value })
+    invalidateActiveSites()
     editDialog.value = false
     await fetchSite()
   } catch (e: any) {

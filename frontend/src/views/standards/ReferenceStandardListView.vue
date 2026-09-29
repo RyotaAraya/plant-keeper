@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
@@ -10,19 +10,20 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
+import { useSiteScope } from '@/composables/useSiteScope'
 import type { ReferenceStandard } from '@/types/models'
 import { latestGuard } from '@/utils/latestGuard'
 import { CATEGORY_LABEL, STATUS_COLOR, STATUS_LABEL } from '@/utils/referenceStandard'
 
+const route = useRoute()
 const router = useRouter()
 const { canManageReferenceStandard } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const standards = ref<ReferenceStandard[]>([])
 const loading = ref(false)
 // 通常業務では自拠点の基準器だけ見ればよいため、自分の所属拠点を初期値にする（複数選択、空は全拠点）
-const selectedSiteIds = ref<number[]>(authStore.user?.site_id ? [authStore.user.site_id] : [])
+const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
 const statuses = ref<string[]>([])
 const categories = ref<string[]>([])
 const search = ref('')
