@@ -314,6 +314,11 @@ export interface Inspection {
   id: number
   checklist_template_id: number | null
   inspection_plan_id: number | null
+  inspection_plan?: Pick<InspectionPlan, 'id' | 'name' | 'next_due_on' | 'interval_days' | 'last_inspected_on'> | null
+  checklist_template?: { id: number; name: string } | null
+  equipment?: { id: number; name: string }
+  instrument?: { id: number; tag_number: string } | null
+  user?: { id: number; name: string }
   user_id: number
   equipment_id: number
   instrument_id: number | null

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 「計画」画面で開いた、点検のまとまりの中身（子の点検計画）。計画ごとの周期・次回期限と、点検の実施・周期の見直し
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
@@ -15,6 +15,7 @@ import { REVIEW_COLOR, REVIEW_LABEL } from '@/utils/intervalReview'
 const props = defineProps<{ group: InspectionPlanGroup; equipments: { id: number; name: string; site_id: number }[] }>()
 const emit = defineEmits<{ changed: [] }>()
 
+const route = useRoute()
 const router = useRouter()
 const { canManageInspectionPlan, canManageReferenceStandard } = usePermissions()
 const plans = ref<InspectionPlan[]>([])
@@ -86,7 +87,7 @@ onMounted(load)
             <v-btn v-if="plan.reference_standard" size="small" variant="outlined" @click="router.push(referenceStandardFromPlan(plan, canManageReferenceStandard))">
               {{ canManageReferenceStandard ? '校正を記録' : '基準器を見る' }}
             </v-btn>
-            <v-btn v-else size="small" variant="outlined" @click="router.push(inspectionFromPlan(plan))">点検を実施</v-btn>
+            <v-btn v-else size="small" variant="outlined" @click="router.push(inspectionFromPlan(plan, route.fullPath))">点検を実施</v-btn>
           </td>
         </tr>
       </tbody>

@@ -82,6 +82,7 @@ test('点検で基準器を選ぶと、点検日に使えるかが分かり、�
   await expect(page.getByRole('heading', { level: 1, name: '新規点検記録' })).toBeVisible()
   await selectOption(page, '設備 *', '常圧蒸留装置')
   await selectFirstOption(page, '部署 *')
+  await page.getByRole('button', { name: '基準器を使用した場合' }).click()
 
   const section = page.getByTestId('reference-standards-section')
   const addStandard = async (number: string) => {

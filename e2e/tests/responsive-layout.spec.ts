@@ -83,7 +83,7 @@ test('スマホで、点検の不具合をプラナの提案を反映して保�
   const title = `E2E ${Date.now()} スマホの不具合報告`
   await titleInput.fill(title)
   await page.getByRole('button', { name: '下書き保存' }).click()
-  await expect(page).toHaveURL(/\/inspections$/)
+  await expect(page).toHaveURL(/\/inspections\/\d+\?.*saved=/)
   expect(await pageOverflow(page)).toBe(0)
 })
 
