@@ -8,6 +8,8 @@ import CalibrationImportDialog from '@/components/CalibrationImportDialog.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
+import InspectionDrafts from '@/components/inspections/InspectionDrafts.vue'
+import { inspectionName } from '@/utils/inspectionWorkflow'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
@@ -43,6 +45,7 @@ const filters = ref({
 })
 
 const headers = [
+  { title: '点検内容', key: 'name', sortable: false },
   { title: '点検日時', key: 'inspected_at', width: '160px' },
   { title: '種別', key: 'inspection_type', width: '110px' },
   { title: '設備', key: 'equipments', sortable: false },
@@ -131,7 +134,8 @@ watch(() => route.query, () => {
   <MainLayout>
     <PageHeader title="点検・作業記録" description="点検の結果をチェックリストで記録し、承認まで進めます。不具合はトラブルに自動登録されます。">
       <v-btn variant="outlined" color="primary" prepend-icon="mdi-file-import-outline" class="mr-2" @click="importOpen = true">校正結果の取り込み</v-btn>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/inspections/new')">新規点検</v-btn>
+      <v-btn color="primary" class="mr-2" :to="{ path: '/plans', query: { tab: 'due', site_ids: filters.site_ids.join(',') || 'all' } }">予定から点検</v-btn>
+      <v-btn variant="outlined" :to="{ path: '/inspections/new', query: { return_to: route.fullPath } }">予定外の点検</v-btn>
     </PageHeader>
     <CalibrationImportDialog v-model="importOpen" @imported="fetchInspections" />
 
@@ -155,6 +159,8 @@ watch(() => route.query, () => {
       <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
+    <InspectionDrafts :site-ids="filters.site_ids" :return-to="route.fullPath" />
+
     <v-data-table
       :headers="headers"
       :items="inspections"
@@ -163,6 +169,7 @@ watch(() => route.query, () => {
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.name="{ item }">{{ inspectionName(item) }}</template>
       <template #item.inspected_at="{ item }">
         {{ formatDate(item.inspected_at) }}
       </template>

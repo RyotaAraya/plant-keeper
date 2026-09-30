@@ -17,7 +17,7 @@ test('点検で不具合を報告すると、トラブル管理に登録され�
   await page.getByLabel('トラブルタイトル').fill(title)
 
   await page.getByRole('button', { name: '提出' }).click()
-  await expect(page).toHaveURL(/\/inspections$/)
+  await expect(page).toHaveURL(/\/inspections\/\d+\?.*saved=/)
 
   await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
   await page.getByRole('textbox', { name: 'タイトル検索' }).fill(title)

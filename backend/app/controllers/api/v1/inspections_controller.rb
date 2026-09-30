@@ -14,7 +14,7 @@ module Api
       # GET /api/v1/inspections
       def index
         authorize Inspection
-        inspections = Inspection.includes(:user, :equipment, :equipments, :instrument, :department, :checklist_template).all
+        inspections = Inspection.includes(:user, :equipment, :equipments, :instrument, :department, :checklist_template, :inspection_plan).all
         # 拠点は代表の設備の拠点で絞る（まとめて点検した設備は同じ拠点。点検の部署は入力時に選ぶ値で、拠点の決め手にならない）
         if (site_ids = id_list_param(:site_ids, :site_id))
           inspections = inspections.where(equipment_id: Equipment.where(site_id: site_ids).select(:id))
@@ -32,7 +32,15 @@ module Api
           inspections = inspections.where(status: statuses)
         end
 
-        inspections = inspections.order(inspected_at: :desc)
+        # 再開候補は本人の記録。ユーザIDはクライアントから受け取らない。
+        inspections = inspections.where(user_id: current_user.id) if params[:mine] == "true"
+        inspections = inspections.where(inspection_plan_id: params[:inspection_plan_id]) if params[:inspection_plan_id].present?
+        inspections = inspections.where(maintenance_task_id: params[:maintenance_task_id]) if params[:maintenance_task_id].present?
+        if params[:mine] == "true" && current_user.company&.company_type == "contractor"
+          inspections = inspections.where(equipment_id: Equipment.where(site_id: current_user.site_id).select(:id))
+        end
+
+        inspections = inspections.order(inspected_at: :desc, id: :desc)
         total_count = inspections.count
 
         page, per_page = pagination_params
@@ -46,6 +54,7 @@ module Api
               equipments: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
               department: { only: [ :id, :name ] },
+              inspection_plan: { only: [ :id, :name, :next_due_on, :interval_days, :last_inspected_on ] },
               checklist_template: { only: [ :id, :name ] }
             }
           ),
@@ -64,6 +73,7 @@ module Api
               equipments: { only: [ :id, :name ] },
               department: { only: [ :id, :name ] },
               instrument: { only: [ :id, :tag_number ] },
+              inspection_plan: { only: [ :id, :name, :next_due_on, :interval_days, :last_inspected_on ] },
               checklist_template: { only: [ :id, :name ] },
               maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ] },
               inspection_items: {
@@ -285,7 +295,7 @@ module Api
 
       def set_inspection
         @inspection = Inspection.includes(
-          :user, :equipment, :department, :instrument, :checklist_template, :maintenance_task,
+          :user, :equipment, :department, :instrument, :checklist_template, :maintenance_task, :inspection_plan,
           inspection_items: [ :trouble, :instrument ],
           inspection_reference_standards: :reference_standard
         ).find(params[:id])

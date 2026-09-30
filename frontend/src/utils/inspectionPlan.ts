@@ -9,9 +9,10 @@ type PlanTarget = Pick<InspectionPlan, 'id' | 'equipment_id' | 'instrument_id' |
 
 // 計画から点検を実施する画面（点検計画の一覧・朝会ボードで共用）。
 // 設備・計器・チェックリストを引き継ぎ、複数の設備をまとめた計画は、その設備すべてを点検に引き継ぐ（先頭が代表の設備）
-export function inspectionFromPlan(plan: PlanTarget): RouteLocationRaw {
+export function inspectionFromPlan(plan: PlanTarget, returnTo = '/plans?tab=due'): RouteLocationRaw {
   const query: Record<string, string> = {
     inspection_plan_id: String(plan.id),
+    return_to: returnTo,
     equipment_id: String(plan.equipment_id ?? ''),
     equipment_ids: coveredEquipments(plan).map((e) => e.id).join(','),
     inspection_type: plan.inspection_type,

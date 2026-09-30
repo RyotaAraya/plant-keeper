@@ -140,7 +140,7 @@ function openReferenceStandard(plan: InspectionPlan) {
 }
 
 function startInspection(plan: InspectionPlan) {
-  router.push(inspectionFromPlan(plan))
+  router.push(inspectionFromPlan(plan, route.fullPath))
 }
 
 // 計画の追加と、校正の作業指示の書き出し（ボタンは「計画」画面の見出しにある。書き出しの候補は表示中の拠点の計画）

@@ -103,6 +103,7 @@ async function deleteTask(task: any) {
 function startInspection(task: any) {
   const query: Record<string, string> = {
     maintenance_task_id: String(task.id),
+    return_to: route.fullPath,
     equipment_id: String(task.equipment?.id ?? ''),
     inspection_type: 'periodic',
   }

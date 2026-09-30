@@ -49,7 +49,7 @@ function initialFilters() {
   }
 }
 const filters = ref(initialFilters())
-// 担当部署・法規区分で絞っている間は、それを持たない定期整備を出さない
+// 点検にだけ適用する条件が入っているときは、定期整備の欄にも範囲を明記する
 const narrowedToGroups = computed(() => !!filters.value.department_id || filters.value.regulation_ids.length > 0)
 
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
@@ -222,7 +222,7 @@ loadAll()
 
 <template>
   <MainLayout>
-    <PageHeader title="計画" description="定期点検のまとまりと、定期整備の系列・単発の整備です。行を押すと、設備・計器ごとの周期と次回期限を開きます。">
+    <PageHeader title="計画" description="点検の予定と定期整備を確認します。点検を始めるときは「点検の期限順」、周期を確認するときは「まとまり別」を選べます。">
       <template v-if="tab === 'due'">
         <v-btn color="primary" variant="outlined" prepend-icon="mdi-file-export-outline" class="mr-2" @click="dueList?.openWorkOrder()">校正の作業指示</v-btn>
         <v-btn v-if="canManageInspectionPlan" color="primary" prepend-icon="mdi-plus" @click="dueList?.openCreate()">計画を追加</v-btn>
@@ -251,13 +251,13 @@ loadAll()
             :items="departments"
             item-title="display_name"
             item-value="id"
-            label="担当部署"
+            label="点検の担当部署"
             clearable
             density="compact"
             hide-details
-            style="max-width: 280px"
+            style="min-width: 200px; max-width: 280px"
           />
-          <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="法規区分" style="max-width: 220px" />
+          <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="点検の法規区分" style="max-width: 220px" />
         </template>
         <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="max-width: 220px" />
       </div>
@@ -304,9 +304,8 @@ loadAll()
 
       <section v-if="showMaintenance" aria-labelledby="plan-maintenance-heading">
         <h2 id="plan-maintenance-heading" class="pk-plan-heading">定期整備<span>系列 → 設備ごとの周期と各回・単発の整備</span></h2>
-        <p v-if="narrowedToGroups" class="text-body-2 text-medium-emphasis">担当部署・法規区分で絞り込んでいる間は、定期整備を表示しません（定期整備には担当部署・法規区分がないため）。</p>
+        <p v-if="narrowedToGroups" class="text-body-2 text-medium-emphasis mb-2">点検の担当部署・法規区分は、下の定期整備には適用されません。</p>
         <v-data-table
-          v-else
           v-model:expanded="expandedMaintenance"
           :headers="maintenanceHeaders"
           :items="maintenanceRows"

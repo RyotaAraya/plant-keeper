@@ -10,6 +10,8 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import StatusChip from '@/components/StatusChip.vue'
+import InspectionDrafts from '@/components/inspections/InspectionDrafts.vue'
+import { idFromQuery } from '@/utils/listQuery'
 import { usePermissions } from '@/composables/usePermissions'
 import { TASK_KIND_LABEL } from '@/constants/maintenanceStatus'
 import { responseTypeLabel, troubleStatusLabel } from '@/constants/recordLabels'
@@ -28,7 +30,7 @@ const { canManageReferenceStandard } = usePermissions()
 const board = ref<HomeBoard | null>(null)
 const loading = ref(true)
 const error = ref('')
-const siteId = ref<number | null>(authStore.user?.site_id ?? null)
+const siteId = ref<number | null>((authStore.user?.company?.company_type === 'owner' ? idFromQuery(route.query.site_id) : null) ?? authStore.user?.site_id ?? null)
 const fetchGuard = latestGuard()
 
 const evening = computed(() => route.query.mode === 'evening')
@@ -79,6 +81,24 @@ const areas = computed(() =>
     }
   }),
 )
+
+// 緊急・期限超過は部署をまたいで先に確認する。同一トラブルは1件にまとめる。
+const urgentTodos = computed(() => {
+  const unique = new Map<string, { todo: Todo; departments: string[] }>()
+  for (const entry of areas.value) {
+    for (const todo of entry.todos.filter((item) => item.rank === 0)) {
+      const existing = unique.get(todo.key)
+      if (existing) existing.departments.push(areaTitle(entry.area))
+      else unique.set(todo.key, { todo, departments: [areaTitle(entry.area)] })
+    }
+  }
+  return [...unique.values()].sort((a, b) => {
+    if (a.todo.kind !== b.todo.kind) return a.todo.kind === 'trouble' ? -1 : 1
+    if (a.todo.kind === 'plan' && b.todo.kind === 'plan') return a.todo.plan.days_until_due - b.todo.plan.days_until_due
+    return 0
+  })
+})
+const homeReturn = computed(() => `/home?${new window.URLSearchParams({ ...(siteId.value ? { site_id: String(siteId.value) } : {}), ...(evening.value ? { mode: 'evening' } : {}) })}`)
 
 const LEVEL_LABEL: Record<string, string> = { team: 'チーム', section: '課', division: '部' }
 function areaTitle(area: HomeArea) {
@@ -144,7 +164,7 @@ watch(siteId, fetchBoard, { immediate: true })
 <template>
   <MainLayout>
     <div class="pk-home">
-      <PageHeader title="ホーム" :description="evening ? '今日の実績と積み残しです。' : '今日やることです。'">
+      <PageHeader title="ホーム" :description="evening ? '今日の実績と積み残しです。' : '緊急の確認、下書きの再開、所属の仕事を進めます。'">
         <v-btn class="pk-no-print" variant="text" color="primary" prepend-icon="mdi-robot-happy-outline" to="/plana">プラナを開く</v-btn>
         <v-btn class="pk-no-print" variant="outlined" prepend-icon="mdi-printer-outline" :disabled="!board" data-testid="home-print" @click="printHome">印刷</v-btn>
       </PageHeader>
@@ -226,6 +246,25 @@ watch(siteId, fetchBoard, { immediate: true })
           </ul>
         </section>
 
+        <section v-if="urgentTodos.length" class="pk-home-section pk-no-print" aria-labelledby="home-urgent-title" data-testid="home-urgent">
+          <h2 id="home-urgent-title">緊急・期限超過<small>{{ urgentTodos.length }}件</small></h2>
+          <ul class="pk-home-list">
+            <li v-for="entry in urgentTodos" :key="entry.todo.key" :data-testid="`home-urgent-${entry.todo.key}`">
+              <StatusChip :label="entry.todo.kind === 'plan' ? dueText(entry.todo.plan) : '緊急'" color="error" alert />
+              <div class="pk-home-list__copy">
+                <strong>{{ entry.todo.kind === 'plan' ? entry.todo.plan.name : entry.todo.kind === 'trouble' ? entry.todo.trouble.title : entry.todo.task.title }}</strong>
+                <span>{{ entry.departments.join('、') }}</span>
+              </div>
+              <template v-if="entry.todo.kind === 'plan'">
+                <v-btn v-if="entry.todo.plan.reference_standard" size="small" variant="outlined" :to="referenceStandardFromPlan(entry.todo.plan, canManageReferenceStandard)">{{ canManageReferenceStandard ? '校正を記録' : '基準器を見る' }}</v-btn>
+                <v-btn v-else size="small" variant="outlined" :to="inspectionFromPlan(entry.todo.plan, homeReturn)">点検を実施</v-btn>
+              </template>
+              <v-btn v-else-if="entry.todo.kind === 'trouble'" size="small" variant="outlined" :to="`/troubles/${entry.todo.trouble.id}`">トラブルを確認</v-btn>
+            </li>
+          </ul>
+        </section>
+        <InspectionDrafts :site-ids="siteId ? [siteId] : []" :return-to="homeReturn" />
+
         <!-- 機器の診断（故障）から自動で登録したトラブルのうち、担当者も計器の点検計画の担当部署もないもの（拠点全体） -->
         <section v-if="board.diagnostic_troubles.length" class="pk-home-section" aria-labelledby="home-diagnostic-title" data-testid="home-diagnostic-troubles">
           <h2 id="home-diagnostic-title">機器の診断から登録したトラブル<small>{{ board.site.name }}全体・担当部署なし・{{ board.diagnostic_troubles.length }}件</small></h2>
@@ -256,6 +295,10 @@ watch(siteId, fetchBoard, { immediate: true })
           <p v-else class="pk-home-empty">完了していない報告はありません。</p>
         </section>
 
+        <div class="pk-no-print mb-3">
+          <h2>所属の仕事</h2>
+          <p class="text-body-2 text-medium-emphasis">自分の担当に加え、所属のほかの担当者・担当未定の仕事も表示しています。</p>
+        </div>
         <!-- 所属のエリア（チーム → 課 → 部。部署のない人は拠点全体） -->
         <section
           v-for="entry in areas"
@@ -328,7 +371,7 @@ watch(siteId, fetchBoard, { immediate: true })
                 <v-btn v-if="todo.plan.reference_standard" size="small" variant="outlined" :to="referenceStandardFromPlan(todo.plan, canManageReferenceStandard)">
                   {{ canManageReferenceStandard ? '校正を記録' : '基準器を見る' }}
                 </v-btn>
-                <v-btn v-else size="small" variant="outlined" :to="inspectionFromPlan(todo.plan)">点検を実施</v-btn>
+                <v-btn v-else size="small" variant="outlined" :to="inspectionFromPlan(todo.plan, homeReturn)">点検を実施</v-btn>
               </template>
               <template v-else-if="todo.kind === 'task'">
                 <div class="pk-home-list__copy">
