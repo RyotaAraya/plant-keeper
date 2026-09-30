@@ -29,7 +29,11 @@ test('校正結果のファイルを確認してから取り込むと、取り�
   await page.getByRole('button', { name: '校正結果の取り込み' }).click()
 
   const dialog = page.getByTestId('calibration-import')
+  await expect(dialog.getByRole('combobox')).toHaveCount(0)
+  await expect(dialog.getByText('記録する部署は、あなたの所属部署になります。')).toBeVisible()
+  const previewRequest = page.waitForRequest((request) => request.url().endsWith('/calibration_imports/preview'))
   await dialog.locator('input[type="file"]').setInputFiles(calibrationFile())
+  expect((await previewRequest).postDataJSON()).not.toHaveProperty('department_id')
 
   const rows = dialog.getByTestId('calibration-import-rows').locator('tbody tr')
   await expect(rows).toHaveCount(2)
@@ -84,4 +88,68 @@ test('校正の作業指示を書き出し、計画のIDを入れた結果を取
   await importDialog.getByTestId('calibration-import-result').getByRole('link', { name: 'FT-301' }).click()
   await expect(page).toHaveURL(/\/inspections\/\d+$/)
   await expect(page.getByTestId('import-source')).toContainText('e2e-calibration.json')
+})
+
+for (const mobile of [false, true]) {
+  test(`${mobile ? 'スマホ' : 'PC'}で取り込みの手順とエラーを確認し、開き直すとファイルをリセットする`, async ({ page }) => {
+    if (mobile) await page.setViewportSize({ width: 390, height: 844 })
+    await login(page, ACCOUNTS.member)
+    await page.goto('/inspections')
+    await page.getByRole('button', { name: '校正結果の取り込み' }).click()
+    const dialog = page.getByTestId('calibration-import')
+    await expect(dialog.getByRole('list', { name: '取り込みの手順' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: '下書きとして取り込む', exact: true })).toBeDisabled()
+    await dialog.getByText('初めて使う方へ・ファイルの用意').click()
+    await expect(dialog.getByRole('button', { name: '見本のファイル' })).toBeVisible()
+    await dialog.locator('input[type="file"]').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('invalid') })
+    await expect(dialog.getByRole('alert')).toBeVisible()
+    await dialog.locator('input[type="file"]').setInputFiles(calibrationFile())
+    await expect(dialog.getByTestId('calibration-import-rows').locator('tbody tr')).toHaveCount(2)
+    await expect(dialog.getByRole('button', { name: '1件を下書きとして取り込む' })).toBeEnabled()
+    expect(await dialog.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
+    await dialog.getByRole('button', { name: '閉じる', exact: true }).click()
+    await page.getByRole('button', { name: '校正結果の取り込み' }).click()
+    await expect(dialog.getByTestId('calibration-import-rows')).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: '下書きとして取り込む', exact: true })).toBeDisabled()
+  })
+}
+
+test('所属部署のない協力会社には部署選択だけを補い、選ぶまで取り込まない', async ({ page }) => {
+  await login(page, { email: 'honda@example.com', password: 'password' })
+  await page.goto('/inspections')
+  await page.getByRole('button', { name: '校正結果の取り込み' }).click()
+  const dialog = page.getByTestId('calibration-import')
+  await expect(dialog.getByText('所属部署がないため、作業を依頼した部署を選んでください。')).toBeVisible()
+  await dialog.locator('input[type="file"]').setInputFiles(calibrationFile())
+  await expect(dialog.getByRole('button', { name: '下書きとして取り込む', exact: true })).toBeDisabled()
+  const request = page.waitForRequest((request) => request.url().endsWith('/calibration_imports/preview'))
+  // 単一選択後は確認中になり、追加のEscapeは親ダイアログを閉じるので送らない。
+  await dialog.locator('.v-field', { has: page.getByLabel('記録する部署 *', { exact: true }) }).click()
+  await page.getByRole('option').first().click()
+  expect((await request).postDataJSON().department_id).toEqual(expect.any(Number))
+  await expect(dialog.getByTestId('calibration-import-rows')).toBeVisible()
+})
+
+test('確認中に閉じて開き直すと、古い確認結果を表示しない', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+  await page.goto('/inspections')
+  let release!: () => void
+  const pending = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/calibration_imports/preview', async (route) => {
+    const response = await route.fetch()
+    await pending
+    await route.fulfill({ response })
+  })
+  await page.getByRole('button', { name: '校正結果の取り込み' }).click()
+  const dialog = page.getByTestId('calibration-import')
+  await dialog.locator('input[type="file"]').setInputFiles(calibrationFile())
+  await expect(dialog.getByRole('status')).toContainText('ファイルを確認しています')
+  await dialog.getByRole('button', { name: '閉じる', exact: true }).click()
+  await page.getByRole('button', { name: '校正結果の取り込み' }).click()
+  const response = page.waitForResponse((res) => res.url().endsWith('/calibration_imports/preview'))
+  release()
+  await response
+  await expect(dialog.getByTestId('calibration-import-rows')).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: '下書きとして取り込む', exact: true })).toBeDisabled()
 })

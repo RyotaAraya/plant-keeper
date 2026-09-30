@@ -26,6 +26,8 @@ const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
 const importOpen = ref(false)
+const importRevision = ref(0)
+function onImported() { importRevision.value++; void fetchInspections() }
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ほかの画面のリンクから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
@@ -137,7 +139,7 @@ watch(() => route.query, () => {
       <v-btn color="primary" class="mr-2" :to="{ path: '/plans', query: { tab: 'due', site_ids: filters.site_ids.join(',') || 'all' } }">予定から点検</v-btn>
       <v-btn variant="outlined" :to="{ path: '/inspections/new', query: { return_to: route.fullPath } }">予定外の点検</v-btn>
     </PageHeader>
-    <CalibrationImportDialog v-model="importOpen" @imported="fetchInspections" />
+    <CalibrationImportDialog v-model="importOpen" @imported="onImported" />
 
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
@@ -159,7 +161,7 @@ watch(() => route.query, () => {
       <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
-    <InspectionDrafts :site-ids="filters.site_ids" :return-to="route.fullPath" />
+    <InspectionDrafts :key="importRevision" :site-ids="filters.site_ids" :return-to="route.fullPath" />
 
     <v-data-table
       :headers="headers"
