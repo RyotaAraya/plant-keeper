@@ -102,7 +102,7 @@ for (const mobile of [false, true]) {
     await dialog.getByText('初めて使う方へ・ファイルの用意').click()
     await expect(dialog.getByRole('button', { name: '見本のファイル' })).toBeVisible()
     await dialog.locator('input[type="file"]').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('invalid') })
-    await expect(dialog.getByRole('alert')).toBeVisible()
+    await expect(dialog.locator('.v-alert').filter({ hasText: 'JSONとして読めません' })).toBeVisible()
     await dialog.locator('input[type="file"]').setInputFiles(calibrationFile())
     await expect(dialog.getByTestId('calibration-import-rows').locator('tbody tr')).toHaveCount(2)
     await expect(dialog.getByRole('button', { name: '1件を下書きとして取り込む' })).toBeEnabled()
