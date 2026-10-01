@@ -50,7 +50,7 @@ const story = [
   {
     key: 'defect-draft',
     scene: '点検で気づく',
-    lead: '巡回中に指示の低さに気づいた。メモを書けば、トラブル報告の形に整えます。',
+    lead: '巡回中に指示の低さに気づいたら、メモを入力します。プラナがメモをトラブル報告の形に整えます。',
     input: '点検で気づいたこと',
     memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
     routineChecks: [
@@ -82,7 +82,7 @@ const story = [
     meta: '完了・優先度 中・2年前',
     similarity: '同じ計器で、指示が低めの状態が続いた点が一致',
     howHandled: '導圧管にスラッジの堆積を確認し、ブローして指示が復旧した',
-    result: 'まず導圧管から確かめればよい、と分かります。',
+    result: '過去の対応から、まず導圧管を確かめればよいと判断できます。',
   },
   {
     key: 'response-draft',
@@ -96,7 +96,7 @@ const story = [
     detail: '導圧管をブローしたところ、黒色のスラッジが排出された。ブロー後に指示の復旧を確認し、現場流量計の指示とも一致した。',
     usedMaterials: 'なし',
     checkPoint: 'スラッジの出どころ（原油の性状の変化など）は分かっているか？',
-    result: '保存すると、トラブルの対応記録として残ります。次に同じ症状が出たとき、2の検索で見つかるようになります。',
+    result: '保存した内容は、トラブルの対応記録になります。次に同じ症状が出たときは、2の検索でこの記録が候補に出ます。',
   },
 ].map((step) => ({ ...step, to: capability(step.key).to, task: capability(step.key).title }))
 </script>
@@ -146,7 +146,7 @@ const story = [
     <section id="safety" class="landing-section landing-divided landing-safety" aria-labelledby="safety-title">
       <div class="landing-section-heading">
         <h2 id="safety-title">インターロックのバイパス管理</h2>
-        <p>点検や故障対応で一時的に外すインターロックを、申請から復帰の確認まで記録します。外している間は、プラントを守る仕組みがひとつ欠けた状態です。</p>
+        <p>点検や故障対応で一時的に外すインターロックを、申請から復帰の確認まで記録します。バイパスしている間、そのインターロックは働きません。</p>
       </div>
       <div class="landing-safety-body">
         <figure class="landing-hero-shot">
@@ -156,7 +156,7 @@ const story = [
           <ol class="landing-bypass-steps" aria-label="バイパスの流れ">
             <li v-for="step in bypassSteps" :key="step.title"><strong>{{ step.title }}</strong><span v-if="step.note">{{ step.note }}</span></li>
           </ol>
-          <p class="landing-body-text">予定の時刻を過ぎても戻っていないバイパスは「復帰期限超過」として目立たせます。定期整備は、対象設備のバイパスがすべて戻るまで検収へ進めません。</p>
+          <p class="landing-body-text">予定の時刻を過ぎても戻っていないバイパスは「復帰期限超過」として赤く表示します。定期整備は、対象設備のバイパスがすべて戻るまで検収へ進めません。</p>
         </div>
       </div>
     </section>
@@ -180,7 +180,7 @@ const story = [
     <section id="daily" class="landing-section landing-divided" aria-labelledby="daily-title">
       <div class="landing-section-heading">
         <h2 id="daily-title">日々の確認</h2>
-        <p>朝会の資料をExcelで作り直したり、機器の異常を別のシステムまで見に行ったりしなくて済むようにしました。</p>
+        <p>朝会の資料をExcelで作る手間と、機器の異常を別のシステムで確かめる手間を省きます。</p>
       </div>
       <div class="landing-daily-grid">
         <article>
@@ -210,7 +210,7 @@ const story = [
           <div>
             <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
             <h2 id="plana-title">プラナ</h2>
-            <p class="landing-plana-lead">不具合が起きたときのフォローをします。使い方は、下の例をご覧ください。</p>
+            <p class="landing-plana-lead">プラナは、不具合の報告の整理、過去の事例の検索、対応記録の整理を手伝います。使い方は下の例をご覧ください。</p>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
@@ -282,7 +282,7 @@ const story = [
     <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
       <h2 id="try-title">試し方</h2>
       <ol><li>ログイン画面でデモアカウントを選びます。3つとも試すなら、自社の「一般」を選んでください。</li><li>仕事を選び、設備やトラブルを指定して、メモを自分で入力します（上の例は自動では入りません）。</li><li>プラナの案を確認し、保存するかを決めます。</li></ol>
-      <p>プラナには1日の利用上限があり、上限に達すると使えなくなります（ほかの機能はそのまま使えます）。</p>
+      <p>プラナには1日の利用上限があります。上限に達するとプラナは使えなくなりますが、ほかの機能はそのまま使えます。</p>
     </section>
 
     <section id="permissions" class="landing-section" aria-labelledby="permission-title">
@@ -291,7 +291,7 @@ const story = [
     </section>
     <section class="landing-story landing-section">
       <div><h2>開発の背景</h2></div>
-      <div><p>石油プラントの計装保全を10年担当していました。紙やExcelに散らばっていた保全の情報を、1か所で扱えるように作ったのがPlantKeeperです。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
+      <div><p>石油プラントの計装保全を10年担当していました。紙やExcelで別々に管理していた保全の情報を、1か所で扱えるように作ったのがPlantKeeperです。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
     </section>
     <section class="landing-section landing-final" aria-labelledby="final-title">
       <div><h2 id="final-title">デモを試す</h2></div>

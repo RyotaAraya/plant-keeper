@@ -65,7 +65,7 @@ async function submit() {
       <v-card-title>定期整備に回す</v-card-title>
       <v-card-text>
         <div class="text-caption text-medium-emphasis mb-3">
-          運転中に直せないトラブルを、定期整備の作業（整備）として回します。トラブルは「定修待ち」になり、作業が完了すると解決済、見送り・削除すると未対応に戻ります。
+          運転中に直せないトラブルを、定期整備の作業（種類は整備）として登録します。トラブルは「定修待ち」になり、作業が完了すると解決済、見送り・削除すると未対応に戻ります。
         </div>
         <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
           <div v-for="err in errors" :key="err">{{ err }}</div>

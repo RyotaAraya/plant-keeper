@@ -112,7 +112,7 @@ function discard() {
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2" data-testid="ai-response-draft">
       <v-card-text class="text-body-2">
-        <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
+        <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認し、必要なら直してから反映してください。反映するまで入力欄は変わりません。</PlanaNote>
         <div>
           <span class="text-medium-emphasis">対応種別:</span>
           <template v-if="draft.response_type">{{ RESPONSE_TYPE_LABEL[draft.response_type] }}</template>
@@ -121,7 +121,7 @@ function discard() {
         <div style="white-space: pre-wrap"><span class="text-medium-emphasis">対応内容:</span> {{ draft.description }}</div>
         <div v-if="draft.used_materials"><span class="text-medium-emphasis">使用資材:</span> {{ draft.used_materials }}</div>
         <div v-if="draft.check_points.length" class="mt-2">
-          <div class="text-medium-emphasis">記録に足すと役立つかもしれない点（反映されません）</div>
+          <div class="text-medium-emphasis">記録に足すとよい点の候補（入力欄には反映されません）</div>
           <ul class="ml-5"><li v-for="c in draft.check_points" :key="c">{{ c }}</li></ul>
         </div>
       </v-card-text>

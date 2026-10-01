@@ -513,7 +513,7 @@ onMounted(async () => {
                   multiple
                   chips
                   closable-chips
-                  hint="複数の設備をまとめて点検できます（同じ拠点の設備。最初に選んだ設備が代表になります）"
+                  hint="複数の設備をまとめて点検できます。選べるのは同じ拠点の設備で、最初に選んだ設備が代表になります"
                   persistent-hint
                   @update:model-value="onEquipmentChange"
                 />
@@ -687,7 +687,7 @@ onMounted(async () => {
                   <div class="defect-workspace" :class="{ 'defect-workspace--assisted': aiStatus?.enabled }">
                     <section v-if="aiStatus?.enabled" class="defect-workspace__draft" :aria-labelledby="`defect-draft-heading-${idx}`">
                       <h3 :id="`defect-draft-heading-${idx}`">メモをプラナに整理してもらう</h3>
-                      <p class="defect-workspace__hint">現場で見たことを入力してください。整理した内容と過去の事例を確認できます。</p>
+                      <p class="defect-workspace__hint">現場で見たことを入力してください。プラナが整理した内容と、過去の似た事例を確認できます。</p>
                       <DefectAiAssist
                         :status="aiStatus"
                         :equipment-id="item.equipment_id ?? form.equipment_id"

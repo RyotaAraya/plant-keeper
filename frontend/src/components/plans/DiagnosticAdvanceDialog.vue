@@ -61,7 +61,7 @@ async function advance() {
           機器の診断: {{ diagnostic.message }}<template v-if="diagnostic.code">（{{ diagnostic.code }}）</template>
         </p>
         <p class="text-body-2">
-          次回期限は <strong>{{ plan.next_due_on }}</strong> です。診断が出てから点検していないため、前倒しの候補にしています（決めるのは人です）。
+          次回期限は <strong>{{ plan.next_due_on }}</strong> です。診断が出てから点検していないため、前倒しの候補にしています。期限を変えるかどうかは人が決めます。
         </p>
         <v-alert v-if="errors.length" type="error" density="compact" class="mt-3">{{ errors.join('、') }}</v-alert>
       </v-card-text>

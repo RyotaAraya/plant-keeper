@@ -20,9 +20,9 @@ interface ActionDef { action: Action; label: string; color: string; variant: 'fl
 const ACTIONS: Record<Action, ActionDef> = {
   approve: { action: 'approve', label: '承認', color: 'primary', variant: 'flat', confirm: '理由と代替措置を確認し、このバイパスを承認します。' },
   reject: { action: 'reject', label: '却下', color: 'error', variant: 'text', confirm: 'このバイパスの申請を却下します。', needsReason: true },
-  start: { action: 'start', label: 'バイパスを実施', color: 'warning', variant: 'flat', confirm: '現場でバイパスしたことを記録します。ここから、インターロックは働いていない扱いになります。' },
+  start: { action: 'start', label: 'バイパスを実施', color: 'warning', variant: 'flat', confirm: '現場でバイパスしたことを記録します。記録した時点から、インターロックは働いていないものとして扱います。' },
   restore: { action: 'restore', label: '復帰した', color: 'primary', variant: 'flat', confirm: 'バイパスを解除し、インターロックを復帰したことを記録します。別の人の確認で完了になります。' },
-  confirm: { action: 'confirm', label: '復帰を確認', color: 'success', variant: 'flat', confirm: 'インターロックが正常に復帰していること（バイパスの解除・指示の正常）を確認しました。' },
+  confirm: { action: 'confirm', label: '復帰を確認', color: 'success', variant: 'flat', confirm: 'バイパスが解除され、指示が正常で、インターロックが復帰していることを確認しました。' },
   cancel: { action: 'cancel', label: '取消', color: 'grey', variant: 'text', confirm: 'このバイパスの申請を取り消します。', needsReason: true },
 }
 

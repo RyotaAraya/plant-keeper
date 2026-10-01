@@ -136,7 +136,7 @@ watch(() => filters.value.site_ids, fetchStocks)
 
 <template>
   <MainLayout>
-    <PageHeader title="修理管理" description="故障した在庫品を修理業者に出し、戻ってくるまでを追います。修理せず廃棄する場合もここで記録します。">
+    <PageHeader title="修理管理" description="故障した在庫品を修理業者に出してから、戻るまでを記録します。修理せず廃棄する場合も、ここで記録します。">
       <v-btn v-if="canManageRepairs" color="primary" prepend-icon="mdi-plus" @click="openDialog()">修理依頼</v-btn>
     </PageHeader>
 

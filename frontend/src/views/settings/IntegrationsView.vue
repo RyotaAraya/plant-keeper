@@ -158,7 +158,7 @@ onMounted(fetchTokens)
         <p>
           <code>POST {{ endpoint }}</code>（ヘッダー <code>X-Integration-Token</code> に発行したトークン）。
           計器は、トークンの拠点のタグ番号で探します。状態は NE 107 の記号（N 正常 / F 故障 / C 機能点検中 / S 仕様外 / M 保守要求）で送ります。
-          いまと同じ状態を受け取り続けても記録は増えず、いまより古い日時の診断は反映せず、未来の日時（5分を超えるもの）は誤りになります。一度に500件まで送れます。
+          いまと同じ状態を受け取り続けても、記録は増えません。いまより古い日時の診断は反映せず、5分を超えて先の日時は誤りになります。一度に500件まで送れます。
         </p>
         <pre class="pk-integration__example">{{ example }}</pre>
       </v-card-text>
@@ -202,7 +202,7 @@ onMounted(fetchTokens)
           </template>
           <template v-else>
             <v-alert type="warning" variant="tonal" class="mb-3">
-              このトークンは、いま一度だけ表示します。閉じると二度と表示できないので、機器管理システムに設定してください。
+              このトークンは、今回だけ表示します。閉じると再表示できないため、いまのうちに機器管理システムに設定してください。
             </v-alert>
             <v-text-field :model-value="issued.token" label="トークン" readonly data-testid="integration-token-value" append-inner-icon="mdi-content-copy" @click:append-inner="copyToken" />
             <p v-if="copied" class="text-caption text-success mb-2">コピーしました</p>
@@ -243,7 +243,7 @@ onMounted(fetchTokens)
       <v-card v-if="revoking" data-testid="integration-revoke-dialog">
         <v-card-title>トークンを失効しますか</v-card-title>
         <v-card-text>
-          「{{ revoking.name }}」（…{{ revoking.token_hint }}）を失効します。失効すると、このトークンでは診断を送れなくなり、元に戻せません（新しく発行し直してください）。
+          「{{ revoking.name }}」（…{{ revoking.token_hint }}）を失効します。失効したトークンでは診断を送れず、元に戻せません。続けて使う場合は、新しく発行してください。
           <v-alert v-if="revokeError" type="error" variant="tonal" class="mt-3">{{ revokeError }}</v-alert>
         </v-card-text>
         <v-card-actions>

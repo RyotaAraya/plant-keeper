@@ -42,7 +42,7 @@ async function pollReseed() {
   if (state.status === 'idle') {
     // 実行中にサーバが再起動すると、状態が失われて未実行に戻る
     reseedStatus.value = 'failed'
-    reseedError.value = '再投入の状態が分からなくなりました（サーバが再起動した可能性があります）。データを確認し、必要ならもう一度実行してください'
+    reseedError.value = '再投入の状態を取得できません。サーバが再起動した可能性があります。データを確認し、必要ならもう一度実行してください'
   } else {
     reseedStatus.value = state.status
     reseedError.value = state.error ?? ''
@@ -131,7 +131,7 @@ onMounted(loadReseedStatus)
           </template>
           <template v-else-if="reseedStatus === 'running'">
             <v-progress-linear indeterminate color="warning" class="mb-3" data-testid="reseed-progress" />
-            サーバで実行中です。この画面を閉じても処理は続きます（途中で止めることはできません）。もう一度実行しないでください。
+            サーバで実行中です。この画面を閉じても処理は続きます。途中で止めることはできません。もう一度実行しないでください。
           </template>
           <template v-else-if="reseedStatus === 'succeeded'">
             デモデータを再投入しました。

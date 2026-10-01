@@ -188,7 +188,7 @@ watch(filters, fetchMaterials, { deep: true })
 
 <template>
   <MainLayout>
-    <PageHeader title="資材管理" description="部品や消耗品の資材マスタです。型番の表記ゆれを吸収して探せ、他拠点の在庫も同じ行で分かります。">
+    <PageHeader title="資材管理" description="部品や消耗品の資材マスタです。型番の表記ゆれがあっても探せます。他拠点の在庫も同じ行で確認できます。">
       <v-btn v-if="canManageMaterial" color="primary" prepend-icon="mdi-plus" @click="openDialog()">新規登録</v-btn>
     </PageHeader>
 

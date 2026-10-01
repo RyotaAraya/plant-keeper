@@ -172,7 +172,7 @@ watch(() => route.query, () => {
 
 <template>
   <MainLayout>
-    <PageHeader title="トラブル管理" description="設備の不具合・故障の報告と対応状況を追います。点検で見つかった不具合も自動で並びます。">
+    <PageHeader title="トラブル管理" description="設備の不具合・故障の報告と対応状況を記録します。点検で見つかった不具合も、トラブルとして自動で登録されます。">
       <v-btn v-if="canCreateTrouble" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
     </PageHeader>
 
