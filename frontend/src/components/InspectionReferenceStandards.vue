@@ -39,7 +39,7 @@ const reasonsFor = (use: InspectionReferenceStandardUse) => {
     <v-card-text>
       <h2 class="text-subtitle-1">使用した基準器</h2>
       <div class="text-caption text-medium-emphasis mb-3">
-        校正に使った基準器と、使用前の1点チェックの結果を記録します。提出するときに、点検日に使える基準器か（校正の有効期限・状態・使用前のチェック）を確認し、5点校正の測定値を提出するには基準器の指定が必要です。
+        校正に使った基準器と、使用前の1点チェックの結果を記録します。提出時には、校正の有効期限・状態・使用前のチェックから、点検日に使える基準器かを確認します。5点校正の測定値を提出するには、基準器を指定してください。
       </div>
       <v-alert v-if="requireTraceable" type="info" variant="tonal" density="compact" class="mb-3">
         この点検には取引用の計器が含まれるため、トレーサビリティのある校正の基準器が必要です。

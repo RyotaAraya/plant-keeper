@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
@@ -8,14 +8,15 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { canTransactStock } from '@/constants/stock'
-import { useAuthStore } from '@/stores/auth'
 import { nowForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
 
+const route = useRoute()
 const router = useRouter()
 const { canManageStockTransaction } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 const stocks = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)
@@ -24,7 +25,7 @@ const totalCount = ref(0)
 // 通常業務では自拠点の在庫だけ見ればよいため、自分の所属拠点を初期値にする。
 // 拠点をまたいで探すときは、拠点で「全拠点」を選ぶ
 const filters = ref({
-  site_ids: (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[],
+  site_ids: initialSiteIds(route.query.site_ids),
   warehouse_ids: [] as number[],
   statuses: [] as string[],
 })
@@ -100,9 +101,7 @@ async function fetchWarehouses(siteIds: number[]) {
 
 // 拠点を変えたら、表示する拠点にない倉庫の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 function changeSite(siteIds: number[]) {
-  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
-  const keepWarehouses = filters.value.warehouse_ids.filter((id) => warehouses.value.find((w) => w.id === id && shown(w.site_id)))
-  filters.value = { ...filters.value, site_ids: siteIds, warehouse_ids: keepWarehouses }
+  filters.value = { ...filters.value, site_ids: siteIds, warehouse_ids: keepInSites(filters.value.warehouse_ids, warehouses.value, siteIds) }
   fetchWarehouses(siteIds)
 }
 

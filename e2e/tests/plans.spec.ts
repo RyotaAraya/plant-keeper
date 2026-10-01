@@ -37,14 +37,15 @@ test('定期整備の系列を開くと各回が並び、回を押すと定期�
   await expect(page.getByRole('link', { name: '計画の一覧へ戻る' })).toBeVisible() // ヘッダーの現在地は「計画」
 })
 
-test('法規区分で絞り込むと、その区分のまとまりだけになり、定期整備は出さない', async ({ page }) => {
+test('法規区分で絞り込むと、その区分のまとまりだけになり、定期整備にはその絞り込みを適用しない', async ({ page }) => {
   await login(page, ACCOUNTS.member)
   await openPlans(page)
-  await selectOption(page, '法規区分', 'ボイラー・第一種圧力容器')
+  await selectOption(page, '点検の法規区分', 'ボイラー・第一種圧力容器')
   const groups = page.getByTestId('plan-groups').locator('tbody tr')
   await expect(groups).toHaveCount(1)
   await expect(groups).toContainText('安全弁 年次点検')
-  await expect(page.getByText('担当部署・法規区分で絞り込んでいる間は、定期整備を表示しません')).toBeVisible()
+  await expect(page.getByText('点検の担当部署・法規区分は、下の定期整備には適用されません。')).toBeVisible()
+  await expect(page.getByTestId('plan-maintenances')).toBeVisible()
 })
 
 test('旧の点検計画・定期整備のURLは「計画」画面の期限順・定期整備に転送され、絞り込みも引き継ぐ', async ({ page }) => {

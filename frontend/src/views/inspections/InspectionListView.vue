@@ -8,28 +8,32 @@ import CalibrationImportDialog from '@/components/CalibrationImportDialog.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
+import InspectionDrafts from '@/components/inspections/InspectionDrafts.vue'
+import { inspectionName } from '@/utils/inspectionWorkflow'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { inspectionTypeLabel } from '@/constants/recordLabels'
-import { useAuthStore } from '@/stores/auth'
-import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { idFromQuery, listFromQuery } from '@/utils/listQuery'
 import { equipmentNames } from '@/utils/equipment'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const inspections = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
 const importOpen = ref(false)
+const importRevision = ref(0)
+function onImported() { importRevision.value++; void fetchInspections() }
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ほかの画面のリンクから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
 function filtersFromQuery() {
   return {
-    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    site_ids: initialSiteIds(route.query.site_ids),
     statuses: listFromQuery(route.query.status),
     instrument_id: idFromQuery(route.query.instrument_id),
     department_id: idFromQuery(route.query.department_id),
@@ -43,6 +47,7 @@ const filters = ref({
 })
 
 const headers = [
+  { title: '点検内容', key: 'name', sortable: false },
   { title: '点検日時', key: 'inspected_at', width: '160px' },
   { title: '種別', key: 'inspection_type', width: '110px' },
   { title: '設備', key: 'equipments', sortable: false },
@@ -93,10 +98,12 @@ async function fetchInspections() {
 
 // 拠点を変えたら、表示する拠点にない設備・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 function changeSite(siteIds: number[]) {
-  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
-  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
-  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
-  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment, department_id: keepDepartment ? keepDepartment.id : null }
+  filters.value = {
+    ...filters.value,
+    site_ids: siteIds,
+    equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
+    department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
+  }
   loadSiteOptions(siteIds)
 }
 
@@ -129,9 +136,10 @@ watch(() => route.query, () => {
   <MainLayout>
     <PageHeader title="点検・作業記録" description="点検の結果をチェックリストで記録し、承認まで進めます。不具合はトラブルに自動登録されます。">
       <v-btn variant="outlined" color="primary" prepend-icon="mdi-file-import-outline" class="mr-2" @click="importOpen = true">校正結果の取り込み</v-btn>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/inspections/new')">新規点検</v-btn>
+      <v-btn color="primary" class="mr-2" :to="{ path: '/plans', query: { tab: 'due', site_ids: filters.site_ids.join(',') || 'all' } }">予定から点検</v-btn>
+      <v-btn variant="outlined" :to="{ path: '/inspections/new', query: { return_to: route.fullPath } }">予定外の点検</v-btn>
     </PageHeader>
-    <CalibrationImportDialog v-model="importOpen" @imported="fetchInspections" />
+    <CalibrationImportDialog v-model="importOpen" @imported="onImported" />
 
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
@@ -153,6 +161,8 @@ watch(() => route.query, () => {
       <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
     </div>
 
+    <InspectionDrafts :key="importRevision" :site-ids="filters.site_ids" :return-to="route.fullPath" />
+
     <v-data-table
       :headers="headers"
       :items="inspections"
@@ -161,6 +171,7 @@ watch(() => route.query, () => {
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.name="{ item }">{{ inspectionName(item) }}</template>
       <template #item.inspected_at="{ item }">
         {{ formatDate(item.inspected_at) }}
       </template>

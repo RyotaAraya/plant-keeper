@@ -3,7 +3,7 @@ module Api
     class InspectionPlansController < BaseController
       include EquipmentIdsParam
 
-      before_action :set_plan, only: [ :update ]
+      before_action :set_plan, only: [ :show, :update ]
 
       # GET /api/v1/inspection_plans
       # overdue=true で期限超過のみ、due_within=N で N日以内に期限が来るもの。既定は有効な計画のみ（is_active=false で無効も）
@@ -51,6 +51,12 @@ module Api
         plans = plans.limit(per_page).offset((page - 1) * per_page)
 
         render json: { data: plans.map { |plan| plan_json(plan) }, meta: { total_count: total_count, page: page, per_page: per_page } }
+      end
+
+      # 開始時の対象・チェックリスト・期限はURLの値でなく、現在の計画から取得する。
+      def show
+        authorize @plan
+        render json: { data: plan_json(@plan) }
       end
 
       # POST /api/v1/inspection_plans

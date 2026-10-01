@@ -86,7 +86,7 @@ async function runExport() {
       <v-card-text>
         <div class="text-body-2 text-medium-emphasis mb-3">
           5点校正のある点検計画を、キャリブレータ・校正管理ソフトに渡すファイル（JSON）にします。
-          結果の記録に計画のID（inspection_plan_id）を入れて返すと、「校正結果の取り込み」でその計画の点検の下書きになり、提出したときに次回期限が進みます。
+          結果の記録に計画のID（inspection_plan_id）を入れて返すと、「校正結果の取り込み」でその計画の点検の下書きになります。下書きを提出すると、次回期限が進みます。
           期限超過と{{ PRESELECT_DAYS }}日以内に期限が来る計画を選んであります。
         </div>
 

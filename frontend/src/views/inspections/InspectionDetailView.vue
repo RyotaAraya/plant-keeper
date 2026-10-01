@@ -11,6 +11,7 @@ import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { RESULT_COLOR, RESULT_LABEL, calibrationInputFrom } from '@/utils/calibration'
 import { RESULT_COLOR as ITEM_RESULT_COLOR, RESULT_LABEL as ITEM_RESULT_LABEL, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
+import { inspectionName, inspectionReturn, inspectionReturnLabel } from '@/utils/inspectionWorkflow'
 import { coveredEquipments } from '@/utils/equipment'
 
 const route = useRoute()
@@ -20,6 +21,7 @@ const { isAdmin, isManager, canApproveInspection } = usePermissions()
 const inspection = ref<any>(null)
 const loading = ref(true)
 const actionError = ref('')
+const returnTo = computed(() => inspectionReturn(route.query.return_to))
 
 // バックエンドの InspectionPolicy#update? に対応（承認済みは誰も変更不可。作成者本人か管理者/マネージャーのみ）
 const canEdit = computed(
@@ -81,15 +83,15 @@ onMounted(fetchInspection)
     <v-progress-linear v-if="loading" indeterminate />
     <template v-else-if="inspection">
       <DetailHeader
-        back-to="/inspections"
-        back-label="点検・作業記録"
+        :back-to="returnTo"
+        :back-label="inspectionReturnLabel(returnTo)"
         kind="点検記録"
-        :title="inspection.checklist_template?.name || inspectionTypeLabel[inspection.inspection_type] || '点検'"
+        :title="inspectionName(inspection)"
         :subtitle="`${inspection.equipment?.name ?? ''} ・ ${formatDate(inspection.inspected_at)}`"
       >
         <template #status><StatusChip kind="inspection" :value="inspection.status" /></template>
         <template #actions>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" @click="router.push(`/inspections/${inspection.id}/edit`)">編集</v-btn>
+          <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
           <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
           <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
@@ -97,6 +99,21 @@ onMounted(fetchInspection)
         </template>
       </DetailHeader>
       <v-alert v-if="actionError" type="error" variant="tonal" closable class="mb-4" @click:close="actionError = ''">{{ actionError }}</v-alert>
+
+      <v-alert v-if="route.query.saved === inspection.status && ['draft', 'submitted'].includes(inspection.status)" type="success" variant="tonal" class="mb-4" role="status" data-testid="inspection-saved">
+        {{ inspection.status === 'draft' ? '下書きを保存しました。入力は「編集」から再開できます。' : '点検を提出しました。' }}
+        <v-btn variant="text" :to="returnTo">{{ inspectionReturnLabel(returnTo) }}に戻る</v-btn>
+      </v-alert>
+      <v-alert v-if="inspection.inspection_plan" type="info" variant="tonal" class="mb-4" data-testid="inspection-plan-context">
+        <strong>{{ inspection.inspection_plan.name }}</strong> ／ 現在の次回期限 {{ inspection.inspection_plan.next_due_on }}
+        <p>{{ inspection.status === 'draft' ? '下書き保存では計画の期限は更新しません。提出すると、実施日をもとに次回期限を更新します。' : 'この点検は計画にひもづいています。表示は計画の現在の期限です。' }}</p>
+      </v-alert>
+      <v-alert v-else-if="!inspection.maintenance_task" type="info" variant="tonal" class="mb-4">予定外の点検です。点検計画の期限は更新しません。</v-alert>
+      <v-alert v-else type="info" variant="tonal" class="mb-4">
+        定期整備の作業「{{ inspection.maintenance_task.title }}」の点検です。
+        {{ inspection.status === 'draft' ? '提出すると作業が完了になります。' : '作業の状態は定期整備で確認できます。' }}
+        <v-btn variant="text" :to="`/maintenances/${inspection.maintenance_task.scheduled_maintenance_id}`">定期整備の作業を開く</v-btn>
+      </v-alert>
 
       <!-- 概要: 常に見える基本情報 -->
       <v-card class="mb-4 pk-summary" data-testid="detail-summary">
@@ -194,11 +211,12 @@ onMounted(fetchInspection)
                 <td colspan="5" class="text-center text-grey py-4">
                   <template v-if="inspection.status === 'draft'">
                     点検項目が未入力です。
-                    <a
+                    <router-link
                       class="text-primary"
-                      style="cursor: pointer"
-                      @click="router.push(`/inspections/${inspection.id}/edit`)"
-                    >編集画面</a>から入力してください。
+                      :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }"
+                    >
+                      編集画面
+                    </router-link>から入力してください。
                   </template>
                   <template v-else>点検項目が未入力です。</template>
                 </td>

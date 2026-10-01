@@ -92,7 +92,7 @@ test('プラナの作業場から現場メモを入力してAIの下書きを作
   await page.getByRole('button', { name: '下書き保存' }).click()
   const body = (await request).postDataJSON()
   expect(body.inspection.items[0].ai_suggestion_id).toEqual(expect.any(Number))
-  await expect(page).toHaveURL(/\/inspections$/)
+  await expect(page).toHaveURL(/\/inspections\/\d+\?.*saved=/)
 
   // 人が直したタイトルでトラブルができている
   await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()

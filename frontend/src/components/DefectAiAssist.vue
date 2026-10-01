@@ -158,7 +158,7 @@ function discard() {
 
     <v-card v-if="draft" variant="outlined" color="primary" class="mt-2 pk-ai-report" data-testid="ai-draft">
       <v-card-text class="text-body-2">
-        <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認して、必要なら直してください（反映するまで入力欄は変わりません）。</PlanaNote>
+        <PlanaNote>プラナが整理しました。まだ保存されていません。内容を確認し、必要なら直してから反映してください。反映するまで入力欄は変わりません。</PlanaNote>
         <h3 class="pk-ai-report-title" data-testid="ai-draft-title">{{ draft.title }}</h3>
         <p v-if="draft.description" class="pk-ai-report-desc">{{ draft.description }}</p>
         <div class="pk-ai-report-priority">
@@ -178,7 +178,7 @@ function discard() {
           </div>
         </div>
         <p v-if="draft.possible_causes.length || draft.check_points.length" class="pk-ai-report-caption">
-          <template v-if="draft.possible_causes.length">見立ては可能性であり断定ではありません。</template>
+          <template v-if="draft.possible_causes.length">見立ては、考えられる原因の候補です。</template>
           タイトル・説明・優先度以外は反映されません。
         </p>
       </v-card-text>

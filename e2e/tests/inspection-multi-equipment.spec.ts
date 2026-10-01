@@ -27,7 +27,9 @@ test('複数の設備をまとめて巡回点検を記録し、異常があっ�
   await page.getByRole('button', { name: '下書き保存' }).click()
   const body = (await saved).postDataJSON()
   expect(body.inspection.equipment_ids).toHaveLength(2)
-  await expect(page).toHaveURL(/\/inspections$/)
+  await expect(page).toHaveURL(/\/inspections\/\d+\?.*saved=/)
+
+  await page.getByRole('link', { name: '点検・作業記録', exact: true }).click()
 
   await test.step('一覧に、まとめた設備が並ぶ（代表の設備が先頭）', async () => {
     await expect(page.getByRole('row', { name: /常圧蒸留装置、重油間接脱硫装置/ }).first()).toBeVisible()

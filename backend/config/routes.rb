@@ -41,7 +41,7 @@ Rails.application.routes.draw do
           get :item_stats
         end
       end
-      resources :inspection_plans, only: [ :index, :create, :update ]
+      resources :inspection_plans, only: [ :index, :show, :create, :update ]
       resources :inspection_plan_groups, only: [ :index, :show, :create, :update ]
       resources :inspections, only: [ :index, :show, :create, :update ]
       # キャリブレータ・校正管理ソフトの校正結果（JSON）の取り込み。確認（preview）→ 取り込み（create）

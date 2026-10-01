@@ -10,15 +10,15 @@ import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
-import { useAuthStore } from '@/stores/auth'
+import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { nowForInput } from '@/utils/datetime'
-import { idFromQuery, listFromQuery, siteIdsFromQuery } from '@/utils/listQuery'
+import { idFromQuery, listFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
 const { canCreateTrouble } = usePermissions()
-const authStore = useAuthStore()
+const { initialSiteIds } = useSiteScope()
 
 const troubles = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
@@ -31,7 +31,7 @@ const errors = ref<string[]>([])
 // ほかの画面のリンクから来たときは、その拠点・ステータス・優先度で、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
 function filtersFromQuery() {
   return {
-    site_ids: siteIdsFromQuery(route.query.site_ids, (authStore.user?.site_id ? [authStore.user.site_id] : []) as number[]),
+    site_ids: initialSiteIds(route.query.site_ids),
     statuses: listFromQuery(route.query.status),
     priorities: listFromQuery(route.query.priority),
     instrument_id: idFromQuery(route.query.instrument_id),
@@ -106,10 +106,12 @@ async function fetchTroubles() {
 
 // 拠点を変えたら、表示する拠点にない設備・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 function changeSite(siteIds: number[]) {
-  const shown = (id: number) => siteIds.length === 0 || siteIds.includes(id)
-  const keepEquipment = filters.value.equipment_ids.filter((id) => equipments.value.find((e) => e.id === id && shown(e.site_id)))
-  const keepDepartment = departments.value.find((d) => d.id === filters.value.department_id && shown(d.site_id))
-  filters.value = { ...filters.value, site_ids: siteIds, equipment_ids: keepEquipment, department_id: keepDepartment ? keepDepartment.id : null }
+  filters.value = {
+    ...filters.value,
+    site_ids: siteIds,
+    equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
+    department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
+  }
   loadSiteOptions(siteIds)
 }
 
@@ -170,7 +172,7 @@ watch(() => route.query, () => {
 
 <template>
   <MainLayout>
-    <PageHeader title="トラブル管理" description="設備の不具合・故障の報告と対応状況を追います。点検で見つかった不具合も自動で並びます。">
+    <PageHeader title="トラブル管理" description="設備の不具合・故障の報告と対応状況を記録します。点検で見つかった不具合も、トラブルとして自動で登録されます。">
       <v-btn v-if="canCreateTrouble" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規報告</v-btn>
     </PageHeader>
 

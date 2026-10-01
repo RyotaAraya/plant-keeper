@@ -103,6 +103,7 @@ async function deleteTask(task: any) {
 function startInspection(task: any) {
   const query: Record<string, string> = {
     maintenance_task_id: String(task.id),
+    return_to: route.fullPath,
     equipment_id: String(task.equipment?.id ?? ''),
     inspection_type: 'periodic',
   }
@@ -291,10 +292,10 @@ onMounted(fetchMaintenance)
           {{ transitionLabel(maintenance.status, status) }}
         </v-btn>
         <span v-if="nextStatuses.some(blockedByBypass)" class="text-caption text-error" data-testid="bypass-blocking-note">
-          対象設備のインターロックに、戻っていないバイパスが{{ blockingBypasses.length }}件あります（復帰と、別の人の確認を済ませてから進んでください）
+          対象設備のインターロックに、戻っていないバイパスが{{ blockingBypasses.length }}件あります。復帰し、別の人の確認を済ませてから進んでください
         </span>
         <span v-if="nextStatuses.includes('completed') && !canComplete" class="text-caption text-medium-emphasis">
-          完了にするには、検収を記録してください（結果が「手直しあり」のときは、実施中に戻して手直しします）
+          完了にするには、検収を記録してください。結果が「手直しあり」のときは、実施中に戻して手直しします
         </span>
       </div>
       <v-alert v-if="actionError" type="error" density="compact" class="mb-3" closable @click:close="actionError = ''">{{ actionError }}</v-alert>
@@ -335,7 +336,7 @@ onMounted(fetchMaintenance)
           <v-icon class="mr-2" :color="blockingBypasses.length ? 'error' : undefined">mdi-shield-alert-outline</v-icon>
           対象設備のインターロックのバイパス
         </v-card-title>
-        <v-card-subtitle>運転を再開する前に、バイパス中・復帰確認待ちのものをすべて戻し、別の人が確認します（残っていると検収へ進めません）</v-card-subtitle>
+        <v-card-subtitle>運転を再開する前に、バイパス中・復帰確認待ちのものをすべて戻し、別の人が確認します。残っていると検収へ進めません</v-card-subtitle>
         <v-card-text>
           <v-table density="compact">
             <tbody>
@@ -400,7 +401,7 @@ onMounted(fetchMaintenance)
             <v-card-text>
               <v-progress-linear v-if="taskProgress.total" :model-value="(taskProgress.completed / taskProgress.total) * 100" color="success" height="6" rounded class="mb-3" />
               <p v-if="!tasks.length" class="text-body-2 text-medium-emphasis">
-                作業はまだありません。部署ごとに、この整備で点検・整備する設備や計器を追加します（「計器を一括追加」で、設備の計器を種類ごとの定修点検つきでまとめて追加できます）。
+                作業はまだありません。部署ごとに、この整備で点検・整備する設備や計器を追加してください。「計器を一括追加」を使うと、設備の計器を種類ごとの定修点検つきでまとめて追加できます。
               </p>
               <div v-for="group in taskGroups" :key="group.name" class="mb-4">
                 <div class="text-subtitle-2 mb-1">{{ group.name }}（{{ group.tasks.length }}）</div>
@@ -478,7 +479,7 @@ onMounted(fetchMaintenance)
             </v-card-title>
             <v-card-text>
               <p v-if="!series" class="text-body-2 text-medium-emphasis">
-                系列に属していません。繰り返し行う整備は、系列に登録すると、設備ごとの周期から「次回を作る」で対象設備を自動で選べます。
+                系列に属していません。繰り返し行う整備を系列に登録すると、「次回を作る」で、設備ごとの周期から対象設備を自動で選べます。
               </p>
               <template v-else>
                 <div class="text-caption text-grey mb-1">設備ごとの周期</div>

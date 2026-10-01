@@ -38,7 +38,7 @@ const bypassSteps = [
 const calibrationPoints = [
   { icon: 'mdi-tune-vertical', title: '5点校正', text: '上昇・下降の出力とDCSの表示を入れると、誤差と合否を計算します。' },
   { icon: 'mdi-chart-line', title: '校正の傾向', text: '調整前の最大誤差を、許容差と並べて年ごとに見られます。' },
-  { icon: 'mdi-calendar-sync-outline', title: '周期の見直しの候補', text: '決まったルールで出します（AIは使いません）。法令で周期が決まる計器は、延長の候補にしません。' },
+  { icon: 'mdi-calendar-sync-outline', title: '周期の見直しの候補', text: '候補は決まったルールで出し、AIは使いません。法令で周期が決まる計器は、延長の候補にしません。' },
 ]
 const diagnosticStates: DiagnosticStatus[] = ['failure', 'function_check', 'out_of_specification', 'maintenance_required']
 
@@ -50,7 +50,7 @@ const story = [
   {
     key: 'defect-draft',
     scene: '点検で気づく',
-    lead: '巡回中に指示の低さに気づいた。メモを書けば、トラブル報告の形に整えます。',
+    lead: '巡回中に指示の低さに気づいたら、メモを入力します。プラナがメモをトラブル報告の形に整えます。',
     input: '点検で気づいたこと',
     memo: '朝の巡回でFT-301の指示が低め。\n昨日も同じだった。いつからかは不明。\n現場の流量はまだ確認していない。',
     routineChecks: [
@@ -69,12 +69,12 @@ const story = [
       '導圧管の閉塞の可能性（急な変化ではなく、進行中の閉塞と考えられるため）',
     ],
     checkPoint: '現場の流量と、FT-301の指示は一致しているか？',
-    result: '確認して点検を保存すると、トラブルとして登録されます。',
+    result: '内容を確認して点検を保存すると、トラブルとして登録されます。',
   },
   {
     key: 'similar-troubles',
     scene: '過去の事例を見る',
-    lead: '同じ計器や同じ種類の計器の過去のトラブルから、症状が同じものを探します。',
+    lead: '同じ計器や同じ種類の計器の過去のトラブルから、プラナが症状の同じものを探します。',
     input: '1と同じメモで探します',
     memo: '',
     planaNote: 'プラナが選んだ候補です（過去のトラブル9件から）。開いて記録を確かめてください。',
@@ -82,12 +82,12 @@ const story = [
     meta: '完了・優先度 中・2年前',
     similarity: '同じ計器で、指示が低めの状態が続いた点が一致',
     howHandled: '導圧管にスラッジの堆積を確認し、ブローして指示が復旧した',
-    result: 'まず導圧管から確かめればよい、と分かります。',
+    result: '過去の対応から、まず導圧管を確かめればよいと判断できます。',
   },
   {
     key: 'response-draft',
     scene: '対応を記録する',
-    lead: '作業後のメモを、対応記録の形に整えます。',
+    lead: 'プラナが作業後のメモを、対応記録の形に整えます。',
     input: '作業後のメモ',
     memo: '導圧管ブローしたら黒いスラッジが出た。\nブロー後は指示が戻った。\n現場の流量計と合ってる。',
     planaNote: 'プラナが整理しました。保存する前に確認・修正してください。',
@@ -96,7 +96,7 @@ const story = [
     detail: '導圧管をブローしたところ、黒色のスラッジが排出された。ブロー後に指示の復旧を確認し、現場流量計の指示とも一致した。',
     usedMaterials: 'なし',
     checkPoint: 'スラッジの出どころ（原油の性状の変化など）は分かっているか？',
-    result: '保存すると、トラブルの対応記録として残ります。次に同じ症状が出たとき、2の検索で見つかるようになります。',
+    result: '保存した内容は、トラブルの対応記録になります。次に同じ症状が出たときは、2の検索でこの記録が候補に出ます。',
   },
 ].map((step) => ({ ...step, to: capability(step.key).to, task: capability(step.key).title }))
 </script>
@@ -124,16 +124,16 @@ const story = [
           <div>
             <v-btn to="/home" color="primary" size="x-large">{{ auth.isLoggedIn ? '作業ホームを開く' : 'デモアカウントで試す' }}</v-btn>
           </div>
-          <p class="landing-caption">{{ auth.isLoggedIn ? '設備やトラブルを選んで、作業を始められます。' : '登録不要。ログイン画面でデモアカウントを選ぶだけで試せます。' }}</p>
+          <p class="landing-caption">{{ auth.isLoggedIn ? '設備やトラブルを選んで、作業を始められます。' : 'アカウントの登録は不要です。ログイン画面でデモアカウントを選ぶと、すぐに試せます。' }}</p>
         </div>
         <figure class="landing-hero-shot">
-          <a :href="troubleScreenshot" target="_blank" rel="noopener" aria-label="トラブル詳細の画面を拡大する（新しいタブ）"><img :src="troubleScreenshot" width="1144" height="584" alt="トラブル詳細画面。対象設備の常圧蒸留装置、計器PV-201、発生元点検と最近の点検履歴を同じ画面で確認できる。" /></a>
+          <a :href="troubleScreenshot" target="_blank" rel="noopener" aria-label="トラブル詳細の画面を拡大する（新しいタブ）"><img :src="troubleScreenshot" width="1144" height="584" alt="トラブル詳細画面。対象設備の常圧蒸留装置、計器PV-201、発生元の点検、最近の点検履歴が1つの画面に並ぶ。" /></a>
         </figure>
       </div>
     </section>
 
     <section id="features" class="landing-section" aria-labelledby="features-title">
-      <div class="landing-section-heading"><p class="landing-eyebrow">PlantKeeperの機能</p><h2 id="features-title">設備台帳から発注まで</h2><p>点検で見つけた不具合はトラブルになり、修理や資材の手配まで、同じ設備にひもづけて記録します。</p></div>
+      <div class="landing-section-heading"><p class="landing-eyebrow">PlantKeeperの機能</p><h2 id="features-title">設備台帳から発注まで</h2><p>点検で見つけた不具合は、トラブルとして登録されます。計器ごとのトラブルと点検の履歴は、計器の詳細で確認できます。</p></div>
       <ol class="landing-flow" aria-label="PlantKeeperで管理する保全業務の流れ">
         <li v-for="step in flowSteps" :key="step.title">
           <v-icon size="22" color="primary" aria-hidden="true">{{ step.icon }}</v-icon>
@@ -146,7 +146,7 @@ const story = [
     <section id="safety" class="landing-section landing-divided landing-safety" aria-labelledby="safety-title">
       <div class="landing-section-heading">
         <h2 id="safety-title">インターロックのバイパス管理</h2>
-        <p>点検や故障対応で一時的に外すインターロックを、申請から復帰の確認まで記録します。外している間は、プラントを守る仕組みがひとつ欠けた状態です。</p>
+        <p>点検や故障対応でインターロックを一時的にバイパスするとき、申請から復帰の確認までを記録します。バイパスしている間、そのインターロックは働きません。</p>
       </div>
       <div class="landing-safety-body">
         <figure class="landing-hero-shot">
@@ -156,7 +156,7 @@ const story = [
           <ol class="landing-bypass-steps" aria-label="バイパスの流れ">
             <li v-for="step in bypassSteps" :key="step.title"><strong>{{ step.title }}</strong><span v-if="step.note">{{ step.note }}</span></li>
           </ol>
-          <p class="landing-body-text">予定の時刻を過ぎても戻っていないバイパスは「復帰期限超過」として目立たせます。定期整備は、対象設備のバイパスがすべて戻るまで検収へ進めません。</p>
+          <p class="landing-body-text">予定の時刻を過ぎても復帰していないバイパスは、「復帰期限超過」として赤く表示します。定期整備は、対象設備のバイパスがすべて復帰するまで検収へ進めません。</p>
         </div>
       </div>
     </section>
@@ -168,7 +168,7 @@ const story = [
       </div>
       <div class="landing-feature-body">
         <figure class="landing-hero-shot">
-          <a :href="calibrationScreenshot" target="_blank" rel="noopener" aria-label="校正の傾向の画面を拡大する（新しいタブ）"><img :src="calibrationScreenshot" width="1120" height="633" alt="計器FT-301の校正の傾向。調整前の最大誤差が0.12、0.25、0.41と年々大きくなり、2026年に0.72%で許容差0.5%を超えて不合格になり、調整後は0.12%に戻っている。" /></a>
+          <a :href="calibrationScreenshot" target="_blank" rel="noopener" aria-label="校正の傾向の画面を拡大する（新しいタブ）"><img :src="calibrationScreenshot" width="1120" height="633" alt="計器FT-301の校正の傾向。調整前の最大誤差は0.12%、0.25%、0.41%と年々大きくなり、2026年は0.72%で許容差0.5%を超えて不合格になった。調整後は0.12%に戻っている。" /></a>
           <figcaption>FT-301の校正の傾向。調整前の誤差が年々増え、今年は許容差を超えたため、周期の短縮の候補になります。</figcaption>
         </figure>
         <ul class="landing-points">
@@ -180,7 +180,7 @@ const story = [
     <section id="daily" class="landing-section landing-divided" aria-labelledby="daily-title">
       <div class="landing-section-heading">
         <h2 id="daily-title">日々の確認</h2>
-        <p>朝会の資料をExcelで作り直したり、機器の異常を別のシステムまで見に行ったりしなくて済むようにしました。</p>
+        <p>朝会・夕会で確かめるその日の仕事と、機器の自己診断の結果を、PlantKeeperの画面で確認できます。</p>
       </div>
       <div class="landing-daily-grid">
         <article>
@@ -188,14 +188,14 @@ const story = [
             <a :href="homeScreenshot" target="_blank" rel="noopener" aria-label="ホームの画面を拡大する（新しいタブ）"><img :src="homeScreenshot" width="1120" height="1062" alt="川崎製油所の計器Aチームの人のホーム（朝会）。先頭にインターロックのバイパス3件、その下に計器Aチームのやること（実施中の定期整備の作業と、優先度の高い順のトラブル）が1本のリストで並ぶ。" /></a>
           </figure>
           <h3 class="landing-feature-title">ホーム（やること）</h3>
-          <p class="landing-body-text">ログインすると、自分の所属のチーム・課・部ごとに、期限の来た点検計画、定期整備の作業、トラブルを1本のリストで出します。夕会に切り替えると、今日の実績と積み残しを出します。A4でそのまま印刷できます。</p>
+          <p class="landing-body-text">ログインすると、所属のチーム・課・部ごとに、やることを1本のリストで表示します。リストには、期限の来た点検計画、定期整備の作業、トラブルが入ります。夕会に切り替えると、今日の実績と積み残しを表示します。A4でそのまま印刷できます。</p>
         </article>
         <article>
           <figure class="landing-hero-shot">
             <a :href="diagnosticsScreenshot" target="_blank" rel="noopener" aria-label="機器の診断で絞り込んだ計器一覧の画面を拡大する（新しいタブ）"><img :src="diagnosticsScreenshot" width="1120" height="427" alt="計器の一覧を機器の診断で絞り込んだ画面。LT-701が仕様外、PT-502が保守要求、TV-602が故障として並ぶ。" /></a>
           </figure>
           <h3 class="landing-feature-title">機器の自己診断（NAMUR NE 107）</h3>
-          <p class="landing-body-text">スマート機器の自己診断を、機器管理システム（AMS Device Manager など）から受け取り、計器の一覧と詳細に出します。故障はトラブルに自動で登録し、保守要求・仕様外は点検計画の期限を前倒しする候補にします（AIは使いません）。</p>
+          <p class="landing-body-text">スマート機器の自己診断の結果を、機器管理システム（AMS Device Managerなど）から受け取り、計器の一覧と詳細に表示します。故障はトラブルとして自動で登録します。保守要求・仕様外になった計器は、その計器の点検計画を期限の前倒しの候補にします。トラブルの登録と前倒しの候補はルールで判定し、AIは使いません。</p>
           <ul class="landing-diagnostic-states" aria-label="NE 107の状態">
             <li v-for="state in diagnosticStates" :key="state"><DiagnosticChip :status="state" /></li>
           </ul>
@@ -210,7 +210,7 @@ const story = [
           <div>
             <p class="landing-eyebrow">PlantKeeperのAIアシスタント</p>
             <h2 id="plana-title">プラナ</h2>
-            <p class="landing-plana-lead">不具合が起きたときのフォローをします。使い方は、下の例をご覧ください。</p>
+            <p class="landing-plana-lead">プラナは、不具合の報告の整理、過去の事例の検索、対応記録の整理を手伝います。使い方は下の例をご覧ください。</p>
           </div>
           <figure class="landing-character">
             <PlanaAvatar variant="full" alt="ヘルメットをかぶり、タブレットを持ったAIアシスタント、プラナ" />
@@ -222,7 +222,7 @@ const story = [
       <section id="plana-work" class="landing-section" aria-labelledby="plana-work-title">
         <div class="landing-section-heading">
           <h2 id="plana-work-title">1件のトラブルでの使い方</h2>
-          <p>流量計FT-301の指示が低い。気づいてから対応を記録するまでに、プラナを使う場面は3つです。<span class="landing-note-inline">メモと記録は架空の例です</span></p>
+          <p>流量計FT-301の指示が低いことに気づいてから、対応を記録するまでに、プラナを使う場面は3つあります。<span class="landing-note-inline">メモと記録は架空の例です</span></p>
         </div>
         <ol class="landing-story-steps">
           <li v-for="(step, index) in story" :key="step.key" class="landing-step" :data-task="step.key">
@@ -281,8 +281,8 @@ const story = [
 
     <section id="try-guide" class="landing-section landing-guide" aria-labelledby="try-title">
       <h2 id="try-title">試し方</h2>
-      <ol><li>ログイン画面でデモアカウントを選びます。3つとも試すなら、自社の「一般」を選んでください。</li><li>仕事を選び、設備やトラブルを指定して、メモを自分で入力します（上の例は自動では入りません）。</li><li>プラナの案を確認し、保存するかを決めます。</li></ol>
-      <p>プラナには1日の利用上限があり、上限に達すると使えなくなります（ほかの機能はそのまま使えます）。</p>
+      <ol><li>ログイン画面でデモアカウントを選びます。3つとも試すなら、自社の「一般」を選んでください。</li><li>仕事を選び、設備やトラブルを指定して、メモを自分で入力します。上の例は自動では入りません。</li><li>プラナの案を確認し、保存するかを決めます。</li></ol>
+      <p>プラナには1日の利用上限があります。上限に達するとプラナは使えなくなりますが、ほかの機能はそのまま使えます。</p>
     </section>
 
     <section id="permissions" class="landing-section" aria-labelledby="permission-title">
@@ -291,7 +291,7 @@ const story = [
     </section>
     <section class="landing-story landing-section">
       <div><h2>開発の背景</h2></div>
-      <div><p>石油プラントの計装保全を10年担当していました。紙やExcelに散らばっていた保全の情報を、1か所で扱えるように作ったのがPlantKeeperです。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
+      <div><p>石油プラントの計装保全を10年担当していました。紙やExcelで別々に管理していた保全の情報を1か所で扱うために、PlantKeeperを作りました。</p><a href="https://github.com/RyotaAraya/plant-keeper" target="_blank" rel="noopener">GitHubで開発の詳細を見る</a></div>
     </section>
     <section class="landing-section landing-final" aria-labelledby="final-title">
       <div><h2 id="final-title">デモを試す</h2></div>

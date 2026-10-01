@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { invalidateActiveSites } from '@/composables/useSiteScope'
 
 const router = useRouter()
 const { canManageSite } = usePermissions()
@@ -59,6 +60,7 @@ async function save() {
     } else {
       await api.post('/sites', { site: form.value })
     }
+    invalidateActiveSites()
     dialog.value = false
     await fetchSites()
   } catch (e: any) {

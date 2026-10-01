@@ -463,7 +463,7 @@ onMounted(() => {
               </div>
               <p class="text-caption text-medium-emphasis mb-3">
                 区分は「作業前・点検・復旧」などの見出しです。測定値は単位と許容範囲（片側だけでも可）を入れると、点検時に合否を自動で出します。
-                条件つきの項目（「インターロックに関わる計器のみ」など）は、判定基準に書いておくと、当てはまらない点検で「－」を付けられます。
+                条件つきの項目（「インターロックに関わる計器のみ」など）は、条件を判定基準に書いてください。当てはまらない点検では「－」を付けます。
               </p>
               <div v-for="(ci, idx) in templateForm.items" :key="idx" class="pk-template-item" :data-testid="`template-item-${idx + 1}`">
                 <div class="d-flex align-center ga-2">

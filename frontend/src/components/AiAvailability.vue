@@ -14,6 +14,6 @@ defineEmits<{ retry: [] }>()
     この環境ではAI機能は無効です。記録の入力と過去のトラブルの参照は利用できます。
   </v-alert>
   <v-alert v-else-if="status && status.remaining_today <= 0" type="info" variant="tonal" class="mb-3" role="status">
-    今日のAI利用回数の上限に達しました。入力中のメモはそのまま、記録を直接入力できます。
+    今日のAI利用回数の上限に達しました。入力中のメモは消えません。記録は直接入力できます。
   </v-alert>
 </template>
