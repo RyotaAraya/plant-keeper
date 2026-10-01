@@ -42,7 +42,7 @@ async function pollReseed() {
   if (state.status === 'idle') {
     // 実行中にサーバが再起動すると、状態が失われて未実行に戻る
     reseedStatus.value = 'failed'
-    reseedError.value = '再投入の状態を取得できません。サーバが再起動した可能性があります。データを確認し、必要ならもう一度実行してください'
+    reseedError.value = '再投入の状態が失われました。サーバが再起動した可能性があります。データを確認し、必要ならもう一度実行してください'
   } else {
     reseedStatus.value = state.status
     reseedError.value = state.error ?? ''

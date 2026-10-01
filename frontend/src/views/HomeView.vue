@@ -133,7 +133,7 @@ const story = [
     </section>
 
     <section id="features" class="landing-section" aria-labelledby="features-title">
-      <div class="landing-section-heading"><p class="landing-eyebrow">PlantKeeperの機能</p><h2 id="features-title">設備台帳から発注まで</h2><p>点検で見つけた不具合は、トラブルとして登録されます。その後の修理や資材の手配も、同じ設備にひもづけて記録します。</p></div>
+      <div class="landing-section-heading"><p class="landing-eyebrow">PlantKeeperの機能</p><h2 id="features-title">設備台帳から発注まで</h2><p>点検で見つけた不具合は、トラブルとして登録されます。計器ごとのトラブルと点検の履歴は、計器の詳細で確認できます。</p></div>
       <ol class="landing-flow" aria-label="PlantKeeperで管理する保全業務の流れ">
         <li v-for="step in flowSteps" :key="step.title">
           <v-icon size="22" color="primary" aria-hidden="true">{{ step.icon }}</v-icon>
@@ -195,7 +195,7 @@ const story = [
             <a :href="diagnosticsScreenshot" target="_blank" rel="noopener" aria-label="機器の診断で絞り込んだ計器一覧の画面を拡大する（新しいタブ）"><img :src="diagnosticsScreenshot" width="1120" height="427" alt="計器の一覧を機器の診断で絞り込んだ画面。LT-701が仕様外、PT-502が保守要求、TV-602が故障として並ぶ。" /></a>
           </figure>
           <h3 class="landing-feature-title">機器の自己診断（NAMUR NE 107）</h3>
-          <p class="landing-body-text">スマート機器の自己診断の結果を、機器管理システム（AMS Device Managerなど）から受け取り、計器の一覧と詳細に表示します。故障はトラブルとして自動で登録します。保守要求・仕様外の計器は、点検計画の期限を前倒しする候補にします。トラブルの登録と前倒しの候補はルールで判定し、AIは使いません。</p>
+          <p class="landing-body-text">スマート機器の自己診断の結果を、機器管理システム（AMS Device Managerなど）から受け取り、計器の一覧と詳細に表示します。故障はトラブルとして自動で登録します。保守要求・仕様外になった計器は、その計器の点検計画を期限の前倒しの候補にします。トラブルの登録と前倒しの候補はルールで判定し、AIは使いません。</p>
           <ul class="landing-diagnostic-states" aria-label="NE 107の状態">
             <li v-for="state in diagnosticStates" :key="state"><DiagnosticChip :status="state" /></li>
           </ul>
