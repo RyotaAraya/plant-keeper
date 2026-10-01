@@ -162,7 +162,7 @@ async function save() {
           multiple
           chips
           closable-chips
-          hint="複数の設備をまとめた計画（巡回など）を作れます（同じ拠点の設備。最初に選んだ設備が代表になります）"
+          hint="複数の設備をまとめた計画（巡回など）を作れます。選べるのは同じ拠点の設備で、最初に選んだ設備が代表になります"
           persistent-hint
           class="mb-2"
           @update:model-value="onEquipmentChange"

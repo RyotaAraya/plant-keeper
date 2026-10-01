@@ -43,13 +43,13 @@ async function add() {
       <v-card-title>計器を一括追加</v-card-title>
       <v-card-text>
         <div class="text-caption text-medium-emphasis mb-3">
-          設備の計器を、種類（伝送器・調節弁・遮断弁・安全弁）ごとの定修点検のチェックリストつきで、点検の作業として追加します。すでに作業のある計器と、チェックリストのない計器（手動弁など）は飛ばします。
+          設備の計器を、種類（伝送器・調節弁・遮断弁・安全弁）ごとの定修点検のチェックリストつきで、点検の作業として追加します。すでに作業のある計器と、チェックリストのない計器（手動弁など）は対象外にします。
         </div>
         <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
           <div v-for="err in errors" :key="err">{{ err }}</div>
         </v-alert>
         <v-alert v-if="result" type="success" variant="tonal" density="compact" class="mb-4" data-testid="bulk-result">
-          {{ result.created }}件を追加しました（作業のある計器 {{ result.skipped_existing }}件・チェックリストのない計器 {{ result.unsupported }}件は飛ばしました）
+          {{ result.created }}件を追加しました（作業のある計器 {{ result.skipped_existing }}件・チェックリストのない計器 {{ result.unsupported }}件は対象外にしました）
         </v-alert>
         <v-select v-model="equipmentId" :items="maintenance.equipments" item-title="name" item-value="id" label="設備 *" class="mb-2" />
         <v-select v-model="departmentId" :items="departments" item-title="full_path" item-value="id" label="担当する部署" clearable hint="作業の部署になります。あとから作業ごとに変えられます" persistent-hint />

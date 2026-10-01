@@ -61,7 +61,7 @@ async function save() {
         <span>{{ plan.name }}</span>
       </v-card-title>
       <v-card-text>
-        <p class="text-body-2 mb-3">いまの周期は <strong>{{ intervalLabel(plan.interval_days) }}</strong>。5点校正の記録から、次の理由で見直しの候補にしています（決めるのは人です）。</p>
+        <p class="text-body-2 mb-3">いまの周期は<strong>{{ intervalLabel(plan.interval_days) }}</strong>です。5点校正の記録から、次の理由で見直しの候補にしています。周期を変えるかどうかは人が決めます。</p>
         <ul class="mb-3 ml-5">
           <li v-for="reason in review.reasons" :key="reason">{{ reason }}</li>
         </ul>

@@ -58,7 +58,7 @@ async function save() {
           class="mb-4"
           data-testid="bypass-measure"
         />
-        <v-text-field v-model="form.planned_restore_at" type="datetime-local" label="予定の復帰日時 *" hint="過ぎても戻っていなければ「復帰期限超過」になります" persistent-hint />
+        <v-text-field v-model="form.planned_restore_at" type="datetime-local" label="予定の復帰日時 *" hint="この日時を過ぎても復帰していなければ「復帰期限超過」になります" persistent-hint />
       </v-card-text>
       <v-card-actions>
         <v-spacer />

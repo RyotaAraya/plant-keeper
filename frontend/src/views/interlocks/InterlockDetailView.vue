@@ -97,7 +97,7 @@ onMounted(fetchInterlock)
           <BypassActions :bypass="current" @changed="fetchInterlock" />
         </v-card-text>
         <v-card-text v-else>
-          インターロックは働いています（終わっていないバイパスはありません）。
+          終わっていないバイパスはありません。インターロックは働いています。
         </v-card-text>
       </v-card>
 

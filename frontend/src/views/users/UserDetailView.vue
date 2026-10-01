@@ -345,7 +345,7 @@ onMounted(() => {
                   item-title="title"
                   item-value="value"
                   label="役職"
-                  hint="役職はシステム管理者のみ変更可能です（画面からの変更不可）"
+                  hint="役職は画面から変更できません。変更はシステム管理者が行います"
                   persistent-hint
                   disabled
                 />

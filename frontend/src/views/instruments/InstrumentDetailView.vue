@@ -241,8 +241,8 @@ onMounted(fetchInstrument)
           <p v-if="!calibrationHistory.length" class="text-body-2 text-medium-emphasis ml-4">5点校正の記録はまだありません。</p>
           <template v-else>
             <p class="text-body-2 mb-2">
-              調整前（as found）の最大誤差の推移です。前回の校正からどれだけずれたかを表し、ずれが年々大きくなる計器は周期の短縮や原因の調査を、
-              調整の要らない状態が続く計器は周期の延長を検討する材料になります。
+              調整前（as found）の最大誤差の推移です。前回の校正からどれだけずれたかを表します。
+              ずれが年々大きくなる計器では、周期の短縮や原因の調査を検討します。調整の要らない状態が続く計器では、周期の延長を検討できます。
             </p>
             <CalibrationTrendChart :rows="calibrationHistory" class="mb-2" />
             <p class="text-caption text-medium-emphasis mb-4">●調整前（赤は不合格） ／ ○調整後（調整した回だけ） ／ 点線は許容差</p>

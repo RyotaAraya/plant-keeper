@@ -121,12 +121,12 @@ async function loginAs(accountEmail: string) {
         <div class="pk-login__brand-copy">
           <PlanaAvatar :size="80" class="mb-5" />
           <h1>プラナと、<br />今日の保全を進めよう。</h1>
-          <p>現場のメモを記録に。似たトラブルを次の手がかりに。ログインして、仕事の続きを始めましょう。</p>
+          <p>プラナが現場のメモを記録の形に整え、似た過去のトラブルを探します。ログインして、作業を始めてください。</p>
         </div>
 
         <section v-if="!isNarrow" class="pk-login__matrix" aria-labelledby="pk-matrix-title-wide">
           <h2 id="pk-matrix-title-wide" class="pk-login__matrix-title">権限ごとに、できることが違います</h2>
-          <p class="pk-login__matrix-lead">右のデモアカウントを選ぶと、その権限の列が光ります。</p>
+          <p class="pk-login__matrix-lead">右のデモアカウントを選ぶと、その権限の列が強調表示されます。</p>
           <PermissionMatrix dense :highlight="highlightRole" />
         </section>
       </div>

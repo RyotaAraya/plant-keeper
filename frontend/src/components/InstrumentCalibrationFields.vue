@@ -13,7 +13,7 @@ const basisOptions = Object.entries(TOLERANCE_BASIS_LABEL).map(([value, title]) 
   <div>
     <div class="text-subtitle-2 mt-2 mb-1">校正の条件（5点校正）</div>
     <div class="text-caption text-medium-emphasis mb-2">
-      伝送器は入力（差圧・圧力・温度など）の範囲、調節弁は開度の範囲（0〜100 %）を入れます。5点（0/25/50/75/100%）の期待値と、許容差に対する合否の元になります。
+      伝送器は入力（差圧・圧力・温度など）の範囲、調節弁は開度の範囲（0〜100%）を入れます。この範囲から、5点（0/25/50/75/100%）の期待値と、許容差に対する合否を計算します。
     </div>
     <v-row dense>
       <v-col cols="4"><v-text-field v-model="model.range_lower" label="校正範囲 下限" type="number" step="any" density="compact" /></v-col>
