@@ -180,7 +180,7 @@ const story = [
     <section id="daily" class="landing-section landing-divided" aria-labelledby="daily-title">
       <div class="landing-section-heading">
         <h2 id="daily-title">日々の確認</h2>
-        <p>朝会の資料をExcelで作る手間と、機器の異常を別のシステムで確かめる手間を省きます。</p>
+        <p>朝会・夕会で確かめるその日の仕事と、機器の自己診断の結果を、PlantKeeperの画面で確認できます。</p>
       </div>
       <div class="landing-daily-grid">
         <article>
