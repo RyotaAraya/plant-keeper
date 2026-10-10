@@ -66,8 +66,16 @@ export async function judgeAllItems(page: Page) {
   await expect(page.getByTestId('missing-required')).toHaveCount(0)
 }
 
+// サイドバーの「組織と設定」（折りたたみ）を開く。グループが出ない権限（協力会社など）では何もしない
+export async function expandOrganizationMenu(page: Page) {
+  const toggle = page.locator('.pk-sidenav__disclosure')
+  if (await toggle.count() === 0) return
+  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+}
+
 // 「計画」画面をメニューから開き、表示（定期点検・定期整備・点検の期限順）を選ぶ。旧の「点検計画」は「点検の期限順」、「定期整備」は「定期整備」
-export async function openPlans(page: Page, tab?: '定期点検' | '定期整備' | '点検の期限順') {
+export async function openPlans(page: Page, tab?: 'すべて' | '定期点検' | '定期整備' | '点検の期限順') {
   await page.getByRole('link', { name: '計画', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '計画' })).toBeVisible()
   if (tab) await page.locator('.v-btn-toggle').getByRole('button', { name: tab, exact: true }).click()

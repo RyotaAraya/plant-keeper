@@ -139,7 +139,7 @@ test('実施中の定期整備の作業は、作業の部署のエリアにだ�
   }
 })
 
-test('マネージャーは先頭に承認待ちが出て、チームのエリアはない', async ({ page }) => {
+test('マネージャーは所属の仕事より前に承認待ちが出て、チームのエリアはない', async ({ page }) => {
   await login(page, MANAGER)
   await expect(page.getByTestId('home-approvals')).toBeVisible()
   await expect(area(page, '保全部')).toBeVisible()

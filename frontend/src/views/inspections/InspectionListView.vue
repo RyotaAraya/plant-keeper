@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -21,13 +21,18 @@ const route = useRoute()
 const router = useRouter()
 const { initialSiteIds } = useSiteScope()
 
+// URLで記録の見方を保持し、下書きと記録一覧を同時に積み上げない。
+const view = computed(() => route.query.view === 'drafts' || route.query.view === 'approvals' ? route.query.view : 'all')
+function changeView(value: string) {
+  void router.replace({ query: { ...route.query, view: value === 'all' ? undefined : value } })
+}
 const inspections = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
 const totalCount = ref(0)
 const importOpen = ref(false)
 const importRevision = ref(0)
-function onImported() { importRevision.value++; void fetchInspections() }
+function onImported() { importRevision.value++; changeView('drafts') }
 
 // 通常業務では自拠点の記録だけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
 // ほかの画面のリンクから来たときは、その拠点・ステータスで、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
@@ -77,6 +82,7 @@ let fetchSeq = 0
 
 async function fetchInspections() {
   const seq = ++fetchSeq
+  if (view.value === 'drafts') { loading.value = false; return }
   loading.value = true
   try {
     const params: any = { per_page: 1000 }
@@ -85,7 +91,8 @@ async function fetchInspections() {
     if (filters.value.instrument_id) params.instrument_id = filters.value.instrument_id
     if (filters.value.department_id) params.department_id = filters.value.department_id
     if (filters.value.inspection_types.length) params.inspection_types = filters.value.inspection_types
-    if (filters.value.statuses.length) params.statuses = filters.value.statuses
+    if (view.value === 'approvals') params.status = 'approval_requested'
+    else if (filters.value.statuses.length) params.statuses = filters.value.statuses
 
     const res = await api.get('/inspections', { params })
     if (seq !== fetchSeq) return
@@ -124,7 +131,11 @@ watch(filters, fetchInspections, { deep: true })
 
 // 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
 // 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
-watch(() => route.query, () => {
+watch(() => route.query, (query, previous) => {
+  if (query.view !== previous.view && JSON.stringify({ ...query, view: undefined }) === JSON.stringify({ ...previous, view: undefined })) {
+    void fetchInspections()
+    return
+  }
   if (route.path !== '/inspections') return
   const q = filtersFromQuery()
   filters.value = { ...filters.value, ...q, equipment_ids: [], inspection_types: [] }
@@ -141,29 +152,38 @@ watch(() => route.query, () => {
     </PageHeader>
     <CalibrationImportDialog v-model="importOpen" @imported="onImported" />
 
+    <v-btn-toggle :model-value="view" mandatory divided color="primary" variant="outlined" class="pk-record-views mb-4" aria-label="記録の表示" @update:model-value="changeView">
+      <v-btn value="all">すべての記録</v-btn>
+      <v-btn value="drafts">自分の下書き</v-btn>
+      <v-btn value="approvals">承認待ち</v-btn>
+    </v-btn-toggle>
+
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
-      <v-divider vertical class="pk-scope-divider" />
-      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
-      <v-select
-        v-model="filters.department_id"
-        :items="departments"
-        item-title="display_name"
-        item-value="id"
-        label="部署"
-        clearable
-        density="compact"
-        hide-details
-        style="max-width: 320px"
-      />
-      <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
-      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
-      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
+      <template v-if="view !== 'drafts'">
+        <v-divider vertical class="pk-scope-divider" />
+        <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+        <v-select
+          v-model="filters.department_id"
+          :items="departments"
+          item-title="display_name"
+          item-value="id"
+          label="部署"
+          clearable
+          density="compact"
+          hide-details
+          style="max-width: 320px"
+        />
+        <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
+        <FilterSelect v-if="view === 'all'" v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+        <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
+      </template>
     </div>
 
-    <InspectionDrafts :key="importRevision" :site-ids="filters.site_ids" :return-to="route.fullPath" />
+    <InspectionDrafts v-if="view === 'drafts'" :key="importRevision" :site-ids="filters.site_ids" :return-to="route.fullPath" />
 
     <v-data-table
+      v-else
       :headers="headers"
       :items="inspections"
       :loading="loading"
@@ -189,6 +209,8 @@ watch(() => route.query, () => {
 </template>
 
 <style scoped>
+.pk-record-views { max-width: 100%; }
+@media (max-width: 600px) { .pk-record-views :deep(.v-btn) { min-width: 0; padding-inline: 12px; } }
 .cursor-pointer :deep(tbody tr) {
   cursor: pointer;
 }

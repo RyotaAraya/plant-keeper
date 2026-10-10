@@ -1,4 +1,4 @@
-import { test, expect, login, openFirstTrouble } from './support'
+import { test, expect, login, openFirstTrouble, expandOrganizationMenu } from './support'
 
 // ロール（自社/協力会社 × マネージャー/作業員）ごとのメニューと操作ボタンの出し分け。
 // フロントの権限判定はログインAPIが返す user.company に依存する（バックエンドの Pundit と対応）
@@ -50,6 +50,8 @@ test('協力会社のマネージャーは自社限定メニューが使えず�
 test('協力会社は拠点管理を見られず（メニューにも出ず、URL直打ちでも戻される）、自分の所属拠点はアカウントメニューに表示される', async ({ page }) => {
   await login(page, ACCOUNTS.contractorManager)
 
+  // 組織と設定が出る権限なら開いてから確かめる（折りたたんだままだと、見えないリンクも0件になる）
+  await expandOrganizationMenu(page)
   await expect(page.getByRole('link', { name: '拠点管理', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'アカウントメニュー' }).click()
   await expect(page.locator('.pk-account-menu')).toContainText('製油所')
@@ -71,6 +73,7 @@ test('自社のユーザは拠点管理が使え、アカウントメニュー�
   await page.getByRole('button', { name: 'アカウントメニュー' }).click()
   await expect(page.locator('.pk-account-menu')).toContainText('製油所')
   await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '拠点管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '拠点管理' })).toBeVisible()
 })

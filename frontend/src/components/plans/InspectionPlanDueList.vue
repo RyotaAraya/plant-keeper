@@ -147,6 +147,7 @@ function startInspection(plan: InspectionPlan) {
 const dialog = ref(false)
 const workOrderDialog = ref(false)
 defineExpose({
+  siteIds: () => filters.value.site_ids,
   openCreate: () => { dialog.value = true },
   openWorkOrder: () => { workOrderDialog.value = true },
 })

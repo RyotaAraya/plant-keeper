@@ -32,7 +32,7 @@ const authStore = useAuthStore()
 const { initialSiteIds } = useSiteScope()
 const { canManageInspectionPlan, canManageMaintenance } = usePermissions()
 
-const tabFromQuery = (): PlanTab => (PLAN_TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as PlanTab) : 'all')
+const tabFromQuery = (): PlanTab => (PLAN_TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as PlanTab) : 'inspection')
 const tab = ref<PlanTab>(tabFromQuery())
 const showInspection = computed(() => tab.value === 'all' || tab.value === 'inspection')
 const showMaintenance = computed(() => tab.value === 'all' || tab.value === 'maintenance')
@@ -179,7 +179,8 @@ function changeSite(siteIds: number[]) {
 }
 
 function changeTab(value: PlanTab) {
-  router.replace({ path: '/plans', query: value === 'all' ? {} : { tab: value } })
+  const siteIds = tab.value === 'due' ? dueList.value?.siteIds() ?? filters.value.site_ids : filters.value.site_ids
+  router.replace({ path: '/plans', query: { tab: value, site_ids: siteIds.join(',') || 'all' } })
 }
 
 // --- 追加・編集 ---
@@ -233,10 +234,11 @@ loadAll()
       </template>
     </PageHeader>
 
-    <!-- 表示の切り替えは、ホームの朝会・夕会と同じく、絞り込みの行の拠点のすぐ右に置く -->
+    <PlanTabs :model-value="tab" class="mb-4" @update:model-value="changeTab" />
+    <!-- 業務の種類を先に選び、その下で表示方法と条件を選ぶ -->
     <InspectionPlanDueList v-if="tab === 'due'" ref="dueList" :key="route.fullPath">
       <template #view>
-        <PlanTabs :model-value="tab" @update:model-value="changeTab" />
+        <PlanTabs level="view" :model-value="tab" @update:model-value="changeTab" />
       </template>
     </InspectionPlanDueList>
 
@@ -244,7 +246,7 @@ loadAll()
       <div class="pk-filters">
         <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
         <v-divider vertical class="pk-scope-divider" />
-        <PlanTabs :model-value="tab" @update:model-value="changeTab" />
+        <PlanTabs level="view" :model-value="tab" @update:model-value="changeTab" />
         <template v-if="showInspection">
           <v-select
             v-model="filters.department_id"

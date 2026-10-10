@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // ホーム（やること）: ログインした人の所属のチーム → 課 → 部ごとに、今日やることを1本のリストで出す（要求仕様書 2.8）。
 // 各エリアには、その部署に直接割り当てたものだけが出る（配下・上位を混ぜない）。バイパスは拠点全体として先頭。
-// 管理者・マネージャーは承認待ちを先頭に、運転員は不具合の報告と自分の報告の状況を出す。
+// 管理者・マネージャーは安全・緊急の確認のあとに承認待ちを、運転員は不具合の報告と自分の報告の状況を出す。
 // 朝会（今日・明日）と夕会（今日の実績と積み残し）は、URLの ?mode=evening で切り替える（再読み込み・印刷でも保つ）
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -29,6 +29,8 @@ const { canManageReferenceStandard } = usePermissions()
 
 const board = ref<HomeBoard | null>(null)
 const loading = ref(true)
+const approvalsExpanded = ref(false)
+const approvalCount = computed(() => (board.value?.approvals?.inspections.length ?? 0) + (board.value?.approvals?.interlock_bypasses.length ?? 0))
 const error = ref('')
 const siteId = ref<number | null>((authStore.user?.company?.company_type === 'owner' ? idFromQuery(route.query.site_id) : null) ?? authStore.user?.site_id ?? null)
 const fetchGuard = latestGuard()
@@ -158,7 +160,7 @@ async function fetchBoard() {
   }
 }
 
-watch(siteId, fetchBoard, { immediate: true })
+watch(siteId, () => { approvalsExpanded.value = false; void fetchBoard() }, { immediate: true })
 </script>
 
 <template>
@@ -209,28 +211,6 @@ watch(siteId, fetchBoard, { immediate: true })
           <v-btn variant="text" color="primary" :to="{ path: '/plana', query: { task: 'defect-draft' } }">プラナに整えてもらう</v-btn>
         </section>
 
-        <!-- 管理者・マネージャー: 承認待ち -->
-        <section v-if="board.approvals" class="pk-home-section" aria-labelledby="home-approvals-title" data-testid="home-approvals">
-          <h2 id="home-approvals-title">承認待ち<small>{{ board.approvals.inspections.length + board.approvals.interlock_bypasses.length }}件</small></h2>
-          <ul v-if="board.approvals.inspections.length || board.approvals.interlock_bypasses.length" class="pk-home-list">
-            <li v-for="bypass in board.approvals.interlock_bypasses" :key="`bypass-${bypass.id}`">
-              <v-chip size="x-small" label color="warning" variant="tonal">バイパス申請</v-chip>
-              <div class="pk-home-list__copy">
-                <router-link :to="`/interlocks/${bypass.interlock.id}`"><strong>{{ bypass.interlock.tag_number }} {{ bypass.interlock.name }}</strong></router-link>
-                <span>{{ bypass.interlock.equipment.name }} ／ {{ bypass.requested_by?.name ?? '—' }}の申請 ／ {{ bypass.reason }}</span>
-              </div>
-            </li>
-            <li v-for="inspection in board.approvals.inspections" :key="`inspection-${inspection.id}`">
-              <v-chip size="x-small" label color="warning" variant="tonal">点検の承認</v-chip>
-              <div class="pk-home-list__copy">
-                <router-link :to="`/inspections/${inspection.id}`"><strong>{{ inspection.checklist_template?.name ?? '点検' }}</strong></router-link>
-                <span>{{ inspectionTarget(inspection) }} ／ {{ inspection.user.name }}</span>
-              </div>
-            </li>
-          </ul>
-          <p v-else class="pk-home-empty">承認待ちはありません。</p>
-        </section>
-
         <!-- インターロックのバイパス（安全に関わるため、エリアに分けず拠点全体。バイパスがなければ出さない） -->
         <section v-if="board.interlock_bypasses.length" class="pk-home-section pk-home-section--alert" aria-labelledby="home-bypass-title" data-testid="home-bypasses">
           <h2 id="home-bypass-title">インターロックのバイパス<small>{{ board.site.name }}全体・{{ board.interlock_bypasses.length }}件</small></h2>
@@ -263,7 +243,32 @@ watch(siteId, fetchBoard, { immediate: true })
             </li>
           </ul>
         </section>
-        <InspectionDrafts :site-ids="siteId ? [siteId] : []" :return-to="homeReturn" />
+        <!-- 管理者・マネージャー: 承認待ち -->
+        <section v-if="board.approvals" class="pk-home-section" aria-labelledby="home-approvals-title" data-testid="home-approvals">
+          <h2 id="home-approvals-title">承認待ち<small>{{ approvalCount }}件</small></h2>
+          <ul v-if="board.approvals.inspections.length || board.approvals.interlock_bypasses.length" id="home-approval-list" class="pk-home-list">
+            <li v-for="(bypass, index) in board.approvals.interlock_bypasses" :key="`bypass-${bypass.id}`" :class="{ 'pk-home-approval--collapsed': !approvalsExpanded && index >= 3 }">
+              <v-chip size="x-small" label color="warning" variant="tonal">バイパス申請</v-chip>
+              <div class="pk-home-list__copy">
+                <router-link :to="`/interlocks/${bypass.interlock.id}`"><strong>{{ bypass.interlock.tag_number }} {{ bypass.interlock.name }}</strong></router-link>
+                <span>{{ bypass.interlock.equipment.name }} ／ {{ bypass.requested_by?.name ?? '—' }}の申請 ／ {{ bypass.reason }}</span>
+              </div>
+            </li>
+            <li v-for="(inspection, index) in board.approvals.inspections" :key="`inspection-${inspection.id}`" :class="{ 'pk-home-approval--collapsed': !approvalsExpanded && index + board.approvals.interlock_bypasses.length >= 3 }">
+              <v-chip size="x-small" label color="warning" variant="tonal">点検の承認</v-chip>
+              <div class="pk-home-list__copy">
+                <router-link :to="`/inspections/${inspection.id}`"><strong>{{ inspection.checklist_template?.name ?? '点検' }}</strong></router-link>
+                <span>{{ inspectionTarget(inspection) }} ／ {{ inspection.user.name }}</span>
+              </div>
+            </li>
+          </ul>
+          <p v-else class="pk-home-empty">承認待ちはありません。</p>
+          <v-btn v-if="approvalCount > 3" variant="text" color="primary" class="pk-no-print" :aria-expanded="approvalsExpanded" aria-controls="home-approval-list" @click="approvalsExpanded = !approvalsExpanded">
+            {{ approvalsExpanded ? '表示を減らす' : `承認待ちをすべて見る（${approvalCount}件）` }}
+          </v-btn>
+        </section>
+
+        <InspectionDrafts :page-size="3" :site-ids="siteId ? [siteId] : []" :return-to="homeReturn" />
 
         <!-- 機器の診断（故障）から自動で登録したトラブルのうち、担当者も計器の点検計画の担当部署もないもの（拠点全体） -->
         <section v-if="board.diagnostic_troubles.length" class="pk-home-section" aria-labelledby="home-diagnostic-title" data-testid="home-diagnostic-troubles">
@@ -421,6 +426,7 @@ watch(siteId, fetchBoard, { immediate: true })
 .pk-home__day { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--pk-muted); font-size: 0.875rem; }
 .pk-home__day strong { padding: 2px 10px; border-radius: 6px; background: var(--pk-soft-blue); color: var(--pk-steel-dark); }
 .pk-home__printed { display: none; }
+.pk-home-list .pk-home-approval--collapsed { display: none; }
 .pk-home-report { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
 .pk-home-section { margin-bottom: 16px; padding: 12px 20px; border: 1px solid var(--pk-line); border-radius: 16px; background: #fff; }
 .pk-home-section--alert { border-color: rgb(var(--v-theme-warning)); }
@@ -447,6 +453,7 @@ a:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: 2px; }
 }
 /* 印刷（会議で紙に出す）: 操作を消し、行の途中でページを分けない */
 @media print {
+  .pk-home-list .pk-home-approval--collapsed { display: flex; }
   .pk-home :deep(.pk-page-header__desc), .pk-home-list .v-btn { display: none !important; }
   .pk-home__printed { display: inline; }
   .pk-home-section { margin-bottom: 8px; padding: 6px 12px; border-radius: 6px; break-inside: auto; }

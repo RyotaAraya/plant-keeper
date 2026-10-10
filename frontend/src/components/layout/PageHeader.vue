@@ -22,12 +22,15 @@ defineProps<{
 <style scoped>
 .pk-page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   min-height: 40px;
   margin-bottom: 1.5rem;
 }
+
+.pk-page-header > div:first-child { flex: 1 1 280px; min-width: 0; }
 
 .pk-page-header__title { font-size: 1.55rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.35rem; }
 
@@ -42,7 +45,9 @@ defineProps<{
 
 .pk-page-header__actions {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  max-width: 100%;
   align-items: center;
   gap: 0.75rem;
 }
@@ -51,6 +56,9 @@ defineProps<{
   .pk-page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .pk-page-header > div:first-child {
+    flex-basis: auto;
   }
 }
 </style>

@@ -15,7 +15,7 @@ export function useNavigation() {
 
   // also: この項目に属する、ほかのパスの詳細画面（ヘッダーの現在地に使う。例: 定期整備の回の詳細は「計画」）
   type NavItem = { title: string; icon: string; to: string; also?: string[]; permission?: { value: boolean } }
-  type NavGroup = { label?: string; items: NavItem[] }
+  type NavGroup = { label?: string; collapsible?: boolean; items: NavItem[] }
 
   // 仕事の流れ（やること＝ホーム → 記録する → 計画する）で並べ、そのあとに参照する台帳・資材・組織設定を置く。
   // 画面名と権限はヘッダーでも共用する。見出しは、見える項目が1つもないグループでは出さない（協力会社や一般ユーザ向けの整理）。
@@ -55,6 +55,7 @@ export function useNavigation() {
     },
     {
       label: '組織と設定',
+      collapsible: true,
       items: [
         { title: '拠点管理', icon: 'mdi-domain', to: '/sites', permission: canViewSites },
         { title: '部署管理', icon: 'mdi-office-building-outline', to: '/departments', permission: canManageUsers },

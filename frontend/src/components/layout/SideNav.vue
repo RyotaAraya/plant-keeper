@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNavigation } from '@/composables/useNavigation'
 import { useDisplay } from 'vuetify'
@@ -16,6 +17,10 @@ defineEmits<{
 }>()
 
 const { visibleGroups } = useNavigation()
+const organizationOpen = ref(false)
+watch(() => route.path, () => {
+  if (visibleGroups.value.some((group) => group.collapsible && group.items.some((item) => isItemActive(item.to)))) organizationOpen.value = true
+}, { immediate: true })
 
 // 詳細画面（/sites/:id 等）は一覧と別ルートのため、Vue Routerの自動判定だけでは
 // アクティブ表示が外れてしまう。パスの前方一致で明示的に判定する。
@@ -40,17 +45,23 @@ function isItemActive(path: string) {
     </div>
     <v-list nav density="compact" class="pk-sidenav__list">
       <template v-for="group in visibleGroups" :key="group.label ?? 'top'">
-        <v-list-subheader v-if="group.label" class="pk-sidenav__group">{{ group.label }}</v-list-subheader>
-        <v-list-item
-          v-for="item in group.items"
-          :key="item.title"
-          :to="item.to"
-          :active="isItemActive(item.to)"
-          :aria-current="isItemActive(item.to) ? 'page' : undefined"
-          :prepend-icon="item.icon"
-          :title="item.title"
-          class="pk-sidenav__item"
-        />
+        <button v-if="group.collapsible" type="button" class="pk-sidenav__disclosure" :aria-expanded="organizationOpen" aria-controls="pk-organization-links" @click="organizationOpen = !organizationOpen">
+          <span>{{ group.label }}</span>
+          <v-icon size="18" aria-hidden="true">{{ organizationOpen ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+        </button>
+        <v-list-subheader v-else-if="group.label" class="pk-sidenav__group">{{ group.label }}</v-list-subheader>
+        <div v-show="!group.collapsible || organizationOpen" :id="group.collapsible ? 'pk-organization-links' : undefined">
+          <v-list-item
+            v-for="item in group.items"
+            :key="item.title"
+            :to="item.to"
+            :active="isItemActive(item.to)"
+            :aria-current="isItemActive(item.to) ? 'page' : undefined"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            class="pk-sidenav__item"
+          />
+        </div>
       </template>
     </v-list>
     <!-- プラナは記録や調べものを手伝う入口のため、仕事の流れ・台帳のあとに置く -->
@@ -82,6 +93,9 @@ function isItemActive(path: string) {
   color: var(--pk-plana-navy);
   letter-spacing: 0.01em;
 }
+
+.pk-sidenav__disclosure { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px; margin-top: 12px; font-size: .75rem; font-weight: 700; text-align: left; color: var(--pk-muted); }
+.pk-sidenav__disclosure:focus-visible { outline: 2px solid var(--pk-steel); outline-offset: -2px; }
 
 .pk-sidenav__list {
   padding: 0.5rem 0.75rem 1rem;

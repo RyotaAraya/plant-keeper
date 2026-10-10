@@ -5,7 +5,7 @@ const OWNER_MANAGER = { email: 'yamamoto@example.com', password: 'password' }
 // 「計画」画面: 定期点検のまとまりと、定期整備の系列・単発を1画面に並べ、行を押すとその場で子を開く
 test('まとまりを開くと計器ごとの周期と期限が並び、「点検を実施」で点検フォームが開く', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await openPlans(page)
+  await openPlans(page, 'すべて')
   await expect(page.getByRole('heading', { level: 2, name: /定期点検/ })).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: /定期整備/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'まとまりを追加' })).toHaveCount(0) // 一般ユーザは作成・編集できない
@@ -39,7 +39,7 @@ test('定期整備の系列を開くと各回が並び、回を押すと定期�
 
 test('法規区分で絞り込むと、その区分のまとまりだけになり、定期整備にはその絞り込みを適用しない', async ({ page }) => {
   await login(page, ACCOUNTS.member)
-  await openPlans(page)
+  await openPlans(page, 'すべて')
   await selectOption(page, '点検の法規区分', 'ボイラー・第一種圧力容器')
   const groups = page.getByTestId('plan-groups').locator('tbody tr')
   await expect(groups).toHaveCount(1)

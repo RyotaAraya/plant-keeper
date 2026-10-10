@@ -1,4 +1,4 @@
-import { test, expect, login, resetSession, apiBaseUrl } from './support'
+import { test, expect, login, resetSession, apiBaseUrl, expandOrganizationMenu } from './support'
 
 // 権限マトリクス（トップページ・ログイン画面）と、実際のメニューが食い違わないこと。
 // マトリクスは permissionsFor（メニューの出し分けと同じ判定）から作っているが、
@@ -49,6 +49,8 @@ test('トップページの権限マトリクスは、実際にログインし�
     await test.step(role.name, async () => {
       await resetSession(page)
       await login(page, role.account)
+      // 折りたたんだままだと、見えないリンクが「メニューに出ない」として通ってしまう
+      await expandOrganizationMenu(page)
 
       for (const [label, menus] of Object.entries(MENU_BY_ROW)) {
         for (const menu of menus) {
@@ -108,6 +110,7 @@ test('ログイン画面のデモアカウントに、所属拠点が表示さ�
 for (const role of ROLES) {
   test(`${role.name}は、メニューに出ているすべての画面をエラーなく開ける`, async ({ page }) => {
     await login(page, role.account)
+    await expandOrganizationMenu(page)
 
     const links = await page.locator('.v-navigation-drawer a[href^="/"]').evaluateAll((els) =>
       els.map((e) => ({ href: (e as HTMLAnchorElement).getAttribute('href') as string, name: (e.textContent ?? '').trim() }))
@@ -116,6 +119,8 @@ for (const role of ROLES) {
 
     for (const link of links) {
       await test.step(link.name, async () => {
+        // 画面を移ると、組織と設定の配下でない画面では折りたたみが閉じるため、押す前に開く
+        await expandOrganizationMenu(page)
         await page.locator(`.v-navigation-drawer a[href="${link.href}"]`).click()
         await expect(page).toHaveURL(new RegExp(`${link.href}$`))
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible()

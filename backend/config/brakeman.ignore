@@ -1,11 +1,6 @@
 {
   "ignored_warnings": [
     {
-      "warning_type": "Unmaintained Dependency",
-      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
-      "note": "Rails 8.0.4のEOL通知。バージョンアップは別タスクで対応する。"
-    },
-    {
       "warning_type": "Mass Assignment",
       "fingerprint": "d836057468423164103bd333f93941aa480223830805c49c884fb500f8a426ac",
       "note": "user_id/equipment_idはadmin/owner_manager限定のPundit認可（EquipmentAssignmentPolicy）配下でのみ受け付けており、意図した設計。"
@@ -22,5 +17,5 @@
     }
   ],
   "updated": "2026-09-18 11:23:35 +0000",
-  "brakeman_version": "8.0.6"
+  "brakeman_version": "8.1.0"
 }
