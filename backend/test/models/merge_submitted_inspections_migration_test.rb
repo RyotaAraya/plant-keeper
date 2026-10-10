@@ -1,8 +1,8 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261010000100_merge_submitted_inspections_into_approval_requested")
+require Rails.root.join("db/migrate/20261010000100_merge_submitted_inspections_into_approved")
 
 class MergeSubmittedInspectionsMigrationTest < ActiveSupport::TestCase
-  test "提出済だけを承認待ちに移し、日付・計画の期限・監査ログを変えない" do
+  test "提出済だけを承認済みに移し（承認待ちに並べない）、日付・計画の期限・監査ログを変えない" do
     equipment = create_equipment
     department = create_department(site: equipment.site)
     user = create_user
@@ -18,9 +18,9 @@ class MergeSubmittedInspectionsMigrationTest < ActiveSupport::TestCase
     before = legacy.attributes.except("status")
     log = AuditLog.create!(user: user, action: "update", auditable: legacy, changes_json: { status: [ "draft", "submitted" ] }, performed_at: Time.current)
 
-    2.times { MergeSubmittedInspectionsIntoApprovalRequested.new.up }
+    2.times { MergeSubmittedInspectionsIntoApproved.new.up }
 
-    assert_equal "approval_requested", legacy.reload.status
+    assert_equal "approved", legacy.reload.status
     assert_equal before, legacy.attributes.except("status")
     assert_equal Date.current, plan.reload.next_due_on
     assert_equal [ "draft", "approval_requested", "approved" ], [ draft.reload.status, pending.reload.status, approved.reload.status ]

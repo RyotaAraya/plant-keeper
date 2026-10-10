@@ -65,6 +65,14 @@ class MaintenanceTask < ApplicationRecord
     update!(status: "completed", completed_on: date)
   end
 
+  # 作業を完了にした点検が差し戻し・取り下げで下書きに戻ったら、作業を実施中に戻す（ほかに提出済みの点検があれば戻さない）
+  def reopen_after_inspection!(inspection)
+    return unless completed? && completed_on == inspection.inspected_at.to_date
+    return if inspections.where.not(status: "draft").where.not(id: inspection.id).exists?
+
+    update!(status: "in_progress")
+  end
+
   # 未完了（未着手・実施中）か
   def unfinished? = not_started? || in_progress?
 
@@ -102,14 +110,20 @@ class MaintenanceTask < ApplicationRecord
   end
 
   # 作業が完了したら、定修待ちのトラブルを完了に。見送りにしたら未対応に戻す。
-  # 見送りから再開したら（未着手・実施中）、未対応のトラブルを定修待ちに戻す。完了したトラブルは作業を再開しても変えない
+  # 見送りから再開したら（未着手・実施中）、未対応のトラブルを定修待ちに戻す。
+  # 完了から戻したら、作業が終わっていないため、完了になっていたトラブルも定修待ちに戻す（完了日時は消える）
   def sync_trouble_status
     return if trouble.nil?
 
     case status
     when "completed" then trouble.update!(status: "closed") if trouble.deferred?
     when "cancelled" then trouble.update!(status: "open") if trouble.deferred?
-    else trouble.update!(status: "deferred") if trouble.open?
+    else
+      if trouble.open?
+        trouble.update!(status: "deferred")
+      elsif trouble.closed? && status_before_last_save == "completed"
+        trouble.reopen_for_maintenance_task!
+      end
     end
   end
 

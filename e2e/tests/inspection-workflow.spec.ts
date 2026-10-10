@@ -34,10 +34,12 @@ async function setup(request: APIRequestContext) {
     return record
   }
   const cleanup = async () => {
+    // 残った点検は承認済みまで進める（承認待ちのまま残すと、承認者のホームの承認待ちに溜まるため）
     for (const id of ids) {
-      const record = (await manager.get(`/inspections/${id}`)).data
-      if (record.status === 'draft') {
-        const response = await request.patch(`${api}/inspections/${id}`, { headers: manager.headers, data: { inspection: { status: 'approval_requested' } } })
+      const { status } = (await manager.get(`/inspections/${id}`)).data
+      const steps = status === 'draft' ? ['approval_requested', 'approved'] : status === 'approval_requested' ? ['approved'] : []
+      for (const next of steps) {
+        const response = await request.patch(`${api}/inspections/${id}`, { headers: manager.headers, data: { inspection: { status: next } } })
         expect(response.ok()).toBeTruthy()
       }
     }
@@ -58,10 +60,14 @@ test('提出で承認待ちになり、差し戻し後は下書きから修正�
     await expect(page.locator('.pk-status-chip').first()).toHaveText('承認待ち')
     await expect(page.getByRole('button', { name: '承認依頼', exact: true })).toHaveCount(0)
     await expect(page.getByRole('link', { name: '編集', exact: true })).toHaveCount(0)
+    // 作成者本人は取り下げられる（差し戻し・承認は出ない）
+    await expect(page.getByRole('button', { name: '取り下げ', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '差し戻し', exact: true })).toHaveCount(0)
 
     await resetSession(page)
     await login(page, ACCOUNTS.admin)
     await page.goto(path)
+    await expect(page.getByRole('button', { name: '取り下げ', exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: '差し戻し', exact: true }).click()
     await expect(page.locator('.pk-status-chip').first()).toHaveText('下書き')
 

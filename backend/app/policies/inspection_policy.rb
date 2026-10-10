@@ -16,4 +16,9 @@ class InspectionPolicy < ApplicationPolicy
   def approve?
     admin? || user.manager?
   end
+
+  # 承認待ちを下書きに戻す: 承認者の差し戻しか、作成者本人の取り下げ（提出後に誤りに気づいたとき）
+  def withdraw?
+    approve? || record.user_id == user.id
+  end
 end

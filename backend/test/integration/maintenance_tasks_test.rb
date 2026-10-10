@@ -236,6 +236,24 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
     assert_equal "cancelled", cancelled.reload.status
   end
 
+  test "作業を完了にした点検を差し戻すと、作業は実施中に戻る。手動で完了にした作業は変えない" do
+    task = create_task
+    post_inspection(task, status: "approval_requested")
+    inspection = Inspection.last
+    assert_equal "completed", task.reload.status
+
+    patch "/api/v1/inspections/#{inspection.id}", headers: auth_headers_for(@manager), as: :json, params: { inspection: { status: "draft" } }
+    assert_response :ok
+    assert_equal [ "in_progress", nil ], [ task.reload.status, task.completed_on ]
+
+    # 作業の完了日と点検日が違う（点検の前に手動で完了にした）ときは、差し戻しても作業を変えない
+    manual = create_task(instrument: @valve, template: @templates[:positioner])
+    manual.update!(status: "completed", completed_on: @today - 5)
+    post_inspection(manual, status: "approval_requested")
+    patch "/api/v1/inspections/#{Inspection.last.id}", headers: auth_headers_for(@manager), as: :json, params: { inspection: { status: "draft" } }
+    assert_equal "completed", manual.reload.status
+  end
+
   test "作業の設備と点検の設備が違うときは、点検を作れない" do
     task = create_task
 

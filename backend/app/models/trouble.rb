@@ -53,7 +53,22 @@ class Trouble < ApplicationRecord
     maintenance_tasks.where.not(status: "cancelled").order(:id).last
   end
 
+  # 回した作業を完了から戻したとき（MaintenanceTask#sync_trouble_status）だけ、完了から定修待ちに戻す。
+  # 手動では完了から戻せない（遷移表）
+  def reopen_for_maintenance_task!
+    @reopening_for_maintenance_task = true
+    update!(status: "deferred")
+  ensure
+    @reopening_for_maintenance_task = false
+  end
+
   private
+
+  def status_transition_allowed
+    return if @reopening_for_maintenance_task && status_was == "closed" && deferred?
+
+    super
+  end
 
   # 定修待ちにできるのは、定期整備の作業に回したとき（作業のないまま、状態だけを定修待ちにできない）
   def deferred_needs_active_task

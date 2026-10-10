@@ -176,7 +176,7 @@ test('夕会に切り替えると、今日の下書きの点検は積み残し�
   const { api, headers, get, me } = await apiSession(page.request, ACCOUNTS.member)
   const equipment = (await get(`/equipments?per_page=1000&site_ids[]=${me.site_id}`)).data[0]
   const stamp = `E2E ${Date.now()}`
-  // 点検は消せないため、提出したまま残る（点検一覧の E2E の記録と同じ扱い）
+  // 点検は消せないため残る。承認待ちのまま残すと承認者の承認待ちに溜まるので、最後に承認する
   const inspection = await page.request.post(`${api}/inspections`, {
     headers,
     data: { inspection: { equipment_id: equipment.id, department_id: me.department_id, inspection_type: 'routine', status: 'draft',
@@ -226,6 +226,9 @@ test('夕会に切り替えると、今日の下書きの点検は積み残し�
   } finally {
     const manager = await apiSession(page.request, MANAGER)
     expect((await page.request.patch(`${api}/troubles/${troubleId}`, { headers: manager.headers, data: { trouble: { status: 'closed' } } })).ok()).toBeTruthy()
+    if ((await manager.get(`/inspections/${inspectionId}`)).data.status === 'approval_requested') {
+      expect((await page.request.patch(`${api}/inspections/${inspectionId}`, { headers: manager.headers, data: { inspection: { status: 'approved' } } })).ok()).toBeTruthy()
+    }
   }
 })
 

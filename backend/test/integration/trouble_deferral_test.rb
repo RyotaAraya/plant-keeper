@@ -148,14 +148,23 @@ class TroubleDeferralTest < ActionDispatch::IntegrationTest
     assert_equal "deferred", @trouble.reload.status
   end
 
-  test "完了した作業を実施中に戻しても、トラブルの完了と完了日時は保つ" do
+  test "完了した作業を実施中に戻したら、作業で完了になっていたトラブルは定修待ちに戻る（完了日時は消える）" do
     defer(scheduled_maintenance_id: @maintenance.id)
     update_task("completed")
-    completed_at = @trouble.reload.resolved_at
+    assert_equal "closed", @trouble.reload.status
 
     update_task("in_progress")
 
-    assert_equal [ "closed", completed_at ], [ @trouble.reload.status, @trouble.resolved_at ]
+    assert_equal [ "deferred", nil ], [ @trouble.reload.status, @trouble.resolved_at ]
+  end
+
+  test "完了のトラブルは、手動では定修待ち・未対応に戻せない" do
+    closed = create_trouble(status: "closed")
+    %w[deferred open].each do |status|
+      patch "/api/v1/troubles/#{closed.id}", headers: auth_headers_for(@manager), as: :json, params: { trouble: { status: status } }
+      assert_response :unprocessable_entity
+    end
+    assert_equal "closed", closed.reload.status
   end
 
   test "作業を削除したら、ほかに作業がなければトラブルは未対応に戻る" do

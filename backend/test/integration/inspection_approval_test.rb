@@ -59,13 +59,15 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
     inspection = Inspection.last
     assert_equal "approval_requested", inspection.status
     assert_equal %w[approval_request create], AuditLog.where(auditable: inspection).pluck(:action).sort
+    # 状態の変化は作成のログだけに残す（承認依頼のログに重ねない）
+    assert_equal({}, AuditLog.find_by(auditable: inspection, action: "approval_request").changes_json)
   end
 
-  test "廃止した提出済には更新できない" do
+  test "旧の提出済を送られたら、承認待ちとして受け付ける（デプロイの間の古い画面）" do
     inspection = create_inspection
     patch_inspection(inspection, @author, { status: "submitted" })
-    assert_response :unprocessable_entity
-    assert_equal "draft", inspection.reload.status
+    assert_response :ok
+    assert_equal "approval_requested", inspection.reload.status
   end
 
   test "承認できるのは管理者かマネージャーだけ（作成者本人の一般ユーザは不可）" do
@@ -137,14 +139,56 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
     assert_equal drop.id, logs.find_by(action: "delete").auditable_id
   end
 
-  test "承認依頼中の点検を差し戻せるのは承認者（管理者/マネージャー）だけで、作成者本人でも不可" do
+  test "承認待ちの点検を下書きに戻せるのは、承認者の差し戻しと作成者本人の取り下げだけ" do
     inspection = create_inspection(status: "approval_requested")
 
     patch_inspection(inspection, @author, { status: "draft" })
+    assert_response :ok
+    assert_equal "draft", inspection.reload.status
+
+    inspection.update!(status: "approval_requested")
+    patch_inspection(inspection, @manager, { status: "draft" })
+    assert_response :ok
+    assert_equal "draft", inspection.reload.status
+
+    inspection.update!(status: "approval_requested")
+    other_member = create_user(system_role: "member", company: @owner)
+    patch_inspection(inspection, other_member, { status: "draft" })
     assert_response :forbidden
     assert_equal "approval_requested", inspection.reload.status
+  end
+
+  test "差し戻すと、提出で進めた計画の期限と作業の完了が戻る" do
+    plan = InspectionPlan.create!(name: "差し戻しの確認", equipment: @equipment, inspection_type: "routine", interval_days: 30, next_due_on: Date.current)
+    earlier = create_inspection
+    earlier.update_columns(inspection_plan_id: plan.id, inspected_at: 40.days.ago)
+    earlier.update!(status: "approval_requested")
+    assert_equal 40.days.ago.to_date + 30, plan.reload.next_due_on
+
+    inspection = create_inspection
+    inspection.update_columns(inspection_plan_id: plan.id)
+    patch_inspection(inspection, @author, { status: "approval_requested" })
+    assert_equal Date.current + 30, plan.reload.next_due_on
 
     patch_inspection(inspection, @manager, { status: "draft" })
     assert_response :ok
+    # ほかに提出済みの点検があれば、その点検日から計算し直す
+    assert_equal [ 40.days.ago.to_date, 40.days.ago.to_date + 30 ], [ plan.reload.last_inspected_on, plan.next_due_on ]
+
+    # 実施日を直して提出し直すと、その日から進む
+    patch_inspection(inspection, @author, { inspected_at: 1.day.ago.iso8601, status: "approval_requested" })
+    assert_response :ok
+    assert_equal 1.day.ago.to_date + 30, plan.reload.next_due_on
+  end
+
+  test "提出済みの点検がほかになければ、差し戻した点検の点検日が期限になる" do
+    plan = InspectionPlan.create!(name: "差し戻しの確認", equipment: @equipment, inspection_type: "routine", interval_days: 30, next_due_on: Date.current + 3)
+    inspection = create_inspection
+    inspection.update_columns(inspection_plan_id: plan.id)
+    inspection.update!(status: "approval_requested")
+
+    patch_inspection(inspection, @author, { status: "draft" })
+    assert_response :ok
+    assert_equal [ nil, Date.current ], [ plan.reload.last_inspected_on, plan.next_due_on ]
   end
 end

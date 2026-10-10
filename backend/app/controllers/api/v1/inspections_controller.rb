@@ -114,7 +114,8 @@ module Api
           unless inspection.draft?
             inspection.check_required_items!
             inspection.check_reference_standards!
-            record_audit_log("approval_request", inspection, changes: { status: [ nil, "approval_requested" ] })
+            # 状態の変化は作成のログにあるため、承認依頼のログには重ねない
+            record_audit_log("approval_request", inspection, changes: {})
           end
         end
 
@@ -134,9 +135,10 @@ module Api
         equipment_ids_before = equipment_ids_of(@inspection)
         @inspection.assign_attributes(inspection_params)
         apply_equipment_ids(@inspection, :inspection)
-        # 承認と差し戻し（承認依頼中から出る操作）は承認者のみ。作成者本人でも自分で差し戻せない
-        if @inspection.status_changed? && (@inspection.approved? || @inspection.status_was == "approval_requested")
-          authorize @inspection, :approve?
+        # 承認は承認者のみ。承認待ちから下書きへ戻すのは、承認者の差し戻しか作成者本人の取り下げ
+        if @inspection.status_changed?
+          authorize @inspection, :approve? if @inspection.approved?
+          authorize @inspection, :withdraw? if @inspection.draft? && @inspection.status_was == "approval_requested"
         end
 
         if content_edit_while_approval_requested?

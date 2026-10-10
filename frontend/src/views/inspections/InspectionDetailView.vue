@@ -31,6 +31,14 @@ const canEdit = computed(
     inspection.value.status === 'draft' &&
     (isAdmin.value || isManager.value || authStore.user?.id === inspection.value.user_id)
 )
+// 承認待ちの点検は、承認者でない作成者本人も取り下げて下書きに戻せる（InspectionPolicy#withdraw?）
+const canWithdraw = computed(
+  () =>
+    !!inspection.value &&
+    inspection.value.status === 'approval_requested' &&
+    !canApproveInspection.value &&
+    authStore.user?.id === inspection.value.user_id
+)
 
 const inspectionTypeLabel: Record<string, string> = {
   routine: '日常点検', periodic: '定期点検', telemetry: 'テレメトリ', operation_check: '運転チェック'
@@ -87,8 +95,9 @@ onMounted(fetchInspection)
       >
         <template #status><StatusChip kind="inspection" :value="inspection.status" /></template>
         <template #actions>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('approval_requested')">提出</v-btn>
+          <v-btn v-if="canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
+          <v-btn v-if="canEdit" color="primary" @click="updateStatus('approval_requested')">提出</v-btn>
+          <v-btn v-if="canWithdraw" variant="outlined" @click="updateStatus('draft')">取り下げ</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('draft')">差し戻し</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
         </template>
