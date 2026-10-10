@@ -151,7 +151,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - https://plant-keeper-web.onrender.com
 - バックエンド: `plant-keeper-api`（Ruby、`backend/` を起動時に `db:migrate` 実行後 puma 起動）
   - https://plant-keeper-api.onrender.com/api/v1
-- DB: Neon（無料Postgres。stg とは別のプロジェクト）。設定は stg と同じく `DATABASE_URL` をダッシュボードで手動設定する（下の stg の説明を参照）。Render の無料Postgres は作成から30日で期限が切れるため、2026-10 に移した。Neon は数分使われないと止まり、次の問い合わせで数秒以内に起きる
+- DB: Neon（無料Postgres。stg とは別のプロジェクト）。設定は stg と同じく `DATABASE_URL` をダッシュボードで手動設定する（下の stg の説明を参照）。以前の Render の無料Postgres（`plant-keeper-db`）は作成から30日で期限が切れるため、2026-10 に Neon へ移した（Blueprint から外しても Render はリソースを消さないため、不要になったら手で消す）。Neon は数分使われないと止まり、次の問い合わせで数秒以内に起きる
 
 ### stg（`develop` ブランチ）
 - フロントエンド: `plant-keeper-web-stg` — https://plant-keeper-web-stg.onrender.com
