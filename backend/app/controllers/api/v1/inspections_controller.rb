@@ -75,7 +75,7 @@ module Api
               instrument: { only: [ :id, :tag_number ] },
               inspection_plan: { only: [ :id, :name, :next_due_on, :interval_days, :last_inspected_on ] },
               checklist_template: { only: [ :id, :name ] },
-              maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ] },
+              maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ], include: { scheduled_maintenance: { only: [ :id, :status ] } } },
               inspection_items: {
                 include: {
                   trouble: { only: [ :id, :title, :status ] },
@@ -96,9 +96,9 @@ module Api
         inspection.user = current_user
         apply_equipment_ids(inspection, :inspection)
 
-        # 承認フローを飛び越えた状態での新規作成は不可（下書き・提出済のみ）
-        unless %w[draft submitted].include?(inspection.status)
-          return render json: { errors: [ "新規作成できるのは下書きまたは提出済のみです" ] }, status: :unprocessable_entity
+        # 承認フローを飛び越えた状態での新規作成は不可（下書き・承認待ちのみ）
+        unless %w[draft approval_requested].include?(inspection.status)
+          return render json: { errors: [ "新規作成できるのは下書きまたは承認待ちのみです" ] }, status: :unprocessable_entity
         end
 
         ActiveRecord::Base.transaction do
@@ -114,6 +114,8 @@ module Api
           unless inspection.draft?
             inspection.check_required_items!
             inspection.check_reference_standards!
+            # 状態の変化は作成のログにあるため、承認依頼のログには重ねない
+            record_audit_log("approval_request", inspection, changes: {})
           end
         end
 
@@ -133,9 +135,10 @@ module Api
         equipment_ids_before = equipment_ids_of(@inspection)
         @inspection.assign_attributes(inspection_params)
         apply_equipment_ids(@inspection, :inspection)
-        # 承認と差し戻し（承認依頼中から出る操作）は承認者のみ。作成者本人でも自分で差し戻せない
-        if @inspection.status_changed? && (@inspection.approved? || @inspection.status_was == "approval_requested")
-          authorize @inspection, :approve?
+        # 承認は承認者のみ。承認待ちから下書きへ戻すのは、承認者の差し戻しか作成者本人の取り下げ
+        if @inspection.status_changed?
+          authorize @inspection, :approve? if @inspection.approved?
+          authorize @inspection, :withdraw? if @inspection.draft? && @inspection.status_was == "approval_requested"
         end
 
         if content_edit_while_approval_requested?

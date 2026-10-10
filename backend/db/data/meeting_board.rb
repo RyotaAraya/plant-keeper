@@ -32,7 +32,7 @@ module MeetingBoardCatalog
   # どちらも計器Aチームなので、佐藤さん（計器Aチーム）の初期表示の夕会に出る。
   # 時刻は「今から何時間前か」。日付をまたがないよう、今日の0時より前にはしない（MeetingBoardCatalog.today_at）
   INSPECTIONS = [
-    { task_tag: "FT-601", user: "sato@example.com", department: "計器Aチーム", status: "submitted", hours_ago: 3,
+    { task_tag: "FT-601", user: "sato@example.com", department: "計器Aチーム", status: "approval_requested", hours_ago: 3,
       notes: "定修点検。導圧管の清掃・ゼロ点の確認とも良好" },
     { task_tag: "LT-601", user: "takahashi@example.com", department: "計器Aチーム", status: "draft", hours_ago: 1,
       notes: "導圧管のブローまで実施。ゼロ点の確認がまだのため下書き" }

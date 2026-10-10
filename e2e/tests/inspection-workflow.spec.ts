@@ -1,4 +1,4 @@
-import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
+import { test, expect, login, resetSession, apiBaseUrl, ACCOUNTS } from './support'
 import type { APIRequestContext } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
@@ -34,10 +34,12 @@ async function setup(request: APIRequestContext) {
     return record
   }
   const cleanup = async () => {
+    // 残った点検は承認済みまで進める（承認待ちのまま残すと、承認者のホームの承認待ちに溜まるため）
     for (const id of ids) {
-      const record = (await manager.get(`/inspections/${id}`)).data
-      if (record.status === 'draft') {
-        const response = await request.patch(`${api}/inspections/${id}`, { headers: manager.headers, data: { inspection: { status: 'submitted' } } })
+      const { status } = (await manager.get(`/inspections/${id}`)).data
+      const steps = status === 'draft' ? ['approval_requested', 'approved'] : status === 'approval_requested' ? ['approved'] : []
+      for (const next of steps) {
+        const response = await request.patch(`${api}/inspections/${id}`, { headers: manager.headers, data: { inspection: { status: next } } })
         expect(response.ok()).toBeTruthy()
       }
     }
@@ -46,6 +48,46 @@ async function setup(request: APIRequestContext) {
   }
   return { member, manager, plan, draft, cleanup }
 }
+
+test('提出で承認待ちになり、差し戻し後は下書きから修正・再提出して承認できる', async ({ page, request }) => {
+  const data = await setup(request)
+  try {
+    const record = await data.draft()
+    const path = `/inspections/${record.id}`
+    await login(page, ACCOUNTS.member)
+    await page.goto(path)
+    await page.getByRole('button', { name: '提出', exact: true }).click()
+    await expect(page.locator('.pk-status-chip').first()).toHaveText('承認待ち')
+    await expect(page.getByRole('button', { name: '承認依頼', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: '編集', exact: true })).toHaveCount(0)
+    // 作成者本人は取り下げられる（差し戻し・承認は出ない）
+    await expect(page.getByRole('button', { name: '取り下げ', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '差し戻し', exact: true })).toHaveCount(0)
+
+    await resetSession(page)
+    await login(page, ACCOUNTS.admin)
+    await page.goto(path)
+    await expect(page.getByRole('button', { name: '取り下げ', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: '差し戻し', exact: true }).click()
+    await expect(page.locator('.pk-status-chip').first()).toHaveText('下書き')
+
+    await resetSession(page)
+    await login(page, ACCOUNTS.member)
+    await page.goto(`${path}/edit`)
+    await page.getByRole('button', { name: '対象・日時・点検票を確認・変更' }).click()
+    await page.getByLabel('備考', { exact: true }).fill('E2E 差し戻し後に修正')
+    await page.getByRole('button', { name: '提出', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`${path}\\?saved=approval_requested`))
+    await expect(page.locator('.pk-status-chip').first()).toHaveText('承認待ち')
+
+    await resetSession(page)
+    await login(page, ACCOUNTS.admin)
+    await page.goto(path)
+    await page.getByRole('button', { name: '承認', exact: true }).click()
+    await expect(page.locator('.pk-status-chip').first()).toHaveText('承認済')
+    await expect(page.getByRole('link', { name: '編集', exact: true })).toHaveCount(0)
+  } finally { await data.cleanup() }
+})
 
 for (const mobile of [false, true]) {
   test(`${mobile ? 'スマホ' : 'PC'}で前日の下書きを計画から再開・提出し、元のホームへ戻れる`, async ({ page }) => {
@@ -70,7 +112,7 @@ for (const mobile of [false, true]) {
       await expect(page).toHaveURL(new RegExp(`/inspections/${record.id}/edit`))
       await expect(page.getByRole('textbox', { name: '内容', exact: true })).toHaveValue('外観を確認')
       await page.getByRole('button', { name: '提出', exact: true }).click()
-      await expect(page).toHaveURL(new RegExp(`/inspections/${record.id}\\?saved=submitted`))
+      await expect(page).toHaveURL(new RegExp(`/inspections/${record.id}\\?saved=approval_requested`))
       await expect(page.getByTestId('inspection-saved')).toContainText('点検を提出しました')
       const currentPlan = (await data.member.get(`/inspection_plans/${data.plan.id}`)).data
       expect(currentPlan.next_due_on > todayForInput()).toBeTruthy()

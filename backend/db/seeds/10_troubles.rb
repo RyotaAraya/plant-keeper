@@ -47,7 +47,7 @@ insp2_defect = InspectionItem.joins(:inspection).where(has_defect: true, inspect
 
 Trouble.create!(inspection_item: insp2_defect, equipment: kw_cdu, instrument: inst("PV-201"), reported_by: sato, assigned_to: suzuki,
   title: "PV-201 グランドパッキン漏れ", description: "定期点検時にPV-201（CDU塔頂圧力制御弁）のグランドパッキンから微量の漏れを発見。弁棒付近からプロセス流体のにじみあり。増し締めでは改善せず、パッキン交換が必要。",
-  status: "resolved", priority: "medium", reported_at: 7.days.ago, resolved_at: 5.days.ago)
+  status: "closed", priority: "medium", reported_at: 7.days.ago, resolved_at: 5.days.ago)
 
 Trouble.create!(equipment: kw_rhds, instrument: inst("TV-501"), reported_by: sato, assigned_to: suzuki,
   title: "TV-501 ゼロ点ドリフト", description: "RHDS反応器入口温度伝送器TV-501のゼロ点に+0.3%のドリフトを確認。DCS指示値と現場計器の乖離が拡大傾向。校正実施が必要。",
@@ -87,7 +87,7 @@ Trouble.create!(equipment: sk_hds, instrument: inst("TV-S501"), reported_by: tan
 
 Trouble.create!(equipment: sk_cdu, instrument: inst("LT-S401"), reported_by: hayashi, assigned_to: tanabe,
   title: "LT-S401 液位計ゼロ点シフト", description: "堺CDUリフラックスドラム液位計のゼロ点が-2%シフト。配管内のコンデンセート影響の可能性。",
-  status: "resolved", priority: "medium", reported_at: 10.days.ago, resolved_at: 8.days.ago)
+  status: "closed", priority: "medium", reported_at: 10.days.ago, resolved_at: 8.days.ago)
 
 Trouble.create!(equipment: wk_fcc, instrument: inst("TV-W501"), reported_by: wk_inst1, assigned_to: wk_inst_mgr,
   title: "TV-W501 計器指示ハンチング", description: "和歌山FCC反応塔温度計の指示がハンチング。ノイズ混入または接地不良の疑い。",
@@ -103,7 +103,7 @@ Trouble.create!(equipment: kw_crf, instrument: inst("PT-801"), reported_by: inou
 
 Trouble.create!(equipment: kw_tank, instrument: inst("LT-1001"), reported_by: okada,
   title: "LT-1001 レーダーレベル計指示異常", description: "原油タンクT-101のレーダーレベル計が一時的に異常値を指示。浮屋根の結露影響か。",
-  status: "resolved", priority: "low", reported_at: 14.days.ago, resolved_at: 13.days.ago)
+  status: "closed", priority: "low", reported_at: 14.days.ago, resolved_at: 13.days.ago)
 
 # ============================================================
 # 追加トラブル
@@ -136,11 +136,11 @@ Trouble.create!(equipment: equip("根岸製油所", "常圧蒸留装置"), instr
 
 Trouble.create!(equipment: equip("根岸製油所", "軽油脱硫装置"), instrument: inst("LT-N502"), reported_by: ogata, assigned_to: yamashita,
   title: "LT-N502 分離槽液位計ゼロ点ドリフト", description: "根岸HDS分離槽液位計のゼロ点が経時的にドリフト。月次校正で偏差が拡大している。",
-  status: "resolved", priority: "low", reported_at: 20.days.ago, resolved_at: 18.days.ago)
+  status: "closed", priority: "low", reported_at: 20.days.ago, resolved_at: 18.days.ago)
 
 Trouble.create!(equipment: equip("堺製油所", "接触改質装置"), instrument: inst("TV-S602"), reported_by: hayashi, assigned_to: kimura,
   title: "TV-S602 水素ライン温度計断線", description: "堺CRF水素ラインTV-S602の4-20mA信号が突然断。現場確認で端子腐食を発見。",
-  status: "resolved", priority: "high", reported_at: 8.days.ago, resolved_at: 7.days.ago)
+  status: "closed", priority: "high", reported_at: 8.days.ago, resolved_at: 7.days.ago)
 
 Trouble.create!(equipment: equip("堺製油所", "ボイラー設備"), instrument: inst("PT-S702"), reported_by: hayashi, assigned_to: kimura,
   title: "PT-S702 ドラム圧力計指示振れ", description: "堺ボイラードラム圧力計PT-S702の指示が±1%の範囲で振れる。バイブレーション対策が必要。",
@@ -162,7 +162,7 @@ Trouble.create!(equipment: equip("仙台製油所", "軽油脱硫装置"), instr
   title: "LT-D202 分離槽液位計ゼロ点異常", description: "仙台HDS分離槽液位計LT-D202のゼロ点が+3%方向にシフト。校正実施後に再発しており、センサ劣化の可能性。",
   status: "open", priority: "medium", reported_at: 10.days.ago)
 
-# 追加: 過去の解決済みトラブル（2件）
+# 追加: 過去の完了したトラブル（2件）
 Trouble.create!(equipment: equip("川崎製油所", "タンク設備"), instrument: inst("LT-1003"), reported_by: okada,
   title: "LT-1003 灯油タンク液位計不感帯異常",
   description: "灯油タンクT-301レーダーレベル計の不感帯設定が変化。メーカー設定確認・調整で解決。",
@@ -173,7 +173,7 @@ Trouble.create!(equipment: equip("根岸製油所", "ボイラー設備"), instr
   description: "根岸ボイラー過熱スチーム温度計TV-N702の信号線断線。補修配線で復旧済み。",
   status: "closed", priority: "medium", reported_at: 35.days.ago, resolved_at: 34.days.ago)
 
-# 追加: 過去の解決済みトラブル
+# 追加: 過去の完了したトラブル
 equip_list = [ kw_cdu, kw_rhds, kw_fcc, kw_boiler, ng_cdu, ng_hds, sk_cdu, sk_hds, equip("和歌山製油所", "常圧蒸留装置"), sd_lk ]
 reporter_list = [ sato, takahashi, fujita, imai, tanabe, hayashi, wk_inst1, sd_inst1, ogata, nishimura ]
 titles = [ "伝送器校正ずれ", "配管漏洩", "弁体シール劣化", "ケーブル絶縁低下", "指示値ドリフト", "端子腐食", "接地不良", "振動による緩み", "凍結による誤作動", "電源異常" ]

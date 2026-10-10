@@ -11,7 +11,7 @@ import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
-import { nowForInput } from '@/utils/datetime'
+import { formatDate, nowForInput } from '@/utils/datetime'
 import { idFromQuery, listFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
@@ -32,7 +32,11 @@ const errors = ref<string[]>([])
 function filtersFromQuery() {
   return {
     site_ids: initialSiteIds(route.query.site_ids),
-    statuses: listFromQuery(route.query.status),
+    // サイドバーから開いたとき（クエリなし）だけ完了を除く。ほかの画面のリンク（計器の「すべて見る」など）は、
+    // ステータスを指定しなければ完了も含めて開く。選択を解除すると全件を表示する
+    statuses: Object.keys(route.query).length === 0
+      ? ['open', 'in_progress', 'deferred']
+      : listFromQuery(route.query.status),
     priorities: listFromQuery(route.query.priority),
     instrument_id: idFromQuery(route.query.instrument_id),
     department_id: idFromQuery(route.query.department_id),
@@ -57,21 +61,20 @@ const form = ref({
 const instruments = ref<any[]>([])
 
 const headers = [
-  { title: '報告日', key: 'reported_at', width: '110px' },
   { title: '優先度', key: 'priority', width: '70px' },
   { title: 'タイトル', key: 'title', minWidth: '300px' },
+  { title: 'ステータス', key: 'status', width: '110px' },
+  { title: '報告日', key: 'reported_at', width: '110px' },
   { title: '設備', key: 'equipment.name', width: '150px' },
   { title: '計器', key: 'instrument.tag_number', width: '90px' },
-  { title: '部署', key: 'department_display', width: '120px' },
   { title: '担当者', key: 'assigned_to.name', width: '90px' },
-  { title: 'ステータス', key: 'status', width: '110px' },
+  { title: '部署', key: 'department_display', width: '120px' },
 ]
 
 const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
   { title: '定修待ち', value: 'deferred' },
-  { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]
 const priorityOptions = [
@@ -145,11 +148,6 @@ async function save() {
   }
 }
 
-function formatDate(dt: string) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleDateString('ja-JP')
-}
-
 function goToDetail(row: any) {
   router.push(`/troubles/${row.id}`)
 }
@@ -161,7 +159,7 @@ onMounted(() => {
 watch(filters, fetchTroubles, { deep: true })
 
 // 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
-// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・絞り込みなし）
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・完了を除くステータス）
 watch(() => route.query, () => {
   if (route.path !== '/troubles') return
   const q = filtersFromQuery()

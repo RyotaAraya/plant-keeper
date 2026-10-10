@@ -32,12 +32,12 @@ const form = ref({
 const headers = [
   { title: '発注日', key: 'ordered_on', width: '110px' },
   { title: '資材', key: 'material.name', minWidth: '250px' },
+  { title: 'ステータス', key: 'status', width: '100px' },
   { title: '型番', key: 'material.part_number', width: '130px' },
   { title: '数量', key: 'quantity', width: '70px' },
-  { title: '単価', key: 'unit_price', width: '100px' },
   { title: '仕入先', key: 'supplier_name', minWidth: '240px' },
+  { title: '単価', key: 'unit_price', width: '100px' },
   { title: '発注者', key: 'user.name', width: '100px' },
-  { title: 'ステータス', key: 'status', width: '100px' },
 ]
 
 const statusLabel: Record<string, string> = {

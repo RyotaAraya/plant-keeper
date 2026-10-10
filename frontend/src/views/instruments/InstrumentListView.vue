@@ -58,13 +58,13 @@ const errors = ref<string[]>([])
 
 const headers = [
   { title: 'タグナンバー', key: 'tag_number' },
-  { title: '種別', key: 'instrument_type' },
+  { title: '診断', key: 'diagnostic_status', sortable: false },
   { title: '設備', key: 'equipment.name' },
   { title: 'サービス', key: 'service.name' },
-  { title: 'ラインクラス', key: 'line_class.code' },
-  { title: '設置場所', key: 'location' },
+  { title: '種別', key: 'instrument_type' },
   { title: '区分', key: 'flags', sortable: false },
-  { title: '診断', key: 'diagnostic_status', sortable: false },
+  { title: '設置場所', key: 'location' },
+  { title: 'ラインクラス', key: 'line_class.code' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 

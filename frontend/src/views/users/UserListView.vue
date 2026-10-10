@@ -30,12 +30,12 @@ const filters = ref({
 // 拠点は、1拠点だけ表示しているときは絞り込み欄で分かるので出さない。状態は、退職者を表示するときだけ出す（通常は全員「在籍」）
 const headers = computed(() => [
   { title: '名前', key: 'name' },
-  { title: 'メール', key: 'email' },
-  { title: '権限', key: 'system_role' },
-  { title: '在籍区分', key: 'employment_type' },
   { title: '所属会社', key: 'company' },
   ...(filters.value.site_ids.length === 1 ? [] : [{ title: '拠点', key: 'site.name' }]),
   { title: '部署', key: 'department_path' },
+  { title: '権限', key: 'system_role' },
+  { title: '在籍区分', key: 'employment_type' },
+  { title: 'メール', key: 'email' },
   ...(showInactive.value ? [{ title: '状態', key: 'is_active' }] : []),
 ])
 

@@ -112,7 +112,7 @@ sd_boiler = equip("仙台製油所", "ボイラー設備")
 # 川崎
 patrol!(patrol_kw, site: "川崎製油所", operator: 0, equipments: [ kw_cdu, kw_rhds, kw_fcc ], at: 3.days.ago)
 patrol!(patrol_kw, site: "川崎製油所", operator: 1, equipments: [ kw_boiler, kw_vdu, kw_crf ], at: 2.days.ago)
-patrol!(patrol_kw, site: "川崎製油所", operator: 2, equipments: [ kw_fcc, kw_cdu ], at: 1.day.ago, status: "submitted",
+patrol!(patrol_kw, site: "川崎製油所", operator: 2, equipments: [ kw_fcc, kw_cdu ], at: 1.day.ago, status: "approval_requested",
         notes: "反応塔まわりのフランジからわずかににじみ。トラブル起票済み。",
         abnormal: { item: 0, equipment: kw_fcc, title: "反応塔まわりのフランジからのにじみ", priority: "medium",
                     description: "巡回中に、反応塔まわりのフランジ部から油のにじみを確認。増し締めで止まるか確認が必要。" })
@@ -123,11 +123,11 @@ patrol!(patrol_ng, site: "根岸製油所", operator: 0, equipments: [ ng_cdu, n
 patrol!(patrol_ng, site: "根岸製油所", operator: 1, equipments: [ ng_boiler, ng_cdu ], at: 5.days.ago)
 patrol!(patrol_sk, site: "堺製油所", operator: 0, equipments: [ sk_cdu, sk_hds, sk_crf ], at: 3.days.ago)
 patrol!(patrol_sk, site: "堺製油所", operator: 1, equipments: [ sk_boiler, sk_hds ], at: 4.days.ago)
-patrol!(patrol_sk, site: "堺製油所", operator: 2, equipments: [ sk_cdu, sk_crf ], at: 2.days.ago, status: "submitted")
+patrol!(patrol_sk, site: "堺製油所", operator: 2, equipments: [ sk_cdu, sk_crf ], at: 2.days.ago, status: "approval_requested")
 # 和歌山・仙台
 patrol!(patrol_kw, site: "和歌山製油所", operator: 0, equipments: [ wk_cdu, wk_fcc ], at: 4.days.ago)
 patrol!(patrol_kw, site: "仙台製油所", operator: 0, equipments: [ sd_lk, sd_hds, sd_boiler ], at: 3.days.ago)
-patrol!(patrol_kw, site: "仙台製油所", operator: 1, equipments: [ sd_hds, sd_boiler ], at: 1.day.ago, status: "submitted",
+patrol!(patrol_kw, site: "仙台製油所", operator: 1, equipments: [ sd_hds, sd_boiler ], at: 1.day.ago, status: "approval_requested",
         notes: "軽油脱硫装置のポンプまわりで微小な振動。悪化するようなら要対応。",
         abnormal: { item: 1, equipment: sd_hds, title: "ポンプまわりの微小な振動", priority: "low",
                     description: "巡回中に微小な振動を確認。今のところ運転に支障はないが、悪化するようなら保全へ相談。" })
@@ -161,7 +161,7 @@ record!(insp2, valve_annual("3.4", "3.8", "グランドパッキンから微量�
                             "外観とグランドの漏れ" => { result: "defect", instrument: inst("PV-201") }))
 
 # 根岸 HDS 月次点検（温度）
-insp8 = Inspection.create!(checklist_template: monthly_inst, user: ogata, equipment: ng_hds, instrument: inst("TV-N501"), department: ng_inst_sec, inspection_type: "periodic", status: "submitted", inspected_at: 2.days.ago, notes: "反応温度の偏差が+1℃。経過観察。")
+insp8 = Inspection.create!(checklist_template: monthly_inst, user: ogata, equipment: ng_hds, instrument: inst("TV-N501"), department: ng_inst_sec, inspection_type: "periodic", status: "approval_requested", inspected_at: 2.days.ago, notes: "反応温度の偏差が+1℃。経過観察。")
 record!(insp8, monthly_temperature.merge("DCSの指示値と現場の指示の差" => { measured_value: "0.4" },
                                          "特記事項" => { text_value: "反応温度の偏差が+1℃（許容内）。経過観察。" }))
 

@@ -84,7 +84,7 @@ class DiagnosticTroublesTest < ActionDispatch::IntegrationTest
     end
 
     # 人が作ったトラブルは、重ねない判定に入れない（診断から作ったものだけを見る）
-    first.update!(status: "resolved")
+    first.update!(status: "closed")
     Trouble.create!(equipment: @equipment, instrument: @instrument, reported_by: @member, title: "指示の異常", reported_at: 1.day.ago)
     send_diagnostics(diagnostic("N", 90.minutes.ago))
     assert_difference "diagnostic_troubles.count", 1 do

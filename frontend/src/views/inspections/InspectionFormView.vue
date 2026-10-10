@@ -316,7 +316,7 @@ async function save(status?: string) {
       savedId = response.data.data.id
     }
     saved.value = true
-    router.push({ path: `/inspections/${savedId}`, query: { saved: status === 'submitted' ? 'submitted' : 'draft', return_to: returnTo.value } })
+    router.push({ path: `/inspections/${savedId}`, query: { saved: status === 'approval_requested' ? 'approval_requested' : 'draft', return_to: returnTo.value } })
   } catch (e: any) {
     errors.value = e.response?.data?.errors || ['保存に失敗しました']
   } finally {
@@ -735,7 +735,7 @@ onMounted(async () => {
           <v-btn @click="router.back()">キャンセル</v-btn>
           <v-spacer />
           <v-btn variant="outlined" :loading="saving" @click="save('draft')">下書き保存</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save('submitted')">提出</v-btn>
+          <v-btn color="primary" :loading="saving" @click="save('approval_requested')">提出</v-btn>
         </div>
       </template>
     </template>

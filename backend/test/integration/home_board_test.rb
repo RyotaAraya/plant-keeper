@@ -104,7 +104,7 @@ class HomeBoardTest < ActionDispatch::IntegrationTest
 
   test "運転部門の人は運転員のホームで、自分が報告した完了前のトラブルが付く" do
     operator = create_user(company: @owner, site: @site, department: @operation)
-    create_trouble("運転員の報告", reported_by: operator, status: "resolved")
+    create_trouble("運転員の報告", reported_by: operator, status: "in_progress")
     create_trouble("完了した報告", reported_by: operator, status: "closed")
     create_trouble("ほかの人の報告")
 
@@ -129,9 +129,9 @@ class HomeBoardTest < ActionDispatch::IntegrationTest
   end
 
   test "夕会の実績は、点検は記録の部署、対応記録は記録した人の所属、作業は作業の部署のエリアに分ける" do
-    Inspection.create!(user: @member, equipment: @equipment, department: @team, inspection_type: "periodic", status: "submitted", inspected_at: Time.current)
+    Inspection.create!(user: @member, equipment: @equipment, department: @team, inspection_type: "periodic", status: "approval_requested", inspected_at: Time.current)
     Inspection.create!(user: @member, equipment: @equipment, department: @section, inspection_type: "periodic", status: "draft", inspected_at: Time.current)
-    Inspection.create!(user: @member, equipment: @equipment, department: @team, inspection_type: "periodic", status: "submitted", inspected_at: 2.days.ago)
+    Inspection.create!(user: @member, equipment: @equipment, department: @team, inspection_type: "periodic", status: "approval_requested", inspected_at: 2.days.ago)
     trouble = create_trouble("対応したトラブル")
     trouble.trouble_responses.create!(user: @section_member, response_type: "investigation", description: "確認", responded_at: Time.current)
     create_task(create_maintenance("実施中の整備"), "今日の作業", department: @team, status: "completed")
@@ -139,7 +139,7 @@ class HomeBoardTest < ActionDispatch::IntegrationTest
     data = home
     team_results = area(data, "計器Aチーム")["results"]
     section_results = area(data, "計装保全課")["results"]
-    assert_equal [ [ "submitted" ], [], [ "今日の作業" ] ],
+    assert_equal [ [ "approval_requested" ], [], [ "今日の作業" ] ],
                  [ team_results["inspections"].pluck("status"), team_results["trouble_responses"], team_results["completed_tasks"].pluck("title") ]
     assert_equal [ [ "draft" ], [ "対応したトラブル" ] ],
                  [ section_results["inspections"].pluck("status"), section_results["trouble_responses"].map { |r| r.dig("trouble", "title") } ]

@@ -95,7 +95,7 @@ class InspectionPlanEquipmentsTest < ActionDispatch::IntegrationTest
 
     post "/api/v1/inspections", headers: @headers, as: :json, params: {
       inspection: { equipment_ids: [ @cdu.id, @hds.id, @fcc.id ], department_id: @department.id, inspection_type: "routine",
-                    inspected_at: Time.current.iso8601, status: "submitted", inspection_plan_id: plan.id }
+                    inspected_at: Time.current.iso8601, status: "approval_requested", inspection_plan_id: plan.id }
     }
 
     assert_response :created
@@ -133,7 +133,7 @@ class InspectionPlanEquipmentsTest < ActionDispatch::IntegrationTest
     inspection = Inspection.last
     plan.update!(equipment_ids_input: [ @cdu.id, @hds.id ])
 
-    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { status: "submitted" } }, headers: @headers, as: :json
+    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { status: "approval_requested" } }, headers: @headers, as: :json
     assert_response :ok
 
     patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { equipment_ids: [ @cdu.id ] } }, headers: @headers, as: :json
@@ -151,7 +151,7 @@ class InspectionPlanEquipmentsTest < ActionDispatch::IntegrationTest
 
   private
 
-  def post_inspection_for(plan, equipment_ids, status: "submitted")
+  def post_inspection_for(plan, equipment_ids, status: "approval_requested")
     post "/api/v1/inspections", headers: @headers, as: :json, params: {
       inspection: { equipment_ids: equipment_ids, department_id: @department.id, inspection_type: "routine",
                     inspected_at: Time.current.iso8601, status: status, inspection_plan_id: plan.id }

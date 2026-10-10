@@ -20,8 +20,8 @@ insp9 = Inspection.joins(:equipment).where(equipments: { site_id: Site.find_by!(
 
 AuditLog.create!(user: tanaka, action: "login", auditable_type: "User", auditable_id: tanaka.id, ip_address: "192.168.1.100", performed_at: 1.hour.ago)
 AuditLog.create!(user: sato, action: "create", auditable_type: "Trouble", auditable_id: t3.id, changes_json: { title: [ nil, "FT-301 オリフィス閉塞疑い" ], status: [ nil, "open" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
-AuditLog.create!(user: suzuki, action: "update", auditable_type: "Trouble", auditable_id: t1.id, changes_json: { status: [ "in_progress", "resolved" ], resolved_at: [ nil, 5.days.ago.iso8601 ] }, ip_address: "192.168.1.102", performed_at: 5.days.ago)
-AuditLog.create!(user: sato, action: "approval_request", auditable_type: "Inspection", auditable_id: insp3.id, changes_json: { status: [ "submitted", "approval_requested" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
+AuditLog.create!(user: suzuki, action: "update", auditable_type: "Trouble", auditable_id: t1.id, changes_json: { status: [ "in_progress", "closed" ], resolved_at: [ nil, 5.days.ago.iso8601 ] }, ip_address: "192.168.1.102", performed_at: 5.days.ago)
+AuditLog.create!(user: sato, action: "approval_request", auditable_type: "Inspection", auditable_id: insp3.id, changes_json: { status: [ "draft", "approval_requested" ] }, ip_address: "192.168.1.105", performed_at: 1.day.ago)
 AuditLog.create!(user: suzuki, action: "login", auditable_type: "User", auditable_id: suzuki.id, ip_address: "192.168.1.102", performed_at: 2.hours.ago)
 AuditLog.create!(user: ito, action: "login", auditable_type: "User", auditable_id: ito.id, ip_address: "192.168.2.100", performed_at: 3.hours.ago)
 AuditLog.create!(user: sasaki, action: "login", auditable_type: "User", auditable_id: sasaki.id, ip_address: "192.168.3.100", performed_at: 4.hours.ago)

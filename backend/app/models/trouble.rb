@@ -2,13 +2,12 @@ class Trouble < ApplicationRecord
   include StatusTransitions
   include InstrumentBelongsToEquipment
 
-  # 完了（closed）からは戻せない。解決済からは再対応（対応中）に戻せる。
-  # 定修待ち（deferred）は、運転中に直せないトラブルを定期整備の作業に回した状態（作業の完了で解決済、作業の見送り・削除で未対応に戻る）
+  # 完了（closed）からは戻せない。
+  # 定修待ち（deferred）は、運転中に直せないトラブルを定期整備の作業に回した状態（作業の完了で完了、作業の見送り・削除で未対応に戻る）
   STATUS_TRANSITIONS = {
-    "open" => %w[in_progress resolved closed deferred],
-    "in_progress" => %w[open resolved closed deferred],
-    "resolved" => %w[in_progress closed deferred],
-    "deferred" => %w[open in_progress resolved closed],
+    "open" => %w[in_progress closed deferred],
+    "in_progress" => %w[open closed deferred],
+    "deferred" => %w[open in_progress closed],
     "closed" => []
   }.freeze
 
@@ -24,7 +23,7 @@ class Trouble < ApplicationRecord
   has_many :repairs, dependent: :restrict_with_error
   has_many :maintenance_tasks, dependent: :nullify
 
-  enum :status, { open: "open", in_progress: "in_progress", deferred: "deferred", resolved: "resolved", closed: "closed" }
+  enum :status, { open: "open", in_progress: "in_progress", deferred: "deferred", closed: "closed" }, validate: true
   enum :priority, { low: "low", medium: "medium", high: "high", critical: "critical" }
   # 出所: 手入力 / 点検の不具合（InspectionsController）/ 機器の診断（DiagnosticTrouble）。APIからは変えられない
   enum :source, { manual: "manual", inspection: "inspection", device_diagnostic: "device_diagnostic" }, prefix: true
@@ -54,7 +53,22 @@ class Trouble < ApplicationRecord
     maintenance_tasks.where.not(status: "cancelled").order(:id).last
   end
 
+  # 回した作業を完了から戻したとき（MaintenanceTask#sync_trouble_status）だけ、完了から定修待ちに戻す。
+  # 手動では完了から戻せない（遷移表）
+  def reopen_for_maintenance_task!
+    @reopening_for_maintenance_task = true
+    update!(status: "deferred")
+  ensure
+    @reopening_for_maintenance_task = false
+  end
+
   private
+
+  def status_transition_allowed
+    return if @reopening_for_maintenance_task && status_was == "closed" && deferred?
+
+    super
+  end
 
   # 定修待ちにできるのは、定期整備の作業に回したとき（作業のないまま、状態だけを定修待ちにできない）
   def deferred_needs_active_task
@@ -63,9 +77,9 @@ class Trouble < ApplicationRecord
     errors.add(:status, "を定修待ちにするには、トラブル詳細の「定期整備に回す」で作業に回してください") unless persisted? && active_maintenance_task
   end
 
-  # 解決日時はステータスから決める（クライアントの値は使わない）。解決済・完了で初めて記録し、再対応で消す
+  # 完了日時はステータスから決める（クライアントの値は使わない）。既存の日時カラムを引き続き使う
   def stamp_resolved_at
-    if resolved? || closed?
+    if closed?
       self.resolved_at ||= Time.current
     else
       self.resolved_at = nil

@@ -20,3 +20,11 @@ export function monthsAgoForInput(months: number, d: Date = new Date()): string 
   target.setDate(Math.min(d.getDate(), lastDay))
   return todayForInput(target)
 }
+
+// 記録の表示用。端末の時刻帯にかかわらず、業務上の日本時間の日付で表示する。
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+}

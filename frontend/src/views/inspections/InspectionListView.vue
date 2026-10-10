@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import { formatDate } from '@/utils/datetime'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CalibrationImportDialog from '@/components/CalibrationImportDialog.vue'
@@ -52,14 +53,14 @@ const filters = ref({
 })
 
 const headers = [
+  { title: '点検日', key: 'inspected_at', width: '120px' },
   { title: '点検内容', key: 'name', sortable: false },
-  { title: '点検日時', key: 'inspected_at', width: '160px' },
-  { title: '種別', key: 'inspection_type', width: '110px' },
+  { title: 'ステータス', key: 'status', width: '120px' },
   { title: '設備', key: 'equipments', sortable: false },
   { title: '計器', key: 'instrument.tag_number', width: '110px' },
   { title: '実施者', key: 'user.name', width: '120px' },
   { title: '部署', key: 'department.name', width: '140px' },
-  { title: 'ステータス', key: 'status', width: '120px' },
+  { title: '種別', key: 'inspection_type', width: '110px' },
 ]
 
 const inspectionTypeOptions = [
@@ -71,7 +72,6 @@ const inspectionTypeOptions = [
 
 const statusOptions = [
   { title: '下書き', value: 'draft' },
-  { title: '提出済', value: 'submitted' },
   { title: '承認待ち', value: 'approval_requested' },
   { title: '承認済', value: 'approved' },
 ]
@@ -112,11 +112,6 @@ function changeSite(siteIds: number[]) {
     department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
   }
   loadSiteOptions(siteIds)
-}
-
-function formatDate(dt: string) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function goToDetail(row: any) {
@@ -193,7 +188,7 @@ watch(() => route.query, (query, previous) => {
     >
       <template #item.name="{ item }">{{ inspectionName(item) }}</template>
       <template #item.inspected_at="{ item }">
-        {{ formatDate(item.inspected_at) }}
+        <span class="text-no-wrap">{{ formatDate(item.inspected_at) }}</span>
       </template>
       <template #item.equipments="{ item }">
         {{ equipmentNames(item) }}

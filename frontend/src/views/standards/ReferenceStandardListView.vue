@@ -34,10 +34,10 @@ const categoryOptions = Object.entries(CATEGORY_LABEL).map(([value, title]) => (
 const headers = [
   { title: '管理番号', key: 'management_number', width: '120px' },
   { title: '名称', key: 'name', minWidth: '240px' },
+  { title: '校正', key: 'calibration_state', minWidth: '210px' },
+  { title: '状態', key: 'status', width: '100px' },
   { title: '種別', key: 'category', width: '110px' },
   { title: '拠点', key: 'site.name', width: '120px' },
-  { title: '状態', key: 'status', width: '100px' },
-  { title: '校正', key: 'calibration_state', minWidth: '210px' },
   { title: '最終校正', key: 'last_calibration', sortable: false, minWidth: '190px' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]

@@ -2,7 +2,7 @@ import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
 import type { APIRequestContext, Page } from '@playwright/test'
 import { todayForInput } from '../../frontend/src/utils/datetime'
 
-// 運転中に直せないトラブルを、定期整備の作業に回す（トラブルは「定修待ち」）。作業の完了で解決済、見送りで未対応に戻る。
+// 運転中に直せないトラブルを、定期整備の作業に回す（トラブルは「定修待ち」）。作業の完了で完了、見送りで未対応に戻る。
 // テストごとに、APIでトラブル（と定期整備）を自分用に用意する。名前は「E2E 」で始まる（繰り返し実行すると一覧に溜まる）
 async function adminApi(request: APIRequestContext) {
   const api = apiBaseUrl()
@@ -36,7 +36,7 @@ async function openTrouble(page: Page, title: string) {
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible()
 }
 
-test('新しい定期整備に回すと定修待ちになり、作業を完了するとトラブルが解決済になる', async ({ page, request }) => {
+test('新しい定期整備に回すと定修待ちになり、作業を完了するとトラブルが完了になる', async ({ page, request }) => {
   const title = `E2E ${Date.now()} PT-701 の指示が振れる`
   const admin = await adminApi(request)
   await admin.createTrouble(title)
@@ -61,10 +61,10 @@ test('新しい定期整備に回すと定修待ちになり、作業を完了�
     await expect(page.getByTestId('tasks-progress')).toContainText('完了 1 / 1')
   })
 
-  await test.step('トラブルは解決済になり、定期整備のカードから整備に戻れる', async () => {
+  await test.step('トラブルは完了になり、定期整備のカードから整備に戻れる', async () => {
     await page.getByTestId('tasks-card').locator('[data-testid^="task-trouble-"]').click()
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible()
-    await expect(page.getByText('解決済').first()).toBeVisible()
+    await expect(page.getByText('完了').first()).toBeVisible()
     await expect(page.getByTestId('deferred-card')).toContainText('完了')
     await expect(page.getByRole('button', { name: '定期整備に回す' })).toHaveCount(0)
   })

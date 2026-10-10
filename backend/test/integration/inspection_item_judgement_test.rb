@@ -104,7 +104,7 @@ class InspectionItemJudgementTest < ActionDispatch::IntegrationTest
     items[1] = from_template(@leak) # 判定なし
     items[3] = from_template(@bypass) # 記入も該当なしもなし
 
-    post_inspection(items, status: "submitted")
+    post_inspection(items, status: "approval_requested")
     assert_response :unprocessable_entity
     assert_equal [ "必須の項目「導圧管の漏れ」が未記入です（判定、または該当なしを付けてください）",
                    "必須の項目「バイパス申請番号」が未記入です（判定、または該当なしを付けてください）" ], json["errors"]
@@ -113,7 +113,7 @@ class InspectionItemJudgementTest < ActionDispatch::IntegrationTest
       post_inspection(items, status: "draft")
     end
 
-    post_inspection(filled_items, status: "submitted")
+    post_inspection(filled_items, status: "approval_requested")
     assert_response :created
   end
 
@@ -123,7 +123,7 @@ class InspectionItemJudgementTest < ActionDispatch::IntegrationTest
     post_inspection(items)
     inspection = Inspection.last
 
-    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { status: "submitted" } }, headers: @headers, as: :json
+    patch "/api/v1/inspections/#{inspection.id}", params: { inspection: { status: "approval_requested" } }, headers: @headers, as: :json
     assert_response :unprocessable_entity
     assert_equal "draft", inspection.reload.status
   end

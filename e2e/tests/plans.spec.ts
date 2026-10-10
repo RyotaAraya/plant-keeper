@@ -26,7 +26,7 @@ test('定期整備の系列を開くと各回が並び、回を押すと定期�
   await openPlans(page, '定期整備')
   await expect(page.getByTestId('plan-groups')).toHaveCount(0) // 定期整備だけ
 
-  const series = await findListRow(page, page.getByTestId('plan-maintenances').locator('tbody tr', { hasText: /^系列A号ボイラー整備/ }))
+  const series = await findListRow(page, page.getByTestId('plan-maintenances').locator('tbody tr').filter({ has: page.getByRole('button', { name: 'A号ボイラー整備の各回を開く', exact: true }) }))
   await expect(series).toContainText('ボイラー設備（24か月）')
   await expect(series).toContainText('発電設備（48か月）')
   await series.click()
@@ -92,7 +92,7 @@ test('業務管理者は、まとまりを追加・編集できる', async ({ pa
 
   await test.step('定期整備の系列を編集すると、今の名前と設備ごとの周期が入っている（保存はしない）', async () => {
     await openPlans(page, '定期整備')
-    const series = await findListRow(page, page.getByTestId('plan-maintenances').locator('tbody tr', { hasText: /^系列A号ボイラー整備/ }))
+    const series = await findListRow(page, page.getByTestId('plan-maintenances').locator('tbody tr').filter({ has: page.getByRole('button', { name: 'A号ボイラー整備の各回を開く', exact: true }) }))
     await series.getByRole('button', { name: 'A号ボイラー整備を編集' }).click()
     await expect(dialog.getByLabel('系列の名前 *（例: A号ボイラー整備）')).toHaveValue('A号ボイラー整備')
     await expect(dialog.getByLabel('ボイラー設備の周期（月）')).toHaveValue('24')

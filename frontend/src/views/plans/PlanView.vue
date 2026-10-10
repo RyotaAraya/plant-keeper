@@ -63,10 +63,10 @@ const groupsGuard = latestGuard()
 const multiSite = computed(() => filters.value.site_ids.length !== 1)
 
 const groupHeaders = [
+  { title: '期限', key: 'next_due_on', sortable: false, width: '230px' },
   { title: 'まとまり', key: 'name', sortable: false },
   { title: '担当部署', key: 'department', sortable: false, width: '200px' },
   { title: '計画', key: 'plans_count', sortable: false, width: '80px' },
-  { title: '期限', key: 'next_due_on', sortable: false, width: '230px' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
   { title: '', key: 'data-table-expand', width: '48px' },
 ]
@@ -105,12 +105,12 @@ const maintenanceGuard = latestGuard()
 const statusOptions = Object.entries(MAINTENANCE_STATUS_LABEL).map(([value, title]) => ({ title, value }))
 
 const maintenanceHeaders = [
-  { title: '種類', key: 'kind', sortable: false, width: '80px' },
-  { title: '名称', key: 'name', sortable: false },
-  { title: '対象設備', key: 'equipments', sortable: false },
   { title: '予定期間', key: 'period', sortable: false, width: '190px' },
-  { title: '作業', key: 'tasks', sortable: false, width: '80px' },
+  { title: '名称', key: 'name', sortable: false },
   { title: '状態', key: 'status', sortable: false, width: '100px' },
+  { title: '対象設備', key: 'equipments', sortable: false },
+  { title: '作業', key: 'tasks', sortable: false, width: '80px' },
+  { title: '種類', key: 'kind', sortable: false, width: '80px' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
   { title: '', key: 'data-table-expand', width: '48px' },
 ]

@@ -76,7 +76,7 @@ async function saveCalibration() {
   }
 }
 
-const inspectionStatusLabel: Record<string, string> = { draft: '下書き', submitted: '提出済', approval_requested: '承認依頼中', approved: '承認済' }
+const inspectionStatusLabel: Record<string, string> = { draft: '下書き', approval_requested: '承認待ち', approved: '承認済' }
 const preCheckLabel = (v: boolean | null) => (v === null ? '未確認' : v ? 'OK' : 'NG')
 const preCheckColor = (v: boolean | null) => (v === null ? 'grey' : v ? 'success' : 'error')
 

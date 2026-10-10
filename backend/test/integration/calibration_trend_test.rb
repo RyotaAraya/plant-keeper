@@ -33,7 +33,7 @@ class CalibrationTrendTest < ActionDispatch::IntegrationTest
     inspection
   end
 
-  test "計器の詳細に、提出済みの5点校正が古い順に並び、調整前の最大誤差と、調整したときは調整後が返る" do
+  test "計器の詳細に、承認待ちの5点校正が古い順に並び、調整前の最大誤差と、調整したときは調整後が返る" do
     record_calibration(days_ago: 400, up: [ 0.1, 0.1, 0.2, 0.2, 0.3 ], down: [ 0.1, 0.1, 0.2, 0.25, 0.3 ])
     latest = record_calibration(days_ago: 30, up: [ 0.2, 0.3, 0.4, 0.6, -0.7 ], down: [ 0.2, 0.3, 0.4, 0.6, -0.7 ],
                                 as_left: [ 0.0, 0.05, 0.1, 0.1, 0.1 ])
