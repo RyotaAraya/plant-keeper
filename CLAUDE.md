@@ -14,7 +14,7 @@ UIの配色・部品・レスポンシブの共通方針は [デザインガイ�
 - フロントエンド: Vue 3 + TypeScript + Vuetify 3 (日本語ロケール) + Pinia + Vue Router 4 + Axios
 - バックエンド: Rails 8 API mode + devise + devise-jwt
 - DB: PostgreSQL 16
-- インフラ: Docker（docker-compose、3コンテナ構成）。デプロイ先は Render（本番・stg）、stg のDBのみ Neon
+- インフラ: Docker（docker-compose、3コンテナ構成）。デプロイ先は Render（本番・stg）、DBは本番・stg とも Neon（別のプロジェクト）
 - テスト: バックエンド Minitest、E2E Playwright（フロントの単体テストは未導入）
 - CI/CD・依存更新: GitHub Actions、Renovate（Dependabot は使わない。脆弱性アラートは GitHub 側の Dependabot alerts を参照）
 - AI: Claude API（`anthropic` gem。不具合報告の整理・類似トラブルの提示・対応記録の整理。既定モデルは Haiku 4.5）。キー未設定の環境では機能ごと無効で、他の機能は変わらない
@@ -151,7 +151,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   - https://plant-keeper-web.onrender.com
 - バックエンド: `plant-keeper-api`（Ruby、`backend/` を起動時に `db:migrate` 実行後 puma 起動）
   - https://plant-keeper-api.onrender.com/api/v1
-- DB: `plant-keeper-db`（Render Postgres、free plan）
+- DB: Neon（無料Postgres。stg とは別のプロジェクト）。設定は stg と同じく `DATABASE_URL` をダッシュボードで手動設定する（下の stg の説明を参照）。以前の Render の無料Postgres（`plant-keeper-db`）は作成から30日で期限が切れるため、2026-10 に Neon へ移した（Blueprint から外しても Render はリソースを消さないため、不要になったら手で消す）。Neon は数分使われないと止まり、次の問い合わせで数秒以内に起きる
 
 ### stg（`develop` ブランチ）
 - フロントエンド: `plant-keeper-web-stg` — https://plant-keeper-web-stg.onrender.com
@@ -164,7 +164,7 @@ E2E_BASE_URL=https://plant-keeper-web-stg.onrender.com npx playwright test
   docker-compose exec -e DATABASE_URL='<Neonの接続文字列>' backend bundle exec rails db:seed
   ```
   （`db:seed:replant` は全データ削除のため、接続先を確認してから使うこと）
-- pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードで確認が必要（Claude Codeからは確認不可）
+- pre-push フック（lefthook）を通過すれば push 自体は成功するが、Render側のビルド・デプロイ完了までは別途数分かかる。デプロイ状況はRenderダッシュボードか Render CLI（`render login` 後に `render services` など）で確認する
 
 ## 設計ドキュメント
 
