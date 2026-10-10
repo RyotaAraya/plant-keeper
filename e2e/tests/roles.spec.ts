@@ -71,6 +71,7 @@ test('自社のユーザは拠点管理が使え、アカウントメニュー�
   await page.getByRole('button', { name: 'アカウントメニュー' }).click()
   await expect(page.locator('.pk-account-menu')).toContainText('製油所')
   await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '拠点管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '拠点管理' })).toBeVisible()
 })

@@ -73,6 +73,7 @@ test('再投入が失敗したら、その旨を表示する', async ({ page }) 
 
 test('再投入は、設定画面には出ない', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '設定', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible()
   await expect(page.getByText('デモデータの再投入')).toHaveCount(0)

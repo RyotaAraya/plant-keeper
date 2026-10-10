@@ -9,6 +9,7 @@ test('監査ログは自拠点・直近1か月が初期値で、対象の選択�
     if (/\/api\/v1\/audit_logs\?/.test(r.url())) urls.push(r.url())
   })
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '監査ログ', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '監査ログ' })).toBeVisible()
 
@@ -34,6 +35,7 @@ test('監査ログは自拠点・直近1か月が初期値で、対象の選択�
 
 test('監査ログは、条件に合う記録をCSVで出力できる', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '監査ログ', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '監査ログ' })).toBeVisible()
   await page.waitForLoadState('networkidle')
@@ -57,6 +59,7 @@ test('ユーザ管理は自拠点が初期値で、拠点を切り替えられ�
     if (/\/api\/v1\/users\?/.test(r.url())) urls.push(r.url())
   })
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: 'ユーザ管理', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'ユーザ管理' })).toBeVisible()
 

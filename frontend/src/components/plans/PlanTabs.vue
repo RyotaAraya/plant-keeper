@@ -9,7 +9,7 @@ export const PLAN_TABS: { value: PlanTab; title: string }[] = [
 ]
 </script>
 <script setup lang="ts">
-const props = defineProps<{ modelValue: PlanTab }>()
+const props = withDefaults(defineProps<{ modelValue: PlanTab; level?: 'kind' | 'view' }>(), { level: 'kind' })
 const emit = defineEmits<{ 'update:modelValue': [value: PlanTab] }>()
 function setKind(value: PlanTab) {
   emit('update:modelValue', value === 'inspection' && props.modelValue === 'due' ? 'due' : value)
@@ -17,15 +17,14 @@ function setKind(value: PlanTab) {
 </script>
 <template>
   <div class="pk-plan-tabs">
-    <div>
-      <span class="pk-plan-tabs__label">計画の種類</span>
+    <div v-if="level === 'kind'">
       <v-btn-toggle :model-value="modelValue === 'due' ? 'inspection' : modelValue" mandatory divided density="compact" variant="outlined" color="primary" aria-label="計画の種類" @update:model-value="setKind">
-        <v-btn value="all">すべて</v-btn>
         <v-btn value="inspection">定期点検</v-btn>
         <v-btn value="maintenance">定期整備</v-btn>
+        <v-btn value="all">すべて</v-btn>
       </v-btn-toggle>
     </div>
-    <div v-if="modelValue !== 'maintenance'">
+    <div v-if="level === 'view' && modelValue !== 'maintenance'">
       <span class="pk-plan-tabs__label">点検の見方</span>
       <v-btn-toggle :model-value="modelValue === 'due' ? 'due' : 'inspection'" mandatory divided density="compact" variant="outlined" color="primary" aria-label="点検の見方" @update:model-value="emit('update:modelValue', $event === 'due' ? 'due' : 'inspection')">
         <v-btn value="inspection">まとまり別</v-btn>

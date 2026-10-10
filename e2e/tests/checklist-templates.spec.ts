@@ -3,6 +3,7 @@ import { test, expect, login, ACCOUNTS, selectOption, openPlans } from './suppor
 // チェックリストは「機器の種類 × 周期」（月次・年次・定修）。巡回は機器で分けず、装置単位の「巡回点検」1つ。廃止した旧テンプレートは、点検の選択肢に出ない
 test('設定のチェックリストに、機器の種類 × 周期のテンプレートが並び、項目数が多すぎない', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '設定', exact: true }).click()
   await page.getByRole('tab', { name: 'チェックリスト' }).click()
 
@@ -70,6 +71,7 @@ test('点検計画から「点検を実施」を開くと、計画のテンプ�
 // 項目の見直し: テンプレートの項目ごとに、提出した点検の実施回数・不具合の件数を出す（件数はほかのテストの点検で増えるため決め打ちしない）
 test('設定のチェックリストから「項目の見直し」を開くと、項目ごとの実施回数・不具合の件数が並び、期間を切り替えられる', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
+  await page.getByRole('button', { name: '組織と設定', exact: true }).click()
   await page.getByRole('link', { name: '設定', exact: true }).click()
   await page.getByRole('tab', { name: 'チェックリスト' }).click()
 

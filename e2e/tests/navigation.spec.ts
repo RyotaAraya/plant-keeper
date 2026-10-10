@@ -17,6 +17,7 @@ test('管理者が主要画面をメニューから順に開ける', async ({ pa
 
   for (const s of screens) {
     await test.step(s.menu, async () => {
+      if (s.menu === '監査ログ') await page.getByRole('button', { name: '組織と設定', exact: true }).click()
       await page.getByRole('link', { name: s.menu, exact: true }).click()
       await expect(page.getByRole('heading', { level: 1, name: s.heading })).toBeVisible()
       if (s.hasRows) {
@@ -76,7 +77,7 @@ for (const [label, account, groups] of [
   test(`${label}のサイドバーは、ホーム → 記録する → 計画する → 台帳の順で、プラナの入口が最後にある`, async ({ page }) => {
     await login(page, account)
     const drawer = page.locator('.v-navigation-drawer')
-    await expect(drawer.locator('.pk-sidenav__group')).toHaveText([...groups])
+    await expect(drawer.locator('.pk-sidenav__group, .pk-sidenav__disclosure span')).toHaveText([...groups])
     const links = await drawer.locator('a[href^="/"]').evaluateAll((els) => els.map((e) => e.getAttribute('href')))
     expect(links.slice(0, 5)).toEqual(['/home', '/inspections', '/troubles', '/interlocks', '/plans'])
     expect(links.at(-1)).toBe('/plana')

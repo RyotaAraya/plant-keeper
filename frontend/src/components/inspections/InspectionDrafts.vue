@@ -6,12 +6,13 @@ import { equipmentNames } from '@/utils/equipment'
 import { inspectionName } from '@/utils/inspectionWorkflow'
 import { latestGuard } from '@/utils/latestGuard'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   siteIds?: number[]
   planId?: number | null
   taskId?: number | null
   returnTo: string
-}>()
+  pageSize?: number
+}>(), { pageSize: 5, siteIds: undefined, planId: null, taskId: null })
 const emit = defineEmits<{ loaded: [count: number] }>()
 const drafts = ref<Inspection[]>([])
 const loading = ref(true)
@@ -27,7 +28,7 @@ async function load() {
     const response = await api.get('/inspections', { params: {
       mine: true, status: 'draft', site_ids: props.siteIds,
       inspection_plan_id: props.planId || undefined, maintenance_task_id: props.taskId || undefined,
-      page: page.value, per_page: 5,
+      page: page.value, per_page: props.pageSize,
     } })
     if (!isLatest()) return
     drafts.value = response.data.data
@@ -39,7 +40,7 @@ async function load() {
     if (isLatest()) loading.value = false
   }
 }
-watch(() => [props.siteIds, props.planId, props.taskId], () => { page.value = 1; void load() }, { immediate: true, deep: true })
+watch(() => [props.siteIds, props.planId, props.taskId, props.pageSize], () => { page.value = 1; void load() }, { immediate: true, deep: true })
 function changePage(value: number) { page.value = value; void load() }
 function dateLabel(value: string) {
   return new Date(value).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -67,7 +68,7 @@ function dateLabel(value: string) {
         </li>
       </ul>
       <p v-else class="mt-2 text-body-2">自分の下書きはありません。</p>
-      <v-pagination v-if="total > 5" :model-value="page" :length="Math.ceil(total / 5)" :total-visible="3" aria-label="下書きのページ" @update:model-value="changePage" />
+      <v-pagination v-if="total > pageSize" :model-value="page" :length="Math.ceil(total / pageSize)" :total-visible="3" aria-label="下書きのページ" @update:model-value="changePage" />
     </template>
   </section>
 </template>
