@@ -28,9 +28,9 @@ const search = ref('')
 const headers = [
   { title: '番号', key: 'tag_number', width: '90px' },
   { title: '名称', key: 'name', minWidth: '200px' },
+  { title: 'バイパス', key: 'open_bypass', sortable: false, minWidth: '260px' },
   { title: '設備', key: 'equipment.name', minWidth: '140px' },
   { title: '関係する計器', key: 'instruments', sortable: false, minWidth: '160px' },
-  { title: 'バイパス', key: 'open_bypass', sortable: false, minWidth: '260px' },
 ]
 
 // 終わっていないバイパスの件数（見ている拠点・検索の範囲）。いまインターロックが外れているもの・誰かの操作を待っているものを先に知らせる

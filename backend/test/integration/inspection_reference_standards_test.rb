@@ -26,7 +26,7 @@ class InspectionReferenceStandardsTest < ActionDispatch::IntegrationTest
     { reference_standard_id: standard.id, pre_check_passed: pre_check_passed, pre_check_note: note }
   end
 
-  def post_inspection(standards, status: "submitted", inspected_at: Time.current, items: [], instrument: nil)
+  def post_inspection(standards, status: "approval_requested", inspected_at: Time.current, items: [], instrument: nil)
     post "/api/v1/inspections", headers: @headers, as: :json, params: {
       inspection: { equipment_id: @equipment.id, department_id: @department.id, instrument_id: instrument&.id, inspection_type: "periodic",
                     inspected_at: inspected_at, status: status, items: items, reference_standards: standards }
@@ -150,7 +150,7 @@ class InspectionReferenceStandardsTest < ActionDispatch::IntegrationTest
     inspection = Inspection.last
 
     patch "/api/v1/inspections/#{inspection.id}", headers: @headers, as: :json,
-                                                  params: { inspection: { status: "submitted", items: [ { id: inspection.inspection_items.first.id, content: "液位", item_type: "check", instrument_id: custody.id } ] } }
+                                                  params: { inspection: { status: "approval_requested", items: [ { id: inspection.inspection_items.first.id, content: "液位", item_type: "check", instrument_id: custody.id } ] } }
 
     assert_response :unprocessable_entity
     assert_match(/トレーサビリティ/, json["errors"].join)
@@ -174,13 +174,13 @@ class InspectionReferenceStandardsTest < ActionDispatch::IntegrationTest
     post_inspection([ use(expired) ], status: "draft")
     inspection = Inspection.last
 
-    patch "/api/v1/inspections/#{inspection.id}", headers: @headers, as: :json, params: { inspection: { status: "submitted" } }
+    patch "/api/v1/inspections/#{inspection.id}", headers: @headers, as: :json, params: { inspection: { status: "approval_requested" } }
     assert_response :unprocessable_entity
     assert_equal "draft", inspection.reload.status
 
     valid = create_standard(number: "RS-NEW")
     patch "/api/v1/inspections/#{inspection.id}", headers: @headers, as: :json,
-                                                  params: { inspection: { status: "submitted", reference_standards: [ use(valid) ] } }
+                                                  params: { inspection: { status: "approval_requested", reference_standards: [ use(valid) ] } }
     assert_response :ok
     assert_equal [ valid ], inspection.reload.reference_standards.to_a
   end
@@ -202,7 +202,7 @@ class InspectionReferenceStandardsTest < ActionDispatch::IntegrationTest
     assert_empty inspection.reload.reference_standards
   end
 
-  test "提出済みの点検で、基準器を使えないものに替えることはできない" do
+  test "承認待ちの点検で、基準器を使えないものに替えることはできない" do
     valid = create_standard(number: "RS-1")
     post_inspection([ use(valid) ])
     inspection = Inspection.last

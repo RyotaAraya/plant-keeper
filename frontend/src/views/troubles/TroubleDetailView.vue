@@ -96,15 +96,13 @@ const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
   { title: '定修待ち', value: 'deferred' },
-  { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]
 // バックエンド（Trouble::STATUS_TRANSITIONS）と同じ。現在のステータスと、そこから進められるものだけを選択肢にする
 const allowedNext: Record<string, string[]> = {
-  open: ['in_progress', 'resolved', 'closed', 'deferred'],
-  in_progress: ['open', 'resolved', 'closed', 'deferred'],
-  resolved: ['in_progress', 'closed', 'deferred'],
-  deferred: ['open', 'in_progress', 'resolved', 'closed'],
+  open: ['in_progress', 'closed', 'deferred'],
+  in_progress: ['open', 'closed', 'deferred'],
+  deferred: ['open', 'in_progress', 'closed'],
   closed: [],
 }
 // 定修待ちは、「定期整備に回す」で作業に回したときだけ設定できるため、手動の選択肢には出さない（今が定修待ちのときの表示だけ）
@@ -296,7 +294,7 @@ watch(() => route.params.id, (id, previous) => {
             <div><dt>報告者</dt><dd>{{ reporterLabel }}</dd></div>
             <div><dt>担当者</dt><dd>{{ trouble.assigned_to?.name || '未割当' }}</dd></div>
             <div><dt>報告日時</dt><dd>{{ formatDate(trouble.reported_at) }}</dd></div>
-            <div><dt>解決日時</dt><dd>{{ trouble.resolved_at ? formatDate(trouble.resolved_at) : '—' }}</dd></div>
+            <div><dt>完了日時</dt><dd>{{ trouble.resolved_at ? formatDate(trouble.resolved_at) : '—' }}</dd></div>
             <div v-if="trouble.instrument_diagnostic" class="pk-summary__wide" data-testid="trouble-diagnostic-source">
               <dt>発生元の診断</dt>
               <dd class="d-flex flex-wrap align-center ga-2">

@@ -46,8 +46,6 @@ const form = ref({
 const headers = computed(() => [
   { title: '型番', key: 'part_number', width: '150px' },
   { title: '資材名', key: 'name', minWidth: '260px' },
-  { title: 'カテゴリ', key: 'category', width: '90px' },
-  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
   ...(canViewStocks.value
     ? [
         { title: '自拠点の在庫', key: 'own_stock', width: '110px', align: 'end' as const },
@@ -56,6 +54,8 @@ const headers = computed(() => [
     : []),
   { title: '入手性', key: 'availability', width: '80px' },
   { title: '危険物', key: 'is_hazardous', width: '70px' },
+  { title: 'カテゴリ', key: 'category', width: '90px' },
+  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
 ])
 
 const stockAvailabilityOptions = [

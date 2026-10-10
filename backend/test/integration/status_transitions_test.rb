@@ -31,52 +31,53 @@ class StatusTransitionsTest < ActionDispatch::IntegrationTest
 
   # ---- トラブル ----
 
-  test "トラブルは 未対応→対応中→解決済→完了 と進められ、完了（closed）からは戻せない" do
+  test "トラブルは未対応→対応中→完了と進められ、完了からは戻せない" do
     trouble = create_trouble
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "in_progress" } }
-    assert_response :ok
+    %w[in_progress closed].each do |status|
+      patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: status } }
+      assert_response :ok
+    end
+
+    %w[open in_progress deferred].each do |status|
+      patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: status } }
+      assert_response :unprocessable_entity
+      assert_equal "closed", trouble.reload.status
+    end
+  end
+
+  test "廃止した解決済は登録・更新できない" do
+    trouble = create_trouble
     patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "resolved" } }
-    assert_response :ok
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "closed" } }
-    assert_response :ok
-
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "open" } }
     assert_response :unprocessable_entity
-    assert_equal "closed", trouble.reload.status
+    assert_equal "open", trouble.reload.status
+
+    assert_no_difference "Trouble.count" do
+      post "/api/v1/troubles", headers: @headers, as: :json, params: {
+        trouble: { equipment_id: @equipment.id, title: "旧状態", reported_at: Time.current, status: "resolved" }
+      }
+    end
+    assert_response :unprocessable_entity
   end
 
-  test "解決済からは再対応（対応中）に戻せるが、未対応には戻せない" do
-    trouble = create_trouble(status: "resolved", resolved_at: 1.day.ago)
-
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "open" } }
-    assert_response :unprocessable_entity
-
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "in_progress" } }
-    assert_response :ok
-  end
-
-  test "解決日時はサーバが記録し、クライアントが送った値は無視する。再対応で消える" do
+  test "完了日時はサーバが記録し、クライアントが送った値は無視する" do
     trouble = create_trouble(status: "in_progress")
     forged = 5.years.ago.iso8601
 
     freeze_time do
-      patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "resolved", resolved_at: forged } }
+      patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "closed", resolved_at: forged } }
       assert_response :ok
       assert_equal Time.current, trouble.reload.resolved_at
     end
-
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "in_progress" } }
-    assert_nil trouble.reload.resolved_at
   end
 
-  test "解決済から完了にしても、最初の解決日時は保たれる" do
-    resolved_at = 3.days.ago.change(usec: 0)
-    trouble = create_trouble(status: "resolved", resolved_at: resolved_at)
+  test "完了後に内容を編集しても、完了日時は保たれる" do
+    completed_at = 3.days.ago.change(usec: 0)
+    trouble = create_trouble(status: "closed", resolved_at: completed_at)
 
-    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { status: "closed" } }
+    patch_json "/api/v1/troubles/#{trouble.id}", { trouble: { description: "追記", resolved_at: Time.current } }
 
     assert_response :ok
-    assert_equal resolved_at, trouble.reload.resolved_at
+    assert_equal completed_at, trouble.reload.resolved_at
   end
 
   # ---- 修理 ----

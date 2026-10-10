@@ -16,7 +16,7 @@ class ChecklistItemStatsTest < ActionDispatch::IntegrationTest
   end
 
   # 項目ごとの判定（[ゼロ点, 導圧管の漏れ]）で点検を1件作る
-  def inspect_with(results, status: "submitted", at: 1.month.ago, equipment: @equipment)
+  def inspect_with(results, status: "approval_requested", at: 1.month.ago, equipment: @equipment)
     inspection = Inspection.create!(user: @member, equipment: equipment, department: @department, checklist_template: @template,
                                     inspection_type: "periodic", status: status, inspected_at: at)
     [ @zero, @leak ].zip(results).each do |template_item, result|

@@ -73,8 +73,8 @@ class TroubleDeferralTest < ActionDispatch::IntegrationTest
   end
 
   test "回せるのは、未対応・対応中のトラブルだけで、すでに回したトラブルは回せない" do
-    resolved = create_trouble(status: "resolved")
-    defer(resolved, scheduled_maintenance_id: @maintenance.id)
+    closed = create_trouble(status: "closed")
+    defer(closed, scheduled_maintenance_id: @maintenance.id)
     assert_response :unprocessable_entity
     assert_match(/未対応・対応中/, json["errors"].join)
 
@@ -128,13 +128,13 @@ class TroubleDeferralTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "作業が完了したら、トラブルは解決済（解決日時が入る）になる" do
+  test "作業が完了したら、トラブルは完了（完了日時が入る）になる" do
     defer(scheduled_maintenance_id: @maintenance.id)
 
     update_task("completed")
 
     @trouble.reload
-    assert_equal "resolved", @trouble.status
+    assert_equal "closed", @trouble.status
     assert_not_nil @trouble.resolved_at
   end
 
@@ -148,13 +148,14 @@ class TroubleDeferralTest < ActionDispatch::IntegrationTest
     assert_equal "deferred", @trouble.reload.status
   end
 
-  test "完了した作業を実施中に戻したら、解決済になっていたトラブルは定修待ちに戻る" do
+  test "完了した作業を実施中に戻しても、トラブルの完了と完了日時は保つ" do
     defer(scheduled_maintenance_id: @maintenance.id)
     update_task("completed")
+    completed_at = @trouble.reload.resolved_at
 
     update_task("in_progress")
 
-    assert_equal [ "deferred", nil ], [ @trouble.reload.status, @trouble.resolved_at ]
+    assert_equal [ "closed", completed_at ], [ @trouble.reload.status, @trouble.resolved_at ]
   end
 
   test "作業を削除したら、ほかに作業がなければトラブルは未対応に戻る" do
@@ -181,7 +182,7 @@ class TroubleDeferralTest < ActionDispatch::IntegrationTest
     assert_equal "closed", closed.reload.status
   end
 
-  test "定修待ちのトラブルは、手動で対応中・解決済・完了に進められる（作業は残る）" do
+  test "定修待ちのトラブルは、手動で対応中・完了に進められる（作業は残る）" do
     defer(scheduled_maintenance_id: @maintenance.id)
 
     patch "/api/v1/troubles/#{@trouble.id}", headers: auth_headers_for(@manager), as: :json, params: { trouble: { status: "in_progress" } }

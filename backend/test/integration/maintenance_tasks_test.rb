@@ -187,7 +187,7 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
     create_task(instrument: @valve, template: @templates[:positioner])
     create_task(instrument: @shutoff, template: @templates[:shutoff_valve], status: "cancelled")
     inspection = Inspection.create!(user: @member, equipment: @boiler, instrument: @transmitter, department: @department, inspection_type: "periodic",
-                                    status: "submitted", inspected_at: Time.current, maintenance_task: done)
+                                    status: "approval_requested", inspected_at: Time.current, maintenance_task: done)
 
     get "/api/v1/scheduled_maintenances/#{@maintenance.id}", headers: auth_headers_for(@worker)
     assert_response :ok
@@ -216,7 +216,7 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal "not_started", task.reload.status
 
-    post_inspection(task, status: "submitted", inspected_at: 2.days.ago)
+    post_inspection(task, status: "approval_requested", inspected_at: 2.days.ago)
     assert_response :created
     task.reload
     assert_equal [ "completed", @today - 2 ], [ task.status, task.completed_on ]
@@ -228,11 +228,11 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
   test "下書きから提出に進めたときにも、作業が完了になる。見送りにした作業は変えない" do
     task = create_task
     post_inspection(task, status: "draft")
-    patch "/api/v1/inspections/#{Inspection.last.id}", headers: auth_headers_for(@member), as: :json, params: { inspection: { status: "submitted" } }
+    patch "/api/v1/inspections/#{Inspection.last.id}", headers: auth_headers_for(@member), as: :json, params: { inspection: { status: "approval_requested" } }
     assert_equal "completed", task.reload.status
 
     cancelled = create_task(instrument: @valve, template: @templates[:positioner], status: "cancelled")
-    post_inspection(cancelled, status: "submitted")
+    post_inspection(cancelled, status: "approval_requested")
     assert_equal "cancelled", cancelled.reload.status
   end
 

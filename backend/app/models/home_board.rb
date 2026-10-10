@@ -103,7 +103,7 @@ class HomeBoard
            .order(reported_at: :desc, id: :desc).limit(MY_TROUBLE_LIMIT)
   end
 
-  # 夕会の実績: 点検日が今日の点検（提出済みは実績、下書きのままは積み残し）。
+  # 夕会の実績: 点検日が今日の点検（承認待ち・承認済みは実績、下書きのままは積み残し）。
   # 提出した日時は記録していないため、「今日提出した」は「点検日が今日で、下書きを出た」で表す
   def todays_inspections(department)
     scope = Inspection.where(inspected_at: today.all_day).joins(:equipment).where(equipments: { site_id: site.id })

@@ -76,9 +76,9 @@ test('種別・ステータス・優先度は複数選択でき、選ぶとリ�
 
   await openList(page, '点検・作業記録')
   await pickFilterOption(page, 'ステータス', '承認待ち')
-  await pickFilterOption(page, 'ステータス', '提出済')
+  await pickFilterOption(page, 'ステータス', '承認済')
   await expect(page.locator('.v-field', { has: page.getByLabel('ステータス', { exact: true }) })).toContainText('ほか1')
-  await expect.poll(() => paramsOf(inspectionRequests[inspectionRequests.length - 1], 'statuses').sort()).toEqual(['approval_requested', 'submitted'])
+  await expect.poll(() => paramsOf(inspectionRequests[inspectionRequests.length - 1], 'statuses').sort()).toEqual(['approval_requested', 'approved'])
 
   await openList(page, 'トラブル管理')
   await pickFilterOption(page, '優先度', '高')

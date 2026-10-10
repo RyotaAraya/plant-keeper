@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import { formatDate } from '@/utils/datetime'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
@@ -23,11 +24,11 @@ const loading = ref(true)
 const actionError = ref('')
 const returnTo = computed(() => inspectionReturn(route.query.return_to))
 
-// バックエンドの InspectionPolicy#update? に対応（承認済みは誰も変更不可。作成者本人か管理者/マネージャーのみ）
+// バックエンドの InspectionPolicy#update? に対応（内容を編集できるのは下書きだけ。作成者本人か管理者/マネージャーのみ）
 const canEdit = computed(
   () =>
     !!inspection.value &&
-    inspection.value.status !== 'approved' &&
+    inspection.value.status === 'draft' &&
     (isAdmin.value || isManager.value || authStore.user?.id === inspection.value.user_id)
 )
 
@@ -70,11 +71,6 @@ async function updateStatus(status: string) {
   await fetchInspection()
 }
 
-function formatDate(dt: string) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
 onMounted(fetchInspection)
 </script>
 
@@ -92,16 +88,15 @@ onMounted(fetchInspection)
         <template #status><StatusChip kind="inspection" :value="inspection.status" /></template>
         <template #actions>
           <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
-          <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
-          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
+          <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('approval_requested')">提出</v-btn>
+          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('draft')">差し戻し</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
         </template>
       </DetailHeader>
       <v-alert v-if="actionError" type="error" variant="tonal" closable class="mb-4" @click:close="actionError = ''">{{ actionError }}</v-alert>
 
-      <v-alert v-if="route.query.saved === inspection.status && ['draft', 'submitted'].includes(inspection.status)" type="success" variant="tonal" class="mb-4" role="status" data-testid="inspection-saved">
-        {{ inspection.status === 'draft' ? '下書きを保存しました。入力は「編集」から再開できます。' : '点検を提出しました。' }}
+      <v-alert v-if="route.query.saved === inspection.status && ['draft', 'approval_requested'].includes(inspection.status)" type="success" variant="tonal" class="mb-4" role="status" data-testid="inspection-saved">
+        {{ inspection.status === 'draft' ? '下書きを保存しました。入力は「編集」から再開できます。' : '点検を提出しました。承認を待っています。' }}
         <v-btn variant="text" :to="returnTo">{{ inspectionReturnLabel(returnTo) }}に戻る</v-btn>
       </v-alert>
       <v-alert v-if="inspection.inspection_plan" type="info" variant="tonal" class="mb-4" data-testid="inspection-plan-context">
@@ -119,7 +114,7 @@ onMounted(fetchInspection)
       <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
           <dl class="pk-summary__grid">
-            <div><dt>点検日時</dt><dd>{{ formatDate(inspection.inspected_at) }}</dd></div>
+            <div><dt>点検日</dt><dd>{{ formatDate(inspection.inspected_at) }}</dd></div>
             <div><dt>種別</dt><dd>{{ inspectionTypeLabel[inspection.inspection_type] }}</dd></div>
             <div><dt>実施者</dt><dd>{{ inspection.user?.name }}</dd></div>
             <div>

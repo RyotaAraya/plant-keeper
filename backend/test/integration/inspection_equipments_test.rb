@@ -150,7 +150,7 @@ class InspectionEquipmentsTest < ActionDispatch::IntegrationTest
   end
 
   test "承認依頼中は、まとめた設備を変えられないが、設備を変えない状態変更（承認など）はできる" do
-    post_inspection(equipment_ids: [ @cdu.id, @hds.id ], status: "submitted")
+    post_inspection(equipment_ids: [ @cdu.id, @hds.id ], status: "approval_requested")
     inspection = Inspection.last
     manager = create_user(system_role: "manager")
 

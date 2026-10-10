@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import api from '@/api/axios'
+import { formatDate } from '@/utils/datetime'
 import type { Inspection } from '@/types/models'
 import { equipmentNames } from '@/utils/equipment'
 import { inspectionName } from '@/utils/inspectionWorkflow'
@@ -42,9 +43,6 @@ async function load() {
 }
 watch(() => [props.siteIds, props.planId, props.taskId, props.pageSize], () => { page.value = 1; void load() }, { immediate: true, deep: true })
 function changePage(value: number) { page.value = value; void load() }
-function dateLabel(value: string) {
-  return new Date(value).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
 </script>
 
 <template>
@@ -62,7 +60,7 @@ function dateLabel(value: string) {
           <div>
             <strong>{{ inspectionName(draft) }}</strong>
             <p>{{ equipmentNames(draft) }}<template v-if="draft.instrument"> ／ {{ draft.instrument.tag_number }}</template></p>
-            <p>点検日時 {{ dateLabel(draft.inspected_at) }} ／ 記録 #{{ draft.id }}</p>
+            <p>点検日 {{ formatDate(draft.inspected_at) }} ／ 記録 #{{ draft.id }}</p>
           </div>
           <v-btn variant="outlined" color="primary" :to="{ path: `/inspections/${draft.id}/edit`, query: { return_to: returnTo } }" :aria-label="`${inspectionName(draft)}（記録 #${draft.id}）の入力を再開`">入力を再開</v-btn>
         </li>

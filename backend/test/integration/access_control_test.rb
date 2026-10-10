@@ -106,7 +106,7 @@ class AccessControlTest < ActionDispatch::IntegrationTest
     assert_equal "青森県", row["home_prefecture"]
   end
 
-  test "点検は承認依頼中・承認済みの状態では新規作成できない" do
+  test "点検は承認済みの状態では新規作成できない" do
     member = create_user(system_role: "member", company: @owner)
     site = create_site
     params = { inspection: { equipment_id: create_equipment(site: site).id, department_id: create_department(site: site).id,

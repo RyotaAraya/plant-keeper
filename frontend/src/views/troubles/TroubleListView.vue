@@ -32,7 +32,10 @@ const errors = ref<string[]>([])
 function filtersFromQuery() {
   return {
     site_ids: initialSiteIds(route.query.site_ids),
-    statuses: listFromQuery(route.query.status),
+    // ステータスの指定がない初期表示では完了を除く。選択を解除すると全件を表示する。
+    statuses: route.query.status == null
+      ? ['open', 'in_progress', 'deferred']
+      : listFromQuery(route.query.status),
     priorities: listFromQuery(route.query.priority),
     instrument_id: idFromQuery(route.query.instrument_id),
     department_id: idFromQuery(route.query.department_id),
@@ -57,21 +60,20 @@ const form = ref({
 const instruments = ref<any[]>([])
 
 const headers = [
-  { title: '報告日', key: 'reported_at', width: '110px' },
   { title: '優先度', key: 'priority', width: '70px' },
   { title: 'タイトル', key: 'title', minWidth: '300px' },
+  { title: 'ステータス', key: 'status', width: '110px' },
+  { title: '報告日', key: 'reported_at', width: '110px' },
   { title: '設備', key: 'equipment.name', width: '150px' },
   { title: '計器', key: 'instrument.tag_number', width: '90px' },
-  { title: '部署', key: 'department_display', width: '120px' },
   { title: '担当者', key: 'assigned_to.name', width: '90px' },
-  { title: 'ステータス', key: 'status', width: '110px' },
+  { title: '部署', key: 'department_display', width: '120px' },
 ]
 
 const statusOptions = [
   { title: '未対応', value: 'open' },
   { title: '対応中', value: 'in_progress' },
   { title: '定修待ち', value: 'deferred' },
-  { title: '解決済', value: 'resolved' },
   { title: '完了', value: 'closed' },
 ]
 const priorityOptions = [

@@ -144,7 +144,7 @@ class CalibrationImportsTest < ActionDispatch::IntegrationTest
     assert(items.values_at(0, 2).all? { |item| item.calibration_data.nil? })
     assert_equal @today, plan.reload.next_due_on
 
-    inspection.update!(status: "submitted")
+    inspection.update!(status: "approval_requested")
     assert_equal inspection.inspected_at.to_date + 365, plan.reload.next_due_on
   end
 

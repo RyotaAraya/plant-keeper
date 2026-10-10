@@ -835,7 +835,7 @@ export interface HomeTrouble {
 // 夕会の実績（点検日が今日の点検は、下書きのままのものを含む。画面で積み残しに分ける）。承認待ちの点検も同じ形
 export interface HomeInspection {
   id: number
-  status: 'draft' | 'submitted' | 'approval_requested' | 'approved'
+  status: 'draft' | 'approval_requested' | 'approved'
   inspection_type: string
   inspected_at: string
   equipment_id: number

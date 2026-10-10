@@ -96,9 +96,9 @@ module Api
         inspection.user = current_user
         apply_equipment_ids(inspection, :inspection)
 
-        # 承認フローを飛び越えた状態での新規作成は不可（下書き・提出済のみ）
-        unless %w[draft submitted].include?(inspection.status)
-          return render json: { errors: [ "新規作成できるのは下書きまたは提出済のみです" ] }, status: :unprocessable_entity
+        # 承認フローを飛び越えた状態での新規作成は不可（下書き・承認待ちのみ）
+        unless %w[draft approval_requested].include?(inspection.status)
+          return render json: { errors: [ "新規作成できるのは下書きまたは承認待ちのみです" ] }, status: :unprocessable_entity
         end
 
         ActiveRecord::Base.transaction do
@@ -114,6 +114,7 @@ module Api
           unless inspection.draft?
             inspection.check_required_items!
             inspection.check_reference_standards!
+            record_audit_log("approval_request", inspection, changes: { status: [ nil, "approval_requested" ] })
           end
         end
 

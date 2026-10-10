@@ -34,7 +34,7 @@ class MaintenanceTask < ApplicationRecord
 
   before_validation :fill_title
   before_save :stamp_completed_on, if: :status_changed?
-  # 回されたトラブルの状態を、作業の状態に合わせる（完了→解決済、見送り・削除→未対応、再開→定修待ち）
+  # 回されたトラブルの状態を、作業の状態に合わせる（完了→完了、見送り・削除→未対応、再開→定修待ち）
   # （作成時は、トラブルを定修待ちにする側が状態を変えるので、連動しない）
   after_save :sync_trouble_status, if: -> { saved_change_to_status? && !previously_new_record? }
   after_destroy :release_trouble
@@ -101,15 +101,15 @@ class MaintenanceTask < ApplicationRecord
     errors.add(:trouble, "は、作業の対象設備のトラブルにしてください") if trouble && trouble.equipment_id != equipment_id
   end
 
-  # 作業が完了したら、定修待ちのトラブルを解決済に。見送りにしたら未対応に戻す。
-  # 見送りや完了から再開したら（未着手・実施中）、未対応・解決済に戻っているトラブルを定修待ちに戻す。完了（closed）のトラブルは変えない
+  # 作業が完了したら、定修待ちのトラブルを完了に。見送りにしたら未対応に戻す。
+  # 見送りから再開したら（未着手・実施中）、未対応のトラブルを定修待ちに戻す。完了したトラブルは作業を再開しても変えない
   def sync_trouble_status
     return if trouble.nil?
 
     case status
-    when "completed" then trouble.update!(status: "resolved") if trouble.deferred?
+    when "completed" then trouble.update!(status: "closed") if trouble.deferred?
     when "cancelled" then trouble.update!(status: "open") if trouble.deferred?
-    else trouble.update!(status: "deferred") if trouble.open? || trouble.resolved?
+    else trouble.update!(status: "deferred") if trouble.open?
     end
   end
 

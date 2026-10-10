@@ -206,7 +206,7 @@ test('夕会に切り替えると、今日の下書きの点検は積み残し�
     await expect(page).toHaveURL(/mode=evening/)
 
     // 提出し、対応を記録すると、再読み込み（夕会のまま）で実績に移る
-    expect((await page.request.patch(`${api}/inspections/${inspectionId}`, { headers, data: { inspection: { status: 'submitted' } } })).ok()).toBeTruthy()
+    expect((await page.request.patch(`${api}/inspections/${inspectionId}`, { headers, data: { inspection: { status: 'approval_requested' } } })).ok()).toBeTruthy()
     const response = await page.request.post(`${api}/trouble_responses`, {
       headers, data: { trouble_response: { trouble_id: troubleId, response_type: 'investigation', description: `${stamp} 導圧管をブローした`, responded_at: new Date().toISOString() } },
     })
@@ -215,7 +215,7 @@ test('夕会に切り替えると、今日の下書きの点検は積み残し�
     await page.reload()
     await expect(page).toHaveURL(/mode=evening/)
     await expect(team.getByTestId(`home-draft-inspection-${inspectionId}`)).toHaveCount(0)
-    await expect(team.getByTestId(`home-result-inspection-${inspectionId}`).locator('.v-chip')).toHaveText('提出済')
+    await expect(team.getByTestId(`home-result-inspection-${inspectionId}`).locator('.v-chip')).toHaveText('承認待ち')
     const responseRow = team.getByTestId(`home-result-response-${responseId}`)
     await expect(responseRow.getByRole('link')).toHaveText(`${stamp} 夕会の対応記録`)
     await expect(responseRow).toContainText(`調査：${stamp} 導圧管をブローした`)

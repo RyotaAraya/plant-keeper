@@ -34,22 +34,38 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
     assert_nil inspection.reload.notes
   end
 
-  test "作成者は 下書き → 提出済 → 承認依頼中 と進められる" do
+  test "作成者は 下書き → 承認待ち と進められる" do
     inspection = create_inspection
 
-    patch_inspection(inspection, @author, { status: "submitted" })
-    assert_response :ok
     patch_inspection(inspection, @author, { status: "approval_requested" })
     assert_response :ok
     assert_equal "approval_requested", inspection.reload.status
   end
 
-  test "承認依頼は監査ログに approval_request として記録される" do
-    inspection = create_inspection(status: "submitted")
+  test "提出は監査ログに approval_request として記録される" do
+    inspection = create_inspection
 
     assert_difference -> { AuditLog.where(action: "approval_request", auditable: inspection).count }, 1 do
       patch_inspection(inspection, @author, { status: "approval_requested" })
     end
+  end
+
+  test "新規提出も承認待ちになり、作成と承認依頼を記録する" do
+    post "/api/v1/inspections", headers: auth_headers_for(@author), as: :json, params: {
+      inspection: { equipment_id: @equipment.id, department_id: @department.id,
+                    inspection_type: "routine", inspected_at: Time.current, status: "approval_requested" }
+    }
+    assert_response :created
+    inspection = Inspection.last
+    assert_equal "approval_requested", inspection.status
+    assert_equal %w[approval_request create], AuditLog.where(auditable: inspection).pluck(:action).sort
+  end
+
+  test "廃止した提出済には更新できない" do
+    inspection = create_inspection
+    patch_inspection(inspection, @author, { status: "submitted" })
+    assert_response :unprocessable_entity
+    assert_equal "draft", inspection.reload.status
   end
 
   test "承認できるのは管理者かマネージャーだけ（作成者本人の一般ユーザは不可）" do
@@ -90,11 +106,17 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_nil inspection.reload.notes
 
-    patch_inspection(inspection, @manager, { status: "submitted" })
+    patch_inspection(inspection, @manager, { status: "draft" })
     assert_response :ok
     patch_inspection(inspection, @author, { notes: "差し戻し後の修正" })
     assert_response :ok
     assert_equal "差し戻し後の修正", inspection.reload.notes
+
+    patch_inspection(inspection, @author, { status: "approval_requested" })
+    assert_response :ok
+    patch_inspection(inspection, @manager, { status: "approved" })
+    assert_response :ok
+    assert_equal "approved", inspection.reload.status
   end
 
   test "点検項目の追加・変更・削除は監査ログに記録される" do
@@ -118,11 +140,11 @@ class InspectionApprovalTest < ActionDispatch::IntegrationTest
   test "承認依頼中の点検を差し戻せるのは承認者（管理者/マネージャー）だけで、作成者本人でも不可" do
     inspection = create_inspection(status: "approval_requested")
 
-    patch_inspection(inspection, @author, { status: "submitted" })
+    patch_inspection(inspection, @author, { status: "draft" })
     assert_response :forbidden
     assert_equal "approval_requested", inspection.reload.status
 
-    patch_inspection(inspection, @manager, { status: "submitted" })
+    patch_inspection(inspection, @manager, { status: "draft" })
     assert_response :ok
   end
 end

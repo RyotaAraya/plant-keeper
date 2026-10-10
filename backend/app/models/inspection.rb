@@ -42,7 +42,7 @@ class Inspection < ApplicationRecord
   has_many_attached :attachments
 
   enum :inspection_type, { routine: "routine", periodic: "periodic", telemetry: "telemetry", operation_check: "operation_check" }
-  enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
+  enum :status, { draft: "draft", approval_requested: "approval_requested", approved: "approved" }, validate: true
 
   validates :inspected_at, presence: true
   validate :contractor_uses_own_site
@@ -55,11 +55,10 @@ class Inspection < ApplicationRecord
   after_save :complete_maintenance_task, if: -> { maintenance_task && saved_change_to_status? && !draft? }
 
   # 承認フローの状態遷移。飛び越し（下書き→承認済み等）と、承認済みからの変更は不可。
-  # 承認依頼中からは差し戻し（提出済へ）か承認のみ
+  # 承認依頼中からは差し戻し（下書きへ）か承認のみ
   STATUS_TRANSITIONS = {
-    "draft" => %w[submitted],
-    "submitted" => %w[draft approval_requested],
-    "approval_requested" => %w[submitted approved],
+    "draft" => %w[approval_requested],
+    "approval_requested" => %w[draft approved],
     "approved" => []
   }.freeze
 
