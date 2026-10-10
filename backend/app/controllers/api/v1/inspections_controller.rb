@@ -75,7 +75,7 @@ module Api
               instrument: { only: [ :id, :tag_number ] },
               inspection_plan: { only: [ :id, :name, :next_due_on, :interval_days, :last_inspected_on ] },
               checklist_template: { only: [ :id, :name ] },
-              maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ] },
+              maintenance_task: { only: [ :id, :title, :scheduled_maintenance_id ], include: { scheduled_maintenance: { only: [ :id, :status ] } } },
               inspection_items: {
                 include: {
                   trouble: { only: [ :id, :title, :status ] },

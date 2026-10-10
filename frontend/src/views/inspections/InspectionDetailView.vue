@@ -31,11 +31,16 @@ const canEdit = computed(
     inspection.value.status === 'draft' &&
     (isAdmin.value || isManager.value || authStore.user?.id === inspection.value.user_id)
 )
+// 定期整備が検収・完了に進んでいると、その作業の点検は下書きに戻せない（Inspection#maintenance_not_accepted）
+const maintenanceLocked = computed(() =>
+  ['acceptance', 'completed'].includes(inspection.value?.maintenance_task?.scheduled_maintenance?.status)
+)
 // 承認待ちの点検は、承認者でない作成者本人も取り下げて下書きに戻せる（InspectionPolicy#withdraw?）
 const canWithdraw = computed(
   () =>
     !!inspection.value &&
     inspection.value.status === 'approval_requested' &&
+    !maintenanceLocked.value &&
     !canApproveInspection.value &&
     authStore.user?.id === inspection.value.user_id
 )
@@ -98,7 +103,7 @@ onMounted(fetchInspection)
           <v-btn v-if="canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
           <v-btn v-if="canEdit" color="primary" @click="updateStatus('approval_requested')">提出</v-btn>
           <v-btn v-if="canWithdraw" variant="outlined" @click="updateStatus('draft')">取り下げ</v-btn>
-          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('draft')">差し戻し</v-btn>
+          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection && !maintenanceLocked" variant="outlined" @click="updateStatus('draft')">差し戻し</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
         </template>
       </DetailHeader>
@@ -116,6 +121,11 @@ onMounted(fetchInspection)
       <v-alert v-else type="info" variant="tonal" class="mb-4">
         定期整備の作業「{{ inspection.maintenance_task.title }}」の点検です。
         {{ inspection.status === 'draft' ? '提出すると作業が完了になります。' : '作業の状態は定期整備で確認できます。' }}
+        <template v-if="inspection.status === 'approval_requested' && maintenanceLocked">
+          {{ inspection.maintenance_task.scheduled_maintenance.status === 'acceptance'
+            ? '定期整備が検収のため、差し戻し・取り下げはできません。記録を直すときは、定期整備を実施中に戻してください。'
+            : '定期整備が完了のため、差し戻し・取り下げはできません。' }}
+        </template>
         <v-btn variant="text" :to="`/maintenances/${inspection.maintenance_task.scheduled_maintenance_id}`">定期整備の作業を開く</v-btn>
       </v-alert>
 

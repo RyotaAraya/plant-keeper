@@ -1,4 +1,4 @@
-import { test, expect, login, resetSession } from './support'
+import { test, expect, login, resetSession, apiBaseUrl } from './support'
 import type { Page } from '@playwright/test'
 
 const ACCOUNTS = {
@@ -34,8 +34,17 @@ async function openApprovalRequestedInspection(page: Page) {
 
 // 承認・差し戻しは管理者/マネージャーだけ。一般ユーザや協力会社の作業員には表示しない（バックエンドの InspectionPolicy#approve? に対応）
 test('承認待ちの点検を承認・差し戻しできるのはマネージャーだけ', async ({ page }) => {
+  // 検収・完了の定期整備の作業の点検は差し戻せないため、定期整備の作業ではない承認待ちの点検を開く
+  const api = apiBaseUrl()
+  const loginRes = await page.request.post(`${api}/login`, { data: { user: ACCOUNTS.ownerManager } })
+  const headers = { Authorization: loginRes.headers()['authorization'] }
+  const list = await (await page.request.get(`${api}/inspections?statuses[]=approval_requested&per_page=100`, { headers })).json()
+  const target = list.data.find((i: any) => !i.maintenance_task_id)
+  expect(target).toBeTruthy()
+
   await login(page, ACCOUNTS.ownerManager)
-  await openApprovalRequestedInspection(page)
+  await page.goto(`/inspections/${target.id}`)
+  await expect(page.getByText('点検記録', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '承認', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '差し戻し' })).toBeVisible()
 })

@@ -254,6 +254,35 @@ class MaintenanceTasksTest < ActionDispatch::IntegrationTest
     assert_equal "completed", manual.reload.status
   end
 
+  test "定期整備が検収・完了のときは、作業の点検を差し戻し・取り下げできない。実施中に戻せば差し戻せる" do
+    task = create_task
+    post_inspection(task, status: "approval_requested")
+    inspection = Inspection.last
+    @maintenance.update_columns(status: "acceptance")
+
+    [ @manager, @member ].each do |user|
+      patch "/api/v1/inspections/#{inspection.id}", headers: auth_headers_for(user), as: :json, params: { inspection: { status: "draft" } }
+      assert_response :unprocessable_entity
+      assert_match(/検収のため/, json["errors"].join)
+    end
+    assert_equal [ "approval_requested", "completed" ], [ inspection.reload.status, task.reload.status ]
+
+    @maintenance.update_columns(status: "completed")
+    patch "/api/v1/inspections/#{inspection.id}", headers: auth_headers_for(@manager), as: :json, params: { inspection: { status: "draft" } }
+    assert_match(/完了のため/, json["errors"].join)
+
+    # 承認はできる
+    patch "/api/v1/inspections/#{inspection.id}", headers: auth_headers_for(@manager), as: :json, params: { inspection: { status: "approved" } }
+    assert_response :ok
+
+    other = create_task(instrument: @valve, template: @templates[:positioner])
+    post_inspection(other, status: "approval_requested")
+    @maintenance.update_columns(status: "in_progress")
+    patch "/api/v1/inspections/#{Inspection.last.id}", headers: auth_headers_for(@manager), as: :json, params: { inspection: { status: "draft" } }
+    assert_response :ok
+    assert_equal "in_progress", other.reload.status
+  end
+
   test "作業の設備と点検の設備が違うときは、点検を作れない" do
     task = create_task
 

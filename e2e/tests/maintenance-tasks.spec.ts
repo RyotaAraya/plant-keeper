@@ -118,7 +118,7 @@ for (const [label, account] of [['一般ユーザ', ACCOUNTS.member], ['協力�
   test(`${label}は作業の状態を更新できるが、作業の追加・一括追加・編集・削除はできない`, async ({ page }) => {
     await login(page, account)
     await openPlans(page, '定期整備')
-    const row = await findListRow(page, page.locator('tbody tr', { hasText: /単発.*\d+ \/ \d+/ }).first()) // 作業のある単発の定期整備（系列の行は、押すと各回を開く）
+    const row = await findListRow(page, page.locator('tbody tr', { hasText: /\d+ \/ \d+.*単発/ }).first()) // 作業のある単発の定期整備（系列の行は、押すと各回を開く）
     await row.click()
 
     const tasks = page.getByTestId('tasks-card')

@@ -48,6 +48,7 @@ class Inspection < ApplicationRecord
   validate :contractor_uses_own_site
   validate :plan_matches_equipment, if: :plan_check_needed?
   validate :task_matches_equipment
+  validate :maintenance_not_accepted, if: -> { status_changed?(from: "approval_requested", to: "draft") }
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
   after_save :advance_inspection_plan, if: -> { inspection_plan && saved_change_to_status? && !draft? }
@@ -135,6 +136,17 @@ class Inspection < ApplicationRecord
   def revert_submission
     inspection_plan&.revert_inspection!(self)
     maintenance_task&.reopen_after_inspection!(self)
+  end
+
+  # 検収・完了に進んだ定期整備の作業の点検は、下書きに戻せない（戻すと、検収の整備に未完了の作業が残るため）。
+  # 検収中に記録を直すときは、定期整備を実施中に戻してから差し戻す（完了した整備は戻せない）
+  def maintenance_not_accepted
+    maintenance = maintenance_task&.scheduled_maintenance
+    if maintenance&.acceptance?
+      errors.add(:base, "定期整備が検収のため、下書きに戻せません。定期整備を実施中に戻してから差し戻してください")
+    elsif maintenance&.completed?
+      errors.add(:base, "定期整備が完了のため、下書きに戻せません")
+    end
   end
 
   def task_matches_equipment
