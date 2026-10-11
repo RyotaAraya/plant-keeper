@@ -3,11 +3,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DiagnosticChip from '@/components/DiagnosticChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { inSites, keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
@@ -18,7 +20,7 @@ import { DIAGNOSTIC_FILTER_OPTIONS } from '@/constants/diagnostics'
 const router = useRouter()
 const route = useRoute()
 const { canManageEquipment } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const instruments = ref<any[]>([])
 const equipments = ref<any[]>([])
@@ -27,15 +29,60 @@ const lineClasses = ref<any[]>([])
 const loading = ref(false)
 const totalCount = ref(0)
 
-// フィルタ（すべて複数選択）
-const search = ref('')
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
-const selectedEquipmentIds = ref<number[]>([])
-const selectedServiceIds = ref<number[]>([])
-const selectedLineClassIds = ref<number[]>([])
-// 機器の自己診断（NAMUR NE 107）の状態。?diagnostic_status=failure,out_of_specification で開ける
-const selectedDiagnosticStatuses = ref<string[]>(listFromQuery(route.query.diagnostic_status))
+// フィルタ（すべて複数選択）。条件は保存して、開き直したときに戻す
+type Filters = { site_ids: number[]; q: string; equipment_ids: number[]; service_ids: number[]; line_class_ids: number[]; diagnostic_statuses: string[] }
+const saved = useSavedFilters<Filters>('instruments', {
+  site_ids: 'ids',
+  q: { type: 'string' },
+  equipment_ids: 'ids',
+  service_ids: 'ids',
+  line_class_ids: 'ids',
+  diagnostic_statuses: { type: 'strings', values: DIAGNOSTIC_FILTER_OPTIONS.map((o) => o.value) },
+})
+
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（＋保存した条件）。
+// ほかの画面のリンクで拠点・機器の診断の状態（?diagnostic_status=failure,out_of_specification）を指定されたときは、保存した条件を混ぜない
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) {
+    return {
+      site_ids: initialSiteIds(route.query.site_ids), q: '', equipment_ids: [], service_ids: [], line_class_ids: [],
+      diagnostic_statuses: listFromQuery(route.query.diagnostic_status),
+    }
+  }
+  const stored = saved.load()
+  return { q: '', equipment_ids: [], service_ids: [], line_class_ids: [], diagnostic_statuses: [], ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const initial = initialFilters()
+const search = ref(initial.q)
+const selectedSiteIds = ref<number[]>(initial.site_ids)
+const selectedEquipmentIds = ref<number[]>(initial.equipment_ids)
+const selectedServiceIds = ref<number[]>(initial.service_ids)
+const selectedLineClassIds = ref<number[]>(initial.line_class_ids)
+const selectedDiagnosticStatuses = ref<string[]>(initial.diagnostic_statuses)
+saved.hold(initial)
+
+const currentFilters = computed<Filters>(() => ({
+  site_ids: selectedSiteIds.value,
+  q: search.value ?? '',
+  equipment_ids: selectedEquipmentIds.value,
+  service_ids: selectedServiceIds.value,
+  line_class_ids: selectedLineClassIds.value,
+  diagnostic_statuses: selectedDiagnosticStatuses.value,
+}))
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+function reset() {
+  saved.clear()
+  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  const next: Filters = { site_ids: ownSiteIds(), q: '', equipment_ids: [], service_ids: [], line_class_ids: [], diagnostic_statuses: [] }
+  saved.hold(next)
+  selectedSiteIds.value = next.site_ids
+  search.value = ''
+  selectedEquipmentIds.value = []
+  selectedServiceIds.value = []
+  selectedLineClassIds.value = []
+  selectedDiagnosticStatuses.value = []
+}
 
 // 拠点で絞り込んだ設備リスト
 const filteredEquipments = computed(() => equipments.value.filter((e: any) => inSites(selectedSiteIds.value, e.site_id)))
@@ -99,6 +146,12 @@ async function fetchMasters() {
   equipments.value = eqRes.data.data
   services.value = svcRes.data.data
   lineClasses.value = lcRes.data.data
+  // 保存した条件のうち、選択肢にないもの（削除・無効になったもの、表示する拠点にない設備）は外す
+  const known = (ids: number[], options: { id: number }[]) => ids.filter((id) => options.some((o) => o.id === id))
+  const prune = (selected: { value: number[] }, kept: number[]) => { if (kept.length !== selected.value.length) selected.value = kept }
+  prune(selectedEquipmentIds, keepInSites(selectedEquipmentIds.value, equipments.value, selectedSiteIds.value))
+  prune(selectedServiceIds, known(selectedServiceIds.value, services.value))
+  prune(selectedLineClassIds, known(selectedLineClassIds.value, lineClasses.value))
 }
 
 function openCreate() {
@@ -152,6 +205,7 @@ function goToDetail(row: any) {
   router.push(`/instruments/${row.id}`)
 }
 
+watch(currentFilters, (value) => saved.save(value))
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(search, () => {
   clearTimeout(searchTimeout)
@@ -196,6 +250,7 @@ onMounted(() => {
       <FilterSelect v-model="selectedServiceIds" :items="services" item-title="name" item-value="id" label="サービス・流体" searchable style="max-width: 240px" />
       <FilterSelect v-model="selectedLineClassIds" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" searchable style="max-width: 240px" />
       <FilterSelect v-model="selectedDiagnosticStatuses" :items="DIAGNOSTIC_FILTER_OPTIONS" label="機器の診断" style="max-width: 220px" data-testid="diagnostic-filter" />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <!-- 件数表示 -->

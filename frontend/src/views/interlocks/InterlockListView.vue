@@ -3,10 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import type { Interlock } from '@/types/models'
@@ -16,14 +18,42 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canManageInterlock } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
+// 条件は保存して、開き直したときに戻す。ほかの画面のリンク（ホームの ?bypass_state=overdue など）から来たときは、保存した条件を混ぜない
+type Filters = { site_ids: number[]; bypass_state: string | null; q: string }
+const saved = useSavedFilters<Filters>('interlocks', {
+  site_ids: 'ids',
+  bypass_state: { type: 'string', values: BYPASS_STATE_OPTIONS.map((o) => o.value) },
+  q: { type: 'string' },
+})
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) {
+    return { site_ids: initialSiteIds(route.query.site_ids), bypass_state: typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null, q: '' }
+  }
+  const stored = saved.load()
+  return { bypass_state: null, q: '', ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const initial = initialFilters()
+saved.hold(initial)
 // 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときはその拠点）
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
-const bypassState = ref<string | null>(typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null)
-const search = ref('')
+const selectedSiteIds = ref<number[]>(initial.site_ids)
+const bypassState = ref<string | null>(initial.bypass_state)
+const search = ref(initial.q)
+const currentFilters = computed<Filters>(() => ({ site_ids: selectedSiteIds.value, bypass_state: bypassState.value, q: search.value ?? '' }))
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+function reset() {
+  saved.clear()
+  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  const next: Filters = { site_ids: ownSiteIds(), bypass_state: null, q: '' }
+  saved.hold(next)
+  selectedSiteIds.value = next.site_ids
+  bypassState.value = null
+  search.value = ''
+}
 
 const headers = [
   { title: '番号', key: 'tag_number', width: '90px' },
@@ -68,7 +98,10 @@ const rowProps = ({ item }: { item: Interlock }) => ({
 })
 
 onMounted(fetchInterlocks)
-watch([selectedSiteIds, bypassState, search], fetchInterlocks)
+watch(currentFilters, (value) => {
+  saved.save(value)
+  void fetchInterlocks()
+})
 </script>
 
 <template>
@@ -99,6 +132,7 @@ watch([selectedSiteIds, bypassState, search], fetchInterlocks)
       />
       <v-text-field v-model="search" label="番号・名称・計器のタグ番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" style="max-width: 300px" />
       <span class="text-caption text-medium-emphasis">バイパス中 {{ summary.bypassed }}件</span>
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table

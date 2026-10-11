@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import type { ReferenceStandard } from '@/types/models'
@@ -18,18 +20,47 @@ import { CATEGORY_LABEL, STATUS_COLOR, STATUS_LABEL } from '@/utils/referenceSta
 const route = useRoute()
 const router = useRouter()
 const { canManageReferenceStandard } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const standards = ref<ReferenceStandard[]>([])
 const loading = ref(false)
-// 通常業務では自拠点の基準器だけ見ればよいため、自分の所属拠点を初期値にする（複数選択、空は全拠点）
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
-const statuses = ref<string[]>([])
-const categories = ref<string[]>([])
-const search = ref('')
-
 const statusOptions = Object.entries(STATUS_LABEL).map(([value, title]) => ({ title, value }))
 const categoryOptions = Object.entries(CATEGORY_LABEL).map(([value, title]) => ({ title, value }))
+
+// 条件は保存して、開き直したときに戻す（ほかの画面のリンクで拠点を指定されたときは、保存した条件を混ぜない）
+type Filters = { site_ids: number[]; statuses: string[]; categories: string[]; q: string }
+const saved = useSavedFilters<Filters>('reference-standards', {
+  site_ids: 'ids',
+  statuses: { type: 'strings', values: statusOptions.map((o) => o.value) },
+  categories: { type: 'strings', values: categoryOptions.map((o) => o.value) },
+  q: { type: 'string' },
+})
+const defaults = (siteIds: number[]): Filters => ({ site_ids: siteIds, statuses: [], categories: [], q: '' })
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) return defaults(initialSiteIds(route.query.site_ids))
+  const stored = saved.load()
+  return { ...defaults([]), ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const initial = initialFilters()
+saved.hold(initial)
+// 通常業務では自拠点の基準器だけ見ればよいため、自分の所属拠点を初期値にする（複数選択、空は全拠点）
+const selectedSiteIds = ref<number[]>(initial.site_ids)
+const statuses = ref<string[]>(initial.statuses)
+const categories = ref<string[]>(initial.categories)
+const search = ref(initial.q)
+const currentFilters = computed<Filters>(() => ({ site_ids: selectedSiteIds.value, statuses: statuses.value, categories: categories.value, q: search.value ?? '' }))
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+function reset() {
+  saved.clear()
+  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  const next = defaults(ownSiteIds())
+  saved.hold(next)
+  selectedSiteIds.value = next.site_ids
+  statuses.value = []
+  categories.value = []
+  search.value = ''
+}
 
 const headers = [
   { title: '管理番号', key: 'management_number', width: '120px' },
@@ -76,7 +107,10 @@ function openEdit(item: ReferenceStandard) {
 }
 
 onMounted(fetchStandards)
-watch([selectedSiteIds, statuses, categories, search], fetchStandards)
+watch(currentFilters, (value) => {
+  saved.save(value)
+  void fetchStandards()
+})
 </script>
 
 <template>
@@ -91,6 +125,7 @@ watch([selectedSiteIds, statuses, categories, search], fetchStandards)
       <FilterSelect v-model="statuses" :items="statusOptions" label="状態" style="max-width: 200px" />
       <FilterSelect v-model="categories" :items="categoryOptions" label="種別" style="max-width: 200px" />
       <v-text-field v-model="search" label="管理番号・名称・型式・製造番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" style="max-width: 320px" />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table

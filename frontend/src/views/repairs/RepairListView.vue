@@ -3,10 +3,12 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { listFromQuery } from '@/utils/listQuery'
@@ -15,7 +17,7 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canManageRepairs } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const repairs = ref<any[]>([])
 const stocks = ref<any[]>([])
@@ -25,11 +27,28 @@ const page = ref(1)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
-// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときは、その拠点・ステータス）
-const filters = ref({
-  site_ids: initialSiteIds(route.query.site_ids),
-  statuses: listFromQuery(route.query.status),
+// 通常業務では自拠点の修理だけ見ればよいため、自分の所属拠点を初期値にする（＋保存した条件）。
+// ほかの画面のリンクから来たときは、保存した条件を混ぜず、その拠点・ステータス
+type Filters = { site_ids: number[]; statuses: string[] }
+const saved = useSavedFilters<Filters>('repairs', {
+  site_ids: 'ids',
+  statuses: { type: 'strings', values: ['pending', 'shipped', 'in_repair', 'completed', 'disposed'] },
 })
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) return { site_ids: initialSiteIds(route.query.site_ids), statuses: listFromQuery(route.query.status) }
+  const stored = saved.load()
+  return { statuses: [], ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const filters = ref<Filters>(initialFilters())
+saved.hold(filters.value)
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+function reset() {
+  saved.clear()
+  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  filters.value = { site_ids: ownSiteIds(), statuses: [] }
+  saved.hold(filters.value)
+}
 
 const form = ref({
   stock_id: null as number | null,
@@ -125,7 +144,8 @@ onMounted(() => {
   fetchStocks()
 })
 // 絞り込みを変えたら1ページ目に戻す（ページ番号だけが残って空の一覧になるのを防ぐ）
-watch(filters, () => {
+watch(filters, (value) => {
+  saved.save(value)
   if (page.value !== 1) page.value = 1
   else fetchRepairs()
 }, { deep: true })
@@ -144,6 +164,7 @@ watch(() => filters.value.site_ids, fetchStocks)
       <SiteScopeTag v-model="filters.site_ids" />
       <v-divider vertical class="pk-scope-divider" />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table

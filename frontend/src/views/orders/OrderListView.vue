@@ -4,6 +4,8 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
 import { todayForInput } from '@/utils/datetime'
 
 const orders = ref<any[]>([])
@@ -15,9 +17,18 @@ const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
 
-const filters = ref({
-  status: null as string | null,
+// ステータスは保存して、開き直したときに戻す
+const saved = useSavedFilters<{ status: string | null }>('orders', {
+  status: { type: 'string', values: ['draft', 'ordered', 'received', 'cancelled'] },
 })
+const filters = ref<{ status: string | null }>({ status: null, ...saved.load() })
+saved.hold(filters.value)
+
+function reset() {
+  saved.clear()
+  filters.value = { status: null }
+  saved.hold(filters.value)
+}
 
 const form = ref({
   material_id: null as number | null,
@@ -155,7 +166,10 @@ onMounted(() => {
   fetchWarehouses()
   fetchOrders()
 })
-watch(filters, fetchOrders, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchOrders()
+}, { deep: true })
 </script>
 
 <template>
@@ -176,6 +190,7 @@ watch(filters, fetchOrders, { deep: true })
         hide-details
         style="max-width: 160px"
       />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table

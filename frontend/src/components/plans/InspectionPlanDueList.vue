@@ -1,53 +1,47 @@
+<script lang="ts">
+export type DueFilters = {
+  site_ids: number[]
+  department_id: number | null
+  regulation_ids: number[]
+  equipment_ids: number[]
+  inspection_plan_group_ids: number[]
+  overdue: boolean
+  interval_review: string | null
+  diagnostic_advance: boolean
+}
+</script>
 <script setup lang="ts">
-// 点検計画の期限順の一覧（「計画」画面の「点検の期限順」。旧の点検計画の一覧）。期限超過・周期の見直しの候補・機器の診断による前倒しの候補で絞り込み、行から点検を始める
-import { ref, onMounted, watch } from 'vue'
+// 点検計画の期限順の一覧（「計画」画面の「点検の期限順」。旧の点検計画の一覧）。期限超過・周期の見直しの候補・機器の診断による前倒しの候補で絞り込み、行から点検を始める。
+// 絞り込みの条件と選択肢は「計画」画面が持つ（表示を切り替えても条件を保つため）。ここは一覧の取得と行の操作だけ
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
-import FilterSelect from '@/components/FilterSelect.vue'
 import IntervalReviewDialog from '@/components/IntervalReviewDialog.vue'
 import CalibrationWorkOrderDialog from '@/components/plans/CalibrationWorkOrderDialog.vue'
 import DiagnosticAdvanceDialog from '@/components/plans/DiagnosticAdvanceDialog.vue'
 import InspectionPlanDialog from '@/components/plans/InspectionPlanDialog.vue'
-import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
 import { usePermissions } from '@/composables/usePermissions'
-import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import type { InspectionPlan, InspectionPlanGroup } from '@/types/models'
 import { dueColor, dueLabel, inspectionFromPlan, referenceStandardFromPlan } from '@/utils/inspectionPlan'
-import { groupLabel } from '@/utils/inspectionPlanGroup'
 import { equipmentNames } from '@/utils/equipment'
-import { REVIEW_COLOR, REVIEW_FILTER_OPTIONS, REVIEW_LABEL } from '@/utils/intervalReview'
+import { REVIEW_COLOR, REVIEW_LABEL } from '@/utils/intervalReview'
 import { regulationColor } from '@/utils/regulation'
 import { latestGuard } from '@/utils/latestGuard'
+
+const props = defineProps<{
+  filters: DueFilters
+  equipments: { id: number; name: string; site_id: number }[]
+  groups: InspectionPlanGroup[]
+}>()
 
 const route = useRoute()
 const router = useRouter()
 const { canManageReferenceStandard } = usePermissions()
-const { initialSiteIds } = useSiteScope()
 
 const plans = ref<InspectionPlan[]>([])
-const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
-// 点検のまとまり（表示する拠点の分）と、法規区分の選択肢
-const groups = ref<InspectionPlanGroup[]>([])
-const regulations = ref<{ id: number; name: string }[]>([])
 const loading = ref(false)
-
-// 通常業務では自拠点の計画だけ見ればよいため、自分の所属拠点を初期値にする
-const filters = ref({
-  site_ids: initialSiteIds(route.query.site_ids),
-  equipment_ids: [] as number[],
-  inspection_plan_group_ids: [] as number[],
-  regulation_ids: [] as number[],
-  // 担当部署（まとまりの部署。配下の部署を含む）
-  department_id: null as number | null,
-  overdue: route.query.overdue === 'true',
-  // 周期の見直しの候補（5点校正の記録から。any / extend / shorten）
-  interval_review: (typeof route.query.interval_review === 'string' ? route.query.interval_review : null) as string | null,
-  // 機器の診断（保守要求・仕様外）で、次回期限を前倒しする候補
-  diagnostic_advance: route.query.diagnostic_advance === 'true',
-})
 
 const headers = [
   { title: '期限', key: 'next_due_on', width: '190px' },
@@ -61,60 +55,32 @@ const headers = [
   { title: '', key: 'actions', sortable: false, width: '130px' },
 ]
 
+const params = computed(() => {
+  const f = props.filters
+  const result: any = { per_page: 1000 }
+  if (f.site_ids.length) result.site_ids = f.site_ids
+  if (f.equipment_ids.length) result.equipment_ids = f.equipment_ids
+  if (f.inspection_plan_group_ids.length) result.inspection_plan_group_ids = f.inspection_plan_group_ids
+  if (f.regulation_ids.length) result.regulation_ids = f.regulation_ids
+  if (f.department_id) result.department_id = f.department_id
+  if (f.overdue) result.overdue = 'true'
+  if (f.interval_review) result.interval_review = f.interval_review
+  if (f.diagnostic_advance) result.diagnostic_advance = 'true'
+  return result
+})
+
 const fetchPlansGuard = latestGuard()
 
 async function fetchPlans() {
   const isLatest = fetchPlansGuard()
   loading.value = true
   try {
-    const params: any = { per_page: 1000 }
-    if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
-    if (filters.value.equipment_ids.length) params.equipment_ids = filters.value.equipment_ids
-    if (filters.value.inspection_plan_group_ids.length) params.inspection_plan_group_ids = filters.value.inspection_plan_group_ids
-    if (filters.value.regulation_ids.length) params.regulation_ids = filters.value.regulation_ids
-    if (filters.value.department_id) params.department_id = filters.value.department_id
-    if (filters.value.overdue) params.overdue = 'true'
-    if (filters.value.interval_review) params.interval_review = filters.value.interval_review
-    if (filters.value.diagnostic_advance) params.diagnostic_advance = 'true'
-    const res = await api.get('/inspection_plans', { params })
+    const res = await api.get('/inspection_plans', { params: params.value })
     if (!isLatest()) return
     plans.value = res.data.data
   } finally {
     if (isLatest()) loading.value = false
   }
-}
-
-const groupsGuard = latestGuard()
-
-async function loadGroups(siteIds: number[]) {
-  const isLatest = groupsGuard()
-  const res = await api.get('/inspection_plan_groups', { params: siteIds.length ? { site_ids: siteIds } : {} })
-  if (isLatest()) groups.value = res.data.data
-}
-
-// 拠点が1つに決まらないときは、まとまりの名前に拠点名を付けて区別する
-const groupTitle = (group: InspectionPlanGroup) => groupLabel(group, filters.value.site_ids.length !== 1)
-
-async function fetchMasters() {
-  const [, regulationRes] = await Promise.all([
-    loadSiteOptions(filters.value.site_ids),
-    api.get('/regulations'),
-    loadGroups(filters.value.site_ids),
-  ])
-  regulations.value = regulationRes.data.data
-}
-
-// 拠点を変えたら、表示する拠点にない設備・まとまり・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
-function changeSite(siteIds: number[]) {
-  filters.value = {
-    ...filters.value,
-    site_ids: siteIds,
-    equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
-    inspection_plan_group_ids: keepInSites(filters.value.inspection_plan_group_ids, groups.value, siteIds),
-    department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
-  }
-  loadSiteOptions(siteIds)
-  loadGroups(siteIds)
 }
 
 // --- 周期の見直しの候補 ---
@@ -147,68 +113,24 @@ function startInspection(plan: InspectionPlan) {
 const dialog = ref(false)
 const workOrderDialog = ref(false)
 defineExpose({
-  siteIds: () => filters.value.site_ids,
   openCreate: () => { dialog.value = true },
   openWorkOrder: () => { workOrderDialog.value = true },
 })
 
-onMounted(() => {
-  fetchMasters()
-  fetchPlans()
-})
-watch(filters, fetchPlans, { deep: true })
+// 条件が同じなら取り直さない（「計画」画面の定期整備の状態など、この一覧に関係しない条件の変更で取得しない）
+watch(() => JSON.stringify(params.value), fetchPlans, { immediate: true })
 </script>
 
 <template>
-  <div>
-    <div class="pk-filters">
-      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
-      <v-divider vertical class="pk-scope-divider" />
-      <!-- 「計画」画面の表示の切り替え（ほかの表示と同じ位置に置くため、親から受け取る） -->
-      <slot name="view" />
-      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
-      <FilterSelect
-        v-model="filters.inspection_plan_group_ids"
-        :items="groups.map((g) => ({ id: g.id, title: groupTitle(g) }))"
-        item-title="title"
-        item-value="id"
-        label="まとまり"
-        searchable
-        style="max-width: 260px"
-        data-testid="plan-group-filter"
-      />
-      <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="法規区分" style="max-width: 220px" />
-      <v-select
-        v-model="filters.department_id"
-        :items="departments"
-        item-title="display_name"
-        item-value="id"
-        label="担当部署"
-        clearable
-        density="compact"
-        hide-details
-        style="min-width: 200px; max-width: 280px"
-      />
-      <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
-      <v-select
-        v-model="filters.interval_review"
-        :items="REVIEW_FILTER_OPTIONS"
-        label="周期の見直し"
-        density="compact"
-        hide-details
-        clearable
-        style="min-width: 220px; max-width: 240px"
-        data-testid="interval-review-filter"
-      />
-      <v-switch v-model="filters.diagnostic_advance" label="診断で前倒しの候補" color="primary" density="compact" hide-details data-testid="diagnostic-advance-filter" />
-    </div>
-
+  <section aria-labelledby="plan-due-heading">
+    <h2 id="plan-due-heading" class="pk-plan-heading">定期点検<span>点検の期限順（設備・計器ごとの点検計画）</span></h2>
     <v-data-table
       :headers="headers"
       :items="plans"
       :loading="loading"
       :sort-by="[{ key: 'next_due_on', order: 'asc' }]"
       hover
+      data-testid="plan-due"
     >
       <template #item.next_due_on="{ item }">
         <StatusChip :label="dueLabel(item)" :color="dueColor(item)" :alert="item.overdue" />
@@ -281,5 +203,10 @@ watch(filters, fetchPlans, { deep: true })
 
     <InspectionPlanDialog v-model="dialog" :equipments="equipments" :groups="groups" @saved="fetchPlans" />
     <CalibrationWorkOrderDialog v-model="workOrderDialog" :site-ids="filters.site_ids" />
-  </div>
+  </section>
 </template>
+
+<style scoped>
+.pk-plan-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
+.pk-plan-heading span { color: var(--pk-muted); font-size: 0.8125rem; font-weight: 400; }
+</style>
