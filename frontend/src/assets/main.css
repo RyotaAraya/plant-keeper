@@ -202,7 +202,8 @@ h1, h2, h3,
 
 /* 絞り込みの行の並びと幅（#166）。並びは 拠点 → キーワード → ページ固有の条件 → リセット。
    幅は部品の種類で決め、画面ごとに style で指定しない。収まらなければ折り返す（ラベルは短縮しない） */
-.pk-filters > .pk-filter-search { flex: 1 1 260px; min-width: 240px; max-width: 360px; }
+/* キーワードは、最も長いラベル（基準器の「管理番号・名称・型式・製造番号」）が虫眼鏡・クリアボタンと並んで収まる幅 */
+.pk-filters > .pk-filter-search { flex: 1 1 320px; min-width: 320px; max-width: 400px; }
 .pk-filters > .pk-filter-select { flex: 0 1 200px; min-width: 180px; max-width: 240px; }
 .pk-filters > .pk-filter-select--wide { flex: 0 1 280px; min-width: 240px; max-width: 320px; }
 .pk-filters > .pk-filter-date { flex: 0 1 170px; min-width: 160px; }
