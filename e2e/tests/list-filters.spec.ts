@@ -58,6 +58,8 @@ for (const { path, heading, label } of PAGES) {
 }
 
 test('リセットすると、表のページも先頭に戻る', async ({ page }) => {
+  // 表は10件ずつ。シード直後のDB（CI）でも2ページ目があるよう、ログイン（監査ログに所属拠点で残る）を11回する
+  for (let i = 0; i < 11; i++) await apiSession(page.request, ACCOUNTS.admin)
   await login(page, ACCOUNTS.admin)
   await page.goto('/audit-logs')
   const footer = page.locator('.v-data-table-footer__info')
