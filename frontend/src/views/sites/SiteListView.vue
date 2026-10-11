@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { invalidateActiveSites } from '@/composables/useSiteScope'
 
@@ -12,7 +14,20 @@ const { canManageSite } = usePermissions()
 
 const sites = ref<any[]>([])
 const loading = ref(false)
-const showInactive = ref(false)
+// 閉鎖拠点の表示は保存して、開き直したときに戻す
+const saved = useSavedFilters<{ show_inactive: boolean }>('sites', { show_inactive: 'boolean' })
+const showInactive = ref(saved.load().show_inactive ?? false)
+saved.hold({ show_inactive: showInactive.value })
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  showInactive.value = false
+  saved.hold({ show_inactive: false })
+}
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ name: '', prefecture: '', address: '', is_active: true, closed_on: '' })
@@ -73,23 +88,25 @@ function goToDetail(row: any) {
 }
 
 onMounted(fetchSites)
-watch(showInactive, fetchSites)
+watch(showInactive, (value) => {
+  saved.save({ show_inactive: value })
+  void fetchSites()
+})
 </script>
 
 <template>
   <MainLayout>
     <PageHeader title="拠点管理" description="製油所などの拠点の一覧です。設備・部署・倉庫は拠点ごとに管理します。">
-      <v-switch
-        v-model="showInactive"
-        label="閉鎖拠点を表示"
-        density="compact"
-        hide-details
-        class="mr-4"
-      />
       <v-btn v-if="canManageSite" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
     </PageHeader>
 
+    <div class="pk-filters">
+      <v-switch v-model="showInactive" label="閉鎖拠点を表示" density="compact" hide-details />
+      <FilterResetButton @reset="reset" />
+    </div>
+
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="sites"
       :loading="loading"

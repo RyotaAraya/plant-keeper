@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -12,8 +14,19 @@ const sites = ref<any[]>([])
 const allUsers = ref<any[]>([])
 const tree = ref<any[]>([])
 
-// --- フィルタ（通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択） ---
-const selectedSiteId = ref<number | null>(authStore.user?.site_id ?? null)
+// --- フィルタ（通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択。選んだ拠点は保存して、開き直したときに戻す。null は全拠点） ---
+const saved = useSavedFilters<{ site_id: number | null }>('departments', { site_id: 'id' })
+const ownSiteId = () => authStore.user?.site_id ?? null
+const stored = saved.load()
+const selectedSiteId = ref<number | null>(stored.site_id !== undefined ? stored.site_id : ownSiteId())
+saved.hold({ site_id: selectedSiteId.value })
+watch(selectedSiteId, (siteId) => saved.save({ site_id: siteId }))
+
+function resetFilters() {
+  saved.clear()
+  selectedSiteId.value = ownSiteId()
+  saved.hold({ site_id: selectedSiteId.value })
+}
 
 const filteredDepts = computed(() => {
   if (!selectedSiteId.value) return allDepartments.value
@@ -206,6 +219,8 @@ async function fetchTree() {
 async function fetchSites() {
   const res = await api.get('/sites', { params: { per_page: 100 } })
   sites.value = res.data.data
+  // 保存した拠点が選択肢になければ、所属拠点に戻す
+  if (selectedSiteId.value && !sites.value.some((s: any) => s.id === selectedSiteId.value)) selectedSiteId.value = ownSiteId()
 }
 
 async function fetchUsers() {
@@ -240,6 +255,7 @@ onMounted(() => {
         hide-details
         style="max-width: 280px"
       />
+      <FilterResetButton @reset="resetFilters" />
     </div>
 
     <div class="d-flex ga-4 align-start">

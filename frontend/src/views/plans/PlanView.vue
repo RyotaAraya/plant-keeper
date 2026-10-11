@@ -5,31 +5,34 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import MaintenanceSeriesDialog from '@/components/MaintenanceSeriesDialog.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import InspectionGroupPlans from '@/components/plans/InspectionGroupPlans.vue'
-import InspectionPlanDueList from '@/components/plans/InspectionPlanDueList.vue'
+import InspectionPlanDueList, { type DueFilters } from '@/components/plans/InspectionPlanDueList.vue'
 import InspectionPlanGroupDialog from '@/components/plans/InspectionPlanGroupDialog.vue'
 import MaintenanceCreateDialog from '@/components/plans/MaintenanceCreateDialog.vue'
 import PlanTabs, { PLAN_TABS, type PlanTab } from '@/components/plans/PlanTabs.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
-import { keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
+import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { useAuthStore } from '@/stores/auth'
 import type { InspectionPlanGroup } from '@/types/models'
 import { groupLabel } from '@/utils/inspectionPlanGroup'
 import { latestGuard } from '@/utils/latestGuard'
 import { listFromQuery } from '@/utils/listQuery'
+import { REVIEW_FILTER_OPTIONS } from '@/utils/intervalReview'
 import { regulationColor } from '@/utils/regulation'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds } = useSiteScope()
 const { canManageInspectionPlan, canManageMaintenance } = usePermissions()
 
 const tabFromQuery = (): PlanTab => (PLAN_TABS.some((t) => t.value === route.query.tab) ? (route.query.tab as PlanTab) : 'inspection')
@@ -37,18 +40,54 @@ const tab = ref<PlanTab>(tabFromQuery())
 const showInspection = computed(() => tab.value === 'all' || tab.value === 'inspection')
 const showMaintenance = computed(() => tab.value === 'all' || tab.value === 'maintenance')
 
-function initialFilters() {
-  return {
-    // 通常業務では自拠点の計画だけ見ればよいため、自分の所属拠点を初期値にする
-    site_ids: initialSiteIds(route.query.site_ids),
-    // 担当部署・法規区分は、点検のまとまりだけが持つ
-    department_id: null as number | null,
-    regulation_ids: [] as number[],
-    // 定期整備の状態（朝会ボードなどから ?status=in_progress で引き継ぐ）
-    statuses: listFromQuery(route.query.status),
+const statusOptions = Object.entries(MAINTENANCE_STATUS_LABEL).map(([value, title]) => ({ title, value }))
+
+// 条件は、表示（定期点検・定期整備・すべて・点検の期限順）をまたいで1つにまとめて持つ。
+// 拠点と点検の担当部署・法規区分は共通。設備・まとまり・期限超過・周期の見直し・前倒しの候補は点検の期限順だけ、状態は定期整備だけに効く。
+// 効かない表示に切り替えても値は残し、戻ったときに使う
+type PlanFilters = DueFilters & { statuses: string[] }
+
+const saved = useSavedFilters<PlanFilters>('plans', {
+  site_ids: 'ids',
+  department_id: 'id',
+  regulation_ids: 'ids',
+  equipment_ids: 'ids',
+  inspection_plan_group_ids: 'ids',
+  overdue: 'boolean',
+  interval_review: { type: 'string', values: REVIEW_FILTER_OPTIONS.map((o) => o.value) },
+  diagnostic_advance: 'boolean',
+  statuses: { type: 'strings', values: statusOptions.map((o) => o.value) },
+})
+
+const emptyFilters = (): Omit<PlanFilters, 'site_ids'> => ({
+  department_id: null,
+  regulation_ids: [],
+  equipment_ids: [],
+  inspection_plan_group_ids: [],
+  overdue: false,
+  interval_review: null,
+  diagnostic_advance: false,
+  statuses: [],
+})
+
+// 通常は既定（自拠点・絞り込みなし）＋保存した条件。ホームなどのリンクから検索条件付きで来たときは、保存した条件を混ぜず、
+// そのリンクの拠点・期限超過・周期の見直し・前倒しの候補・定期整備の状態（朝会ボードの ?status=in_progress など）で開く
+function filtersForRoute(): PlanFilters {
+  if (hasQueryConditions(route.query)) {
+    return {
+      ...emptyFilters(),
+      site_ids: initialSiteIds(route.query.site_ids),
+      overdue: route.query.overdue === 'true',
+      interval_review: typeof route.query.interval_review === 'string' ? route.query.interval_review : null,
+      diagnostic_advance: route.query.diagnostic_advance === 'true',
+      statuses: listFromQuery(route.query.status),
+    }
   }
+  const stored = saved.load()
+  return { ...emptyFilters(), ...stored, site_ids: savedSiteIds(stored.site_ids) }
 }
-const filters = ref(initialFilters())
+const filters = ref<PlanFilters>(filtersForRoute())
+saved.hold(filters.value)
 // 点検にだけ適用する条件が入っているときは、定期整備の欄にも範囲を明記する
 const narrowedToGroups = computed(() => !!filters.value.department_id || filters.value.regulation_ids.length > 0)
 
@@ -101,9 +140,8 @@ const series = ref<any[]>([])
 const maintenances = ref<any[]>([])
 const maintenanceLoading = ref(false)
 const expandedMaintenance = ref<string[]>([])
+const maintenancePage = ref(1)
 const maintenanceGuard = latestGuard()
-const statusOptions = Object.entries(MAINTENANCE_STATUS_LABEL).map(([value, title]) => ({ title, value }))
-
 const maintenanceHeaders = [
   { title: '予定期間', key: 'period', sortable: false, width: '190px' },
   { title: '名称', key: 'name', sortable: false },
@@ -163,24 +201,73 @@ function openMaintenanceRow(row: MaintenanceRow, toggleExpand: () => void) {
   else toggleExpand()
 }
 
-// --- 取得 ---
-async function loadAll() {
-  if (tab.value === 'due') return
-  const tasks: Promise<unknown>[] = []
-  if (showInspection.value) tasks.push(loadGroups())
-  if (showMaintenance.value) tasks.push(loadMaintenance())
-  await Promise.all(tasks)
+// --- 選択肢 ---
+// 点検の期限順の「まとまり」の選択肢と、計画の追加の候補（表示する拠点のまとまり。担当部署・法規区分では絞らない）
+const groupOptions = ref<InspectionPlanGroup[]>([])
+const groupOptionsGuard = latestGuard()
+
+async function loadGroupOptions(siteIds: number[]): Promise<boolean> {
+  const isLatest = groupOptionsGuard()
+  const res = await api.get('/inspection_plan_groups', { params: siteIds.length ? { site_ids: siteIds } : {} })
+  if (!isLatest()) return false
+  groupOptions.value = res.data.data
+  return true
 }
 
-// 拠点を変えたら、表示する拠点にない部署の絞り込みは外す
+// 表示する拠点の設備・部署・まとまりを取り直し、選択肢にないもの（保存したあとに無効になったものなど）の絞り込みを外す。
+// 取得に失敗したとき・取り直しが重なったときは、選択を外さない
+async function loadOptions(siteIds: number[]) {
+  const [sitesLoaded, groupsLoaded] = await Promise.all([
+    loadSiteOptions(siteIds).catch(() => false),
+    loadGroupOptions(siteIds).catch(() => false),
+  ])
+  const next = { ...filters.value }
+  if (sitesLoaded) {
+    next.equipment_ids = keepInSites(next.equipment_ids, equipments.value, siteIds)
+    next.department_id = keepOneInSites(next.department_id, departments.value, siteIds)
+  }
+  if (groupsLoaded) next.inspection_plan_group_ids = keepInSites(next.inspection_plan_group_ids, groupOptions.value, siteIds)
+  if (JSON.stringify(next) !== JSON.stringify(filters.value)) filters.value = next
+}
+
+async function loadRegulations() {
+  const res = await api.get('/regulations')
+  regulations.value = res.data.data
+  const kept = filters.value.regulation_ids.filter((id) => regulations.value.some((r) => r.id === id))
+  if (kept.length !== filters.value.regulation_ids.length) filters.value = { ...filters.value, regulation_ids: kept }
+}
+
+// 拠点を変えたら、表示する拠点にない部署・設備・まとまりの絞り込みは外す（いまの表示に出ていない条件も）
 function changeSite(siteIds: number[]) {
-  filters.value = { ...filters.value, site_ids: siteIds, department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds) }
-  loadSiteOptions(siteIds)
+  filters.value = {
+    ...filters.value,
+    site_ids: siteIds,
+    department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
+    equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
+    inspection_plan_group_ids: keepInSites(filters.value.inspection_plan_group_ids, groupOptions.value, siteIds),
+  }
+  void loadOptions(siteIds)
 }
 
+// 表示（種類・点検の見方）だけを変える。条件は変えず、URLの検索条件もそのまま残す
 function changeTab(value: PlanTab) {
-  const siteIds = tab.value === 'due' ? dueList.value?.siteIds() ?? filters.value.site_ids : filters.value.site_ids
-  router.replace({ path: '/plans', query: { tab: value, site_ids: siteIds.join(',') || 'all' } })
+  void router.replace({ path: '/plans', query: { ...route.query, tab: value } })
+}
+
+function applyRoute() {
+  filters.value = filtersForRoute()
+  saved.hold(filters.value)
+  expandedGroups.value = []
+  expandedMaintenance.value = []
+  void loadOptions(filters.value.site_ids)
+}
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す。表示（タブ・見方）はそのまま
+function reset() {
+  maintenancePage.value = 1
+  dueList.value?.firstPage()
+  saved.clear()
+  if (!saved.clearQuery()) applyRoute()
 }
 
 // --- 追加・編集 ---
@@ -197,28 +284,41 @@ function openGroupDialog(group: InspectionPlanGroup | null) {
   groupDialog.value = true
 }
 
+function onGroupSaved() {
+  void loadGroups()
+  void loadGroupOptions(filters.value.site_ids).catch(() => {})
+}
+
 function openSeriesDialog(item: any) {
   editingSeries.value = item
   seriesDialog.value = true
 }
 
-// サイドバーから開き直したとき・転送で来たときは、クエリに合わせ直す
+// 表示だけが変わったときは条件を保つ。サイドバーから開き直したとき・転送で来たとき（検索条件が変わったとき）は、クエリに合わせ直す
 watch(
   () => route.query,
-  () => {
+  (query, previous) => {
     if (route.path !== '/plans') return
     tab.value = tabFromQuery()
-    filters.value = initialFilters()
-    expandedGroups.value = []
-    expandedMaintenance.value = []
+    if (saved.isOwnReplace(query)) return
+    if (JSON.stringify({ ...query, tab: undefined }) !== JSON.stringify({ ...previous, tab: undefined })) applyRoute()
   },
 )
-watch(filters, loadAll, { deep: true })
-watch(tab, loadAll)
+watch(filters, (value) => saved.save(value), { deep: true })
+// 表示している一覧に関係する条件が変わったときだけ取り直す（定期整備の状態は画面の中で絞る）
+watch(
+  () => showInspection.value && JSON.stringify([filters.value.site_ids, filters.value.department_id, filters.value.regulation_ids]),
+  (key) => { if (key) void loadGroups() },
+  { immediate: true },
+)
+watch(
+  () => showMaintenance.value && JSON.stringify(filters.value.site_ids),
+  (key) => { if (key) void loadMaintenance() },
+  { immediate: true },
+)
 
-loadSiteOptions(filters.value.site_ids)
-api.get('/regulations').then((res) => (regulations.value = res.data.data))
-loadAll()
+void loadOptions(filters.value.site_ids)
+void loadRegulations()
 </script>
 
 <template>
@@ -235,37 +335,59 @@ loadAll()
     </PageHeader>
 
     <PlanTabs :model-value="tab" class="mb-4" @update:model-value="changeTab" />
-    <!-- 業務の種類を先に選び、その下で表示方法と条件を選ぶ -->
-    <InspectionPlanDueList v-if="tab === 'due'" ref="dueList" :key="route.fullPath">
-      <template #view>
-        <PlanTabs level="view" :model-value="tab" @update:model-value="changeTab" />
+    <!-- 業務の種類を先に選び、その下で点検の見方と条件を選ぶ。条件の並びは、どの表示でも 拠点 → 見方 → 点検の共通 → 表示ごと → リセット -->
+    <div class="pk-filters" data-testid="plan-filters">
+      <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
+      <v-divider vertical class="pk-scope-divider" />
+      <PlanTabs level="view" :model-value="tab" @update:model-value="changeTab" />
+      <template v-if="showInspection || tab === 'due'">
+        <v-select
+          v-model="filters.department_id"
+          :items="departments"
+          item-title="display_name"
+          item-value="id"
+          label="点検の担当部署"
+          clearable
+          density="compact"
+          hide-details
+          style="min-width: 200px; max-width: 280px"
+        />
+        <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="点検の法規区分" style="max-width: 220px" />
       </template>
-    </InspectionPlanDueList>
+      <template v-if="tab === 'due'">
+        <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+        <FilterSelect
+          v-model="filters.inspection_plan_group_ids"
+          :items="groupOptions.map((g) => ({ id: g.id, title: groupLabel(g, multiSite) }))"
+          item-title="title"
+          item-value="id"
+          label="まとまり"
+          searchable
+          style="max-width: 260px"
+          data-testid="plan-group-filter"
+        />
+        <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
+        <v-select
+          v-model="filters.interval_review"
+          :items="REVIEW_FILTER_OPTIONS"
+          label="周期の見直し"
+          density="compact"
+          hide-details
+          clearable
+          style="min-width: 220px; max-width: 240px"
+          data-testid="interval-review-filter"
+        />
+        <v-switch v-model="filters.diagnostic_advance" label="診断で前倒しの候補" color="primary" density="compact" hide-details data-testid="diagnostic-advance-filter" />
+      </template>
+      <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="max-width: 220px" />
+      <FilterResetButton @reset="reset" />
+    </div>
+
+    <InspectionPlanDueList v-if="tab === 'due'" ref="dueList" :filters="filters" :equipments="equipments" :groups="groupOptions" />
 
     <template v-else>
-      <div class="pk-filters">
-        <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
-        <v-divider vertical class="pk-scope-divider" />
-        <PlanTabs level="view" :model-value="tab" @update:model-value="changeTab" />
-        <template v-if="showInspection">
-          <v-select
-            v-model="filters.department_id"
-            :items="departments"
-            item-title="display_name"
-            item-value="id"
-            label="点検の担当部署"
-            clearable
-            density="compact"
-            hide-details
-            style="min-width: 200px; max-width: 280px"
-          />
-          <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="点検の法規区分" style="max-width: 220px" />
-        </template>
-        <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="max-width: 220px" />
-      </div>
-
       <section v-if="showInspection" class="mb-6" aria-labelledby="plan-inspection-heading">
-        <h2 id="plan-inspection-heading" class="pk-plan-heading">定期点検<span>まとまり → 設備・計器ごとの点検計画</span></h2>
+        <h2 id="plan-inspection-heading" class="pk-plan-heading">定期点検<span>まとまり別（まとまり → 設備・計器ごとの点検計画）</span></h2>
         <v-data-table
           v-model:expanded="expandedGroups"
           :headers="groupHeaders"
@@ -309,6 +431,7 @@ loadAll()
         <p v-if="narrowedToGroups" class="text-body-2 text-medium-emphasis mb-2">点検の担当部署・法規区分は、下の定期整備には適用されません。</p>
         <v-data-table
           v-model:expanded="expandedMaintenance"
+          v-model:page="maintenancePage"
           :headers="maintenanceHeaders"
           :items="maintenanceRows"
           :loading="maintenanceLoading"
@@ -387,7 +510,7 @@ loadAll()
       </section>
     </template>
 
-    <InspectionPlanGroupDialog v-model="groupDialog" :group="editingGroup" :default-site-id="defaultSiteId" @saved="loadGroups" />
+    <InspectionPlanGroupDialog v-model="groupDialog" :group="editingGroup" :default-site-id="defaultSiteId" @saved="onGroupSaved" />
     <MaintenanceCreateDialog v-model="maintenanceDialog" :default-site-id="defaultSiteId" @saved="loadMaintenance" />
     <!-- 常に置いておく（開いたときに系列を読み込むため。v-if で開くと同時に作ると、開いたことに気づかない） -->
     <MaintenanceSeriesDialog
@@ -400,7 +523,7 @@ loadAll()
 </template>
 
 <style scoped>
-.pk-plan-heading { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
+.pk-plan-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
 .pk-plan-heading span { color: var(--pk-muted); font-size: 0.8125rem; font-weight: 400; }
 .pk-plan-table :deep(tbody tr.v-data-table__tr) { cursor: pointer; }
 .pk-plan-expanded > td { background: rgb(var(--v-theme-surface-variant), 0.35); }

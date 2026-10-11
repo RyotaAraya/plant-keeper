@@ -4,10 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
@@ -18,7 +20,7 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canCreateTrouble } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds } = useSiteScope()
 
 const troubles = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
@@ -27,27 +29,69 @@ const totalCount = ref(0)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
-// 通常業務では自拠点のトラブルだけ見ればよいため、自分の所属拠点を初期値にする（部署は絞らず、拠点全体を見る）
-// ほかの画面のリンクから来たときは、その拠点・ステータス・優先度で、計器の「すべて見る」から来たときは、その計器で絞り込んだ状態で開く
-function filtersFromQuery() {
+const statusOptions = [
+  { title: '未対応', value: 'open' },
+  { title: '対応中', value: 'in_progress' },
+  { title: '定修待ち', value: 'deferred' },
+  { title: '完了', value: 'closed' },
+]
+const priorityOptions = [
+  { title: '低', value: 'low' },
+  { title: '中', value: 'medium' },
+  { title: '高', value: 'high' },
+  { title: '緊急', value: 'critical' },
+]
+
+type Filters = {
+  site_ids: number[]
+  q: string
+  equipment_ids: number[]
+  department_id: number | null
+  statuses: string[]
+  priorities: string[]
+  // 計器の「すべて見る」から来たときだけの一時的な絞り込み（保存しない）
+  instrument_id: number | null
+}
+
+const saved = useSavedFilters<Filters>('troubles', {
+  site_ids: 'ids',
+  q: { type: 'string' },
+  equipment_ids: 'ids',
+  department_id: 'id',
+  statuses: { type: 'strings', values: statusOptions.map((o) => o.value) },
+  priorities: { type: 'strings', values: priorityOptions.map((o) => o.value) },
+}, { linkOnly: (): Record<string, string> => (filters.value.instrument_id ? { instrument_id: String(filters.value.instrument_id) } : {}) })
+
+// 通常は既定（自拠点・完了を除くステータス）＋保存した条件。保存したステータスの全解除（空）は、全件の表示としてそのまま戻す。
+// ほかの画面のリンクから検索条件付きで来たときは、保存した条件を混ぜず、その拠点・ステータス・優先度・部署・計器で開く。
+// このときステータスを指定しなければ完了も含める（計器の「すべて見る」など）
+function filtersForRoute(): Filters {
+  if (hasQueryConditions(route.query)) {
+    return {
+      site_ids: initialSiteIds(route.query.site_ids),
+      q: '',
+      equipment_ids: [],
+      department_id: idFromQuery(route.query.department_id),
+      statuses: listFromQuery(route.query.status),
+      priorities: listFromQuery(route.query.priority),
+      instrument_id: idFromQuery(route.query.instrument_id),
+    }
+  }
+  const stored = saved.load()
   return {
-    site_ids: initialSiteIds(route.query.site_ids),
-    // サイドバーから開いたとき（クエリなし）だけ完了を除く。ほかの画面のリンク（計器の「すべて見る」など）は、
-    // ステータスを指定しなければ完了も含めて開く。選択を解除すると全件を表示する
-    statuses: Object.keys(route.query).length === 0
-      ? ['open', 'in_progress', 'deferred']
-      : listFromQuery(route.query.status),
-    priorities: listFromQuery(route.query.priority),
+    q: '',
+    equipment_ids: [],
+    department_id: null,
+    statuses: ['open', 'in_progress', 'deferred'],
+    priorities: [],
+    ...stored,
+    site_ids: savedSiteIds(stored.site_ids),
     instrument_id: idFromQuery(route.query.instrument_id),
-    department_id: idFromQuery(route.query.department_id),
   }
 }
 
-const filters = ref({
-  ...filtersFromQuery(),
-  equipment_ids: [] as number[],
-  q: '',
-})
+const filters = ref<Filters>(filtersForRoute())
+saved.hold(filters.value)
 
 const form = ref({
   equipment_id: null as number | null,
@@ -69,19 +113,6 @@ const headers = [
   { title: '計器', key: 'instrument.tag_number', width: '90px' },
   { title: '担当者', key: 'assigned_to.name', width: '90px' },
   { title: '部署', key: 'department_display', width: '120px' },
-]
-
-const statusOptions = [
-  { title: '未対応', value: 'open' },
-  { title: '対応中', value: 'in_progress' },
-  { title: '定修待ち', value: 'deferred' },
-  { title: '完了', value: 'closed' },
-]
-const priorityOptions = [
-  { title: '低', value: 'low' },
-  { title: '中', value: 'medium' },
-  { title: '高', value: 'high' },
-  { title: '緊急', value: 'critical' },
 ]
 
 const fetchTroublesGuard = latestGuard()
@@ -107,6 +138,17 @@ async function fetchTroubles() {
   }
 }
 
+// 表示する拠点の設備・部署を取り直し、選択肢にない設備・部署の絞り込み（保存したあとに無効になったものなど）を外す。
+// 取得に失敗したとき・取り直しが重なったときは、選択を外さない
+async function loadOptions(siteIds: number[]) {
+  if (!(await loadSiteOptions(siteIds).catch(() => false))) return
+  const equipmentIds = keepInSites(filters.value.equipment_ids, equipments.value, siteIds)
+  const departmentId = keepOneInSites(filters.value.department_id, departments.value, siteIds)
+  if (equipmentIds.length !== filters.value.equipment_ids.length || departmentId !== filters.value.department_id) {
+    filters.value = { ...filters.value, equipment_ids: equipmentIds, department_id: departmentId }
+  }
+}
+
 // 拠点を変えたら、表示する拠点にない設備・部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 function changeSite(siteIds: number[]) {
   filters.value = {
@@ -115,7 +157,23 @@ function changeSite(siteIds: number[]) {
     equipment_ids: keepInSites(filters.value.equipment_ids, equipments.value, siteIds),
     department_id: keepOneInSites(filters.value.department_id, departments.value, siteIds),
   }
-  loadSiteOptions(siteIds)
+  void loadOptions(siteIds)
+}
+
+function applyRoute() {
+  filters.value = filtersForRoute()
+  saved.hold(filters.value)
+  void loadOptions(filters.value.site_ids)
+}
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・完了を除くステータス）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  if (!saved.clearQuery()) applyRoute()
 }
 
 async function fetchInstruments() {
@@ -148,23 +206,30 @@ async function save() {
   }
 }
 
+// 計器の一時的な絞り込みを外す（URL からも外し、ほかの条件はいまの値で保存する）
+function clearInstrument() {
+  filters.value = { ...filters.value, instrument_id: null }
+  saved.save(filters.value, { force: true })
+}
+
 function goToDetail(row: any) {
   router.push(`/troubles/${row.id}`)
 }
 
 onMounted(() => {
-  loadSiteOptions(filters.value.site_ids)
-  fetchTroubles()
+  void loadOptions(filters.value.site_ids)
+  void fetchTroubles()
 })
-watch(filters, fetchTroubles, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchTroubles()
+}, { deep: true })
 
 // 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
-// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、初期値の自拠点・完了を除くステータス）
-watch(() => route.query, () => {
-  if (route.path !== '/troubles') return
-  const q = filtersFromQuery()
-  filters.value = { ...filters.value, ...q, equipment_ids: [] }
-  loadSiteOptions(q.site_ids)
+// 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、既定＋保存した条件）
+watch(() => route.query, (query) => {
+  if (route.path !== '/troubles' || saved.isOwnReplace(query)) return
+  applyRoute()
 })
 </script>
 
@@ -200,10 +265,12 @@ watch(() => route.query, () => {
       />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
       <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" style="max-width: 200px" />
-      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="clearInstrument" />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="troubles"
       :loading="loading"

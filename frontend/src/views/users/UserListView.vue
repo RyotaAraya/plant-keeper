@@ -4,27 +4,60 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
 const router = useRouter()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 const users = ref<any[]>([])
 const { departments, load: loadSiteOptions } = useSiteScopeOptions({ withEquipments: false })
 const loading = ref(false)
-const showInactive = ref(false)
 
-// 通常業務では自拠点のユーザだけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）
-const filters = ref({
-  site_ids: initialSiteIds(route.query.site_ids),
-  q: '',
-  employment_type: null as string | null,
-  system_role: null as string | null,
-  department_id: null as number | null,
+type Filters = {
+  site_ids: number[]
+  q: string
+  employment_type: string | null
+  system_role: string | null
+  department_id: number | null
+  show_inactive: boolean
+}
+const defaults = (siteIds: number[]): Filters => ({ site_ids: siteIds, q: '', employment_type: null, system_role: null, department_id: null, show_inactive: false })
+// 条件は保存して、開き直したときに戻す（ほかの画面のリンクで拠点を指定されたときは、保存した条件を混ぜない）
+const saved = useSavedFilters<Filters>('users', {
+  site_ids: 'ids',
+  q: { type: 'string' },
+  employment_type: { type: 'string', values: ['employee', 'dispatch', 'contractor'] },
+  system_role: { type: 'string', values: ['admin', 'manager', 'member', 'worker'] },
+  department_id: 'id',
+  show_inactive: 'boolean',
 })
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) return defaults(initialSiteIds(route.query.site_ids))
+  const stored = saved.load()
+  return { ...defaults([]), ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+// 通常業務では自拠点のユーザだけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）
+const filters = ref<Filters>(initialFilters())
+saved.hold(filters.value)
+const showInactive = computed(() => filters.value.show_inactive)
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・在籍者だけ）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  filters.value = defaults(ownSiteIds())
+  saved.hold(filters.value)
+  void loadSiteOptions(filters.value.site_ids).catch(() => {})
+}
 
 // 1行に収まる列だけにする。入社年は詳細画面で見られる。
 // 拠点は、1拠点だけ表示しているときは絞り込み欄で分かるので出さない。状態は、退職者を表示するときだけ出す（通常は全員「在籍」）
@@ -61,7 +94,7 @@ const systemRoleOptions = [
 // 拠点を変えたら、表示する拠点にない部署の絞り込みは外す（1回の更新で、一覧の取得も1回で済む）
 async function changeSite(siteIds: number[]) {
   filters.value = { ...filters.value, site_ids: siteIds }
-  await loadSiteOptions(siteIds)
+  if (!(await loadSiteOptions(siteIds).catch(() => false))) return
   if (filters.value.department_id && !departments.value.some((d) => d.id === filters.value.department_id)) {
     filters.value = { ...filters.value, department_id: null }
   }
@@ -107,11 +140,17 @@ function nameInitial(name: string) {
   return name.charAt(0)
 }
 
-onMounted(() => {
-  loadSiteOptions(filters.value.site_ids)
-  fetchUsers()
+onMounted(async () => {
+  // 保存した部署が選択肢になければ外す
+  if (!(await loadSiteOptions(filters.value.site_ids).catch(() => false))) return
+  if (filters.value.department_id && !departments.value.some((d) => d.id === filters.value.department_id)) {
+    filters.value = { ...filters.value, department_id: null }
+  }
 })
-watch([filters, showInactive], fetchUsers, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchUsers()
+}, { deep: true, immediate: true })
 </script>
 
 <template>
@@ -163,10 +202,12 @@ watch([filters, showInactive], fetchUsers, { deep: true })
         hide-details
         style="max-width: 320px"
       />
-      <v-switch v-model="showInactive" label="退職者表示" density="compact" hide-details />
+      <v-switch v-model="filters.show_inactive" label="退職者表示" density="compact" hide-details />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="users"
       :loading="loading"

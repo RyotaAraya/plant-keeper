@@ -5,7 +5,9 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import RegulationChip from '@/components/RegulationChip.vue'
 import RegulationSelect from '@/components/RegulationSelect.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -14,13 +16,28 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canManageEquipment, canViewSites } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const equipments = ref<any[]>([])
 const sites = ref<any[]>([])
 const loading = ref(false)
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）。
+// 選んだ拠点は保存して、開き直したときに戻す（ほかの画面のリンクで拠点を指定されたときは、そちら）
+const saved = useSavedFilters<{ site_ids: number[] }>('equipments', { site_ids: 'ids' })
+const initialSites = () => (hasQueryConditions(route.query) ? initialSiteIds(route.query.site_ids) : savedSiteIds(saved.load().site_ids))
+const selectedSiteIds = ref<number[]>(initialSites())
+saved.hold({ site_ids: selectedSiteIds.value })
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  selectedSiteIds.value = ownSiteIds()
+  saved.hold({ site_ids: selectedSiteIds.value })
+}
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ name: '', description: '', site_id: null as number | null, regulation_ids: [] as number[] })
@@ -99,7 +116,10 @@ onMounted(() => {
   fetchSites()
   fetchEquipments()
 })
-watch(selectedSiteIds, fetchEquipments)
+watch(selectedSiteIds, (siteIds) => {
+  saved.save({ site_ids: siteIds })
+  void fetchEquipments()
+})
 </script>
 
 <template>
@@ -110,9 +130,11 @@ watch(selectedSiteIds, fetchEquipments)
 
     <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="equipments"
       :loading="loading"

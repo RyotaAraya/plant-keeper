@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
@@ -19,12 +21,27 @@ const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
 
-const filters = ref({
-  q: '',
-  category: null as string | null,
-  manufacturer_id: null as number | null,
-  stock_availability: null as string | null,
+type Filters = { q: string; category: string | null; manufacturer_id: number | null; stock_availability: string | null }
+const defaultFilters = (): Filters => ({ q: '', category: null, manufacturer_id: null, stock_availability: null })
+// 条件は保存して、開き直したときに戻す（資材マスタは全拠点共通のため、拠点はない）
+const saved = useSavedFilters<Filters>('materials', {
+  q: { type: 'string' },
+  category: { type: 'string', values: ['instrument', 'valve', 'electrical', 'piping'] },
+  manufacturer_id: 'id',
+  stock_availability: { type: 'string', values: ['own', 'others_only', 'none'] },
 })
+const filters = ref<Filters>({ ...defaultFilters(), ...saved.load() })
+saved.hold(filters.value)
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  filters.value = defaultFilters()
+  saved.hold(filters.value)
+}
 
 const form = ref({
   manufacturer_id: null as number | null,
@@ -127,6 +144,9 @@ async function fetchMaterials() {
 async function fetchManufacturers() {
   const res = await api.get('/manufacturers')
   manufacturers.value = res.data.data
+  // 保存したメーカーが選択肢になければ外す
+  const id = filters.value.manufacturer_id
+  if (id && !manufacturers.value.some((m) => m.id === id)) filters.value = { ...filters.value, manufacturer_id: null }
 }
 
 function openDialog(item?: any) {
@@ -183,7 +203,10 @@ onMounted(() => {
   fetchManufacturers()
   fetchMaterials()
 })
-watch(filters, fetchMaterials, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchMaterials()
+}, { deep: true })
 </script>
 
 <template>
@@ -236,9 +259,11 @@ watch(filters, fetchMaterials, { deep: true })
         hide-details
         style="max-width: 290px"
       />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="rows"
       :loading="loading"

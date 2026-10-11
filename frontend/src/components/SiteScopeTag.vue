@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useActiveSites } from '@/composables/useSiteScope'
 import { useAuthStore } from '@/stores/auth'
@@ -26,6 +26,15 @@ onMounted(() => {
 })
 
 const switchable = computed(() => canViewSites.value && sites.value.length > 1)
+
+// 保存しておいた拠点・URL の拠点が、閉鎖などで選べなくなっていたら外す（残りがなければ所属拠点）。拠点の一覧を取れたあとだけ
+watch([sites, model], () => {
+  if (!canViewSites.value || !sites.value.length || !model.value.length) return
+  const known = model.value.filter((id) => sites.value.some((s) => s.id === id))
+  if (known.length === model.value.length) return
+  const own = ownSiteId.value && sites.value.some((s) => s.id === ownSiteId.value) ? [ownSiteId.value] : []
+  model.value = known.length ? known : own
+}, { immediate: true })
 
 // 選択中の拠点。空は全拠点（メニューでは全てにチェックが付く）
 const selectedIds = computed(() => (model.value.length ? model.value : sites.value.map((s) => s.id)))
