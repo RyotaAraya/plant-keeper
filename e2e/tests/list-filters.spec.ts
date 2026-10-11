@@ -58,12 +58,16 @@ for (const { path, heading, label } of PAGES) {
 }
 
 test('リセットすると、表のページも先頭に戻る', async ({ page }) => {
-  // 表は10件ずつ。シード直後のDB（CI）でも2ページ目があるよう、ログイン（監査ログに所属拠点で残る）を11回する
+  // 表を10件ずつにして進む（既定の50件では、シード直後のDB（CI）は1ページに収まる）。
+  // 2ページ目があるよう、ログイン（監査ログに所属拠点で残る）を11回する
   for (let i = 0; i < 11; i++) await apiSession(page.request, ACCOUNTS.admin)
   await login(page, ACCOUNTS.admin)
   await page.goto('/audit-logs')
   const footer = page.locator('.v-data-table-footer__info')
   await expect(footer).toContainText(/^1-\d+ 件目/)
+  await page.locator('.v-data-table-footer__items-per-page .v-field').click()
+  await page.getByRole('option', { name: '10', exact: true }).click()
+  await expect(footer).toContainText(/^1-10 件目/)
   await page.locator('.v-data-table-footer').getByRole('button', { name: '次のページ' }).click()
   await expect(footer).not.toContainText(/^1-\d+ 件目/)
   await page.getByTestId('filter-reset').click()
