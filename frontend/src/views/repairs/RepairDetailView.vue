@@ -6,7 +6,7 @@ import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { todayForInput } from '@/utils/datetime'
+import { formatDay, todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const { canManageRepairs } = usePermissions()
@@ -139,9 +139,9 @@ onMounted(fetchRepair)
             <div><dt>処置方針</dt><dd>{{ dispositionLabel[repair.disposition] || '—' }}</dd></div>
             <div><dt>修理業者</dt><dd>{{ repair.repair_vendor || '—' }}</dd></div>
             <div><dt>依頼者</dt><dd>{{ repair.requested_by?.name || '—' }}</dd></div>
-            <div><dt>発送日</dt><dd>{{ repair.shipped_on || '—' }}</dd></div>
-            <div><dt>修理完了日</dt><dd>{{ repair.completed_on || '—' }}</dd></div>
-            <div><dt>受領日</dt><dd>{{ repair.received_on || '—' }}</dd></div>
+            <div><dt>発送日</dt><dd>{{ formatDay(repair.shipped_on) }}</dd></div>
+            <div><dt>修理完了日</dt><dd>{{ formatDay(repair.completed_on) }}</dd></div>
+            <div><dt>受領日</dt><dd>{{ formatDay(repair.received_on) }}</dd></div>
             <div><dt>修理費</dt><dd>{{ formatPrice(repair.repair_cost) }}</dd></div>
             <div><dt>送料</dt><dd>{{ formatPrice(repair.shipping_cost) }}</dd></div>
             <div v-if="repair.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ repair.notes }}</dd></div>
@@ -205,8 +205,8 @@ onMounted(fetchRepair)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="editDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveEdit">保存</v-btn>
+          <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveEdit">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

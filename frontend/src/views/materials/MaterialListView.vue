@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
 import { useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
@@ -16,7 +17,8 @@ const authStore = useAuthStore()
 const materials = ref<any[]>([])
 const manufacturers = ref<any[]>([])
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
@@ -126,6 +128,7 @@ const fetchMaterialsGuard = latestGuard()
 async function fetchMaterials() {
   const isLatest = fetchMaterialsGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.q) params.q = filters.value.q
@@ -136,6 +139,8 @@ async function fetchMaterials() {
     if (!isLatest()) return
     materials.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -223,7 +228,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 250px"
+        class="pk-filter-search"
       />
       <v-select
         v-model="filters.category"
@@ -234,7 +239,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 140px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.manufacturer_id"
@@ -245,7 +250,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 180px"
+        class="pk-filter-select"
       />
       <v-select
         v-if="canViewStocks"
@@ -257,10 +262,12 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 290px"
+        class="pk-filter-select pk-filter-select--wide"
       />
       <FilterResetButton @reset="reset" />
     </div>
+
+    <ListCount :total="totalCount" :shown="rows.length" :loading="loading" :error="loadError" />
 
     <v-data-table
       v-model:page="tablePage"
@@ -307,7 +314,7 @@ watch(filters, (value) => {
 
     <v-dialog v-model="dialog" max-width="700">
       <v-card>
-        <v-card-title>{{ editingId ? '資材編集' : '資材登録' }}</v-card-title>
+        <v-card-title>{{ editingId ? '資材の編集' : '資材の登録' }}</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -356,8 +363,8 @@ watch(filters, (value) => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">保存</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

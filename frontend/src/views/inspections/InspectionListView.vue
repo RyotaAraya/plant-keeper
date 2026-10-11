@@ -2,13 +2,14 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
-import { formatDate } from '@/utils/datetime'
+import { formatDay } from '@/utils/datetime'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CalibrationImportDialog from '@/components/CalibrationImportDialog.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
+import ListCount from '@/components/ListCount.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import { inspectionName } from '@/utils/inspectionWorkflow'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -32,7 +33,8 @@ function changeView(value: string) {
 const inspections = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const importOpen = ref(false)
 function onImported() {
   if (view.value === 'drafts') void fetchInspections()
@@ -101,11 +103,11 @@ const filters = ref<Filters>(filtersForRoute())
 saved.hold(filters.value)
 
 const headers = computed(() => [
-  { title: '点検日', key: 'inspected_at', width: '120px' },
-  { title: '点検内容', key: 'name', sortable: false },
+  { title: '点検日', key: 'inspected_at', minWidth: '110px' },
+  { title: '点検内容', key: 'name', sortable: false, minWidth: '200px' },
   { title: 'ステータス', key: 'status', width: '120px' },
-  { title: '設備', key: 'equipments', sortable: false },
-  { title: '計器', key: 'instrument.tag_number', width: '110px' },
+  { title: '設備', key: 'equipments', sortable: false, minWidth: '160px' },
+  { title: '計器', key: 'instrument.tag_number', minWidth: '90px' },
   { title: '実施者', key: 'user.name', width: '120px' },
   { title: '部署', key: 'department.name', width: '140px' },
   { title: '種別', key: 'inspection_type', width: '110px' },
@@ -119,6 +121,7 @@ const fetchGuard = latestGuard()
 async function fetchInspections() {
   const isLatest = fetchGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
@@ -135,6 +138,8 @@ async function fetchInspections() {
     if (!isLatest()) return
     inspections.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -227,7 +232,7 @@ watch(() => route.query, (query, previous) => {
     <div class="pk-filters">
       <SiteScopeTag :model-value="filters.site_ids" @update:model-value="changeSite" />
       <v-divider vertical class="pk-scope-divider" />
-      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable />
       <v-select
         v-model="filters.department_id"
         :items="departments"
@@ -237,16 +242,18 @@ watch(() => route.query, (query, previous) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 320px"
+        class="pk-filter-select pk-filter-select--wide"
       />
-      <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
-      <FilterSelect v-if="view === 'all'" v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
+      <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" />
+      <FilterSelect v-if="view === 'all'" v-model="filters.statuses" :items="statusOptions" label="ステータス" />
       <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="clearInstrument" />
       <FilterResetButton @reset="reset" />
     </div>
 
     <p v-if="view === 'drafts'" class="text-body-2 text-medium-emphasis mb-2">自分が作成した下書きです。前日以前の記録も含め、途中から再開できます。</p>
     <p v-else-if="view === 'approvals'" class="text-body-2 text-medium-emphasis mb-2">承認依頼中の記録です。</p>
+
+    <ListCount :total="totalCount" :shown="inspections.length" :loading="loading" :error="loadError" />
 
     <v-data-table
       v-model:page="tablePage"
@@ -260,7 +267,7 @@ watch(() => route.query, (query, previous) => {
     >
       <template #item.name="{ item }">{{ inspectionName(item) }}</template>
       <template #item.inspected_at="{ item }">
-        <span class="text-no-wrap">{{ formatDate(item.inspected_at) }}</span>
+        <span class="text-no-wrap">{{ formatDay(item.inspected_at) }}</span>
       </template>
       <template #item.equipments="{ item }">
         {{ equipmentNames(item) }}

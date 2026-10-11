@@ -425,8 +425,8 @@ watch(() => route.params.id, (id, previous) => {
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="editDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveEdit">保存</v-btn>
+            <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveEdit">保存</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -467,8 +467,8 @@ watch(() => route.params.id, (id, previous) => {
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="closeResponse">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveResponse">記録</v-btn>
+            <v-btn variant="text" @click="closeResponse">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveResponse">記録</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

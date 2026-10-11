@@ -28,3 +28,12 @@ export function formatDate(value: string | null | undefined): string {
     timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
   })
 }
+
+// 一覧・詳細の暦日の表示（YYYY/MM/DD。#166）。暦日の文字列（'YYYY-MM-DD'）は時刻帯で日付をずらさずに区切りだけ変え、
+// 日時は formatDate と同じく日本時間の日付にする。空は「—」（0 や意味のある状態の文言は呼び出し側で扱う）
+export function formatDay(value: string | null | undefined): string {
+  if (!value) return '—'
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (day) return `${day[1]}/${day[2]}/${day[3]}`
+  return formatDate(value) || '—'
+}

@@ -22,7 +22,7 @@ test('スマホではメニューを開いて画面を選ぶと閉じ、一覧�
 test('スマホの一覧から作成ダイアログを開いて閉じられる', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.goto('/equipments')
-  await page.getByRole('button', { name: '新規作成' }).click()
+  await page.getByRole('button', { name: '新規登録' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByLabel('設備名')).toBeVisible()
   await expect(dialog.getByRole('button', { name: '保存', exact: true })).toBeVisible()

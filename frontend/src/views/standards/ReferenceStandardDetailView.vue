@@ -10,7 +10,7 @@ import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialo
 import ResourceHistory from '@/components/ResourceHistory.vue'
 import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
-import { todayForInput } from '@/utils/datetime'
+import { formatDay, todayForInput } from '@/utils/datetime'
 import { intervalLabel } from '@/utils/interval'
 import {
   CALIBRATION_RESULT_LABEL,
@@ -141,7 +141,7 @@ onMounted(async () => {
 
       <v-window v-model="tab">
         <v-window-item value="calibrations">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th>実施日</th>
@@ -158,12 +158,12 @@ onMounted(async () => {
                 <td colspan="7" class="text-center text-grey py-4">校正の記録はありません</td>
               </tr>
               <tr v-for="c in standard.calibrations" :key="c.id">
-                <td class="text-no-wrap">{{ c.performed_on }}</td>
+                <td class="text-no-wrap">{{ formatDay(c.performed_on) }}</td>
                 <td>{{ c.performed_by }}</td>
                 <td>{{ c.certificate_number || '—' }}</td>
                 <td><v-chip :color="c.result === 'pass' ? 'success' : 'error'" size="x-small" label variant="tonal">{{ CALIBRATION_RESULT_LABEL[c.result] }}</v-chip></td>
                 <td>{{ c.traceable ? 'あり' : 'なし' }}</td>
-                <td class="text-no-wrap">{{ c.valid_until }}</td>
+                <td class="text-no-wrap">{{ formatDay(c.valid_until) }}</td>
                 <td>{{ c.notes || '' }}</td>
               </tr>
             </tbody>
@@ -171,7 +171,7 @@ onMounted(async () => {
         </v-window-item>
 
         <v-window-item value="inspections">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th>点検日</th>
@@ -205,7 +205,7 @@ onMounted(async () => {
           <v-list v-if="standard.inspection_plans.length">
             <v-list-item v-for="plan in standard.inspection_plans" :key="plan.id" :title="plan.name" :subtitle="`${intervalLabel(plan.interval_days)}ごと${plan.is_active ? '' : '（停止中）'}`">
               <template #append>
-                <v-chip :color="planDueColor(plan)" size="small" label variant="tonal">次回 {{ plan.next_due_on }}</v-chip>
+                <v-chip :color="planDueColor(plan)" size="small" label variant="tonal">次回 {{ formatDay(plan.next_due_on) }}</v-chip>
               </template>
             </v-list-item>
           </v-list>
@@ -245,8 +245,8 @@ onMounted(async () => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="calibrationDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveCalibration">記録</v-btn>
+          <v-btn variant="text" @click="calibrationDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveCalibration">記録</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

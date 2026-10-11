@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
-import { formatDate } from '@/utils/datetime'
+import { formatDate, formatDay } from '@/utils/datetime'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
@@ -114,7 +114,7 @@ onMounted(fetchInspection)
         <v-btn variant="text" :to="returnTo">{{ inspectionReturnLabel(returnTo) }}に戻る</v-btn>
       </v-alert>
       <v-alert v-if="inspection.inspection_plan" type="info" variant="tonal" class="mb-4" data-testid="inspection-plan-context">
-        <strong>{{ inspection.inspection_plan.name }}</strong> ／ 現在の次回期限 {{ inspection.inspection_plan.next_due_on }}
+        <strong>{{ inspection.inspection_plan.name }}</strong> ／ 現在の次回期限 {{ formatDay(inspection.inspection_plan.next_due_on) }}
         <p>{{ inspection.status === 'draft' ? '下書き保存では計画の期限は更新しません。提出すると、実施日をもとに次回期限を更新します。' : 'この点検は計画にひもづいています。表示は計画の現在の期限です。' }}</p>
       </v-alert>
       <v-alert v-else-if="!inspection.maintenance_task" type="info" variant="tonal" class="mb-4">予定外の点検です。点検計画の期限は更新しません。</v-alert>
@@ -175,7 +175,7 @@ onMounted(fetchInspection)
       </v-tabs>
       <v-window v-model="tab">
         <v-window-item v-if="inspection.inspection_reference_standards?.length" value="standards">
-          <v-table density="compact" data-testid="reference-standards-used">
+          <v-table density="compact" class="pk-data-table" data-testid="reference-standards-used">
             <thead>
               <tr>
                 <th>基準器</th>
@@ -192,8 +192,8 @@ onMounted(fetchInspection)
                 </td>
                 <td class="text-caption">
                   <template v-if="link.calibration_at_inspection">
-                    {{ link.calibration_at_inspection.performed_on }} 実施・{{ link.calibration_at_inspection.performed_by }}・
-                    {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ link.calibration_at_inspection.valid_until }}まで有効・
+                    {{ formatDay(link.calibration_at_inspection.performed_on) }} 実施・{{ link.calibration_at_inspection.performed_by }}・
+                    {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ formatDay(link.calibration_at_inspection.valid_until) }}まで有効・
                     トレーサビリティ{{ link.calibration_at_inspection.traceable ? 'あり' : 'なし' }}
                   </template>
                   <template v-else>—</template>
@@ -210,7 +210,7 @@ onMounted(fetchInspection)
         </v-window-item>
 
         <v-window-item value="items">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th width="40">#</th>

@@ -81,7 +81,7 @@ onMounted(fetchMaterial)
                 利用可の在庫数（全拠点）
                 <template v-if="material.total_stock !== material.usable_stock">／ 使用中・修理中などを含む合計 {{ material.total_stock }}</template>
               </div>
-              <v-table v-if="material.stock_summary.length" density="compact">
+              <v-table v-if="material.stock_summary.length" density="compact" class="pk-data-table">
                 <thead>
                   <tr>
                     <th>拠点・倉庫</th>

@@ -350,12 +350,12 @@ void loadRegulations()
           clearable
           density="compact"
           hide-details
-          style="min-width: 200px; max-width: 280px"
+          class="pk-filter-select pk-filter-select--wide"
         />
-        <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="点検の法規区分" style="max-width: 220px" />
+        <FilterSelect v-model="filters.regulation_ids" :items="regulations" item-title="name" item-value="id" label="点検の法規区分" wide />
       </template>
       <template v-if="tab === 'due'">
-        <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+        <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable />
         <FilterSelect
           v-model="filters.inspection_plan_group_ids"
           :items="groupOptions.map((g) => ({ id: g.id, title: groupLabel(g, multiSite) }))"
@@ -363,7 +363,7 @@ void loadRegulations()
           item-value="id"
           label="まとまり"
           searchable
-          style="max-width: 260px"
+          wide
           data-testid="plan-group-filter"
         />
         <v-switch v-model="filters.overdue" label="期限超過のみ" color="error" density="compact" hide-details />
@@ -374,12 +374,12 @@ void loadRegulations()
           density="compact"
           hide-details
           clearable
-          style="min-width: 220px; max-width: 240px"
+          class="pk-filter-select pk-filter-select--wide"
           data-testid="interval-review-filter"
         />
         <v-switch v-model="filters.diagnostic_advance" label="診断で前倒しの候補" color="primary" density="compact" hide-details data-testid="diagnostic-advance-filter" />
       </template>
-      <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" style="max-width: 220px" />
+      <FilterSelect v-if="showMaintenance" v-model="filters.statuses" :items="statusOptions" label="定期整備の状態" wide />
       <FilterResetButton @reset="reset" />
     </div>
 

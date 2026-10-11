@@ -74,8 +74,8 @@ async function create() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn @click="open = false">キャンセル</v-btn>
-        <v-btn color="primary" :disabled="loading" @click="create">作成</v-btn>
+        <v-btn variant="text" @click="open = false">キャンセル</v-btn>
+        <v-btn color="primary" variant="flat" :disabled="loading" @click="create">作成</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

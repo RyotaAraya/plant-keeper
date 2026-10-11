@@ -11,14 +11,15 @@ import CalibrationTable from '@/components/CalibrationTable.vue'
 import DefectAiAssist from '@/components/DefectAiAssist.vue'
 import InspectionReferenceStandards from '@/components/InspectionReferenceStandards.vue'
 import ItemResultToggle from '@/components/ItemResultToggle.vue'
+import DetailHeader from '@/components/layout/DetailHeader.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { useAuthStore } from '@/stores/auth'
 import type { AiDefectDraft, InspectionPlan, InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
 import { calibrationInputFrom, emptyCalibrationInput, evaluateCalibration, snapshotFromInstrument } from '@/utils/calibration'
 import { ITEM_TYPE_OPTIONS, criteriaOf, isFilled, isJudgedType, limitStatus, limitsText, startsSection, type ItemResult } from '@/utils/checklistCriteria'
-import { nowForInput } from '@/utils/datetime'
-import { inspectionReturn } from '@/utils/inspectionWorkflow'
+import { formatDay, nowForInput } from '@/utils/datetime'
+import { inspectionReturn, inspectionReturnLabel } from '@/utils/inspectionWorkflow'
 import { revealApplied } from '@/utils/revealApplied'
 
 const route = useRoute()
@@ -457,10 +458,8 @@ onMounted(async () => {
 
 <template>
   <MainLayout>
-    <div class="d-flex align-center mb-4">
-      <v-btn icon="mdi-arrow-left" variant="text" aria-label="前の画面に戻る" @click="router.back()" />
-      <h1 class="text-h5 ml-2">{{ isEdit ? '点検記録編集' : '新規点検記録' }}</h1>
-    </div>
+    <!-- 詳細画面と同じ「← 戻る先」＋見出し。戻る先は開始元（ホーム・計画・定期整備の作業・点検・作業記録。検証済みの return_to） -->
+    <DetailHeader :back-to="returnTo" :back-label="inspectionReturnLabel(returnTo)" kind="点検・作業記録" :title="isEdit ? '点検記録編集' : '新規点検記録'" />
 
     <div v-if="initializing" role="status" aria-live="polite">
       <v-progress-linear indeterminate class="mb-3" />
@@ -470,7 +469,7 @@ onMounted(async () => {
     <v-alert v-else-if="initializationError" type="error" role="alert">点検の準備に失敗しました。元の画面に戻って、もう一度開いてください。<v-btn variant="text" :to="returnTo">元の画面に戻る</v-btn></v-alert>
     <template v-else>
       <v-alert v-if="plan" type="info" variant="tonal" class="mb-4" data-testid="inspection-plan-context">
-        <strong>{{ plan.name }}</strong> ／ 現在の期限 {{ plan.next_due_on }}
+        <strong>{{ plan.name }}</strong> ／ 現在の期限 {{ formatDay(plan.next_due_on) }}
         <p>この計画の点検として記録します。提出すると、実施日をもとに次回期限を更新します。下書き保存では更新しません。</p>
       </v-alert>
       <v-alert v-else-if="!form.maintenance_task_id" variant="tonal" type="info" class="mb-4" data-testid="inspection-unplanned-context">
@@ -732,7 +731,7 @@ onMounted(async () => {
           未記入の必須項目が {{ missingRequired }}件あります（下書きは保存できます）
         </p>
         <div class="d-flex ga-3 mt-4">
-          <v-btn @click="router.back()">キャンセル</v-btn>
+          <v-btn variant="text" @click="router.back()">キャンセル</v-btn>
           <v-spacer />
           <v-btn variant="outlined" :loading="saving" @click="save('draft')">下書き保存</v-btn>
           <v-btn color="primary" :loading="saving" @click="save('approval_requested')">提出</v-btn>

@@ -7,7 +7,7 @@ import StatusChip from '@/components/StatusChip.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
-import { todayForInput } from '@/utils/datetime'
+import { formatDay, todayForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const { canManageUsers } = usePermissions()
@@ -276,7 +276,7 @@ onMounted(() => {
             <div><dt>{{ user.company?.company_type === 'owner' ? '入社年' : '参加年' }}</dt><dd>{{ user.join_year ? `${user.join_year}年` : '—' }}</dd></div>
             <div><dt>出身地</dt><dd>{{ user.home_prefecture || '—' }}</dd></div>
             <div v-if="user.company?.company_type === 'owner'"><dt>前職</dt><dd>{{ user.previous_company || '—' }}</dd></div>
-            <div v-if="user.deactivated_on"><dt>退職日</dt><dd>{{ user.deactivated_on }}</dd></div>
+            <div v-if="user.deactivated_on"><dt>退職日</dt><dd>{{ formatDay(user.deactivated_on) }}</dd></div>
           </dl>
         </v-card-text>
       </v-card>
@@ -284,7 +284,7 @@ onMounted(() => {
       <v-tabs v-model="tab" class="mb-4">
         <v-tab value="assignments">設備担当（{{ user.equipment_assignments?.length ?? 0 }}）</v-tab>
       </v-tabs>
-      <v-table v-if="user.equipment_assignments?.length" density="compact">
+      <v-table v-if="user.equipment_assignments?.length" density="compact" class="pk-data-table">
         <thead><tr><th>設備</th><th>役割</th><th>開始日</th><th>終了日</th></tr></thead>
         <tbody>
           <tr v-for="a in user.equipment_assignments" :key="a.id">
@@ -292,8 +292,8 @@ onMounted(() => {
               <router-link class="text-primary" :to="`/equipments/${a.equipment?.id}`">{{ a.equipment?.name }}</router-link>
             </td>
             <td>{{ a.role === 'lead' ? '主担当' : 'メンバー' }}</td>
-            <td>{{ a.started_on }}</td>
-            <td>{{ a.ended_on || '—' }}</td>
+            <td class="text-no-wrap">{{ formatDay(a.started_on) }}</td>
+            <td class="text-no-wrap">{{ formatDay(a.ended_on) }}</td>
           </tr>
         </tbody>
       </v-table>
@@ -413,8 +413,8 @@ onMounted(() => {
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="editDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveEdit">保存</v-btn>
+            <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveEdit">保存</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

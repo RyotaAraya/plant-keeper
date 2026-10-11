@@ -7,13 +7,14 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
+import ListCount from '@/components/ListCount.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
-import { formatDate, nowForInput } from '@/utils/datetime'
+import { formatDay, nowForInput } from '@/utils/datetime'
 import { idFromQuery, listFromQuery } from '@/utils/listQuery'
 import { latestGuard } from '@/utils/latestGuard'
 
@@ -25,7 +26,8 @@ const { initialSiteIds, savedSiteIds } = useSiteScope()
 const troubles = ref<any[]>([])
 const { equipments, departments, load: loadSiteOptions } = useSiteScopeOptions()
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const dialog = ref(false)
 const errors = ref<string[]>([])
 
@@ -108,9 +110,9 @@ const headers = [
   { title: '優先度', key: 'priority', width: '70px' },
   { title: 'タイトル', key: 'title', minWidth: '300px' },
   { title: 'ステータス', key: 'status', width: '110px' },
-  { title: '報告日', key: 'reported_at', width: '110px' },
-  { title: '設備', key: 'equipment.name', width: '150px' },
-  { title: '計器', key: 'instrument.tag_number', width: '90px' },
+  { title: '報告日', key: 'reported_at', minWidth: '110px' },
+  { title: '設備', key: 'equipment.name', minWidth: '150px' },
+  { title: '計器', key: 'instrument.tag_number', minWidth: '90px' },
   { title: '担当者', key: 'assigned_to.name', width: '90px' },
   { title: '部署', key: 'department_display', width: '120px' },
 ]
@@ -120,6 +122,7 @@ const fetchTroublesGuard = latestGuard()
 async function fetchTroubles() {
   const isLatest = fetchTroublesGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.statuses.length) params.statuses = filters.value.statuses
@@ -133,6 +136,8 @@ async function fetchTroubles() {
     if (!isLatest()) return
     troubles.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -249,9 +254,9 @@ watch(() => route.query, (query) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 220px"
+        class="pk-filter-search"
       />
-      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
+      <FilterSelect v-model="filters.equipment_ids" :items="equipments" item-title="name" item-value="id" label="設備" searchable />
       <v-select
         v-model="filters.department_id"
         :items="departments"
@@ -261,13 +266,15 @@ watch(() => route.query, (query) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 320px"
+        class="pk-filter-select pk-filter-select--wide"
       />
-      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
-      <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" style="max-width: 200px" />
+      <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" />
+      <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" />
       <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="clearInstrument" />
       <FilterResetButton @reset="reset" />
     </div>
+
+    <ListCount :total="totalCount" :shown="troubles.length" :loading="loading" :error="loadError" />
 
     <v-data-table
       v-model:page="tablePage"
@@ -279,7 +286,7 @@ watch(() => route.query, (query) => {
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
       <template #item.reported_at="{ item }">
-        {{ formatDate(item.reported_at) }}
+        <span class="text-no-wrap">{{ formatDay(item.reported_at) }}</span>
       </template>
       <template #item.priority="{ item }">
         <StatusChip kind="priority" :value="item.priority" />
@@ -344,8 +351,8 @@ watch(() => route.query, (query) => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">報告</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">報告</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

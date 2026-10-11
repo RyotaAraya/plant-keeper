@@ -6,6 +6,7 @@ import StatusChip from '@/components/StatusChip.vue'
 import CalibrationStateChip from '@/components/CalibrationStateChip.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
+import ListCount from '@/components/ListCount.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
@@ -14,6 +15,7 @@ import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilte
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import type { ReferenceStandard } from '@/types/models'
+import { formatDay } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
 import { CATEGORY_LABEL, STATUS_COLOR, STATUS_LABEL } from '@/utils/referenceStandard'
 
@@ -24,6 +26,8 @@ const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const standards = ref<ReferenceStandard[]>([])
 const loading = ref(false)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const statusOptions = Object.entries(STATUS_LABEL).map(([value, title]) => ({ title, value }))
 const categoryOptions = Object.entries(CATEGORY_LABEL).map(([value, title]) => ({ title, value }))
 
@@ -66,22 +70,24 @@ function reset() {
   search.value = ''
 }
 
-const headers = [
-  { title: '管理番号', key: 'management_number', width: '120px' },
+// 拠点の列は、1つの拠点だけを表示しているときは出さない（どの行も同じ拠点のため）
+const headers = computed(() => [
+  { title: '管理番号', key: 'management_number', minWidth: '120px' },
   { title: '名称', key: 'name', minWidth: '240px' },
   { title: '校正', key: 'calibration_state', minWidth: '210px' },
   { title: '状態', key: 'status', width: '100px' },
   { title: '種別', key: 'category', width: '110px' },
-  { title: '拠点', key: 'site.name', width: '120px' },
-  { title: '最終校正', key: 'last_calibration', sortable: false, minWidth: '190px' },
+  ...(selectedSiteIds.value.length === 1 ? [] : [{ title: '拠点', key: 'site.name', minWidth: '120px' }]),
+  { title: '最終校正', key: 'last_calibration', sortable: false, minWidth: '160px' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
-]
+])
 
 const fetchGuard = latestGuard()
 
 async function fetchStandards() {
   const isLatest = fetchGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
@@ -91,6 +97,9 @@ async function fetchStandards() {
     const res = await api.get('/reference_standards', { params })
     if (!isLatest()) return
     standards.value = res.data.data
+    totalCount.value = res.data.meta?.total_count ?? res.data.data.length
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -126,11 +135,13 @@ watch(currentFilters, (value) => {
     <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
       <v-divider vertical class="pk-scope-divider" />
-      <FilterSelect v-model="statuses" :items="statusOptions" label="状態" style="max-width: 200px" />
-      <FilterSelect v-model="categories" :items="categoryOptions" label="種別" style="max-width: 200px" />
-      <v-text-field v-model="search" label="管理番号・名称・型式・製造番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" style="max-width: 320px" />
+      <v-text-field v-model="search" label="管理番号・名称・型式・製造番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" class="pk-filter-search" />
+      <FilterSelect v-model="statuses" :items="statusOptions" label="状態" />
+      <FilterSelect v-model="categories" :items="categoryOptions" label="種別" />
       <FilterResetButton @reset="reset" />
     </div>
+
+    <ListCount :total="totalCount" :shown="standards.length" :loading="loading" :error="loadError" />
 
     <v-data-table
       v-model:page="tablePage"
@@ -151,7 +162,7 @@ watch(currentFilters, (value) => {
       </template>
       <template #item.last_calibration="{ item }">
         <template v-if="item.calibrations[0]">
-          <div class="text-no-wrap">{{ item.calibrations[0].performed_on }}</div>
+          <div class="text-no-wrap">{{ formatDay(item.calibrations[0].performed_on) }}</div>
           <div class="text-caption text-medium-emphasis">{{ item.calibrations[0].performed_by }}</div>
         </template>
         <span v-else class="text-medium-emphasis">—</span>

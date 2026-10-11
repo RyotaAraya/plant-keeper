@@ -253,7 +253,7 @@ onMounted(() => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 280px"
+        class="pk-filter-select pk-filter-select--wide"
       />
       <FilterResetButton @reset="resetFilters" />
     </div>
@@ -444,8 +444,8 @@ onMounted(() => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="deptDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveDept">保存</v-btn>
+          <v-btn variant="text" @click="deptDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveDept">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -478,8 +478,8 @@ onMounted(() => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="memberDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" :disabled="!memberForm.user_id" @click="saveMember">追加</v-btn>
+          <v-btn variant="text" @click="memberDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" :disabled="!memberForm.user_id" @click="saveMember">追加</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -497,8 +497,8 @@ onMounted(() => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="roleDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveRole">保存</v-btn>
+          <v-btn variant="text" @click="roleDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveRole">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

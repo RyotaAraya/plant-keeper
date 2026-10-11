@@ -120,8 +120,8 @@ async function save() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn @click="open = false">キャンセル</v-btn>
-        <v-btn color="primary" :loading="saving" :disabled="!form.name || !form.site_id" @click="save">保存</v-btn>
+        <v-btn variant="text" @click="open = false">キャンセル</v-btn>
+        <v-btn color="primary" variant="flat" :loading="saving" :disabled="!form.name || !form.site_id" @click="save">保存</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
