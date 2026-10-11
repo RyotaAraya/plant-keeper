@@ -338,7 +338,7 @@ onMounted(fetchMaintenance)
         </v-card-title>
         <v-card-subtitle>運転を再開する前に、バイパス中・復帰確認待ちのものをすべて戻し、別の人が確認します。残っていると検収へ進めません</v-card-subtitle>
         <v-card-text>
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <tbody>
               <tr v-for="b in bypasses" :key="b.id" style="cursor: pointer" @click="router.push(`/interlocks/${b.interlock.id}`)">
                 <td class="text-no-wrap"><StatusChip :label="bypassLabel(b)" :color="bypassColor(b)" :alert="b.overdue" /></td>
@@ -405,7 +405,7 @@ onMounted(fetchMaintenance)
               </p>
               <div v-for="group in taskGroups" :key="group.name" class="mb-4">
                 <div class="text-subtitle-2 mb-1">{{ group.name }}（{{ group.tasks.length }}）</div>
-                <v-table density="compact">
+                <v-table density="compact" class="pk-data-table">
                   <thead>
                     <tr>
                       <th class="text-no-wrap">対象</th>
@@ -558,8 +558,8 @@ onMounted(fetchMaintenance)
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="editDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveEdit">保存</v-btn>
+            <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveEdit">保存</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -579,8 +579,8 @@ onMounted(fetchMaintenance)
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="acceptanceDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveAcceptance">記録</v-btn>
+            <v-btn variant="text" @click="acceptanceDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveAcceptance">記録</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -598,8 +598,8 @@ onMounted(fetchMaintenance)
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="assignDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveAssign">追加</v-btn>
+            <v-btn variant="text" @click="assignDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveAssign">追加</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

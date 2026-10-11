@@ -343,8 +343,8 @@ onMounted(() => {
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn @click="serviceDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveService">保存</v-btn>
+              <v-btn variant="text" @click="serviceDialog = false">キャンセル</v-btn>
+              <v-btn color="primary" variant="flat" @click="saveService">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -382,8 +382,8 @@ onMounted(() => {
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn @click="lcDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveLc">保存</v-btn>
+              <v-btn variant="text" @click="lcDialog = false">キャンセル</v-btn>
+              <v-btn color="primary" variant="flat" @click="saveLc">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -499,8 +499,8 @@ onMounted(() => {
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn @click="templateDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveTemplate">保存</v-btn>
+              <v-btn variant="text" @click="templateDialog = false">キャンセル</v-btn>
+              <v-btn color="primary" variant="flat" @click="saveTemplate">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -540,8 +540,8 @@ onMounted(() => {
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn @click="mfrDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveMfr">保存</v-btn>
+              <v-btn variant="text" @click="mfrDialog = false">キャンセル</v-btn>
+              <v-btn color="primary" variant="flat" @click="saveMfr">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -579,8 +579,8 @@ onMounted(() => {
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn @click="whDialog = false">キャンセル</v-btn>
-              <v-btn color="primary" @click="saveWh">保存</v-btn>
+              <v-btn variant="text" @click="whDialog = false">キャンセル</v-btn>
+              <v-btn color="primary" variant="flat" @click="saveWh">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

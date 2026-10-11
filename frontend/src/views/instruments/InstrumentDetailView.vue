@@ -15,6 +15,7 @@ import DiagnosticChip from '@/components/DiagnosticChip.vue'
 import DiagnosticAdvanceDialog from '@/components/plans/DiagnosticAdvanceDialog.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import { DIAGNOSTIC_STATUS } from '@/constants/diagnostics'
+import { formatDay } from '@/utils/datetime'
 import { formatDateTime } from '@/utils/interlock'
 import {
   CHARACTERISTIC_LABEL,
@@ -190,7 +191,7 @@ onMounted(fetchInstrument)
               </dd>
               <dd v-for="plan in instrument.diagnostic_advance_plans ?? []" :key="`p-${plan.id}`" class="d-flex flex-wrap align-center ga-2 mt-1" data-testid="diagnostic-advance-plan">
                 <v-chip size="small" label variant="flat" color="primary" append-icon="mdi-chevron-right" @click="openAdvance(plan)">前倒しの候補</v-chip>
-                <span class="text-body-2">{{ plan.name }}（次回期限 {{ plan.next_due_on }}）</span>
+                <span class="text-body-2">{{ plan.name }}（次回期限 {{ formatDay(plan.next_due_on) }}）</span>
               </dd>
             </div>
             <div class="pk-summary__wide" data-testid="calibration-conditions">
@@ -246,7 +247,7 @@ onMounted(fetchInstrument)
             </p>
             <CalibrationTrendChart :rows="calibrationHistory" class="mb-2" />
             <p class="text-caption text-medium-emphasis mb-4">●調整前（赤は不合格） ／ ○調整後（調整した回だけ） ／ 点線は許容差</p>
-            <v-table density="compact">
+            <v-table density="compact" class="pk-data-table">
               <thead>
                 <tr class="text-no-wrap">
                   <th>点検日</th>
@@ -275,7 +276,7 @@ onMounted(fetchInstrument)
 
         <v-window-item value="diagnostics" data-testid="diagnostic-history">
           <p class="text-body-2 mb-2">機器管理システムから受け取った、機器の自己診断の状態が変わった記録です（新しい順に20件）。同じ状態を受け取り続けても、記録は増えません。</p>
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr class="text-no-wrap"><th>発生日時</th><th>状態</th><th>コード</th><th>内容</th><th>送ってきた連携</th></tr>
             </thead>
@@ -317,8 +318,8 @@ onMounted(fetchInstrument)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="editDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveInstrument">保存</v-btn>
+          <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveInstrument">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

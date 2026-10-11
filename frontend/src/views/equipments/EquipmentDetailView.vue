@@ -176,7 +176,7 @@ onMounted(fetchEquipment)
           <v-card v-for="regulation in equipment.regulations" :key="regulation.id" variant="outlined" class="mb-3">
             <v-card-title class="text-subtitle-1"><RegulationChip :regulation="regulation" size="default" /></v-card-title>
             <v-card-subtitle>{{ regulation.law_name }}</v-card-subtitle>
-            <v-table density="compact">
+            <v-table density="compact" class="pk-data-table">
               <thead>
                 <tr>
                   <th>法定検査</th>
@@ -270,8 +270,8 @@ onMounted(fetchEquipment)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="editDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveEquipment">保存</v-btn>
+          <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveEquipment">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -290,8 +290,8 @@ onMounted(fetchEquipment)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="assignDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveAssignment">追加</v-btn>
+          <v-btn variant="text" @click="assignDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveAssignment">追加</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

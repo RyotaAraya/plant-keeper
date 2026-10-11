@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
@@ -17,6 +18,8 @@ const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 const users = ref<any[]>([])
 const { departments, load: loadSiteOptions } = useSiteScopeOptions({ withEquipments: false })
 const loading = ref(false)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 
 type Filters = {
   site_ids: number[]
@@ -105,6 +108,7 @@ const fetchUsersGuard = latestGuard()
 async function fetchUsers() {
   const isLatest = fetchUsersGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = {}
     if (filters.value.site_ids.length) params.site_ids = filters.value.site_ids
@@ -116,6 +120,9 @@ async function fetchUsers() {
     const res = await api.get('/users', { params })
     if (!isLatest()) return
     users.value = res.data.data
+    totalCount.value = res.data.meta?.total_count ?? res.data.data.length
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -167,7 +174,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 220px"
+        class="pk-filter-search"
       />
       <v-select
         v-model="filters.employment_type"
@@ -178,7 +185,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 140px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.system_role"
@@ -189,7 +196,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 120px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.department_id"
@@ -200,11 +207,13 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 320px"
+        class="pk-filter-select pk-filter-select--wide"
       />
       <v-switch v-model="filters.show_inactive" label="退職者表示" density="compact" hide-details />
       <FilterResetButton @reset="reset" />
     </div>
+
+    <ListCount :total="totalCount" :shown="users.length" :loading="loading" :error="loadError" />
 
     <v-data-table
       v-model:page="tablePage"

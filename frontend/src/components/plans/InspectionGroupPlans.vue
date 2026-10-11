@@ -51,7 +51,7 @@ onMounted(load)
   <div class="pk-group-plans" :data-testid="`group-plans-${group.id}`">
     <div v-if="loading" class="text-medium-emphasis text-body-2 pa-2">読み込み中…</div>
     <div v-else-if="!plans.length" class="text-medium-emphasis text-body-2 pa-2">有効な計画はありません。</div>
-    <v-table v-else density="compact">
+    <v-table v-else density="compact" class="pk-data-table">
       <thead>
         <tr>
           <th style="width: 200px">期限</th>

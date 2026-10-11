@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
+import ListCount from '@/components/ListCount.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -22,6 +23,8 @@ const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 // 条件は保存して、開き直したときに戻す。ほかの画面のリンク（ホームの ?bypass_state=overdue など）から来たときは、保存した条件を混ぜない
 type Filters = { site_ids: number[]; bypass_state: string | null; q: string }
 const saved = useSavedFilters<Filters>('interlocks', {
@@ -60,7 +63,7 @@ function reset() {
 }
 
 const headers = [
-  { title: '番号', key: 'tag_number', width: '90px' },
+  { title: '番号', key: 'tag_number', minWidth: '90px' },
   { title: '名称', key: 'name', minWidth: '200px' },
   { title: 'バイパス', key: 'open_bypass', sortable: false, minWidth: '260px' },
   { title: '設備', key: 'equipment.name', minWidth: '140px' },
@@ -81,6 +84,7 @@ const fetchGuard = latestGuard()
 async function fetchInterlocks() {
   const isLatest = fetchGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: Record<string, unknown> = { per_page: 500 }
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
@@ -89,6 +93,9 @@ async function fetchInterlocks() {
     const res = await api.get('/interlocks', { params })
     if (!isLatest()) return
     interlocks.value = res.data.data
+    totalCount.value = res.data.meta?.total_count ?? res.data.data.length
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -124,6 +131,7 @@ watch(currentFilters, (value) => {
     <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
       <v-divider vertical class="pk-scope-divider" />
+      <v-text-field v-model="search" label="番号・名称・計器のタグ番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" class="pk-filter-search" />
       <v-select
         v-model="bypassState"
         :items="BYPASS_STATE_OPTIONS"
@@ -131,13 +139,15 @@ watch(currentFilters, (value) => {
         density="compact"
         hide-details
         clearable
-        style="max-width: 240px"
+        class="pk-filter-select pk-filter-select--wide"
         data-testid="bypass-state-filter"
       />
-      <v-text-field v-model="search" label="番号・名称・計器のタグ番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" style="max-width: 300px" />
-      <span class="text-caption text-medium-emphasis">バイパス中 {{ summary.bypassed }}件</span>
       <FilterResetButton @reset="reset" />
     </div>
+
+    <ListCount :total="totalCount" :shown="interlocks.length" :loading="loading" :error="loadError">
+      ／ バイパス中 <strong>{{ summary.bypassed }}</strong>件
+    </ListCount>
 
     <v-data-table
       v-model:page="tablePage"

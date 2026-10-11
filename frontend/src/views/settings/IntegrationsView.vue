@@ -166,7 +166,7 @@ onMounted(fetchTokens)
 
     <v-card>
       <v-card-title class="text-subtitle-1">発行したトークン</v-card-title>
-      <v-table density="comfortable" data-testid="integration-tokens">
+      <v-table density="comfortable" class="pk-data-table" data-testid="integration-tokens">
         <thead>
           <tr class="text-no-wrap"><th>名前</th><th>拠点</th><th>トークン</th><th>発行</th><th>最後に使った日時</th><th>状態</th><th /></tr>
         </thead>

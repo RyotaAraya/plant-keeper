@@ -116,7 +116,8 @@ for (const mobile of [false, true]) {
       await expect(page.getByTestId('inspection-saved')).toContainText('点検を提出しました')
       const currentPlan = (await data.member.get(`/inspection_plans/${data.plan.id}`)).data
       expect(currentPlan.next_due_on > todayForInput()).toBeTruthy()
-      await expect(page.getByTestId('inspection-plan-context')).toContainText(currentPlan.next_due_on)
+      // 画面の暦日は YYYY/MM/DD（#166）
+      await expect(page.getByTestId('inspection-plan-context')).toContainText(currentPlan.next_due_on.replaceAll('-', '/'))
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       expect(overflow).toBeLessThanOrEqual(1)
       await page.getByTestId('inspection-saved').getByRole('link', { name: 'ホームに戻る' }).click()

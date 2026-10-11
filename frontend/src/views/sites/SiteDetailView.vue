@@ -8,6 +8,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { invalidateActiveSites } from '@/composables/useSiteScope'
+import { formatDay } from '@/utils/datetime'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +83,7 @@ onMounted(fetchSite)
           <dl class="pk-summary__grid">
             <div><dt>所在県</dt><dd>{{ site.prefecture }}</dd></div>
             <div class="pk-summary__wide"><dt>住所</dt><dd>{{ site.address }}</dd></div>
-            <div v-if="site.closed_on"><dt>閉鎖日</dt><dd>{{ site.closed_on }}</dd></div>
+            <div v-if="site.closed_on"><dt>閉鎖日</dt><dd>{{ formatDay(site.closed_on) }}</dd></div>
             <div><dt>設備数</dt><dd class="pk-mono">{{ site.equipments_count }}</dd></div>
             <div><dt>倉庫数</dt><dd class="pk-mono">{{ site.warehouses_count }}</dd></div>
           </dl>
@@ -126,8 +127,8 @@ onMounted(fetchSite)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="editDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveSite">保存</v-btn>
+          <v-btn variant="text" @click="editDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveSite">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

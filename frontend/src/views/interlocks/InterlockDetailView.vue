@@ -108,7 +108,7 @@ onMounted(fetchInterlock)
 
       <v-window v-model="tab">
         <v-window-item value="bypasses">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr class="text-no-wrap">
                 <th>申請番号</th>

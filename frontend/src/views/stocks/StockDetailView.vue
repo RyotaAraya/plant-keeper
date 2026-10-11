@@ -8,7 +8,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import { useDetailTab } from '@/composables/useDetailTab'
 import { usePermissions } from '@/composables/usePermissions'
 import { canTransactStock } from '@/constants/stock'
-import { nowForInput } from '@/utils/datetime'
+import { formatDay, nowForInput } from '@/utils/datetime'
 
 const route = useRoute()
 const { canManageStockTransaction } = usePermissions()
@@ -126,7 +126,7 @@ onMounted(() => {
             <div><dt>型番</dt><dd>{{ stock.material?.part_number }}</dd></div>
             <div><dt>倉庫</dt><dd>{{ stock.warehouse?.name }}</dd></div>
             <div><dt>数量</dt><dd class="text-h6">{{ stock.quantity }}</dd></div>
-            <div><dt>購入日</dt><dd>{{ stock.purchased_on || '—' }}</dd></div>
+            <div><dt>購入日</dt><dd>{{ formatDay(stock.purchased_on) }}</dd></div>
             <div><dt>シリアル番号</dt><dd>{{ stock.serial_number || '—' }}</dd></div>
             <div v-if="stock.notes" class="pk-summary__wide"><dt>備考</dt><dd style="white-space: pre-wrap">{{ stock.notes }}</dd></div>
           </dl>
@@ -139,7 +139,7 @@ onMounted(() => {
       </v-tabs>
       <v-window v-model="tab">
         <v-window-item value="transactions">
-          <v-table v-if="stock.stock_transactions?.length" density="compact">
+          <v-table v-if="stock.stock_transactions?.length" density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th width="160">日時</th>
@@ -167,7 +167,7 @@ onMounted(() => {
         </v-window-item>
 
         <v-window-item v-if="stock.repairs?.length" value="repairs">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th width="100">ステータス</th>
@@ -182,8 +182,8 @@ onMounted(() => {
               <tr v-for="r in stock.repairs" :key="r.id">
                 <td>{{ repairStatusLabel[r.status] || r.status }}</td>
                 <td>{{ r.repair_vendor || '—' }}</td>
-                <td>{{ r.shipped_on || '—' }}</td>
-                <td>{{ r.completed_on || '—' }}</td>
+                <td class="text-no-wrap">{{ formatDay(r.shipped_on) }}</td>
+                <td class="text-no-wrap">{{ formatDay(r.completed_on) }}</td>
                 <td>{{ r.repair_cost ? `¥${r.repair_cost.toLocaleString()}` : '—' }}</td>
                 <td>{{ r.requested_by?.name }}</td>
               </tr>
@@ -216,8 +216,8 @@ onMounted(() => {
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn @click="txDialog = false">キャンセル</v-btn>
-            <v-btn color="primary" @click="saveTx">実行</v-btn>
+            <v-btn variant="text" @click="txDialog = false">キャンセル</v-btn>
+            <v-btn color="primary" variant="flat" @click="saveTx">実行</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

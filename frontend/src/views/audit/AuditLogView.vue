@@ -5,6 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
@@ -18,7 +19,7 @@ const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 const logs = ref<any[]>([])
 const loading = ref(false)
 const exporting = ref(false)
-const totalCount = ref(0)
+const totalCount = ref<number | null>(null)
 const apiError = ref<string | null>(null)
 
 // 一覧の表示は新しい順に最大1000件。CSV出力は条件に合う全件
@@ -117,7 +118,7 @@ async function fetchLogs() {
     if (!isLatest()) return
     apiError.value = e.response?.data?.error || e.response?.data?.errors?.join('、') || 'ログの取得に失敗しました'
     logs.value = []
-    totalCount.value = 0
+    totalCount.value = null
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -202,16 +203,16 @@ watch(filters, (value) => {
         label="開始日"
         density="compact"
         hide-details
-        style="max-width: 170px"
+        class="pk-filter-date"
       />
-      <span class="text-medium-emphasis" aria-hidden="true">〜</span>
+      <span class="pk-filter-range-sep text-medium-emphasis" aria-hidden="true">〜</span>
       <v-text-field
         v-model="filters.to"
         type="date"
         label="終了日"
         density="compact"
         hide-details
-        style="max-width: 170px"
+        class="pk-filter-date"
       />
       <v-select
         v-model="filters.action"
@@ -222,7 +223,7 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 160px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.auditable_type"
@@ -233,15 +234,17 @@ watch(filters, (value) => {
         clearable
         density="compact"
         hide-details
-        style="max-width: 200px"
+        class="pk-filter-select"
       />
       <FilterResetButton @reset="reset" />
     </div>
 
     <v-alert v-if="apiError" type="error" density="compact" class="mb-4">{{ apiError }}</v-alert>
-    <v-alert v-else-if="totalCount > logs.length" type="info" variant="tonal" density="compact" class="mb-4">
+    <v-alert v-else-if="totalCount !== null && totalCount > logs.length" type="info" variant="tonal" density="compact" class="mb-4">
       条件に合う記録は{{ totalCount }}件あります。新しい順に{{ logs.length }}件を表示しています。期間などで絞り込むか、CSVで全件を出力してください。
     </v-alert>
+    <!-- 表示上限の案内は上の欄で出すため、件数には「うちM件を表示」を添えない。取得の失敗も上の欄で出す -->
+    <ListCount v-if="!apiError" :total="totalCount" :shown="logs.length" :loading="loading" :partial="false" />
 
     <v-data-table
       v-model:page="tablePage"

@@ -43,15 +43,15 @@ test('点検計画の追加で設備を選ぶと、適用される法定検査�
   await expect(dialog.getByLabel('計画名')).not.toHaveValue('')
 })
 
-// 適用法規は、設備台帳の新規作成・編集ダイアログからも選べる（保存まではしない。保存はバックエンドのテストが検証）
-test('設備台帳の新規作成・編集ダイアログで適用法規を選べ、編集では現在の区分が選択済みになっている', async ({ page }) => {
+// 適用法規は、設備台帳の新規登録・編集ダイアログからも選べる（保存まではしない。保存はバックエンドのテストが検証）
+test('設備台帳の新規登録・編集ダイアログで適用法規を選べ、編集では現在の区分が選択済みになっている', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.getByRole('link', { name: '設備台帳', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '設備台帳' })).toBeVisible()
   const dialog = page.getByRole('dialog')
 
-  await test.step('新規作成では未選択で、選択肢に設備向けの法規区分が出る（計器単位の計量法は出ない）', async () => {
-    await page.getByRole('button', { name: '新規作成' }).click()
+  await test.step('新規登録では未選択で、選択肢に設備向けの法規区分が出る（計器単位の計量法は出ない）', async () => {
+    await page.getByRole('button', { name: '新規登録' }).click()
     await expect(dialog.getByLabel('適用法規')).toBeVisible()
     await dialog.locator('.v-field', { has: page.getByLabel('適用法規') }).click()
     await expect(page.getByRole('option', { name: /高圧ガス製造施設/ })).toBeVisible()
