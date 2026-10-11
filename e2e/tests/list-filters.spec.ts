@@ -57,6 +57,17 @@ for (const { path, heading, label } of PAGES) {
   })
 }
 
+test('リセットすると、表のページも先頭に戻る', async ({ page }) => {
+  await login(page, ACCOUNTS.admin)
+  await page.goto('/audit-logs')
+  const footer = page.locator('.v-data-table-footer__info')
+  await expect(footer).toContainText(/^1-\d+ 件目/)
+  await page.locator('.v-data-table-footer').getByRole('button', { name: '次のページ' }).click()
+  await expect(footer).not.toContainText(/^1-\d+ 件目/)
+  await page.getByTestId('filter-reset').click()
+  await expect(footer).toContainText(/^1-\d+ 件目/)
+})
+
 test('設備台帳・拠点管理・部署管理も、選んだ条件を保存してリセットで戻す', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   const site = page.getByRole('button', { name: '表示する拠点を選ぶ' })
@@ -228,6 +239,39 @@ test('トラブル: ステータスの全解除を保存し、リンクの条件
   await switchUser(page, ACCOUNTS.member)
   await page.goto('/troubles')
   await expect(field(page, '優先度')).toContainText('緊急')
+})
+
+test('リンクで開いたあとに条件を変えると、URL からリンクの条件が外れ、再読み込み・戻るでもいまの条件で開く', async ({ page }) => {
+  await login(page, ACCOUNTS.member)
+
+  // トラブル: 完了だけのリンク → 優先度を足すと、URL はクエリなしになり、完了 × 緊急のまま開き直せる
+  await page.goto('/troubles?status=closed&site_ids=all')
+  await selectOption(page, '優先度', '緊急')
+  await expect(page).toHaveURL(/\/troubles$/)
+  await page.reload()
+  await expect(field(page, 'ステータス')).toContainText('完了')
+  await expect(field(page, '優先度')).toContainText('緊急')
+  await expect(page.getByRole('button', { name: '表示する拠点を選ぶ' })).toContainText('全拠点')
+
+  // 計器の一時的な絞り込みは URL に残し、チップで外すと URL からも外れる
+  await page.goto('/troubles?instrument_id=1&site_ids=all')
+  await selectOption(page, '優先度', '高')
+  await expect(page).toHaveURL(/\/troubles\?instrument_id=1$/)
+  await page.reload()
+  await expect(page.getByTestId('instrument-filter-chip')).toBeVisible()
+  await expect(field(page, '優先度')).toContainText('高')
+  await page.getByTestId('instrument-filter-chip').getByRole('button').click()
+  await expect(page).toHaveURL(/\/troubles$/)
+  await expect(page.getByTestId('instrument-filter-chip')).toHaveCount(0)
+
+  // 計画: ホームの期限超過のリンク → 法規区分で絞ってから点検に進んでも、戻ると両方の条件のまま
+  await page.goto('/plans?tab=due&overdue=true')
+  await selectOption(page, '点検の法規区分', 'ボイラー・第一種圧力容器')
+  await expect(page).toHaveURL(/\/plans\?tab=due$/)
+  await page.goto('/home')
+  await page.goBack()
+  await expect(page.getByLabel('期限超過のみ')).toBeChecked()
+  await expect(field(page, '点検の法規区分')).toContainText('ボイラー・第一種圧力容器')
 })
 
 test('保存データが壊れている・型が違う・localStorage が使えないときも、既定の条件で一覧を使える', async ({ page, request }) => {

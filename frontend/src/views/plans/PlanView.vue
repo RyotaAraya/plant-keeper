@@ -17,7 +17,7 @@ import MaintenanceCreateDialog from '@/components/plans/MaintenanceCreateDialog.
 import PlanTabs, { PLAN_TABS, type PlanTab } from '@/components/plans/PlanTabs.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
 import { MAINTENANCE_STATUS_LABEL, periodLabel } from '@/constants/maintenanceStatus'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
@@ -140,6 +140,7 @@ const series = ref<any[]>([])
 const maintenances = ref<any[]>([])
 const maintenanceLoading = ref(false)
 const expandedMaintenance = ref<string[]>([])
+const maintenancePage = ref(1)
 const maintenanceGuard = latestGuard()
 const maintenanceHeaders = [
   { title: '予定期間', key: 'period', sortable: false, width: '190px' },
@@ -263,9 +264,10 @@ function applyRoute() {
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す。表示（タブ・見方）はそのまま
 function reset() {
+  maintenancePage.value = 1
+  dueList.value?.firstPage()
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ path: '/plans', query: withoutQueryConditions(route.query) })
-  else applyRoute()
+  if (!saved.clearQuery()) applyRoute()
 }
 
 // --- 追加・編集 ---
@@ -298,6 +300,7 @@ watch(
   (query, previous) => {
     if (route.path !== '/plans') return
     tab.value = tabFromQuery()
+    if (saved.isOwnReplace(query)) return
     if (JSON.stringify({ ...query, tab: undefined }) !== JSON.stringify({ ...previous, tab: undefined })) applyRoute()
   },
 )
@@ -428,6 +431,7 @@ void loadRegulations()
         <p v-if="narrowedToGroups" class="text-body-2 text-medium-emphasis mb-2">点検の担当部署・法規区分は、下の定期整備には適用されません。</p>
         <v-data-table
           v-model:expanded="expandedMaintenance"
+          v-model:page="maintenancePage"
           :headers="maintenanceHeaders"
           :items="maintenanceRows"
           :loading="maintenanceLoading"

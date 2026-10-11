@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { downloadCsv } from '@/utils/csv'
 import { monthsAgoForInput, todayForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
-const router = useRouter()
 const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const logs = ref<any[]>([])
@@ -82,9 +81,13 @@ const filters = ref<Filters>(initialFilters())
 saved.hold(filters.value)
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・直近1か月）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   filters.value = defaults(ownSiteIds())
   saved.hold(filters.value)
 }
@@ -241,6 +244,7 @@ watch(filters, (value) => {
     </v-alert>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="logs"
       :loading="loading"

@@ -9,7 +9,7 @@ import InstrumentCalibrationFields from '@/components/InstrumentCalibrationField
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { inSites, keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
@@ -71,9 +71,13 @@ const currentFilters = computed<Filters>(() => ({
 }))
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   const next: Filters = { site_ids: ownSiteIds(), q: '', equipment_ids: [], service_ids: [], line_class_ids: [], diagnostic_statuses: [] }
   saved.hold(next)
   selectedSiteIds.value = next.site_ids
@@ -258,6 +262,7 @@ onMounted(() => {
 
     <!-- テーブル -->
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="instruments"
       :loading="loading"

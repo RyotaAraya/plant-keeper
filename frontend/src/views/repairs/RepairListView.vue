@@ -8,7 +8,7 @@ import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { listFromQuery } from '@/utils/listQuery'
@@ -45,7 +45,7 @@ saved.hold(filters.value)
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
 function reset() {
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   filters.value = { site_ids: ownSiteIds(), statuses: [] }
   saved.hold(filters.value)
 }

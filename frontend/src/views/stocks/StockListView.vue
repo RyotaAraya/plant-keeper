@@ -8,7 +8,7 @@ import FilterSelect from '@/components/FilterSelect.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { canTransactStock } from '@/constants/stock'
@@ -42,9 +42,13 @@ const filters = ref<Filters>(initialFilters())
 saved.hold(filters.value)
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   filters.value = { site_ids: ownSiteIds(), warehouse_ids: [], statuses: [] }
   saved.hold(filters.value)
   void fetchWarehouses(filters.value.site_ids)
@@ -178,6 +182,7 @@ watch(filters, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="stocks"
       :loading="loading"

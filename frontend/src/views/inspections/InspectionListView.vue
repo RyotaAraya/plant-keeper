@@ -12,7 +12,7 @@ import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import { inspectionName } from '@/utils/inspectionWorkflow'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { inspectionTypeLabel } from '@/constants/recordLabels'
@@ -70,7 +70,7 @@ const saved = useSavedFilters<Filters>('inspections', {
   department_id: 'id',
   inspection_types: { type: 'strings', values: inspectionTypeOptions.map((o) => o.value) },
   statuses: { type: 'strings', values: statusOptions.map((o) => o.value) },
-})
+}, { linkOnly: (): Record<string, string> => (filters.value.instrument_id ? { instrument_id: String(filters.value.instrument_id) } : {}) })
 
 // 通常は既定（自拠点・絞り込みなし）＋保存した条件。ほかの画面のリンクから検索条件付きで来たときは、
 // 保存した条件を混ぜず、そのリンクの拠点・ステータス・部署・計器で開く（保存した設備などで目的の記録が隠れないように）
@@ -93,7 +93,7 @@ function filtersForRoute(): Filters {
     statuses: [],
     ...stored,
     site_ids: savedSiteIds(stored.site_ids),
-    instrument_id: null,
+    instrument_id: idFromQuery(route.query.instrument_id),
   }
 }
 
@@ -163,19 +163,25 @@ function changeSite(siteIds: number[]) {
 }
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す。見方（タブ）はそのまま
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) {
-    void router.replace({ query: withoutQueryConditions(route.query) })
-    return
-  }
-  applyRoute()
+  if (!saved.clearQuery()) applyRoute()
 }
 
 function applyRoute() {
   filters.value = filtersForRoute()
   saved.hold(filters.value)
   void loadOptions(filters.value.site_ids)
+}
+
+// 計器の一時的な絞り込みを外す（URL からも外し、ほかの条件はいまの値で保存する）
+function clearInstrument() {
+  filters.value = { ...filters.value, instrument_id: null }
+  saved.save(filters.value, { force: true })
 }
 
 function goToDetail(row: any) {
@@ -194,7 +200,7 @@ watch(filters, (value) => {
 // 見方（view）だけが変わったときは、絞り込みはそのままで取り直す。
 // それ以外でクエリが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、画面は使い回されるので、クエリに合わせ直す
 watch(() => route.query, (query, previous) => {
-  if (route.path !== '/inspections') return
+  if (route.path !== '/inspections' || saved.isOwnReplace(query)) return
   if (JSON.stringify({ ...query, view: undefined }) === JSON.stringify({ ...previous, view: undefined })) {
     void fetchInspections()
     return
@@ -235,7 +241,7 @@ watch(() => route.query, (query, previous) => {
       />
       <FilterSelect v-model="filters.inspection_types" :items="inspectionTypeOptions" label="種別" style="max-width: 200px" />
       <FilterSelect v-if="view === 'all'" v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
-      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="clearInstrument" />
       <FilterResetButton @reset="reset" />
     </div>
 
@@ -243,6 +249,7 @@ watch(() => route.query, (query, previous) => {
     <p v-else-if="view === 'approvals'" class="text-body-2 text-medium-emphasis mb-2">承認依頼中の記録です。</p>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="inspections"
       :loading="loading"

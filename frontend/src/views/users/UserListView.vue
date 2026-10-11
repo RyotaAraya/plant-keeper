@@ -6,7 +6,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { latestGuard } from '@/utils/latestGuard'
@@ -47,12 +47,16 @@ saved.hold(filters.value)
 const showInactive = computed(() => filters.value.show_inactive)
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・在籍者だけ）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   filters.value = defaults(ownSiteIds())
   saved.hold(filters.value)
-  void changeSite(filters.value.site_ids)
+  void loadSiteOptions(filters.value.site_ids).catch(() => {})
 }
 
 // 1行に収まる列だけにする。入社年は詳細画面で見られる。
@@ -136,9 +140,12 @@ function nameInitial(name: string) {
   return name.charAt(0)
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 保存した部署が選択肢になければ外す
-  void changeSite(filters.value.site_ids)
+  if (!(await loadSiteOptions(filters.value.site_ids).catch(() => false))) return
+  if (filters.value.department_id && !departments.value.some((d) => d.id === filters.value.department_id)) {
+    filters.value = { ...filters.value, department_id: null }
+  }
 })
 watch(filters, (value) => {
   saved.save(value)
@@ -200,6 +207,7 @@ watch(filters, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="users"
       :loading="loading"

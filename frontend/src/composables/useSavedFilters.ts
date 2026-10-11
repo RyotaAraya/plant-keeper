@@ -1,4 +1,4 @@
-import type { LocationQuery } from 'vue-router'
+import { useRoute, useRouter, type LocationQuery } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 // 一覧の検索条件を、ユーザ・ページごとにブラウザ（localStorage）へ保存して、開き直したときに戻す。
@@ -44,21 +44,29 @@ export function sanitizeFilters(raw: unknown, schema: FilterSchema): Record<stri
   return result
 }
 
-// URL に検索条件があるか（`view`・`tab` は表示の切り替えで、検索条件ではない）
-const NON_CONDITION_KEYS = ['view', 'tab']
+// URL に検索条件があるか。`view`・`tab` は表示の切り替え、`instrument_id` は計器の「すべて見る」から来たときだけの一時的な絞り込みで、
+// どちらも保存した条件と一緒に使う（計器の絞り込みは保存しない）。それ以外のクエリがあれば、保存した条件を混ぜずにリンクの条件で開く
+const VIEW_KEYS = ['view', 'tab']
+const LINK_ONLY_KEYS = ['instrument_id']
 export function hasQueryConditions(query: LocationQuery): boolean {
-  return Object.keys(query).some((key) => !NON_CONDITION_KEYS.includes(key))
+  return Object.keys(query).some((key) => !VIEW_KEYS.includes(key) && !LINK_ONLY_KEYS.includes(key))
 }
 
-// URL から検索条件を外したクエリ（リセットで使う。`view`・`tab` は残す）
-export function withoutQueryConditions(query: LocationQuery): LocationQuery {
-  return Object.fromEntries(Object.entries(query).filter(([key]) => NON_CONDITION_KEYS.includes(key)))
+const pickQuery = (query: LocationQuery, keys: string[]): LocationQuery => Object.fromEntries(Object.entries(query).filter(([key]) => keys.includes(key)))
+const sameQuery = (a: LocationQuery, b: LocationQuery) => {
+  const sorted = (q: LocationQuery) => JSON.stringify(Object.entries(q).filter(([, v]) => v !== undefined).sort(([x], [y]) => x.localeCompare(y)))
+  return sorted(a) === sorted(b)
 }
 
-export function useSavedFilters<T extends object>(page: string, schema: FilterSchema) {
+// options.linkOnly: いまの一時的な絞り込みをクエリにしたもの（計器の絞り込みを外したら、URL からも外す）
+export function useSavedFilters<T extends object>(page: string, schema: FilterSchema, options: { linkOnly?: () => Record<string, string> } = {}) {
   const authStore = useAuthStore()
+  const route = useRoute()
+  const router = useRouter()
   // 保存しない値（初期表示・URL・リセットで入れた値）。同じ値の変更通知では保存しない
   let held: string | null = null
+  // 自分で URL を書き換えたときの行き先（一覧のクエリの監視で、開き直しと区別する）
+  let replacedTo: LocationQuery | null = null
 
   // ユーザが確定する前は読み書きしない（別のユーザの条件と混ざらないように）
   const key = () => (authStore.user ? savedFiltersKey(authStore.user.id, page) : null)
@@ -75,10 +83,25 @@ export function useSavedFilters<T extends object>(page: string, schema: FilterSc
     }
   }
 
-  function save(values: T) {
+  function replaceQuery(query: LocationQuery): boolean {
+    if (sameQuery(query, route.query)) return false
+    replacedTo = query
+    void router.replace({ query })
+    return true
+  }
+
+  // ユーザが条件を変えたあとは、リンクの検索条件を URL から外す（いまの条件は保存してあるので、
+  // 点検から戻る・再読み込み・ブラウザの戻るで、リンクの条件に戻らず、いまの条件で開く）。計器の一時的な絞り込みは残す
+  function releaseQuery() {
+    replaceQuery({ ...pickQuery(route.query, VIEW_KEYS), ...(options.linkOnly?.() ?? {}) })
+  }
+
+  // ユーザの操作による変更なら保存して、URL のリンクの条件を外す。force: 保存する項目が変わっていなくても（計器の絞り込みを外したときなど）
+  function save(values: T, { force = false } = {}) {
     const json = pick(values)
-    if (json === held) return
+    if (json === held && !force) return
     held = null
+    releaseQuery()
     const k = key()
     if (!k) return
     try {
@@ -102,5 +125,17 @@ export function useSavedFilters<T extends object>(page: string, schema: FilterSc
     }
   }
 
-  return { load, save, hold, clear }
+  // リセット: URL から検索条件と一時的な絞り込みを外す（`view`・`tab` は残す）。URL を変えたら true
+  function clearQuery(): boolean {
+    return replaceQuery(pickQuery(route.query, VIEW_KEYS))
+  }
+
+  // 一覧のクエリの監視で、いまの変更が releaseQuery による書き換えか（そうなら、条件を合わせ直さない）
+  function isOwnReplace(query: LocationQuery): boolean {
+    const own = replacedTo !== null && sameQuery(query, replacedTo)
+    replacedTo = null
+    return own
+  }
+
+  return { load, save, hold, clear, clearQuery, isOwnReplace }
 }

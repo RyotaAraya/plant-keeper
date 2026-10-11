@@ -42,6 +42,7 @@ const { canManageReferenceStandard } = usePermissions()
 
 const plans = ref<InspectionPlan[]>([])
 const loading = ref(false)
+const page = ref(1)
 
 const headers = [
   { title: '期限', key: 'next_due_on', width: '190px' },
@@ -113,6 +114,7 @@ function startInspection(plan: InspectionPlan) {
 const dialog = ref(false)
 const workOrderDialog = ref(false)
 defineExpose({
+  firstPage: () => { page.value = 1 },
   openCreate: () => { dialog.value = true },
   openWorkOrder: () => { workOrderDialog.value = true },
 })
@@ -125,6 +127,7 @@ watch(() => JSON.stringify(params.value), fetchPlans, { immediate: true })
   <section aria-labelledby="plan-due-heading">
     <h2 id="plan-due-heading" class="pk-plan-heading">定期点検<span>点検の期限順（設備・計器ごとの点検計画）</span></h2>
     <v-data-table
+      v-model:page="page"
       :headers="headers"
       :items="plans"
       :loading="loading"

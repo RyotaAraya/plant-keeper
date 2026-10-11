@@ -5,7 +5,7 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
 import FilterResetButton from '@/components/FilterResetButton.vue'
 import RegulationChip from '@/components/RegulationChip.vue'
@@ -28,9 +28,13 @@ const initialSites = () => (hasQueryConditions(route.query) ? initialSiteIds(rou
 const selectedSiteIds = ref<number[]>(initialSites())
 saved.hold({ site_ids: selectedSiteIds.value })
 
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   selectedSiteIds.value = ownSiteIds()
   saved.hold({ site_ids: selectedSiteIds.value })
 }
@@ -130,6 +134,7 @@ watch(selectedSiteIds, (siteIds) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="equipments"
       :loading="loading"

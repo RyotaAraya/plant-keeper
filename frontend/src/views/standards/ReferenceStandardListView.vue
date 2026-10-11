@@ -10,7 +10,7 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import ReferenceStandardFormDialog from '@/components/ReferenceStandardFormDialog.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import type { ReferenceStandard } from '@/types/models'
@@ -51,9 +51,13 @@ const search = ref(initial.q)
 const currentFilters = computed<Filters>(() => ({ site_ids: selectedSiteIds.value, statuses: statuses.value, categories: categories.value, q: search.value ?? '' }))
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
+  saved.clearQuery()
   const next = defaults(ownSiteIds())
   saved.hold(next)
   selectedSiteIds.value = next.site_ids
@@ -129,6 +133,7 @@ watch(currentFilters, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="standards"
       :loading="loading"

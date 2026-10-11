@@ -24,7 +24,11 @@ const saved = useSavedFilters<{ status: string | null }>('orders', {
 const filters = ref<{ status: string | null }>({ status: null, ...saved.load() })
 saved.hold(filters.value)
 
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
   filters.value = { status: null }
   saved.hold(filters.value)
@@ -194,6 +198,7 @@ watch(filters, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="orders"
       :loading="loading"

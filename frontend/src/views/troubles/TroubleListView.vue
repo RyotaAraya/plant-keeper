@@ -9,7 +9,7 @@ import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentFilterChip from '@/components/InstrumentFilterChip.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
-import { hasQueryConditions, useSavedFilters, withoutQueryConditions } from '@/composables/useSavedFilters'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScopeOptions } from '@/composables/useSiteScopeOptions'
 import { usePermissions } from '@/composables/usePermissions'
 import { keepInSites, keepOneInSites, useSiteScope } from '@/composables/useSiteScope'
@@ -60,7 +60,7 @@ const saved = useSavedFilters<Filters>('troubles', {
   department_id: 'id',
   statuses: { type: 'strings', values: statusOptions.map((o) => o.value) },
   priorities: { type: 'strings', values: priorityOptions.map((o) => o.value) },
-})
+}, { linkOnly: (): Record<string, string> => (filters.value.instrument_id ? { instrument_id: String(filters.value.instrument_id) } : {}) })
 
 // 通常は既定（自拠点・完了を除くステータス）＋保存した条件。保存したステータスの全解除（空）は、全件の表示としてそのまま戻す。
 // ほかの画面のリンクから検索条件付きで来たときは、保存した条件を混ぜず、その拠点・ステータス・優先度・部署・計器で開く。
@@ -86,7 +86,7 @@ function filtersForRoute(): Filters {
     priorities: [],
     ...stored,
     site_ids: savedSiteIds(stored.site_ids),
-    instrument_id: null,
+    instrument_id: idFromQuery(route.query.instrument_id),
   }
 }
 
@@ -167,10 +167,13 @@ function applyRoute() {
 }
 
 // 保存した条件とURLの検索条件を消し、既定（自拠点・完了を除くステータス）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
-  if (hasQueryConditions(route.query)) void router.replace({ query: withoutQueryConditions(route.query) })
-  else applyRoute()
+  if (!saved.clearQuery()) applyRoute()
 }
 
 async function fetchInstruments() {
@@ -203,6 +206,12 @@ async function save() {
   }
 }
 
+// 計器の一時的な絞り込みを外す（URL からも外し、ほかの条件はいまの値で保存する）
+function clearInstrument() {
+  filters.value = { ...filters.value, instrument_id: null }
+  saved.save(filters.value, { force: true })
+}
+
 function goToDetail(row: any) {
   router.push(`/troubles/${row.id}`)
 }
@@ -218,8 +227,8 @@ watch(filters, (value) => {
 
 // 同じ一覧のままクエリだけが変わったとき（計器で絞り込み中に、サイドバーから開き直したときなど）は、
 // 画面は使い回されるので、クエリの絞り込みに合わせ直す（クエリがなければ、既定＋保存した条件）
-watch(() => route.query, () => {
-  if (route.path !== '/troubles') return
+watch(() => route.query, (query) => {
+  if (route.path !== '/troubles' || saved.isOwnReplace(query)) return
   applyRoute()
 })
 </script>
@@ -256,11 +265,12 @@ watch(() => route.query, () => {
       />
       <FilterSelect v-model="filters.statuses" :items="statusOptions" label="ステータス" style="max-width: 200px" />
       <FilterSelect v-model="filters.priorities" :items="priorityOptions" label="優先度" style="max-width: 200px" />
-      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="filters.instrument_id = null" />
+      <InstrumentFilterChip v-if="filters.instrument_id" :instrument-id="filters.instrument_id" @clear="clearInstrument" />
       <FilterResetButton @reset="reset" />
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="troubles"
       :loading="loading"

@@ -19,7 +19,11 @@ const saved = useSavedFilters<{ show_inactive: boolean }>('sites', { show_inacti
 const showInactive = ref(saved.load().show_inactive ?? false)
 saved.hold({ show_inactive: showInactive.value })
 
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
   showInactive.value = false
   saved.hold({ show_inactive: false })
@@ -102,6 +106,7 @@ watch(showInactive, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="sites"
       :loading="loading"

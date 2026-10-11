@@ -33,7 +33,11 @@ const saved = useSavedFilters<Filters>('materials', {
 const filters = ref<Filters>({ ...defaultFilters(), ...saved.load() })
 saved.hold(filters.value)
 
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
 function reset() {
+  tablePage.value = 1
   saved.clear()
   filters.value = defaultFilters()
   saved.hold(filters.value)
@@ -259,6 +263,7 @@ watch(filters, (value) => {
     </div>
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="rows"
       :loading="loading"
