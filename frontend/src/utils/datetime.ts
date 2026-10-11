@@ -20,3 +20,20 @@ export function monthsAgoForInput(months: number, d: Date = new Date()): string 
   target.setDate(Math.min(d.getDate(), lastDay))
   return todayForInput(target)
 }
+
+// 記録の表示用。端末の時刻帯にかかわらず、業務上の日本時間の日付で表示する。
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+}
+
+// 一覧・詳細の暦日の表示（YYYY/MM/DD。#166）。暦日の文字列（'YYYY-MM-DD'）は時刻帯で日付をずらさずに区切りだけ変え、
+// 日時は formatDate と同じく日本時間の日付にする。空は「—」（0 や意味のある状態の文言は呼び出し側で扱う）
+export function formatDay(value: string | null | undefined): string {
+  if (!value) return '—'
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (day) return `${day[1]}/${day[2]}/${day[3]}`
+  return formatDate(value) || '—'
+}

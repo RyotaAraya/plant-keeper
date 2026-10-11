@@ -1,17 +1,20 @@
 <script setup lang="ts">
 // 一覧の絞り込み用の複数選択。未選択は「絞り込まない」。
 // 選んだ項目は先頭の1つだけ表示し、残りは「ほか N」にまとめる（狭い絞り込みの行でも折り返さないため）。
-// 選択肢が多いもの（設備など）は searchable で入力して探せる
+// 選択肢が多いもの（設備など）は searchable で入力して探せる。
+// 幅は main.css の .pk-filter-select が決める。ラベルが長いもの（「サービス・流体」など）は wide で広くする（スマホでは全幅）
 const props = withDefaults(defineProps<{
   items: any[]
   label: string
   itemTitle?: string
   itemValue?: string
   searchable?: boolean
+  wide?: boolean
 }>(), {
   itemTitle: 'title',
   itemValue: 'value',
   searchable: false,
+  wide: false,
 })
 
 const model = defineModel<any[]>({ default: () => [] })
@@ -29,7 +32,7 @@ const model = defineModel<any[]>({ default: () => [] })
     clearable
     density="compact"
     hide-details
-    class="pk-filter-select"
+    :class="['pk-filter-select', { 'pk-filter-select--wide': props.wide }]"
   >
     <template #selection="{ item, index }">
       <span v-if="index === 0" class="pk-filter-select__value">
@@ -41,10 +44,6 @@ const model = defineModel<any[]>({ default: () => [] })
 </template>
 
 <style scoped>
-.pk-filter-select {
-  min-width: 150px;
-}
-
 .pk-filter-select__value {
   display: inline-flex;
   align-items: baseline;

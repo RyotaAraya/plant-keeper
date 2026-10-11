@@ -25,7 +25,13 @@ export function useSiteScope() {
     return siteIdsFromQuery(query, ownSiteIds())
   }
 
-  return { ownSiteIds, initialSiteIds }
+  // 保存しておいた拠点（`useSavedFilters`）。保存がなければ所属拠点。拠点を切り替えられない人は、保存値によらず所属拠点
+  function savedSiteIds(saved: number[] | undefined): number[] {
+    if (!canViewSites.value || saved === undefined) return ownSiteIds()
+    return saved
+  }
+
+  return { ownSiteIds, initialSiteIds, savedSiteIds }
 }
 
 // 表示する拠点に含まれるか（空は全拠点なので、常に含まれる）

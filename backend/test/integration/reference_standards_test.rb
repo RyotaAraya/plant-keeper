@@ -171,10 +171,10 @@ class ReferenceStandardsTest < ActionDispatch::IntegrationTest
     department = create_department(site: @site)
     equipment = create_equipment(site: @site)
     [ 200, 100, 10 ].each do |days_ago|
-      inspection = Inspection.create!(user: @member, equipment: equipment, department: department, inspection_type: "periodic", status: "submitted", inspected_at: days_ago.days.ago)
+      inspection = Inspection.create!(user: @member, equipment: equipment, department: department, inspection_type: "periodic", status: "approval_requested", inspected_at: days_ago.days.ago)
       inspection.inspection_reference_standards.create!(reference_standard: standard, pre_check_passed: true)
     end
-    Inspection.create!(user: @member, equipment: equipment, department: department, inspection_type: "periodic", status: "submitted", inspected_at: 400.days.ago)
+    Inspection.create!(user: @member, equipment: equipment, department: department, inspection_type: "periodic", status: "approval_requested", inspected_at: 400.days.ago)
                  .inspection_reference_standards.create!(reference_standard: standard, pre_check_passed: true) # 合格した校正より前
 
     get "/api/v1/reference_standards/#{standard.id}", headers: auth_headers_for(@member)

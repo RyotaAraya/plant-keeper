@@ -10,23 +10,24 @@ export function useSiteScopeOptions({ withDepartments = true, withEquipments = t
   // 拠点を続けて切り替えると取得が重なるため、最新の取得だけを反映する
   let seq = 0
 
-  // siteIds が空のときは全拠点
-  async function load(siteIds: number[]) {
+  // siteIds が空のときは全拠点。選択肢を反映したら true（あとから始めた取得に追い越されたときは false。失敗は例外）
+  async function load(siteIds: number[]): Promise<boolean> {
     const current = ++seq
     const params = siteIds.length ? { site_ids: siteIds } : {}
     const [equipmentRes, departmentRes] = await Promise.all([
       withEquipments ? api.get('/equipments', { params: { ...params, per_page: 1000 } }) : Promise.resolve(null),
       withDepartments ? api.get('/departments', { params }) : Promise.resolve(null),
     ])
-    if (current !== seq) return
+    if (current !== seq) return false
 
     if (equipmentRes) equipments.value = equipmentRes.data.data
-    if (!departmentRes) return
+    if (!departmentRes) return true
 
     const singleSite = siteIds.length === 1
     departments.value = departmentRes.data.data
       .map((d: any) => ({ ...d, display_name: singleSite ? d.full_path : `${d.site?.name ?? ''} ${d.full_path}` }))
       .sort((a: any, b: any) => a.display_name.localeCompare(b.display_name, 'ja'))
+    return true
   }
 
   return { equipments, departments, load }

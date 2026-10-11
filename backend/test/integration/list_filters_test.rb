@@ -42,15 +42,15 @@ class ListFiltersTest < ActionDispatch::IntegrationTest
 
   test "点検は拠点・設備・種別・ステータスを複数指定して絞り込める" do
     a = create_inspection(@equipment_a, inspection_type: "routine", status: "draft")
-    b = create_inspection(@equipment_b, inspection_type: "periodic", status: "submitted")
-    c = create_inspection(@equipment_c, inspection_type: "routine", status: "submitted")
+    b = create_inspection(@equipment_b, inspection_type: "periodic", status: "approval_requested")
+    c = create_inspection(@equipment_c, inspection_type: "routine", status: "approval_requested")
 
     assert_ids [ a, b ], "/api/v1/inspections", site_ids: [ @site_a.id, @site_b.id ]
     assert_ids [ b ], "/api/v1/inspections", site_id: @site_b.id
     assert_ids [ a, c ], "/api/v1/inspections", equipment_ids: [ @equipment_a.id, @equipment_c.id ]
     assert_ids [ a, c ], "/api/v1/inspections", inspection_types: [ "routine", "telemetry" ]
-    assert_ids [ b, c ], "/api/v1/inspections", statuses: [ "submitted", "approved" ]
-    assert_ids [ c ], "/api/v1/inspections", site_ids: [ @site_b.id, @site_c.id ], statuses: [ "submitted" ], inspection_types: [ "routine" ]
+    assert_ids [ b, c ], "/api/v1/inspections", statuses: [ "approval_requested", "approved" ]
+    assert_ids [ c ], "/api/v1/inspections", site_ids: [ @site_b.id, @site_c.id ], statuses: [ "approval_requested" ], inspection_types: [ "routine" ]
   end
 
   test "トラブルは拠点・ステータス・優先度を複数指定して絞り込める" do

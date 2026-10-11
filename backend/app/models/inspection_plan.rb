@@ -81,6 +81,20 @@ class InspectionPlan < ApplicationRecord
     update!(last_inspected_on: inspected_on, next_due_on: inspected_on + interval_days)
   end
 
+  # 提出した点検が差し戻し・取り下げで下書きに戻ったとき、その点検で進めた期限を戻す。
+  # 前の期限は持っていないため、ほかに提出済みの点検があればその日から計算し、なければその点検日を期限にする（実施し直すまで期限を過ぎた扱い）
+  def revert_inspection!(inspection)
+    inspected_on = inspection.inspected_at.to_date
+    return unless last_inspected_on == inspected_on
+
+    latest = inspections.where.not(status: "draft").where.not(id: inspection.id).maximum(:inspected_at)&.to_date
+    if latest
+      update!(last_inspected_on: latest, next_due_on: latest + interval_days)
+    else
+      update!(last_inspected_on: nil, next_due_on: inspected_on)
+    end
+  end
+
   # 基準器の校正のように、次回期限が周期の計算ではなく校正の有効期限で決まるとき
   def reschedule!(last_inspected_on:, next_due_on:)
     update!(last_inspected_on: last_inspected_on, next_due_on: next_due_on)

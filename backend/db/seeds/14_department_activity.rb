@@ -65,7 +65,7 @@ def activity_kind_for(dept)
   end
 end
 
-inspection_statuses = %w[approved approved submitted approval_requested draft]
+inspection_statuses = %w[approved approved approval_requested approval_requested draft]
 
 # 末端（リーフ）部署のみ対象（子部署があれば子側でカバーされるため対象外）
 leaf_departments = Department.includes(:site, :children)
@@ -174,7 +174,7 @@ non_leaf_departments.each_with_index do |dept, idx|
     insp = Inspection.create!(
       user: user, equipment: eq, department: dept,
       inspection_type: inspection_type,
-      status: %w[approved submitted][i % 2],
+      status: %w[approved approval_requested][i % 2],
       inspected_at: (idx + i * 4 + 3).days.ago,
       notes: "#{dept.full_path}による総括点検。異常なし。"
     )

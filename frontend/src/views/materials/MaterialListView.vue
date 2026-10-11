@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useAuthStore } from '@/stores/auth'
 import { latestGuard } from '@/utils/latestGuard'
@@ -14,17 +17,33 @@ const authStore = useAuthStore()
 const materials = ref<any[]>([])
 const manufacturers = ref<any[]>([])
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
 
-const filters = ref({
-  q: '',
-  category: null as string | null,
-  manufacturer_id: null as number | null,
-  stock_availability: null as string | null,
+type Filters = { q: string; category: string | null; manufacturer_id: number | null; stock_availability: string | null }
+const defaultFilters = (): Filters => ({ q: '', category: null, manufacturer_id: null, stock_availability: null })
+// 条件は保存して、開き直したときに戻す（資材マスタは全拠点共通のため、拠点はない）
+const saved = useSavedFilters<Filters>('materials', {
+  q: { type: 'string' },
+  category: { type: 'string', values: ['instrument', 'valve', 'electrical', 'piping'] },
+  manufacturer_id: 'id',
+  stock_availability: { type: 'string', values: ['own', 'others_only', 'none'] },
 })
+const filters = ref<Filters>({ ...defaultFilters(), ...saved.load() })
+saved.hold(filters.value)
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  filters.value = defaultFilters()
+  saved.hold(filters.value)
+}
 
 const form = ref({
   manufacturer_id: null as number | null,
@@ -46,8 +65,6 @@ const form = ref({
 const headers = computed(() => [
   { title: '型番', key: 'part_number', width: '150px' },
   { title: '資材名', key: 'name', minWidth: '260px' },
-  { title: 'カテゴリ', key: 'category', width: '90px' },
-  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
   ...(canViewStocks.value
     ? [
         { title: '自拠点の在庫', key: 'own_stock', width: '110px', align: 'end' as const },
@@ -56,6 +73,8 @@ const headers = computed(() => [
     : []),
   { title: '入手性', key: 'availability', width: '80px' },
   { title: '危険物', key: 'is_hazardous', width: '70px' },
+  { title: 'カテゴリ', key: 'category', width: '90px' },
+  { title: 'メーカー', key: 'manufacturer.name', width: '120px' },
 ])
 
 const stockAvailabilityOptions = [
@@ -109,6 +128,7 @@ const fetchMaterialsGuard = latestGuard()
 async function fetchMaterials() {
   const isLatest = fetchMaterialsGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.q) params.q = filters.value.q
@@ -119,6 +139,8 @@ async function fetchMaterials() {
     if (!isLatest()) return
     materials.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -127,6 +149,9 @@ async function fetchMaterials() {
 async function fetchManufacturers() {
   const res = await api.get('/manufacturers')
   manufacturers.value = res.data.data
+  // 保存したメーカーが選択肢になければ外す
+  const id = filters.value.manufacturer_id
+  if (id && !manufacturers.value.some((m) => m.id === id)) filters.value = { ...filters.value, manufacturer_id: null }
 }
 
 function openDialog(item?: any) {
@@ -183,7 +208,10 @@ onMounted(() => {
   fetchManufacturers()
   fetchMaterials()
 })
-watch(filters, fetchMaterials, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchMaterials()
+}, { deep: true })
 </script>
 
 <template>
@@ -200,7 +228,7 @@ watch(filters, fetchMaterials, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 250px"
+        class="pk-filter-search"
       />
       <v-select
         v-model="filters.category"
@@ -211,7 +239,7 @@ watch(filters, fetchMaterials, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 140px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.manufacturer_id"
@@ -222,7 +250,7 @@ watch(filters, fetchMaterials, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 180px"
+        class="pk-filter-select"
       />
       <v-select
         v-if="canViewStocks"
@@ -234,11 +262,15 @@ watch(filters, fetchMaterials, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 290px"
+        class="pk-filter-select pk-filter-select--wide"
       />
+      <FilterResetButton @reset="reset" />
     </div>
 
+    <ListCount :total="totalCount" :shown="rows.length" :loading="loading" :error="loadError" />
+
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="rows"
       :loading="loading"
@@ -282,7 +314,7 @@ watch(filters, fetchMaterials, { deep: true })
 
     <v-dialog v-model="dialog" max-width="700">
       <v-card>
-        <v-card-title>{{ editingId ? '資材編集' : '資材登録' }}</v-card-title>
+        <v-card-title>{{ editingId ? '資材の編集' : '資材の登録' }}</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -331,8 +363,8 @@ watch(filters, fetchMaterials, { deep: true })
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">保存</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

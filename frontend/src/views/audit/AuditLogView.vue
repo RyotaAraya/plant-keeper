@@ -4,32 +4,31 @@ import { useRoute } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
 import { downloadCsv } from '@/utils/csv'
 import { monthsAgoForInput, todayForInput } from '@/utils/datetime'
 import { latestGuard } from '@/utils/latestGuard'
 
 const route = useRoute()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const logs = ref<any[]>([])
 const loading = ref(false)
 const exporting = ref(false)
-const totalCount = ref(0)
+const totalCount = ref<number | null>(null)
 const apiError = ref<string | null>(null)
 
 // 一覧の表示は新しい順に最大1000件。CSV出力は条件に合う全件
 const LIST_LIMIT = 1000
 
 // 通常業務では自拠点の変更だけ見ればよいため、自分の所属拠点を初期値にする（空は全拠点）。期間は直近1か月
-const filters = ref({
-  site_ids: initialSiteIds(route.query.site_ids),
-  from: monthsAgoForInput(1),
-  to: todayForInput(),
-  action: null as string | null,
-  auditable_type: null as string | null,
-})
+type Filters = { site_ids: number[]; from: string; to: string; action: string | null; auditable_type: string | null }
+// 期間の既定は、開いた（リセットした）時点の直近1か月
+const defaults = (siteIds: number[]): Filters => ({ site_ids: siteIds, from: monthsAgoForInput(1), to: todayForInput(), action: null, auditable_type: null })
 
 const headers = [
   { title: '日時', key: 'performed_at', width: '175px' },
@@ -65,6 +64,35 @@ const typeLabel: Record<string, string> = {
 }
 const typeOptions = Object.entries(typeLabel).map(([value, title]) => ({ title, value }))
 
+// 条件は保存して、開き直したときに戻す（ほかの画面のリンクで拠点を指定されたときは、保存した条件を混ぜない）
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+const saved = useSavedFilters<Filters>('audit-logs', {
+  site_ids: 'ids',
+  from: { type: 'string', pattern: DATE },
+  to: { type: 'string', pattern: DATE },
+  action: { type: 'string', values: actionOptions.map((o) => o.value) },
+  auditable_type: { type: 'string', values: typeOptions.map((o) => o.value) },
+})
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) return defaults(initialSiteIds(route.query.site_ids))
+  const stored = saved.load()
+  return { ...defaults([]), ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const filters = ref<Filters>(initialFilters())
+saved.hold(filters.value)
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・直近1か月）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  filters.value = defaults(ownSiteIds())
+  saved.hold(filters.value)
+}
+
 const fetchLogsGuard = latestGuard()
 
 function buildParams() {
@@ -90,7 +118,7 @@ async function fetchLogs() {
     if (!isLatest()) return
     apiError.value = e.response?.data?.error || e.response?.data?.errors?.join('、') || 'ログの取得に失敗しました'
     logs.value = []
-    totalCount.value = 0
+    totalCount.value = null
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -154,7 +182,10 @@ async function exportCsv() {
 }
 
 onMounted(fetchLogs)
-watch(filters, fetchLogs, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchLogs()
+}, { deep: true })
 </script>
 
 <template>
@@ -172,16 +203,16 @@ watch(filters, fetchLogs, { deep: true })
         label="開始日"
         density="compact"
         hide-details
-        style="max-width: 170px"
+        class="pk-filter-date"
       />
-      <span class="text-medium-emphasis" aria-hidden="true">〜</span>
+      <span class="pk-filter-range-sep text-medium-emphasis" aria-hidden="true">〜</span>
       <v-text-field
         v-model="filters.to"
         type="date"
         label="終了日"
         density="compact"
         hide-details
-        style="max-width: 170px"
+        class="pk-filter-date"
       />
       <v-select
         v-model="filters.action"
@@ -192,7 +223,7 @@ watch(filters, fetchLogs, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 160px"
+        class="pk-filter-select"
       />
       <v-select
         v-model="filters.auditable_type"
@@ -203,16 +234,20 @@ watch(filters, fetchLogs, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 200px"
+        class="pk-filter-select"
       />
+      <FilterResetButton @reset="reset" />
     </div>
 
     <v-alert v-if="apiError" type="error" density="compact" class="mb-4">{{ apiError }}</v-alert>
-    <v-alert v-else-if="totalCount > logs.length" type="info" variant="tonal" density="compact" class="mb-4">
+    <v-alert v-else-if="totalCount !== null && totalCount > logs.length" type="info" variant="tonal" density="compact" class="mb-4">
       条件に合う記録は{{ totalCount }}件あります。新しい順に{{ logs.length }}件を表示しています。期間などで絞り込むか、CSVで全件を出力してください。
     </v-alert>
+    <!-- 表示上限の案内は上の欄で出すため、件数には「うちM件を表示」を添えない。取得の失敗も上の欄で出す -->
+    <ListCount v-if="!apiError" :total="totalCount" :shown="logs.length" :loading="loading" :partial="false" />
 
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="logs"
       :loading="loading"

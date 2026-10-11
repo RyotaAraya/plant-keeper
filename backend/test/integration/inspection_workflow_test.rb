@@ -15,11 +15,11 @@ class InspectionWorkflowTest < ActionDispatch::IntegrationTest
                        inspected_at: 2.days.ago, inspection_type: "routine", status: "draft", **attrs)
   end
 
-  test "本人の下書きを日付をまたいで計画ごとに取得し、他人と提出済みを混ぜない" do
+  test "本人の下書きを日付をまたいで計画ごとに取得し、他人と承認待ちを混ぜない" do
     own = draft
     draft(user: @other)
     draft(plan: nil)
-    draft(status: "submitted")
+    draft(status: "approval_requested")
     get "/api/v1/inspections", params: { mine: "true", status: "draft", inspection_plan_id: @plan.id, user_id: @other.id }, headers: auth_headers_for(@member)
     assert_response :ok
     assert_equal [ own.id ], json["data"].map { |row| row["id"] }
@@ -64,7 +64,7 @@ class InspectionWorkflowTest < ActionDispatch::IntegrationTest
     record = draft
     headers = auth_headers_for(@member)
     assert_equal Date.current, @plan.reload.next_due_on
-    patch "/api/v1/inspections/#{record.id}", headers: headers, as: :json, params: { inspection: { status: "submitted" } }
+    patch "/api/v1/inspections/#{record.id}", headers: headers, as: :json, params: { inspection: { status: "approval_requested" } }
     assert_response :ok
     get "/api/v1/inspections/#{record.id}", headers: headers
     assert_response :ok
@@ -75,7 +75,7 @@ class InspectionWorkflowTest < ActionDispatch::IntegrationTest
   test "予定外の点検を提出しても同じ設備の計画の期限は進めない" do
     record = draft(plan: nil)
     headers = auth_headers_for(@member)
-    patch "/api/v1/inspections/#{record.id}", headers: headers, as: :json, params: { inspection: { status: "submitted" } }
+    patch "/api/v1/inspections/#{record.id}", headers: headers, as: :json, params: { inspection: { status: "approval_requested" } }
     assert_response :ok
     assert_equal Date.current, @plan.reload.next_due_on
     get "/api/v1/inspections/#{record.id}", headers: headers

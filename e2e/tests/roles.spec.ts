@@ -21,7 +21,7 @@ test('自社のマネージャーは管理系メニューと操作ボタンが�
   }
 
   await page.getByRole('link', { name: '設備台帳', exact: true }).click()
-  await expect(page.getByRole('button', { name: '新規作成' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '新規登録' })).toBeVisible()
 
   await openFirstTrouble(page)
   await expect(page.getByRole('button', { name: '編集' })).toBeVisible()
@@ -36,7 +36,7 @@ test('協力会社のマネージャーは自社限定メニューが使えず�
 
   await page.getByRole('link', { name: '設備台帳', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '設備台帳' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '新規作成' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '新規登録' })).toHaveCount(0)
 
   await openFirstTrouble(page)
   await expect(page.getByRole('button', { name: '編集' })).toBeVisible()

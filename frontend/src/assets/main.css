@@ -79,6 +79,28 @@ h1, h2, h3,
   font-variant-numeric: tabular-nums;
 }
 
+/* 詳細・設定の関連表（v-table）も、一覧の表（v-data-table）と同じ見出しの背景・罫線・文字の強さにする（#166）。
+   業務データの表にだけ .pk-data-table を付ける（校正の入力表・取り込みの確認表・日付ピッカーの中の表には付けない）。
+   行の高さは用途で選ぶ: 一覧は標準、詳細の小さな関連表と設定のマスタは density="compact" */
+.v-table.pk-data-table {
+  font-size: 0.875rem;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.v-table.pk-data-table > .v-table__wrapper > table > thead > tr > th {
+  font-weight: 600 !important;
+  color: var(--pk-ink) !important;
+  background: var(--pk-mist);
+  border-bottom: 1px solid var(--pk-line) !important;
+  white-space: nowrap;
+}
+
+.v-table.pk-data-table > .v-table__wrapper > table > tbody > tr > td {
+  font-variant-numeric: tabular-nums;
+}
+
 .v-navigation-drawer {
   border-right: 1px solid var(--pk-line) !important;
 }
@@ -120,7 +142,7 @@ h1, h2, h3,
   white-space: nowrap;
 }
 
-/* 一覧の「表示する拠点」と、その右の絞り込み項目を区切る縦線。幅が狭く折り返すときは出さない */
+/* 一覧の「表示する拠点」と、その右の絞り込み項目を区切る縦線。幅が狭く折り返すときは出さない（絞り込みの行の中では改行に使う。下の .pk-filters） */
 .pk-scope-divider {
   align-self: stretch;
   margin: 0.25rem 0;
@@ -168,7 +190,8 @@ h1, h2, h3,
 .v-application .v-field--focused { --v-field-border-opacity: 1; }
 .v-application .v-data-table { border: 1px solid var(--pk-line); border-radius: 12px; overflow: hidden; }
 .v-application .v-card--variant-outlined { border-color: var(--pk-line); background: rgb(var(--v-theme-surface)); }
-.v-application .v-card .v-data-table { border: 0; }
+.v-application .v-card .v-data-table,
+.v-application .v-card .v-table.pk-data-table { border: 0; }
 .v-data-table tbody tr:hover { background: var(--pk-mist); }
 .v-data-table .v-data-table-footer { border-top: 1px solid var(--pk-line); gap: 0.5rem; }
 .v-application .v-list-item-title { font-size: 0.875rem; }
@@ -177,8 +200,33 @@ h1, h2, h3,
 .pk-filters { padding: 1rem; border: 1px solid var(--pk-line); border-radius: 12px; background: #fff; }
 .pk-filters .v-field--dirty { background: var(--pk-soft-blue); }
 
+/* 絞り込みの行の並びと幅（#166）。並びは 拠点 → キーワード → ページ固有の条件 → リセット。
+   幅は部品の種類で決め、画面ごとに style で指定しない。収まらなければ折り返す（ラベルは短縮しない） */
+/* キーワードは、最も長いラベル（基準器の「管理番号・名称・型式・製造番号」）が虫眼鏡・クリアボタンと並んで収まる幅 */
+.pk-filters > .pk-filter-search { flex: 1 1 320px; min-width: 320px; max-width: 400px; }
+.pk-filters > .pk-filter-select { flex: 0 1 200px; min-width: 180px; max-width: 240px; }
+.pk-filters > .pk-filter-select--wide { flex: 0 1 280px; min-width: 240px; max-width: 320px; }
+.pk-filters > .pk-filter-date { flex: 0 1 170px; min-width: 160px; }
+.pk-filters > .v-input--horizontal.v-switch { flex: none; }
+
+/* 表の識別情報（設備名など）。日本語を語の途中で折り返さず、列に収まらないときだけ折り返す */
+.pk-keep-words { word-break: keep-all; overflow-wrap: anywhere; }
+
+/* 一覧の表の直前に置く検索結果の件数（ListCount） */
+.pk-list-count { margin: 0 0 0.5rem; color: var(--pk-muted); font-size: 0.875rem; }
+.pk-list-count strong { color: var(--pk-ink); font-variant-numeric: tabular-nums; }
+.pk-list-count--error { color: rgb(var(--v-theme-error)); }
+
 @media (max-width: 600px) {
   .pk-filters { padding: 0.75rem; }
+  /* 拠点は先頭の行に置く（区切り線を改行として使う）。キーワードと長いラベルの選択欄は全幅、そのほかの選択欄は2列 */
+  .pk-filters > .pk-scope-divider { display: block; flex-basis: 100%; height: 0; margin: 0; border: 0; }
+  .pk-filters > .pk-filter-select,
+  .pk-filters > .pk-filter-date { flex: 1 1 calc(50% - 0.375rem); min-width: 0; max-width: none; }
+  /* wide は pk-filter-select も持つため、2列の指定より後に書く */
+  .pk-filters > .pk-filter-search,
+  .pk-filters > .pk-filter-select--wide { flex: 1 1 100%; min-width: 0; max-width: none; }
+  .pk-filters > .pk-filter-range-sep { display: none; }
   .v-data-table > .v-table__wrapper > table { min-width: 680px; }
   .v-data-table .v-data-table-footer { justify-content: flex-start; padding: 8px; }
   .v-data-table-footer__items-per-page { margin-inline-end: 0; }

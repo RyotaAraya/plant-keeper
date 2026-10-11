@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import { formatDate, formatDay } from '@/utils/datetime'
 import CalibrationTable from '@/components/CalibrationTable.vue'
 import DetailHeader from '@/components/layout/DetailHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
@@ -23,12 +24,25 @@ const loading = ref(true)
 const actionError = ref('')
 const returnTo = computed(() => inspectionReturn(route.query.return_to))
 
-// バックエンドの InspectionPolicy#update? に対応（承認済みは誰も変更不可。作成者本人か管理者/マネージャーのみ）
+// バックエンドの InspectionPolicy#update? に対応（内容を編集できるのは下書きだけ。作成者本人か管理者/マネージャーのみ）
 const canEdit = computed(
   () =>
     !!inspection.value &&
-    inspection.value.status !== 'approved' &&
+    inspection.value.status === 'draft' &&
     (isAdmin.value || isManager.value || authStore.user?.id === inspection.value.user_id)
+)
+// 定期整備が検収・完了に進んでいると、その作業の点検は下書きに戻せない（Inspection#maintenance_not_accepted）
+const maintenanceLocked = computed(() =>
+  ['acceptance', 'completed'].includes(inspection.value?.maintenance_task?.scheduled_maintenance?.status)
+)
+// 承認待ちの点検は、承認者でない作成者本人も取り下げて下書きに戻せる（InspectionPolicy#withdraw?）
+const canWithdraw = computed(
+  () =>
+    !!inspection.value &&
+    inspection.value.status === 'approval_requested' &&
+    !maintenanceLocked.value &&
+    !canApproveInspection.value &&
+    authStore.user?.id === inspection.value.user_id
 )
 
 const inspectionTypeLabel: Record<string, string> = {
@@ -70,11 +84,6 @@ async function updateStatus(status: string) {
   await fetchInspection()
 }
 
-function formatDate(dt: string) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
 onMounted(fetchInspection)
 </script>
 
@@ -91,27 +100,32 @@ onMounted(fetchInspection)
       >
         <template #status><StatusChip kind="inspection" :value="inspection.status" /></template>
         <template #actions>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
-          <v-btn v-if="inspection.status === 'draft' && canEdit" color="primary" @click="updateStatus('submitted')">提出</v-btn>
-          <v-btn v-if="inspection.status === 'submitted' && canEdit" color="warning" @click="updateStatus('approval_requested')">承認依頼</v-btn>
-          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" variant="outlined" @click="updateStatus('submitted')">差し戻し</v-btn>
+          <v-btn v-if="canEdit" variant="outlined" prepend-icon="mdi-pencil" :to="{ path: `/inspections/${inspection.id}/edit`, query: { return_to: returnTo } }">編集</v-btn>
+          <v-btn v-if="canEdit" color="primary" @click="updateStatus('approval_requested')">提出</v-btn>
+          <v-btn v-if="canWithdraw" variant="outlined" @click="updateStatus('draft')">取り下げ</v-btn>
+          <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection && !maintenanceLocked" variant="outlined" @click="updateStatus('draft')">差し戻し</v-btn>
           <v-btn v-if="inspection.status === 'approval_requested' && canApproveInspection" color="success" @click="updateStatus('approved')">承認</v-btn>
         </template>
       </DetailHeader>
       <v-alert v-if="actionError" type="error" variant="tonal" closable class="mb-4" @click:close="actionError = ''">{{ actionError }}</v-alert>
 
-      <v-alert v-if="route.query.saved === inspection.status && ['draft', 'submitted'].includes(inspection.status)" type="success" variant="tonal" class="mb-4" role="status" data-testid="inspection-saved">
-        {{ inspection.status === 'draft' ? '下書きを保存しました。入力は「編集」から再開できます。' : '点検を提出しました。' }}
+      <v-alert v-if="route.query.saved === inspection.status && ['draft', 'approval_requested'].includes(inspection.status)" type="success" variant="tonal" class="mb-4" role="status" data-testid="inspection-saved">
+        {{ inspection.status === 'draft' ? '下書きを保存しました。入力は「編集」から再開できます。' : '点検を提出しました。承認を待っています。' }}
         <v-btn variant="text" :to="returnTo">{{ inspectionReturnLabel(returnTo) }}に戻る</v-btn>
       </v-alert>
       <v-alert v-if="inspection.inspection_plan" type="info" variant="tonal" class="mb-4" data-testid="inspection-plan-context">
-        <strong>{{ inspection.inspection_plan.name }}</strong> ／ 現在の次回期限 {{ inspection.inspection_plan.next_due_on }}
+        <strong>{{ inspection.inspection_plan.name }}</strong> ／ 現在の次回期限 {{ formatDay(inspection.inspection_plan.next_due_on) }}
         <p>{{ inspection.status === 'draft' ? '下書き保存では計画の期限は更新しません。提出すると、実施日をもとに次回期限を更新します。' : 'この点検は計画にひもづいています。表示は計画の現在の期限です。' }}</p>
       </v-alert>
       <v-alert v-else-if="!inspection.maintenance_task" type="info" variant="tonal" class="mb-4">予定外の点検です。点検計画の期限は更新しません。</v-alert>
       <v-alert v-else type="info" variant="tonal" class="mb-4">
         定期整備の作業「{{ inspection.maintenance_task.title }}」の点検です。
         {{ inspection.status === 'draft' ? '提出すると作業が完了になります。' : '作業の状態は定期整備で確認できます。' }}
+        <template v-if="inspection.status === 'approval_requested' && maintenanceLocked">
+          {{ inspection.maintenance_task.scheduled_maintenance.status === 'acceptance'
+            ? '定期整備が検収のため、差し戻し・取り下げはできません。記録を直すときは、定期整備を実施中に戻してください。'
+            : '定期整備が完了のため、差し戻し・取り下げはできません。' }}
+        </template>
         <v-btn variant="text" :to="`/maintenances/${inspection.maintenance_task.scheduled_maintenance_id}`">定期整備の作業を開く</v-btn>
       </v-alert>
 
@@ -119,7 +133,7 @@ onMounted(fetchInspection)
       <v-card class="mb-4 pk-summary" data-testid="detail-summary">
         <v-card-text>
           <dl class="pk-summary__grid">
-            <div><dt>点検日時</dt><dd>{{ formatDate(inspection.inspected_at) }}</dd></div>
+            <div><dt>点検日</dt><dd>{{ formatDate(inspection.inspected_at) }}</dd></div>
             <div><dt>種別</dt><dd>{{ inspectionTypeLabel[inspection.inspection_type] }}</dd></div>
             <div><dt>実施者</dt><dd>{{ inspection.user?.name }}</dd></div>
             <div>
@@ -161,7 +175,7 @@ onMounted(fetchInspection)
       </v-tabs>
       <v-window v-model="tab">
         <v-window-item v-if="inspection.inspection_reference_standards?.length" value="standards">
-          <v-table density="compact" data-testid="reference-standards-used">
+          <v-table density="compact" class="pk-data-table" data-testid="reference-standards-used">
             <thead>
               <tr>
                 <th>基準器</th>
@@ -178,8 +192,8 @@ onMounted(fetchInspection)
                 </td>
                 <td class="text-caption">
                   <template v-if="link.calibration_at_inspection">
-                    {{ link.calibration_at_inspection.performed_on }} 実施・{{ link.calibration_at_inspection.performed_by }}・
-                    {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ link.calibration_at_inspection.valid_until }}まで有効・
+                    {{ formatDay(link.calibration_at_inspection.performed_on) }} 実施・{{ link.calibration_at_inspection.performed_by }}・
+                    {{ link.calibration_at_inspection.certificate_number || '証明書番号なし' }}・{{ formatDay(link.calibration_at_inspection.valid_until) }}まで有効・
                     トレーサビリティ{{ link.calibration_at_inspection.traceable ? 'あり' : 'なし' }}
                   </template>
                   <template v-else>—</template>
@@ -196,7 +210,7 @@ onMounted(fetchInspection)
         </v-window-item>
 
         <v-window-item value="items">
-          <v-table density="compact">
+          <v-table density="compact" class="pk-data-table">
             <thead>
               <tr>
                 <th width="40">#</th>

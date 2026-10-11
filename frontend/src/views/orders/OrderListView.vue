@@ -4,20 +4,37 @@ import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusChip from '@/components/StatusChip.vue'
-import { todayForInput } from '@/utils/datetime'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
+import { useSavedFilters } from '@/composables/useSavedFilters'
+import { formatDay, todayForInput } from '@/utils/datetime'
 
 const orders = ref<any[]>([])
 const materials = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const errors = ref<string[]>([])
 
-const filters = ref({
-  status: null as string | null,
+// ステータスは保存して、開き直したときに戻す
+const saved = useSavedFilters<{ status: string | null }>('orders', {
+  status: { type: 'string', values: ['draft', 'ordered', 'received', 'cancelled'] },
 })
+const filters = ref<{ status: string | null }>({ status: null, ...saved.load() })
+saved.hold(filters.value)
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  filters.value = { status: null }
+  saved.hold(filters.value)
+}
 
 const form = ref({
   material_id: null as number | null,
@@ -30,14 +47,14 @@ const form = ref({
 })
 
 const headers = [
-  { title: '発注日', key: 'ordered_on', width: '110px' },
+  { title: '発注日', key: 'ordered_on', minWidth: '110px' },
   { title: '資材', key: 'material.name', minWidth: '250px' },
+  { title: 'ステータス', key: 'status', width: '100px' },
   { title: '型番', key: 'material.part_number', width: '130px' },
   { title: '数量', key: 'quantity', width: '70px' },
-  { title: '単価', key: 'unit_price', width: '100px' },
   { title: '仕入先', key: 'supplier_name', minWidth: '240px' },
+  { title: '単価', key: 'unit_price', width: '100px' },
   { title: '発注者', key: 'user.name', width: '100px' },
-  { title: 'ステータス', key: 'status', width: '100px' },
 ]
 
 const statusLabel: Record<string, string> = {
@@ -55,12 +72,15 @@ const statusOptions = [
 
 async function fetchOrders() {
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (filters.value.status) params.status = filters.value.status
     const res = await api.get('/orders', { params })
     orders.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -155,7 +175,10 @@ onMounted(() => {
   fetchWarehouses()
   fetchOrders()
 })
-watch(filters, fetchOrders, { deep: true })
+watch(filters, (value) => {
+  saved.save(value)
+  void fetchOrders()
+}, { deep: true })
 </script>
 
 <template>
@@ -174,16 +197,22 @@ watch(filters, fetchOrders, { deep: true })
         clearable
         density="compact"
         hide-details
-        style="max-width: 160px"
+        class="pk-filter-select"
       />
+      <FilterResetButton @reset="reset" />
     </div>
 
+    <ListCount :total="totalCount" :shown="orders.length" :loading="loading" :error="loadError" />
+
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="orders"
       :loading="loading"
       hover
     >
+      <template #item.ordered_on="{ item }"><span class="text-no-wrap">{{ formatDay(item.ordered_on) }}</span></template>
+      <template #item.supplier_name="{ item }">{{ item.supplier_name || '—' }}</template>
       <template #item.unit_price="{ item }">
         {{ formatPrice(item.unit_price) }}
       </template>
@@ -213,7 +242,7 @@ watch(filters, fetchOrders, { deep: true })
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>
-        <v-card-title>{{ editingId ? '発注編集' : '新規発注' }}</v-card-title>
+        <v-card-title>{{ editingId ? '発注の編集' : '新規発注' }}</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -238,8 +267,8 @@ watch(filters, fetchOrders, { deep: true })
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">保存</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -266,8 +295,8 @@ watch(filters, fetchOrders, { deep: true })
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="receiveDialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="saveReceive">受領して入庫</v-btn>
+          <v-btn variant="text" @click="receiveDialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveReceive">受領して入庫</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

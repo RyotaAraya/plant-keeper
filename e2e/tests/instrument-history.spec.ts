@@ -116,12 +116,15 @@ test('計器の詳細の点検履歴から、その計器で絞り込んだ点�
   await expect(page.locator('tbody tr').first()).toBeVisible()
 })
 
-// トラブル一覧の計器の列のリンクから、シードの計器 FT-301 の詳細へ
+// シードの計器 FT-301（トラブル「FT-301 オリフィス閉塞疑い」の計器）の詳細へ。
+// トラブル一覧のタイトル検索は保存され、サイドバーから開き直しても残るため、一覧では探さずAPIで計器を求める
 async function openFt301Page(page: Page) {
-  await page.getByRole('link', { name: 'トラブル管理', exact: true }).click()
-  await page.getByRole('textbox', { name: 'タイトル検索' }).fill('FT-301 オリフィス閉塞疑い')
-  await page.getByRole('row', { name: /FT-301 オリフィス閉塞疑い/ }).getByRole('link', { name: 'FT-301', exact: true }).click()
-  await expect(page).toHaveURL(/\/instruments\/\d+$/)
+  const token = await page.evaluate(() => localStorage.getItem('jwt'))
+  const response = await page.request.get(`${apiBaseUrl()}/troubles`, { headers: { Authorization: `Bearer ${token}` }, params: { q: 'FT-301 オリフィス閉塞疑い' } })
+  expect(response.ok()).toBeTruthy()
+  const trouble = (await response.json()).data.find((t: { instrument_id: number | null }) => t.instrument_id)
+  await page.goto(`/instruments/${trouble.instrument_id}`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('FT-301')
 }
 
 test('計器で絞り込んだ一覧を開いたまま、サイドバーから開き直すと、絞り込みが外れる（トラブル一覧・点検一覧）', async ({ page }) => {

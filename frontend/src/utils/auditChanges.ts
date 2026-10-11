@@ -22,7 +22,7 @@ const HIDDEN_KEYS = new Set(['id', 'created_at', 'updated_at'])
 const FIELD_LABELS: Record<string, string> = {
   title: 'タイトル', description: '内容', notes: '備考', name: '名称',
   status: '状態', priority: '優先度', kind: '種別', location: '設置場所',
-  reported_at: '報告日時', resolved_at: '解決日時', responded_at: '対応日時', inspected_at: '点検日時',
+  reported_at: '報告日時', resolved_at: '完了日時', responded_at: '対応日時', inspected_at: '点検日時',
   response_type: '対応種別', used_materials: '使用資材',
   inspection_type: '点検種別', has_defect: '不具合', checked: '確認', content: '内容', item_type: '項目の種類',
   measured_value: '測定値', text_value: '入力内容', calibration_result: '校正の結果',
@@ -57,8 +57,9 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 const STATUS_BY_TYPE: Record<string, Record<string, string>> = {
-  Trouble: troubleStatusLabel,
-  Inspection: inspectionStatusLabel,
+  // 移行前の監査ログは書き換えず、旧状態も現在の呼び名で表示する。
+  Trouble: { ...troubleStatusLabel, resolved: '完了' },
+  Inspection: { ...inspectionStatusLabel, submitted: '承認待ち' },
   ScheduledMaintenance: MAINTENANCE_STATUS_LABEL,
   MaintenanceTask: TASK_STATUS_LABEL,
   ReferenceStandard: { usable: '使用可', in_calibration: '校正中', retired: '使用停止' },

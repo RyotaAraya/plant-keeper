@@ -118,10 +118,10 @@ test('点検計画にまとまりと法規区分が表示され、法規区分�
   await expect(valve).toContainText('ボイラー・第一種圧力容器')
 
   await test.step('法規区分で絞り込むと、その区分のまとまりの計画だけになる', async () => {
-    await selectOption(page, '法規区分', 'ボイラー・第一種圧力容器')
+    await selectOption(page, '点検の法規区分', 'ボイラー・第一種圧力容器')
     await expect(page.getByRole('row', { name: /FT-301 流量伝送器 ゼロ点確認/ })).toHaveCount(0)
     for (const text of await page.locator('tbody tr').allInnerTexts()) expect(text).toContain('ボイラー・第一種圧力容器')
-    await page.goto('/inspection-plans') // 絞り込みを外す
+    await page.getByTestId('filter-reset').click() // 絞り込みを外す（条件は保存されるため、開き直しでは外れない）
   })
 
   await test.step('まとまりで絞り込むと、そのまとまりの計画だけになる', async () => {

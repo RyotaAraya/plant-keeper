@@ -32,17 +32,17 @@ class InspectionPlansTest < ActionDispatch::IntegrationTest
     assert_equal @today - 3, plan.reload.next_due_on
     assert_nil plan.last_inspected_on
 
-    patch "/api/v1/inspections/#{Inspection.last.id}", params: { inspection: { status: "submitted" } },
+    patch "/api/v1/inspections/#{Inspection.last.id}", params: { inspection: { status: "approval_requested" } },
                                                        headers: auth_headers_for(@member), as: :json
     assert_response :ok
     assert_equal @today, plan.reload.last_inspected_on
     assert_equal @today + 30, plan.next_due_on
   end
 
-  test "提出済で新規作成した場合も期限が進む" do
+  test "承認待ちで新規作成した場合も期限が進む" do
     plan = create_plan(next_due_on: @today - 1, interval_days: 7)
 
-    post_inspection(@member, plan, status: "submitted")
+    post_inspection(@member, plan, status: "approval_requested")
 
     assert_response :created
     assert_equal @today + 7, plan.reload.next_due_on
@@ -51,7 +51,7 @@ class InspectionPlansTest < ActionDispatch::IntegrationTest
   test "過去日の点検を後から登録しても、次回期限は戻らない" do
     plan = create_plan(next_due_on: @today + 30, last_inspected_on: @today)
 
-    post_inspection(@member, plan, status: "submitted", inspected_at: 10.days.ago)
+    post_inspection(@member, plan, status: "approval_requested", inspected_at: 10.days.ago)
 
     assert_response :created
     assert_equal @today, plan.reload.last_inspected_on
@@ -63,7 +63,7 @@ class InspectionPlansTest < ActionDispatch::IntegrationTest
     plan = create_plan(next_due_on: @today, equipment: other)
 
     assert_no_difference "Inspection.count" do
-      post_inspection(@member, plan, status: "submitted", equipment: @equipment)
+      post_inspection(@member, plan, status: "approval_requested", equipment: @equipment)
     end
     assert_response :unprocessable_entity
   end

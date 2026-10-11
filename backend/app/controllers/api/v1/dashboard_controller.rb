@@ -61,7 +61,7 @@ module Api
               open: troubles_scope.open.count,
               in_progress: troubles_scope.in_progress.count,
               critical: troubles_scope.where(priority: "critical").where.not(status: "closed").count,
-              resolved_this_month: troubles_scope.resolved.where("resolved_at >= ?", Time.current.beginning_of_month).count
+              resolved_this_month: troubles_scope.closed.where("resolved_at >= ?", Time.current.beginning_of_month).count
             },
             # 点検統計
             inspections: {

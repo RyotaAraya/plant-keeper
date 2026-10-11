@@ -3,6 +3,7 @@
 // 選んだ時点で表示する（提出時の確認はサーバーが行い、使えないものが含まれると提出できない）
 import { computed, nextTick, ref } from 'vue'
 import type { InspectionReferenceStandardUse, ReferenceStandard } from '@/types/models'
+import { formatDay } from '@/utils/datetime'
 import { STATUS_COLOR, STATUS_LABEL, calibrationOn, unusableReasons } from '@/utils/referenceStandard'
 
 const props = defineProps<{ standards: ReferenceStandard[]; inspectionDate: string; requireTraceable: boolean }>()
@@ -84,7 +85,7 @@ const reasonsFor = (use: InspectionReferenceStandardUse) => {
                 <span class="text-caption">
                   {{ calibrationOn(byId.get(use.reference_standard_id)!, inspectionDate)!.performed_by }}・
                   {{ calibrationOn(byId.get(use.reference_standard_id)!, inspectionDate)!.certificate_number || '証明書番号なし' }}・
-                  {{ calibrationOn(byId.get(use.reference_standard_id)!, inspectionDate)!.valid_until }}まで有効
+                  {{ formatDay(calibrationOn(byId.get(use.reference_standard_id)!, inspectionDate)!.valid_until) }}まで有効
                 </span>
               </template>
             </td>

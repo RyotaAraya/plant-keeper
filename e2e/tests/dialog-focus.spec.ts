@@ -3,10 +3,10 @@ import { test, expect, login, apiBaseUrl, ACCOUNTS } from './support'
 // ダイアログを閉じたとき、開いたボタンへフォーカスが戻る（アプリ全体の仕組み utils/dialogFocusReturn.ts。#136）。
 // キャンセル・Esc・外側のクリック・保存（一覧の再取得でボタンが作り直される場合を含む）のどれでも戻ることを、代表的なダイアログで確かめる
 
-test('作成ダイアログは、キャンセル・Esc・外側のクリックのどれで閉じても「新規作成」へ戻る', async ({ page }) => {
+test('作成ダイアログは、キャンセル・Esc・外側のクリックのどれで閉じても「新規登録」へ戻る', async ({ page }) => {
   await login(page, ACCOUNTS.admin)
   await page.goto('/equipments')
-  const open = page.getByRole('button', { name: '新規作成' })
+  const open = page.getByRole('button', { name: '新規登録' })
   const dialog = page.getByRole('dialog')
 
   await open.click()

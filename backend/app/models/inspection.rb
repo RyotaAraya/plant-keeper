@@ -42,24 +42,31 @@ class Inspection < ApplicationRecord
   has_many_attached :attachments
 
   enum :inspection_type, { routine: "routine", periodic: "periodic", telemetry: "telemetry", operation_check: "operation_check" }
-  enum :status, { draft: "draft", submitted: "submitted", approval_requested: "approval_requested", approved: "approved" }
+  enum :status, { draft: "draft", approval_requested: "approval_requested", approved: "approved" }, validate: true
 
   validates :inspected_at, presence: true
   validate :contractor_uses_own_site
   validate :plan_matches_equipment, if: :plan_check_needed?
   validate :task_matches_equipment
+  validate :maintenance_not_accepted, if: -> { status_changed?(from: "approval_requested", to: "draft") }
 
   # 下書きを出て実施済みになったら、点検計画の次回期限を進める
   after_save :advance_inspection_plan, if: -> { inspection_plan && saved_change_to_status? && !draft? }
   # 定期整備の作業から実施した点検が、下書きを出たら、作業を完了にする
   after_save :complete_maintenance_task, if: -> { maintenance_task && saved_change_to_status? && !draft? }
+  # 差し戻し・取り下げで下書きに戻ったら、提出で進めた計画の期限と作業の完了を戻す
+  after_save :revert_submission, if: -> { saved_change_to_status?(from: "approval_requested", to: "draft") }
+
+  # 旧の「提出済」。デプロイの間に古い画面から送られてきても提出として受け付ける（次のリリースで削除）
+  def status=(value)
+    super(value == "submitted" ? "approval_requested" : value)
+  end
 
   # 承認フローの状態遷移。飛び越し（下書き→承認済み等）と、承認済みからの変更は不可。
-  # 承認依頼中からは差し戻し（提出済へ）か承認のみ
+  # 承認依頼中からは差し戻し・取り下げ（下書きへ）か承認のみ
   STATUS_TRANSITIONS = {
-    "draft" => %w[submitted],
-    "submitted" => %w[draft approval_requested],
-    "approval_requested" => %w[submitted approved],
+    "draft" => %w[approval_requested],
+    "approval_requested" => %w[draft approved],
     "approved" => []
   }.freeze
 
@@ -124,6 +131,22 @@ class Inspection < ApplicationRecord
 
   def complete_maintenance_task
     maintenance_task.complete_by_inspection!(inspected_at.to_date)
+  end
+
+  def revert_submission
+    inspection_plan&.revert_inspection!(self)
+    maintenance_task&.reopen_after_inspection!(self)
+  end
+
+  # 検収・完了に進んだ定期整備の作業の点検は、下書きに戻せない（戻すと、検収の整備に未完了の作業が残るため）。
+  # 検収中に記録を直すときは、定期整備を実施中に戻してから差し戻す（完了した整備は戻せない）
+  def maintenance_not_accepted
+    maintenance = maintenance_task&.scheduled_maintenance
+    if maintenance&.acceptance?
+      errors.add(:base, "定期整備が検収のため、下書きに戻せません。定期整備を実施中に戻してから差し戻してください")
+    elsif maintenance&.completed?
+      errors.add(:base, "定期整備が完了のため、下書きに戻せません")
+    end
   end
 
   def task_matches_equipment

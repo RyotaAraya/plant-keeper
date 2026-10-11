@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePermissions } from '@/composables/usePermissions'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { useSiteScope } from '@/composables/useSiteScope'
+import FilterResetButton from '@/components/FilterResetButton.vue'
+import ListCount from '@/components/ListCount.vue'
 import RegulationChip from '@/components/RegulationChip.vue'
 import RegulationSelect from '@/components/RegulationSelect.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
@@ -14,37 +17,60 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canManageEquipment, canViewSites } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const equipments = ref<any[]>([])
 const sites = ref<any[]>([])
 const loading = ref(false)
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（複数選択、空は全拠点）。
+// 選んだ拠点は保存して、開き直したときに戻す（ほかの画面のリンクで拠点を指定されたときは、そちら）
+const saved = useSavedFilters<{ site_ids: number[] }>('equipments', { site_ids: 'ids' })
+const initialSites = () => (hasQueryConditions(route.query) ? initialSiteIds(route.query.site_ids) : savedSiteIds(saved.load().site_ids))
+const selectedSiteIds = ref<number[]>(initialSites())
+saved.hold({ site_ids: selectedSiteIds.value })
+
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  selectedSiteIds.value = ownSiteIds()
+  saved.hold({ site_ids: selectedSiteIds.value })
+}
 const dialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ name: '', description: '', site_id: null as number | null, regulation_ids: [] as number[] })
 const errors = ref<string[]>([])
 
-const headers = [
-  { title: '設備名', key: 'name' },
-  { title: '拠点', key: 'site.name' },
-  { title: '適用法規', key: 'regulations', sortable: false },
+// 設備名・拠点は語の途中で折り返さない幅を取り、説明の列を先に縮める。
+// 拠点の列は、1つの拠点だけを表示しているときは出さない（どの行も同じ拠点のため）
+const headers = computed(() => [
+  { title: '設備名', key: 'name', minWidth: '200px' },
+  ...(selectedSiteIds.value.length === 1 ? [] : [{ title: '拠点', key: 'site.name', minWidth: '120px' }]),
+  { title: '適用法規', key: 'regulations', sortable: false, minWidth: '160px' },
   { title: '説明', key: 'description' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
-]
+])
 
 const fetchEquipmentsGuard = latestGuard()
 
 async function fetchEquipments() {
   const isLatest = fetchEquipmentsGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
     const res = await api.get('/equipments', { params })
     if (!isLatest()) return
     equipments.value = res.data.data
+    totalCount.value = res.data.meta?.total_count ?? res.data.data.length
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -99,20 +125,27 @@ onMounted(() => {
   fetchSites()
   fetchEquipments()
 })
-watch(selectedSiteIds, fetchEquipments)
+watch(selectedSiteIds, (siteIds) => {
+  saved.save({ site_ids: siteIds })
+  void fetchEquipments()
+})
 </script>
 
 <template>
   <MainLayout>
     <PageHeader title="設備台帳" description="拠点にある設備の台帳です。設備ごとの計器・担当者・整備・変更履歴を確認します。">
-      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
+      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規登録</v-btn>
     </PageHeader>
 
     <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
+      <FilterResetButton @reset="reset" />
     </div>
 
+    <ListCount :total="totalCount" :shown="equipments.length" :loading="loading" :error="loadError" />
+
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="equipments"
       :loading="loading"
@@ -120,8 +153,12 @@ watch(selectedSiteIds, fetchEquipments)
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.name="{ item }"><span class="pk-keep-words">{{ item.name }}</span></template>
+      <template #item.site.name="{ item }"><span class="text-no-wrap">{{ item.site?.name || '—' }}</span></template>
+      <template #item.description="{ item }">{{ item.description || '—' }}</template>
       <template #item.regulations="{ item }">
         <RegulationChip v-for="regulation in item.regulations" :key="regulation.id" :regulation="regulation" class="mr-1 my-1" />
+        <span v-if="!item.regulations?.length" class="text-medium-emphasis">—</span>
       </template>
       <template #item.actions="{ item }">
         <v-btn v-if="canManageEquipment" icon="mdi-pencil" size="x-small" variant="text" :aria-label="`${item.name}を編集`" @click.stop="openEdit(item)" />
@@ -130,7 +167,7 @@ watch(selectedSiteIds, fetchEquipments)
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>
-        <v-card-title>{{ editingId ? '設備編集' : '設備作成' }}</v-card-title>
+        <v-card-title>{{ editingId ? '設備の編集' : '設備の登録' }}</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -149,8 +186,8 @@ watch(selectedSiteIds, fetchEquipments)
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">保存</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

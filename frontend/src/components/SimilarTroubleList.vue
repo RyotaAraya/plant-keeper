@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import PlanaNote from '@/components/plana/PlanaNote.vue'
 import { priorityLabel, troubleStatusLabel } from '@/constants/recordLabels'
 import type { AiSimilarTroubles } from '@/types/models'
+import { formatDate } from '@/utils/datetime'
 
 defineProps<{ result: AiSimilarTroubles }>()
 defineEmits<{ close: [] }>()
@@ -12,7 +13,6 @@ defineEmits<{ close: [] }>()
 const router = useRouter()
 
 const href = (id: number) => router.resolve(`/troubles/${id}`).href
-const formatDate = (dt: string) => new Date(dt).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })
 </script>
 
 <template>

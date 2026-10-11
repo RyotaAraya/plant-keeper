@@ -3,11 +3,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import DiagnosticChip from '@/components/DiagnosticChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import FilterSelect from '@/components/FilterSelect.vue'
 import InstrumentCalibrationFields from '@/components/InstrumentCalibrationFields.vue'
+import ListCount from '@/components/ListCount.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { inSites, keepInSites, useSiteScope } from '@/composables/useSiteScope'
 import { calibrationFieldsFrom, calibrationFieldsPayload, emptyCalibrationFields, type CalibrationFields } from '@/utils/calibration'
@@ -18,24 +21,74 @@ import { DIAGNOSTIC_FILTER_OPTIONS } from '@/constants/diagnostics'
 const router = useRouter()
 const route = useRoute()
 const { canManageEquipment } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const instruments = ref<any[]>([])
 const equipments = ref<any[]>([])
 const services = ref<any[]>([])
 const lineClasses = ref<any[]>([])
 const loading = ref(false)
-const totalCount = ref(0)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
 
-// フィルタ（すべて複数選択）
-const search = ref('')
-// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
-const selectedEquipmentIds = ref<number[]>([])
-const selectedServiceIds = ref<number[]>([])
-const selectedLineClassIds = ref<number[]>([])
-// 機器の自己診断（NAMUR NE 107）の状態。?diagnostic_status=failure,out_of_specification で開ける
-const selectedDiagnosticStatuses = ref<string[]>(listFromQuery(route.query.diagnostic_status))
+// フィルタ（すべて複数選択）。条件は保存して、開き直したときに戻す
+type Filters = { site_ids: number[]; q: string; equipment_ids: number[]; service_ids: number[]; line_class_ids: number[]; diagnostic_statuses: string[] }
+const saved = useSavedFilters<Filters>('instruments', {
+  site_ids: 'ids',
+  q: { type: 'string' },
+  equipment_ids: 'ids',
+  service_ids: 'ids',
+  line_class_ids: 'ids',
+  diagnostic_statuses: { type: 'strings', values: DIAGNOSTIC_FILTER_OPTIONS.map((o) => o.value) },
+})
+
+// 通常業務では自拠点だけ意識すればよいため、自分の所属拠点をデフォルト選択（＋保存した条件）。
+// ほかの画面のリンクで拠点・機器の診断の状態（?diagnostic_status=failure,out_of_specification）を指定されたときは、保存した条件を混ぜない
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) {
+    return {
+      site_ids: initialSiteIds(route.query.site_ids), q: '', equipment_ids: [], service_ids: [], line_class_ids: [],
+      diagnostic_statuses: listFromQuery(route.query.diagnostic_status),
+    }
+  }
+  const stored = saved.load()
+  return { q: '', equipment_ids: [], service_ids: [], line_class_ids: [], diagnostic_statuses: [], ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const initial = initialFilters()
+const search = ref(initial.q)
+const selectedSiteIds = ref<number[]>(initial.site_ids)
+const selectedEquipmentIds = ref<number[]>(initial.equipment_ids)
+const selectedServiceIds = ref<number[]>(initial.service_ids)
+const selectedLineClassIds = ref<number[]>(initial.line_class_ids)
+const selectedDiagnosticStatuses = ref<string[]>(initial.diagnostic_statuses)
+saved.hold(initial)
+
+const currentFilters = computed<Filters>(() => ({
+  site_ids: selectedSiteIds.value,
+  q: search.value ?? '',
+  equipment_ids: selectedEquipmentIds.value,
+  service_ids: selectedServiceIds.value,
+  line_class_ids: selectedLineClassIds.value,
+  diagnostic_statuses: selectedDiagnosticStatuses.value,
+}))
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  const next: Filters = { site_ids: ownSiteIds(), q: '', equipment_ids: [], service_ids: [], line_class_ids: [], diagnostic_statuses: [] }
+  saved.hold(next)
+  selectedSiteIds.value = next.site_ids
+  search.value = ''
+  selectedEquipmentIds.value = []
+  selectedServiceIds.value = []
+  selectedLineClassIds.value = []
+  selectedDiagnosticStatuses.value = []
+}
 
 // 拠点で絞り込んだ設備リスト
 const filteredEquipments = computed(() => equipments.value.filter((e: any) => inSites(selectedSiteIds.value, e.site_id)))
@@ -57,14 +110,14 @@ const calibrationForm = ref<CalibrationFields>(emptyCalibrationFields())
 const errors = ref<string[]>([])
 
 const headers = [
-  { title: 'タグナンバー', key: 'tag_number' },
-  { title: '種別', key: 'instrument_type' },
-  { title: '設備', key: 'equipment.name' },
-  { title: 'サービス', key: 'service.name' },
-  { title: 'ラインクラス', key: 'line_class.code' },
-  { title: '設置場所', key: 'location' },
-  { title: '区分', key: 'flags', sortable: false },
+  { title: 'タグナンバー', key: 'tag_number', minWidth: '120px' },
   { title: '診断', key: 'diagnostic_status', sortable: false },
+  { title: '設備', key: 'equipment.name', minWidth: '160px' },
+  { title: 'サービス', key: 'service.name' },
+  { title: '種別', key: 'instrument_type' },
+  { title: '区分', key: 'flags', sortable: false },
+  { title: '設置場所', key: 'location' },
+  { title: 'ラインクラス', key: 'line_class.code' },
   { title: '', key: 'actions', sortable: false, width: '60px' },
 ]
 
@@ -73,6 +126,7 @@ const fetchInstrumentsGuard = latestGuard()
 async function fetchInstruments() {
   const isLatest = fetchInstrumentsGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: any = { per_page: 1000 }
     if (search.value) params.q = search.value
@@ -85,6 +139,8 @@ async function fetchInstruments() {
     if (!isLatest()) return
     instruments.value = res.data.data
     totalCount.value = res.data.meta.total_count
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -99,6 +155,12 @@ async function fetchMasters() {
   equipments.value = eqRes.data.data
   services.value = svcRes.data.data
   lineClasses.value = lcRes.data.data
+  // 保存した条件のうち、選択肢にないもの（削除・無効になったもの、表示する拠点にない設備）は外す
+  const known = (ids: number[], options: { id: number }[]) => ids.filter((id) => options.some((o) => o.id === id))
+  const prune = (selected: { value: number[] }, kept: number[]) => { if (kept.length !== selected.value.length) selected.value = kept }
+  prune(selectedEquipmentIds, keepInSites(selectedEquipmentIds.value, equipments.value, selectedSiteIds.value))
+  prune(selectedServiceIds, known(selectedServiceIds.value, services.value))
+  prune(selectedLineClassIds, known(selectedLineClassIds.value, lineClasses.value))
 }
 
 function openCreate() {
@@ -152,6 +214,7 @@ function goToDetail(row: any) {
   router.push(`/instruments/${row.id}`)
 }
 
+watch(currentFilters, (value) => saved.save(value))
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(search, () => {
   clearTimeout(searchTimeout)
@@ -176,7 +239,7 @@ onMounted(() => {
   <MainLayout>
     <!-- ヘッダー -->
     <PageHeader title="装置・計器" description="設備に付いている計器をタグ番号で探します。サービス（流体）やラインクラスなどの仕様を確認できます。">
-      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規作成</v-btn>
+      <v-btn v-if="canManageEquipment" color="primary" prepend-icon="mdi-plus" @click="openCreate">新規登録</v-btn>
     </PageHeader>
 
     <!-- フィルタパネル -->
@@ -190,19 +253,20 @@ onMounted(() => {
         clearable
         density="compact"
         hide-details
-        style="min-width: 200px; max-width: 260px"
+        class="pk-filter-search"
       />
-      <FilterSelect v-model="selectedEquipmentIds" :items="filteredEquipments" item-title="name" item-value="id" label="設備" searchable style="max-width: 240px" />
-      <FilterSelect v-model="selectedServiceIds" :items="services" item-title="name" item-value="id" label="サービス・流体" searchable style="max-width: 240px" />
-      <FilterSelect v-model="selectedLineClassIds" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" searchable style="max-width: 240px" />
-      <FilterSelect v-model="selectedDiagnosticStatuses" :items="DIAGNOSTIC_FILTER_OPTIONS" label="機器の診断" style="max-width: 220px" data-testid="diagnostic-filter" />
+      <FilterSelect v-model="selectedEquipmentIds" :items="filteredEquipments" item-title="name" item-value="id" label="設備" searchable />
+      <FilterSelect v-model="selectedServiceIds" :items="services" item-title="name" item-value="id" label="サービス・流体" searchable wide />
+      <FilterSelect v-model="selectedLineClassIds" :items="lineClasses" item-title="code" item-value="id" label="ラインクラス" searchable />
+      <FilterSelect v-model="selectedDiagnosticStatuses" :items="DIAGNOSTIC_FILTER_OPTIONS" label="機器の診断" data-testid="diagnostic-filter" />
+      <FilterResetButton @reset="reset" />
     </div>
 
-    <!-- 件数表示 -->
-    <div class="text-caption text-grey mb-2">{{ totalCount }}件</div>
+    <ListCount :total="totalCount" :shown="instruments.length" :loading="loading" :error="loadError" />
 
     <!-- テーブル -->
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="instruments"
       :loading="loading"
@@ -210,6 +274,11 @@ onMounted(() => {
       class="cursor-pointer"
       @click:row="(_e: any, { item }: any) => goToDetail(item)"
     >
+      <template #item.tag_number="{ item }"><span class="text-no-wrap">{{ item.tag_number }}</span></template>
+      <template #item.service.name="{ item }">{{ item.service?.name || '—' }}</template>
+      <template #item.instrument_type="{ item }">{{ item.instrument_type || '—' }}</template>
+      <template #item.location="{ item }">{{ item.location || '—' }}</template>
+      <template #item.line_class.code="{ item }">{{ item.line_class?.code || '—' }}</template>
       <template #item.flags="{ item }">
         <v-chip v-if="item.telemetry" size="x-small" label color="indigo" variant="tonal" class="mr-1">テレメータ</v-chip>
         <v-chip v-if="item.custody_transfer" size="x-small" label color="brown" variant="tonal" class="mr-1">取引用</v-chip>
@@ -222,12 +291,10 @@ onMounted(() => {
       </template>
     </v-data-table>
 
-    <!-- ページネーション -->
-
     <!-- 作成・編集ダイアログ -->
     <v-dialog v-model="dialog" max-width="720" scrollable>
       <v-card>
-        <v-card-title>{{ editingId ? '計器編集' : '計器作成' }}</v-card-title>
+        <v-card-title>{{ editingId ? '計器の編集' : '計器の登録' }}</v-card-title>
         <v-card-text>
           <v-alert v-if="errors.length" type="error" density="compact" class="mb-4">
             <div v-for="err in errors" :key="err">{{ err }}</div>
@@ -244,8 +311,8 @@ onMounted(() => {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="dialog = false">キャンセル</v-btn>
-          <v-btn color="primary" @click="save">保存</v-btn>
+          <v-btn variant="text" @click="dialog = false">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" @click="save">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

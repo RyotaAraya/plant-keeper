@@ -3,10 +3,13 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import StatusChip from '@/components/StatusChip.vue'
+import FilterResetButton from '@/components/FilterResetButton.vue'
 import InterlockFormDialog from '@/components/InterlockFormDialog.vue'
+import ListCount from '@/components/ListCount.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import SiteScopeTag from '@/components/SiteScopeTag.vue'
+import { hasQueryConditions, useSavedFilters } from '@/composables/useSavedFilters'
 import { usePermissions } from '@/composables/usePermissions'
 import { useSiteScope } from '@/composables/useSiteScope'
 import type { Interlock } from '@/types/models'
@@ -16,21 +19,55 @@ import { latestGuard } from '@/utils/latestGuard'
 const route = useRoute()
 const router = useRouter()
 const { canManageInterlock } = usePermissions()
-const { initialSiteIds } = useSiteScope()
+const { initialSiteIds, savedSiteIds, ownSiteIds } = useSiteScope()
 
 const interlocks = ref<Interlock[]>([])
 const loading = ref(false)
+const loadError = ref(false)
+const totalCount = ref<number | null>(null)
+// 条件は保存して、開き直したときに戻す。ほかの画面のリンク（ホームの ?bypass_state=overdue など）から来たときは、保存した条件を混ぜない
+type Filters = { site_ids: number[]; bypass_state: string | null; q: string }
+const saved = useSavedFilters<Filters>('interlocks', {
+  site_ids: 'ids',
+  bypass_state: { type: 'string', values: BYPASS_STATE_OPTIONS.map((o) => o.value) },
+  q: { type: 'string' },
+})
+function initialFilters(): Filters {
+  if (hasQueryConditions(route.query)) {
+    return { site_ids: initialSiteIds(route.query.site_ids), bypass_state: typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null, q: '' }
+  }
+  const stored = saved.load()
+  return { bypass_state: null, q: '', ...stored, site_ids: savedSiteIds(stored.site_ids) }
+}
+const initial = initialFilters()
+saved.hold(initial)
 // 通常業務では自拠点だけ見ればよいため、自分の所属拠点を初期値にする（ほかの画面のリンクから来たときはその拠点）
-const selectedSiteIds = ref<number[]>(initialSiteIds(route.query.site_ids))
-const bypassState = ref<string | null>(typeof route.query.bypass_state === 'string' ? route.query.bypass_state : null)
-const search = ref('')
+const selectedSiteIds = ref<number[]>(initial.site_ids)
+const bypassState = ref<string | null>(initial.bypass_state)
+const search = ref(initial.q)
+const currentFilters = computed<Filters>(() => ({ site_ids: selectedSiteIds.value, bypass_state: bypassState.value, q: search.value ?? '' }))
+
+// 保存した条件とURLの検索条件を消し、既定（自拠点・絞り込みなし）に戻す
+// 表のページ（リセットで先頭に戻す）
+const tablePage = ref(1)
+
+function reset() {
+  tablePage.value = 1
+  saved.clear()
+  saved.clearQuery()
+  const next: Filters = { site_ids: ownSiteIds(), bypass_state: null, q: '' }
+  saved.hold(next)
+  selectedSiteIds.value = next.site_ids
+  bypassState.value = null
+  search.value = ''
+}
 
 const headers = [
-  { title: '番号', key: 'tag_number', width: '90px' },
+  { title: '番号', key: 'tag_number', minWidth: '90px' },
   { title: '名称', key: 'name', minWidth: '200px' },
+  { title: 'バイパス', key: 'open_bypass', sortable: false, minWidth: '260px' },
   { title: '設備', key: 'equipment.name', minWidth: '140px' },
   { title: '関係する計器', key: 'instruments', sortable: false, minWidth: '160px' },
-  { title: 'バイパス', key: 'open_bypass', sortable: false, minWidth: '260px' },
 ]
 
 // 終わっていないバイパスの件数（見ている拠点・検索の範囲）。いまインターロックが外れているもの・誰かの操作を待っているものを先に知らせる
@@ -47,6 +84,7 @@ const fetchGuard = latestGuard()
 async function fetchInterlocks() {
   const isLatest = fetchGuard()
   loading.value = true
+  loadError.value = false
   try {
     const params: Record<string, unknown> = { per_page: 500 }
     if (selectedSiteIds.value.length) params.site_ids = selectedSiteIds.value
@@ -55,6 +93,9 @@ async function fetchInterlocks() {
     const res = await api.get('/interlocks', { params })
     if (!isLatest()) return
     interlocks.value = res.data.data
+    totalCount.value = res.data.meta?.total_count ?? res.data.data.length
+  } catch {
+    if (isLatest()) loadError.value = true
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -68,7 +109,10 @@ const rowProps = ({ item }: { item: Interlock }) => ({
 })
 
 onMounted(fetchInterlocks)
-watch([selectedSiteIds, bypassState, search], fetchInterlocks)
+watch(currentFilters, (value) => {
+  saved.save(value)
+  void fetchInterlocks()
+})
 </script>
 
 <template>
@@ -87,6 +131,7 @@ watch([selectedSiteIds, bypassState, search], fetchInterlocks)
     <div class="pk-filters">
       <SiteScopeTag v-model="selectedSiteIds" />
       <v-divider vertical class="pk-scope-divider" />
+      <v-text-field v-model="search" label="番号・名称・計器のタグ番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" class="pk-filter-search" />
       <v-select
         v-model="bypassState"
         :items="BYPASS_STATE_OPTIONS"
@@ -94,14 +139,18 @@ watch([selectedSiteIds, bypassState, search], fetchInterlocks)
         density="compact"
         hide-details
         clearable
-        style="max-width: 240px"
+        class="pk-filter-select pk-filter-select--wide"
         data-testid="bypass-state-filter"
       />
-      <v-text-field v-model="search" label="番号・名称・計器のタグ番号" density="compact" hide-details clearable prepend-inner-icon="mdi-magnify" style="max-width: 300px" />
-      <span class="text-caption text-medium-emphasis">バイパス中 {{ summary.bypassed }}件</span>
+      <FilterResetButton @reset="reset" />
     </div>
 
+    <ListCount :total="totalCount" :shown="interlocks.length" :loading="loading" :error="loadError">
+      ／ バイパス中 <strong>{{ summary.bypassed }}</strong>件
+    </ListCount>
+
     <v-data-table
+      v-model:page="tablePage"
       :headers="headers"
       :items="interlocks"
       :loading="loading"
